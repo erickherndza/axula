@@ -1,0 +1,2256 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MultimediaTrack — C.E. Benito Juárez</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="stylesheet" href="/static/theme.css">
+<style>
+/* ═══════════════════════════════════════════
+   LAYOUT BASE
+═══════════════════════════════════════════ */
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:'DM Sans',sans-serif;
+  display:flex;flex-direction:column;
+  min-height:100vh;
+}
+
+/* ═══════════════════════════════════════════
+   NAVBAR
+═══════════════════════════════════════════ */
+.nav{
+  display:flex;align-items:center;gap:0;
+  padding:0 20px;height:48px;
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:200;
+  flex-shrink:0;
+}
+.logo{
+  text-decoration:none;display:flex;flex-direction:column;
+  line-height:1;gap:1px;margin-right:24px;
+}
+.logo-row{
+  display:flex;align-items:baseline;gap:0;
+  font-family:'Syne',sans-serif;font-size:15px;font-weight:800;
+}
+.logo-row .a{color:var(--accent);}
+.logo-sub2{
+  font-size:8px;font-family:'DM Mono',monospace;font-weight:400;
+  color:var(--muted);letter-spacing:.4px;text-transform:uppercase;
+  white-space:nowrap;
+}
+.nav-links{
+  display:flex;align-items:center;gap:2px;
+  flex:1;
+}
+.nl{
+  display:flex;align-items:center;gap:6px;
+  padding:5px 10px;border-radius:7px;border:none;
+  background:transparent;color:var(--muted);
+  font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;
+  cursor:pointer;text-decoration:none;transition:all .15s;
+  white-space:nowrap;
+}
+.nl:hover{background:var(--hover);color:var(--text);}
+.nl.active{background:rgba(var(--accent-rgb),.1);color:var(--accent);}
+.nl i{font-size:11px;opacity:.7;}
+
+{% if es_profesor %}
+.nl.coord-only{display:none;}
+{% endif %}
+
+.nav-right{display:flex;align-items:center;gap:8px;}
+.user-badge{
+  display:flex;align-items:center;gap:7px;
+  padding:5px 10px;border-radius:8px;
+  background:var(--hover);cursor:default;
+}
+.user-avatar{
+  width:24px;height:24px;border-radius:50%;
+  background:var(--accent);
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;font-weight:800;color:#000;
+  font-family:'Syne',sans-serif;flex-shrink:0;
+}
+.user-name{font-size:12px;font-weight:500;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.user-rol{
+  font-size:9px;padding:2px 6px;border-radius:4px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.4px;
+}
+.rol-coord{background:rgba(var(--accent-rgb),.15);color:var(--accent);}
+.rol-prof{background:rgba(96,184,240,.15);color:#60b8f0;}
+.btn-logout{
+  display:flex;align-items:center;gap:5px;
+  padding:5px 10px;border-radius:7px;
+  background:transparent;border:none;
+  color:var(--muted);font-size:11px;cursor:pointer;
+  font-family:'DM Sans',sans-serif;transition:all .15s;text-decoration:none;
+}
+.btn-logout:hover{background:rgba(255,107,107,.1);color:#ff6b6b;}
+
+/* ═══════════════════════════════════════════
+   BODY LAYOUT (sidebar + main)
+═══════════════════════════════════════════ */
+.app-body{
+  display:flex;flex:1;overflow:hidden;
+}
+/* ═══════════════════════════════════════════
+   SIDEBAR
+═══════════════════════════════════════════ */
+.sidebar{
+  width:200px;flex-shrink:0;
+  background:var(--surface);
+  border-right:1px solid var(--border);
+  overflow-y:auto;padding:12px 8px;
+  display:flex;flex-direction:column;gap:0;
+}
+.sb-section{margin-bottom:8px;}
+.sb-label{
+  font-size:9px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.7px;color:var(--muted);
+  padding:6px 8px 4px;
+}
+.sb-item{
+  display:flex;align-items:center;gap:8px;
+  width:100%;padding:7px 8px;border-radius:7px;
+  border:none;background:transparent;
+  color:var(--text);font-size:12px;
+  font-family:'DM Sans',sans-serif;
+  cursor:pointer;transition:all .15s;
+  text-align:left;
+}
+.sb-item:hover{background:var(--hover);}
+.sb-item.active{background:rgba(var(--accent-rgb),.1);color:var(--accent);font-weight:600;}
+.sb-item.active .sb-dot{opacity:1;}
+.sb-count{
+  margin-left:auto;font-size:10px;font-weight:700;
+  color:var(--muted);font-family:'DM Mono',monospace;
+}
+.sb-dot{
+  width:8px;height:8px;border-radius:50%;flex-shrink:0;opacity:.6;
+}
+.dot-mm{background:#c8f060;}
+.dot-th{background:#60b8f0;}
+.dot-mu{background:#ff9f60;}
+.dot-av{background:#c060f0;}
+.sb-sep{
+  height:1px;background:var(--border);margin:6px 0;
+}
+/* Prof panel */
+.prof-panel{
+  background:rgba(var(--accent-rgb),.05);
+  border:1px solid rgba(var(--accent-rgb),.12);
+  border-radius:10px;padding:10px;margin:6px 0;
+  font-size:11px;
+}
+.prof-panel .pp-title{
+  font-size:9px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.5px;color:var(--muted);margin-bottom:7px;
+}
+.pp-row{
+  display:flex;align-items:center;gap:5px;margin-bottom:4px;
+}
+.pp-lbl{font-size:9px;color:var(--muted);width:45px;flex-shrink:0;}
+.pp-val{
+  font-size:11px;font-weight:700;color:var(--text);
+  padding:1px 6px;border-radius:4px;
+  background:rgba(var(--accent-rgb),.1);
+}
+.pp-link{
+  display:flex;align-items:center;gap:5px;
+  margin-top:8px;font-size:10px;color:#60b8f0;
+  text-decoration:none;font-weight:600;
+}
+.pp-link:hover{text-decoration:underline;}
+
+/* ═══════════════════════════════════════════
+   MAIN CONTENT
+═══════════════════════════════════════════ */
+.main-content{
+  flex:1;overflow-y:auto;
+  display:flex;flex-direction:column;
+  min-width:0;
+}
+
+/* ═══════════════════════════════════════════
+   TOOLBAR (search + chips)
+═══════════════════════════════════════════ */
+.toolbar{
+  display:flex;align-items:center;flex-wrap:wrap;gap:5px;
+  padding:8px 16px;
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:100;
+}
+.sw{
+  display:flex;align-items:center;gap:6px;
+  background:var(--hover);border:1px solid var(--border);
+  border-radius:8px;padding:0 10px;height:28px;
+  min-width:180px;
+}
+.sw i{font-size:11px;color:var(--muted);}
+.sw input{
+  background:none;border:none;outline:none;
+  color:var(--text);font-size:12px;width:100%;
+  font-family:'DM Sans',sans-serif;
+}
+.sw input::placeholder{color:var(--muted);}
+#ordenar{
+  background:var(--hover);border:1px solid var(--border);
+  color:var(--text);font-size:11px;border-radius:8px;
+  padding:0 8px;height:28px;outline:none;cursor:pointer;
+  font-family:'DM Sans',sans-serif;
+}
+.div{width:1px;height:20px;background:var(--border);margin:0 3px;flex-shrink:0;}
+.chip{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:4px 10px;border-radius:99px;height:26px;
+  border:1px solid var(--border);
+  background:transparent;color:var(--muted);
+  font-size:11px;font-weight:500;font-family:'DM Sans',sans-serif;
+  cursor:pointer;transition:all .15s;white-space:nowrap;
+}
+.chip:hover{border-color:var(--accent);color:var(--accent);}
+.chip.active{
+  background:rgba(var(--accent-rgb),.12);
+  border-color:var(--accent);color:var(--accent);font-weight:700;
+}
+
+/* ═══════════════════════════════════════════
+   KPIs
+═══════════════════════════════════════════ */
+.kpi-bar{
+  display:flex;gap:8px;padding:10px 16px;
+  flex-wrap:wrap;
+}
+.kpi{
+  flex:1;min-width:100px;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;padding:10px 12px;
+}
+.kpi-n{
+  font-size:22px;font-weight:800;font-family:'Syne',sans-serif;
+  line-height:1;
+}
+.kpi-l{font-size:10px;color:var(--muted);margin-top:3px;}
+.kpi-sub{font-size:11px;font-weight:600;margin-top:2px;}
+
+/* ═══════════════════════════════════════════
+   ACCIONES BARRA
+═══════════════════════════════════════════ */
+.actions-bar{
+  display:flex;align-items:center;gap:8px;
+  padding:6px 16px;
+  border-bottom:1px solid var(--border);
+}
+.btn-action{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:6px 12px;border-radius:8px;
+  border:1px solid var(--border);
+  background:var(--surface);color:var(--text);
+  font-size:11px;font-weight:600;cursor:pointer;
+  font-family:'DM Sans',sans-serif;transition:all .15s;
+  text-decoration:none;
+}
+.btn-action:hover{border-color:var(--accent);color:var(--accent);}
+.btn-action.primary{
+  background:var(--accent);color:#000;border-color:var(--accent);
+}
+.btn-action.primary:hover{background:var(--accent-hover,#b0e040);}
+.btn-action i{font-size:10px;}
+#total-info{font-size:11px;color:var(--muted);margin-left:auto;}
+
+/* ═══════════════════════════════════════════
+   TABLA
+═══════════════════════════════════════════ */
+.tw{overflow-x:auto;padding:0 16px 16px;}
+table{
+  width:100%;border-collapse:collapse;
+  font-size:12px;min-width:700px;
+}
+.th{
+  display:flex;padding:8px 0 6px;
+  border-bottom:2px solid var(--border);
+  font-size:10px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.5px;color:var(--muted);
+  position:sticky;top:0;background:var(--bg);z-index:5;
+}
+thead th{
+  padding:8px 12px;text-align:left;
+  background:var(--hover);
+  font-size:10px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.4px;color:var(--muted);
+  border-bottom:1px solid var(--border);
+  white-space:nowrap;
+}
+thead th:first-child{border-radius:8px 0 0 0;}
+thead th:last-child{border-radius:0 8px 0 0;}
+tbody tr{
+  border-bottom:1px solid var(--border);
+  transition:background .1s;
+  cursor:pointer;
+}
+tbody tr:hover{background:var(--hover);}
+td{padding:10px 12px;vertical-align:middle;}
+td.td-nombre{font-weight:600;font-size:13px;}
+td.td-nombre span{display:block;font-size:10px;color:var(--muted);font-weight:400;}
+
+.badge{
+  display:inline-flex;align-items:center;gap:3px;
+  padding:2px 7px;border-radius:99px;
+  font-size:10px;font-weight:700;
+}
+.badge-alerta{background:rgba(255,159,96,.15);color:#ff9f60;}
+.badge-silencioso{background:rgba(96,184,240,.15);color:#60b8f0;}
+.badge-estable{background:rgba(var(--accent-rgb),.15);color:var(--accent);}
+.badge-sin{background:rgba(100,100,100,.1);color:#666;}
+
+.mini-bar{
+  height:5px;border-radius:3px;background:var(--border);
+  width:60px;overflow:hidden;display:inline-block;vertical-align:middle;
+}
+.mini-bar-fill{height:100%;border-radius:3px;}
+
+/* ═══════════════════════════════════════════
+   CARDS GRID
+═══════════════════════════════════════════ */
+#cards-grid{
+  display:none;flex-wrap:wrap;gap:10px;
+  padding:16px;
+}
+.est-card{
+  width:calc(25% - 8px);min-width:200px;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;padding:14px;
+  cursor:pointer;transition:all .2s;
+}
+.est-card:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.12);}
+.ec-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.ec-avatar{
+  width:36px;height:36px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;font-weight:800;font-family:'Syne',sans-serif;
+  background:rgba(var(--accent-rgb),.15);color:var(--accent);
+}
+.ec-name{font-weight:600;font-size:13px;line-height:1.3;}
+.ec-course{font-size:10px;color:var(--muted);}
+.ec-stat{
+  display:flex;justify-content:space-between;
+  font-size:11px;margin-bottom:4px;
+}
+.ec-stat-lbl{color:var(--muted);}
+.ec-stat-val{font-weight:700;}
+
+/* ═══════════════════════════════════════════
+   ESTADO VACÍO
+═══════════════════════════════════════════ */
+.empty-state{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:80px 20px;gap:12px;color:var(--muted);
+  text-align:center;
+}
+.empty-state .ei{font-size:48px;opacity:.3;}
+.empty-state .et{font-size:16px;font-weight:600;color:var(--text);}
+.empty-state .es{font-size:13px;}
+
+/* ═══════════════════════════════════════════
+   MODAL (crear/editar usuario)
+═══════════════════════════════════════════ */
+.modal-overlay{
+  display:none;position:fixed;inset:0;z-index:1000;
+  background:rgba(0,0,0,.6);backdrop-filter:blur(4px);
+  align-items:center;justify-content:center;
+}
+.modal-overlay.open{display:flex;}
+.modal{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:16px;padding:24px;width:100%;max-width:440px;
+  max-height:90vh;overflow-y:auto;
+  animation:modalIn .2s ease both;
+}
+@keyframes modalIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+.modal-title{
+  font-family:'Syne',sans-serif;font-size:16px;font-weight:800;
+  margin-bottom:4px;
+}
+.modal-sub{font-size:12px;color:var(--muted);margin-bottom:20px;}
+.form-row{display:flex;gap:10px;margin-bottom:12px;}
+.form-col{flex:1;}
+.form-label{
+  display:block;font-size:10px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.4px;color:var(--muted);margin-bottom:5px;
+}
+.form-input{
+  width:100%;background:var(--hover);border:1px solid var(--border);
+  color:var(--text);padding:8px 12px;border-radius:8px;
+  font-size:12px;outline:none;font-family:'DM Sans',sans-serif;
+  transition:border-color .2s;
+}
+.form-input:focus{border-color:var(--accent);}
+.form-select{
+  width:100%;background:var(--hover);border:1px solid var(--border);
+  color:var(--text);padding:8px 12px;border-radius:8px;
+  font-size:12px;outline:none;font-family:'DM Sans',sans-serif;
+}
+.grade-btn-group{
+  display:flex;gap:5px;flex-wrap:wrap;
+}
+.cu-grade-btn{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:4px 10px;border-radius:6px;
+  border:1px solid var(--border);
+  background:transparent;color:var(--muted);
+  font-size:11px;cursor:pointer;transition:all .15s;
+}
+.cu-grade-btn input[type="radio"]{
+  accent-color:var(--accent);
+}
+.modal-actions{
+  display:flex;gap:8px;justify-content:flex-end;margin-top:20px;
+  padding-top:16px;border-top:1px solid var(--border);
+}
+.btn-cancel{
+  padding:8px 16px;border-radius:8px;
+  border:1px solid var(--border);background:transparent;
+  color:var(--muted);font-size:12px;cursor:pointer;
+  font-family:'DM Sans',sans-serif;
+}
+.btn-save{
+  padding:8px 18px;border-radius:8px;
+  border:none;background:var(--accent);
+  color:#000;font-size:12px;font-weight:700;cursor:pointer;
+  font-family:'Syne',sans-serif;
+}
+
+/* ═══════════════════════════════════════════
+   USUARIOS SECTION
+═══════════════════════════════════════════ */
+#usuarios-section{
+  display:none;padding:16px;
+}
+.usuarios-grid{
+  display:flex;flex-wrap:wrap;gap:10px;
+}
+.user-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;padding:12px 14px;
+  min-width:220px;display:flex;flex-direction:column;gap:6px;
+}
+.uc-header{display:flex;align-items:center;gap:8px;}
+.uc-avatar{
+  width:30px;height:30px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:800;font-family:'Syne',sans-serif;
+  background:rgba(var(--accent-rgb),.15);color:var(--accent);flex-shrink:0;
+}
+.uc-name{font-weight:600;font-size:13px;}
+.uc-user{font-size:10px;color:var(--muted);}
+.uc-meta{display:flex;gap:5px;flex-wrap:wrap;}
+.uc-tag{
+  font-size:9px;padding:2px 6px;border-radius:4px;
+  background:var(--hover);color:var(--muted);
+}
+.uc-actions{display:flex;gap:5px;margin-top:4px;}
+.uc-btn{
+  padding:4px 10px;border-radius:6px;font-size:10px;font-weight:600;
+  border:1px solid var(--border);background:transparent;
+  color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif;
+  transition:all .15s;
+}
+.uc-btn:hover{border-color:var(--accent);color:var(--accent);}
+.uc-btn.del:hover{border-color:#ff6b6b;color:#ff6b6b;}
+
+/* ═══════════════════════════════════════════
+   UPLOAD SECTION
+═══════════════════════════════════════════ */
+#upload-section{
+  display:none;padding:16px;
+}
+.upload-grid{display:flex;gap:12px;flex-wrap:wrap;}
+.upload-card{
+  flex:1;min-width:280px;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;padding:16px;
+}
+.upload-card h3{font-size:14px;font-weight:700;margin-bottom:4px;}
+.upload-card p{font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.6;}
+.upload-drop{
+  border:2px dashed var(--border);border-radius:10px;
+  padding:24px;text-align:center;
+  cursor:pointer;transition:border-color .2s;
+}
+.upload-drop:hover{border-color:var(--accent);}
+.upload-drop input{display:none;}
+.upload-status{
+  margin-top:10px;font-size:12px;padding:8px 12px;
+  border-radius:8px;display:none;
+}
+.upload-status.ok{background:rgba(var(--accent-rgb),.1);color:var(--accent);}
+.upload-status.err{background:rgba(255,107,107,.1);color:#ff6b6b;}
+
+/* ═══════════════════════════════════════════
+   NOTIFICATIONS / TOAST
+═══════════════════════════════════════════ */
+#toast{
+  position:fixed;bottom:20px;right:20px;z-index:9999;
+  display:flex;flex-direction:column;gap:8px;pointer-events:none;
+}
+.toast-item{
+  padding:10px 16px;border-radius:10px;font-size:12px;font-weight:600;
+  box-shadow:0 4px 20px rgba(0,0,0,.2);pointer-events:auto;
+  animation:toastIn .3s ease both;max-width:320px;
+}
+.toast-ok{background:#1e2e1e;border:1px solid rgba(var(--accent-rgb),.3);color:var(--accent);}
+.toast-err{background:#2e1e1e;border:1px solid rgba(255,107,107,.3);color:#ff6b6b;}
+@keyframes toastIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* ═══════════════════════════════════════════
+   THEME TOGGLE
+═══════════════════════════════════════════ */
+.mt-theme-toggle{
+  display:flex;align-items:center;gap:2px;
+  background:var(--hover);border:1px solid var(--border);
+  border-radius:99px;padding:2px;
+}
+.mt-tbtn{
+  padding:3px 9px;border-radius:99px;border:none;
+  cursor:pointer;font-family:inherit;font-size:10px;font-weight:700;
+  color:var(--muted);background:transparent;transition:all .2s;white-space:nowrap;
+}
+.mt-tbtn.theme-btn-active{
+  background:rgba(var(--accent-rgb),.15);
+  color:var(--accent);box-shadow:0 1px 3px rgba(0,0,0,.2);
+}
+
+/* ═══════════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════════ */
+@media(max-width:900px){
+  .sidebar{display:none;}
+  .est-card{width:calc(50% - 5px);}
+}
+@media(max-width:600px){
+  .est-card{width:100%;}
+  .kpi{min-width:80px;}
+}
+</style>
+<script src="/static/theme.js"></script>
+</head>
+<body>
+
+<!-- ════════════════ NAVBAR ════════════════ -->
+<nav class="nav">
+  <a href="/" class="logo">
+    <div class="logo-row"><span class="a">Multimedia</span><span>Track</span></div>
+    <div class="logo-sub2">C.E. Benito Juárez</div>
+  </a>
+
+  <div class="nav-links">
+    <a class="nl active" href="#" onclick="showSection('students');return false;"><i class="fas fa-chart-pie"></i> Dashboard</a>
+    {% if current_user and current_user.rol not in ['profesor'] %}
+    <a class="nl" href="/reportes"><i class="fas fa-flag"></i> Reportes</a>
+    {% endif %}
+    {% if current_user and current_user.es_admin %}
+    <a class="nl" href="/patrones"><i class="fas fa-brain"></i> Patrones</a>
+    <a class="nl" href="/planificacion"><i class="fas fa-book-open"></i> Planificación</a>
+    {% endif %}
+    {% if current_user and current_user.rol not in ['profesor','psicologa_primer_ciclo','psicologa_segundo_ciclo'] %}
+    <button class="nl" onclick="showSection('upload')"><i class="fas fa-upload"></i> Cargar datos</button>
+    {% endif %}
+    {% if current_user and current_user.es_admin %}
+    <button class="nl" onclick="showSection('usuarios')"><i class="fas fa-users-cog"></i> Usuarios</button>
+    <button class="nl" onclick="abrirModalDB()" style="color:#ff9f60;"><i class="fas fa-database"></i> BD</button>
+    {% endif %}
+    {% if current_user and current_user.rol == 'profesor' %}
+    <a class="nl" href="/profesor"><i class="fas fa-clipboard-check"></i> Pase de lista</a>
+    {% endif %}
+    {% if current_user %}
+    <span class="nl" style="font-size:10px;opacity:.5;pointer-events:none;">
+      {{ {'directora':'👑','coordinador_general':'🏛️','coordinador_primer_ciclo':'📚',
+          'coordinador_segundo_ciclo':'🎓','psicologa_primer_ciclo':'🧠',
+          'psicologa_segundo_ciclo':'🧠','profesor':'🏫'}.get(current_user.rol,'') }}
+      {{ current_user.rol | replace('_',' ') | title }}
+    </span>
+    {% endif %}
+  </div>
+
+  <div class="nav-right">
+    <!-- Theme toggle inyectado por theme.js -->
+    <div class="user-badge">
+      <div class="user-avatar" id="user-av">{{ usuario.nombre[:1].upper() if usuario else 'U' }}</div>
+      <div>
+        <div class="user-name">{{ usuario.nombre if usuario else 'Usuario' }}</div>
+      </div>
+      <span class="user-rol {{ 'rol-coord' if usuario and usuario.rol == 'coordinador' else 'rol-prof' }}">
+        {{ usuario.rol if usuario else '' }}
+      </span>
+    </div>
+    <a href="/logout" class="btn-logout"><i class="fas fa-sign-out-alt"></i></a>
+  </div>
+</nav>
+
+<!-- ════════════════ APP BODY ════════════════ -->
+<div class="app-body">
+
+  <!-- ── SIDEBAR ── -->
+  <aside class="sidebar">
+
+    {%- if es_profesor %}
+    <!-- Panel del profesor -->
+    <div class="prof-panel">
+      <div class="pp-title"><i class="fas fa-chalkboard-teacher" style="margin-right:4px;"></i>Tu perfil</div>
+      {% if prof_grado %}
+      <div class="pp-row">
+        <span class="pp-lbl">Grado</span>
+        <span class="pp-val">{{ prof_grado.upper() }}</span>
+      </div>
+      {% endif %}
+      {% if prof_mencion %}
+      <div class="pp-row">
+        <span class="pp-lbl">Mención</span>
+        <span class="pp-val" style="color:var(--accent);">{{ prof_mencion }}</span>
+      </div>
+      {% endif %}
+      {% if prof_asignaturas %}
+      <div style="font-size:9px;color:#444;margin-top:5px;line-height:1.6;">
+        {{ prof_asignaturas }}
+      </div>
+      {% endif %}
+      <a href="/profesor" class="pp-link">
+        <i class="fas fa-clipboard-check"></i> Ir a pase de lista →
+      </a>
+    </div>
+    {%- endif %}
+
+    <!-- CICLO -->
+    <div class="sb-section">
+      <div class="sb-label"><i class="fas fa-layer-group" style="margin-right:4px;opacity:.5;"></i>Ciclo</div>
+      <button class="sb-item active" id="sb-ciclo-todos" onclick="sbSetCiclo('')">
+        <i class="fas fa-circle-dot" style="font-size:9px;opacity:.5;"></i>
+        <span style="flex:1;">Todos los ciclos</span>
+      </button>
+      <button class="sb-item" id="sb-ciclo-primero" onclick="sbSetCiclo('primer_ciclo')">
+        <span style="font-size:12px;">📚</span>
+        <span style="flex:1;">1er Ciclo (1ro–3ro)</span>
+        <span class="sb-count" id="sb-cnt-ciclo1">—</span>
+      </button>
+      <button class="sb-item" id="sb-ciclo-segundo" onclick="sbSetCiclo('segundo_ciclo')">
+        <span style="font-size:12px;">🎓</span>
+        <span style="flex:1;">2do Ciclo (4to–6to)</span>
+        <span class="sb-count" id="sb-cnt-ciclo2">—</span>
+      </button>
+    </div>
+
+    <!-- SECCIONES (aparece al seleccionar 1er ciclo o un grado 1ro-3ro) -->
+    <div class="sb-section" id="sb-secciones-panel" style="display:none;">
+      <div class="sb-label"><i class="fas fa-door-open" style="margin-right:4px;opacity:.5;"></i>Sección</div>
+      <button class="sb-item active" id="sb-sec-todas" onclick="sbSetSeccion('')">
+        <span style="flex:1;">Todas</span>
+        <span class="sb-count" id="sb-cnt-sec-todas">—</span>
+      </button>
+      <button class="sb-item" id="sb-sec-a" onclick="sbSetSeccion('A')">
+        <span class="sb-dot" style="background:#a78bfa;"></span>
+        <span style="flex:1;">Sección A</span>
+        <span class="sb-count" id="sb-cnt-sec-a">—</span>
+      </button>
+      <button class="sb-item" id="sb-sec-b" onclick="sbSetSeccion('B')">
+        <span class="sb-dot" style="background:#818cf8;"></span>
+        <span style="flex:1;">Sección B</span>
+        <span class="sb-count" id="sb-cnt-sec-b">—</span>
+      </button>
+      <button class="sb-item" id="sb-sec-c" onclick="sbSetSeccion('C')">
+        <span class="sb-dot" style="background:#6366f1;"></span>
+        <span style="flex:1;">Sección C</span>
+        <span class="sb-count" id="sb-cnt-sec-c">—</span>
+      </button>
+      <button class="sb-item" id="sb-sec-d" onclick="sbSetSeccion('D')">
+        <span class="sb-dot" style="background:#4f46e5;"></span>
+        <span style="flex:1;">Sección D</span>
+        <span class="sb-count" id="sb-cnt-sec-d">—</span>
+      </button>
+      <button class="sb-item" id="sb-sec-e" onclick="sbSetSeccion('E')">
+        <span class="sb-dot" style="background:#4338ca;"></span>
+        <span style="flex:1;">Sección E</span>
+        <span class="sb-count" id="sb-cnt-sec-e">—</span>
+      </button>
+    </div>
+
+    <div class="sb-sep"></div>
+
+    <!-- GRADOS -->
+    <div class="sb-section">
+      <div class="sb-label"><i class="fas fa-graduation-cap" style="margin-right:4px;opacity:.5;"></i>Grados</div>
+
+      {% if not es_profesor %}
+      <button class="sb-item active" id="sb-todos" onclick="sbSetGrado('')">
+        <i class="fas fa-users" style="font-size:11px;color:#555;"></i>
+        Todos
+        <span class="sb-count" id="sb-cnt-todos">—</span>
+      </button>
+      {% endif %}
+
+      {%- set pg = prof_grado | lower -%}
+      {%- set show_all_grades = not es_profesor -%}
+      {% if show_all_grades or '1ro' in pg or '1er' in pg %}
+      <button class="sb-item {% if es_profesor and ('1ro' in pg or '1er' in pg) %}active{% endif %}" id="sb-1ro" onclick="sbSetGrado('1ro')">
+        <span class="sb-dot" style="background:#a78bfa;"></span>1ro Grado
+        <span class="sb-count" id="sb-cnt-1ro">—</span>
+      </button>
+      {% endif %}
+      {% if show_all_grades or '2do' in pg %}
+      <button class="sb-item {% if es_profesor and '2do' in pg %}active{% endif %}" id="sb-2do" onclick="sbSetGrado('2do')">
+        <span class="sb-dot" style="background:#818cf8;"></span>2do Grado
+        <span class="sb-count" id="sb-cnt-2do">—</span>
+      </button>
+      {% endif %}
+      {% if show_all_grades or '3ro' in pg or '3er' in pg %}
+      <button class="sb-item {% if es_profesor and ('3ro' in pg or '3er' in pg) %}active{% endif %}" id="sb-3ro" onclick="sbSetGrado('3ro')">
+        <span class="sb-dot" style="background:#6366f1;"></span>3ro Grado
+        <span class="sb-count" id="sb-cnt-3ro">—</span>
+      </button>
+      {% endif %}
+      {% if show_all_grades or '4' in pg %}
+      <button class="sb-item {% if es_profesor and '4' in pg %}active{% endif %}" id="sb-4to" onclick="sbSetGrado('4to')">
+        <span class="sb-dot dot-mm"></span>
+        4to Grado
+        <span class="sb-count" id="sb-cnt-4to">—</span>
+      </button>
+      {% endif %}
+      {% if show_all_grades or '5' in pg %}
+      <button class="sb-item {% if es_profesor and '5' in pg %}active{% endif %}" id="sb-5to" onclick="sbSetGrado('5to')">
+        <span class="sb-dot" style="background:#f0c060;opacity:.8;"></span>
+        5to Grado
+        <span class="sb-count" id="sb-cnt-5to">—</span>
+      </button>
+      {% endif %}
+      {% if show_all_grades or '6' in pg %}
+      <button class="sb-item {% if es_profesor and '6' in pg %}active{% endif %}" id="sb-6to" onclick="sbSetGrado('6to')">
+        <span class="sb-dot" style="background:#60b8f0;opacity:.8;"></span>
+        6to Grado
+        <span class="sb-count" id="sb-cnt-6to">—</span>
+      </button>
+      {% endif %}
+    </div>
+
+    <div class="sb-sep"></div>
+
+    <!-- ESPECIALIDAD / MENCIONES -->
+    <div class="sb-section">
+      <div class="sb-label"><i class="fas fa-palette" style="margin-right:4px;opacity:.5;"></i>Especialidad</div>
+
+      {%- set pm = prof_mencion | lower -%}
+      {% if not es_profesor %}
+      <button class="sb-item active" id="sb-all-m" onclick="sbSetMencion('')">
+        <i class="fas fa-th" style="font-size:10px;color:#555;"></i>
+        Todas
+        <span class="sb-count" id="sb-cnt-all-m">—</span>
+      </button>
+      {% endif %}
+
+      {% if not es_profesor or 'multimedia' in pm %}
+      <button class="sb-item {% if es_profesor and 'multimedia' in pm %}active{% endif %}"
+              id="sb-multimedia" onclick="sbSetMencion('MULTIMEDIA')">
+        <span style="font-size:13px;line-height:1;">🎬</span>
+        <span style="flex:1;">Multimedia</span>
+        <span class="sb-count" id="sb-cnt-mm">—</span>
+      </button>
+      {% endif %}
+      {% if not es_profesor or 'teatro' in pm %}
+      <button class="sb-item {% if es_profesor and 'teatro' in pm %}active{% endif %}"
+              id="sb-teatro" onclick="sbSetMencion('TEATRO')">
+        <span style="font-size:13px;line-height:1;">🎭</span>
+        <span style="flex:1;">Teatro</span>
+        <span class="sb-count" id="sb-cnt-th">—</span>
+      </button>
+      {% endif %}
+      {% if not es_profesor or 'musica' in pm or 'música' in pm %}
+      <button class="sb-item {% if es_profesor and ('musica' in pm or 'música' in pm) %}active{% endif %}"
+              id="sb-musica" onclick="sbSetMencion('MUSICA')">
+        <span style="font-size:13px;line-height:1;">🎵</span>
+        <span style="flex:1;">Música</span>
+        <span class="sb-count" id="sb-cnt-mu">—</span>
+      </button>
+      {% endif %}
+      {% if not es_profesor or 'visual' in pm or 'artes' in pm %}
+      <button class="sb-item {% if es_profesor and ('visual' in pm or 'artes' in pm) %}active{% endif %}"
+              id="sb-visual" onclick="sbSetMencion('VISUAL')">
+        <span style="font-size:13px;line-height:1;">🎨</span>
+        <span style="flex:1;">Artes Visuales</span>
+        <span class="sb-count" id="sb-cnt-av">—</span>
+      </button>
+      {% endif %}
+    </div>
+
+    <div class="sb-sep"></div>
+
+    <!-- ESTADO -->
+    <div class="sb-section">
+      <div class="sb-label"><i class="fas fa-circle-half-stroke" style="margin-right:4px;opacity:.5;"></i>Estado</div>
+      <button class="sb-item" onclick="setFiltro2('todos')">
+        <i class="fas fa-circle-dot" style="font-size:9px;color:#555;"></i>
+        Todos
+      </button>
+      <button class="sb-item" onclick="setFiltro2('estable')">
+        <span class="sb-dot dot-mm"></span>
+        Estable
+      </button>
+      <button class="sb-item" onclick="setFiltro2('alerta')">
+        <span class="sb-dot" style="background:#ff9f60;"></span>
+        Alerta
+      </button>
+      <button class="sb-item" onclick="setFiltro2('silencioso')">
+        <span class="sb-dot" style="background:#60b8f0;"></span>
+        Silenciosos
+      </button>
+    </div>
+
+  </aside>
+
+  <!-- ── MAIN CONTENT ── -->
+  <div class="main-content">
+
+    <!-- TOOLBAR -->
+    <div class="toolbar">
+      <div class="sw">
+        <i class="fas fa-search"></i>
+        <input type="text" id="busqueda" placeholder="Buscar estudiante..." oninput="filtrar()">
+      </div>
+      <select id="ordenar" onchange="filtrar()">
+        <option value="p_acad_desc">Mayor promedio</option>
+        <option value="p_acad_asc">Menor promedio</option>
+        <option value="riesgo_desc">Mayor riesgo ↑</option>
+        <option value="riesgo_asc">Menor riesgo ↓</option>
+        <option value="proyeccion_desc">Mejor proyección</option>
+        <option value="nombre_asc">Nombre A-Z</option>
+      </select>
+      <div class="div"></div>
+      <button class="chip active" data-filtro="todos"              onclick="setFiltro(this)">Todos</button>
+      <button class="chip"        data-filtro="ALERTA DE REPROBACIÓN" onclick="setFiltro(this)">⚠ Alerta</button>
+      <button class="chip"        data-filtro="CASO SILENCIOSO"    onclick="setFiltro(this)">🔇 Silenciosos</button>
+      <div class="div"></div>
+      <button class="chip" data-grado="4to" onclick="toggleGrado(this)">4to</button>
+      <button class="chip" data-grado="5to" onclick="toggleGrado(this)">5to</button>
+      <button class="chip" data-grado="6to" onclick="toggleGrado(this)">6to</button>
+      <div class="div"></div>
+      <button class="chip" data-mencion="MULTIMEDIA" onclick="toggleMencion(this)">🎬 Multimedia</button>
+      <button class="chip" data-mencion="MUSICA"     onclick="toggleMencion(this)">🎵 Música</button>
+      <button class="chip" data-mencion="TEATRO"     onclick="toggleMencion(this)">🎭 Teatro</button>
+      <button class="chip" data-mencion="VISUAL"     onclick="toggleMencion(this)">🎨 Artes Visuales</button>
+      <div class="div"></div>
+      <button class="chip" id="btn-vista-tabla" onclick="setVista('tabla')" title="Vista tabla">⊞ Tabla</button>
+      <button class="chip" id="btn-vista-cards" onclick="setVista('cards')" title="Vista tarjetas">▦ Tarjetas</button>
+    </div>
+
+    <!-- KPIs -->
+    <div class="kpi-bar" id="kpi-bar">
+      <div class="kpi">
+        <div class="kpi-n" id="kpi-total">—</div>
+        <div class="kpi-l">Estudiantes</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-n" id="kpi-con-notas" style="color:var(--accent);">—</div>
+        <div class="kpi-l">Con notas</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-n" id="kpi-prom" style="color:var(--accent);">—</div>
+        <div class="kpi-l">Prom. general</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-n" id="kpi-alertas" style="color:#ff9f60;">—</div>
+        <div class="kpi-l">Alertas</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-n" id="kpi-silenciosos" style="color:#60b8f0;">—</div>
+        <div class="kpi-l">Silenciosos</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-n" id="kpi-sin-notas" style="color:#666;">—</div>
+        <div class="kpi-l">Sin notas</div>
+      </div>
+    </div>
+
+    <!-- ACTIONS BAR -->
+    <div class="actions-bar">
+      <span id="total-info" style="font-size:11px;color:var(--muted);">Cargando...</span>
+      <div style="margin-left:auto;display:flex;gap:6px;align-items:center;">
+        {% if not es_profesor %}
+        <button class="btn-action" onclick="showSection('upload')"><i class="fas fa-upload"></i> Cargar datos</button>
+        <button class="btn-action primary" onclick="abrirModalUsuario()"><i class="fas fa-plus"></i> Nuevo usuario</button>
+        {% endif %}
+        <button class="btn-action" onclick="cargarDatos(true)"><i class="fas fa-sync"></i> Actualizar</button>
+      </div>
+    </div>
+
+    <!-- TABLA / CARDS -->
+    <div id="estudiantes-section">
+      <div class="tw" id="tabla-container">
+        <div class="empty-state">
+          <div class="ei">⏳</div>
+          <div class="et">Cargando datos...</div>
+          <div class="es">Conectando con la base de datos</div>
+        </div>
+      </div>
+      <div id="cards-grid"></div>
+    </div>
+
+    <!-- UPLOAD SECTION -->
+    <div id="upload-section" style="display:none;">
+      <div class="upload-grid">
+        <!-- Listado maestro -->
+        <div class="upload-card">
+          <h3>📋 Listado del Liceo</h3>
+          <p>Carga el archivo LISTADO oficial del liceo (Excel). Registra estudiantes de 1ro a 6to grado. Para 4to–6to incluye menciones.</p>
+          <div class="upload-drop" onclick="document.getElementById('file-listado').click()">
+            <input type="file" id="file-listado" accept=".xlsx,.xls,.xlsm" onchange="cargarListado(this)">
+            <div style="font-size:24px;margin-bottom:8px;">📂</div>
+            <div style="font-size:13px;font-weight:600;">Haz clic o arrastra aquí</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px;">LISTADO-AÑO-XXXX.xlsx</div>
+          </div>
+          <div class="upload-status" id="status-listado"></div>
+        </div>
+
+        <!-- Boletín Oficial -->
+        <div class="upload-card">
+          <h3>📝 Boletín Oficial</h3>
+          <p>Carga el Boletín oficial del C.E. Benito Juárez. Importa automáticamente calificaciones académicas y técnicas de 1er y 2do ciclo.</p>
+          <div class="upload-drop" onclick="document.getElementById('file-boletin').click()">
+            <input type="file" id="file-boletin" accept=".xlsx,.xls,.xlsm" onchange="cargarBoletinIndex(this)">
+            <div style="font-size:24px;margin-bottom:8px;">📝</div>
+            <div style="font-size:13px;font-weight:600;">Haz clic o arrastra aquí</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px;">Boletin_calificaciones_*.xlsx</div>
+          </div>
+          <div class="upload-status" id="status-boletin"></div>
+        </div>
+
+        <!-- Excel de maestro -->
+        <div class="upload-card">
+          <h3>📝 Registro del Maestro</h3>
+          <p>Carga el Registro de Calificaciones oficial del C.E. Benito Juárez. El sistema detecta automáticamente la materia, grado, mención y profesor del archivo.</p>
+          <div class="upload-drop" onclick="document.getElementById('file-registro').click()">
+            <input type="file" id="file-registro" accept=".xlsx,.xls,.xlsm" onchange="cargarRegistro(this)">
+            <div style="font-size:24px;margin-bottom:8px;">🗂</div>
+            <div style="font-size:13px;font-weight:600;">Haz clic o arrastra aquí</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px;">Registro Calificaciones *.xlsx</div>
+          </div>
+          <div class="upload-status" id="status-registro"></div>
+        </div>
+
+        <!-- Calendario Escolar -->
+        <div class="upload-card" id="card-calendario">
+          <h3>📅 Calendario Escolar</h3>
+          <p style="font-size:11px;color:var(--muted);margin-bottom:10px;">Registra días no laborables para calcular correctamente el % de asistencia mensual.</p>
+          <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;">
+            <input type="date" id="cal-fecha" style="flex:1;min-width:120px;padding:6px 8px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:11px;">
+            <select id="cal-tipo" style="flex:1;min-width:140px;padding:6px 8px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:11px;">
+              <option value="feriado">🔴 Feriado</option>
+              <option value="vacacion_navidad">🎄 Vacac. Navidad</option>
+              <option value="vacacion_semana_santa">✝️ Semana Santa</option>
+              <option value="vacacion_verano">☀️ Vacac. Verano</option>
+              <option value="incidente_climatico">🌧️ Inc. Climático</option>
+              <option value="no_docencia">📌 Sin docencia</option>
+              <option value="otro">⚪ Otro</option>
+            </select>
+          </div>
+          <input type="text" id="cal-desc" placeholder="Descripción (opcional)"
+            style="width:100%;padding:6px 8px;background:var(--surface);border:1px solid var(--border);
+            border-radius:8px;color:var(--text);font-size:11px;box-sizing:border-box;margin-bottom:8px;">
+          <button onclick="agregarDiaCalendario()"
+            style="background:var(--accent);color:#000;border:none;padding:6px 14px;
+            border-radius:8px;font-size:11px;cursor:pointer;font-weight:700;width:100%;margin-bottom:8px;">
+            <i class="fas fa-plus"></i> Agregar día
+          </button>
+          <div id="status-calendario" style="font-size:11px;min-height:16px;"></div>
+          <div id="cal-lista-reciente" style="margin-top:8px;max-height:110px;overflow-y:auto;"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- USUARIOS SECTION -->
+    <div id="usuarios-section" style="display:none;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+        <h2 style="font-size:16px;font-family:'Syne',sans-serif;">Gestión de Usuarios</h2>
+        <button class="btn-action primary" onclick="abrirModalUsuario()"><i class="fas fa-plus"></i> Nuevo usuario</button>
+        <button class="btn-action" onclick="cargarUsuarios()"><i class="fas fa-sync"></i></button>
+      </div>
+      <div class="usuarios-grid" id="usuarios-grid">
+        <div style="color:var(--muted);font-size:13px;">Cargando usuarios...</div>
+      </div>
+    </div>
+
+  </div><!-- /main-content -->
+</div><!-- /app-body -->
+
+<!-- ════════ MODAL USUARIO ════════ -->
+<div class="modal-overlay" id="modal-usuario">
+  <div class="modal">
+    <div class="modal-title" id="modal-titulo">Nuevo Usuario</div>
+    <div class="modal-sub">Sistema MultimediaTrack — C.E. Benito Juárez</div>
+
+    <input type="hidden" id="cu-id">
+
+    <div class="form-row">
+      <div class="form-col">
+        <label class="form-label">Nombre completo</label>
+        <input class="form-input" id="cu-nombre" placeholder="ej: Ana Martínez">
+      </div>
+      <div class="form-col">
+        <label class="form-label">Usuario</label>
+        <input class="form-input" id="cu-username" placeholder="ej: amartinez">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-col">
+        <label class="form-label">Contraseña</label>
+        <input class="form-input" type="password" id="cu-password" placeholder="mínimo 6 caracteres">
+      </div>
+      <div class="form-col">
+        <label class="form-label">Rol</label>
+        <select class="form-select" id="cu-rol" onchange="toggleRolFields()">
+          <option value="coordinador_general">Coordinador General</option>
+          <option value="coordinador_primer_ciclo">Coordinador 1er Ciclo</option>
+          <option value="coordinador_segundo_ciclo">Coordinador 2do Ciclo</option>
+          <option value="psicologa_primer_ciclo">Psicóloga 1er Ciclo</option>
+          <option value="psicologa_segundo_ciclo">Psicóloga 2do Ciclo</option>
+          <option value="profesor" selected>Profesor/a</option>
+        </select>
+        <div id="rol-label-hint" style="font-size:10px;color:var(--muted);margin-top:4px;"></div>
+      </div>
+    </div>
+
+    <div id="prof-fields">
+      <div class="form-row">
+        <div class="form-col">
+          <label class="form-label">Grado asignado</label>
+          <div class="grade-btn-group">
+            <label class="cu-grade-btn" style="border-color:#6366f1;"><input type="radio" name="cu-grado" value="1ro" onchange="cargarSugerenciasMaterias()"> 1ro</label>
+            <label class="cu-grade-btn" style="border-color:#6366f1;"><input type="radio" name="cu-grado" value="2do" onchange="cargarSugerenciasMaterias()"> 2do</label>
+            <label class="cu-grade-btn" style="border-color:#6366f1;"><input type="radio" name="cu-grado" value="3ro" onchange="cargarSugerenciasMaterias()"> 3ro</label>
+            <label class="cu-grade-btn"><input type="radio" name="cu-grado" value="4to" onchange="cargarSugerenciasMaterias()"> 4to</label>
+            <label class="cu-grade-btn"><input type="radio" name="cu-grado" value="5to" onchange="cargarSugerenciasMaterias()"> 5to</label>
+            <label class="cu-grade-btn"><input type="radio" name="cu-grado" value="6to" onchange="cargarSugerenciasMaterias()"> 6to</label>
+            <label class="cu-grade-btn" style="background:rgba(99,102,241,.1);"><input type="radio" name="cu-grado" value="todos" onchange="cargarSugerenciasMaterias()"> Todos</label>
+          </div>
+        </div>
+        <div class="form-col">
+          <label class="form-label">Mención</label>
+          <div class="grade-btn-group">
+            <label class="cu-grade-btn"><input type="radio" name="cu-mencion" value="multimedia" onchange="cargarSugerenciasMaterias()"> 🎬 Multimedia</label>
+            <label class="cu-grade-btn"><input type="radio" name="cu-mencion" value="teatro"     onchange="cargarSugerenciasMaterias()"> 🎭 Teatro</label>
+            <label class="cu-grade-btn"><input type="radio" name="cu-mencion" value="musica"     onchange="cargarSugerenciasMaterias()"> 🎵 Música</label>
+            <label class="cu-grade-btn"><input type="radio" name="cu-mencion" value="visual"     onchange="cargarSugerenciasMaterias()"> 🎨 Artes Visuales</label>
+          </div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-col">
+          <label class="form-label">Asignaturas
+            <span style="font-size:9px;color:var(--muted);font-weight:400;">— separadas por coma, o selecciona del plan</span>
+          </label>
+          <div style="display:flex;gap:6px;align-items:flex-start;flex-direction:column;">
+            <input class="form-input" id="cu-asignaturas" placeholder="ej: Fotografía, Diseño Web...">
+            <div id="sugerencias-materias" style="display:flex;flex-wrap:wrap;gap:4px;min-height:20px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn-save" onclick="guardarUsuario()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════ MODAL BASE DE DATOS ════════ -->
+<div class="modal-overlay" id="modal-db">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-title" style="color:#ff9f60;">
+      <i class="fas fa-database" style="margin-right:8px;"></i>Gestión de Base de Datos
+    </div>
+    <div class="modal-sub">C.E. Benito Juárez — solo coordinadores</div>
+
+    <!-- Estado de tablas -->
+    <div id="db-estado-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:16px;">
+      <div style="color:var(--muted);font-size:12px;grid-column:1/-1;">Cargando estado...</div>
+    </div>
+
+    <!-- Selector de qué purgar -->
+    <div style="background:rgba(255,107,107,.05);border:1px solid rgba(255,107,107,.2);border-radius:10px;padding:14px;margin-bottom:12px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#ff6b6b;margin-bottom:10px;">
+        <i class="fas fa-trash-alt"></i> Purga selectiva
+      </div>
+      <div id="db-checkboxes" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;"></div>
+      <div style="font-size:10px;color:var(--muted);margin-bottom:10px;">
+        ⚠ Si seleccionas <b>Estudiantes</b>, se eliminarán también sus calificaciones, asistencia y reportes automáticamente.
+      </div>
+      <button class="btn-action" style="border-color:#ff9f60;color:#ff9f60;" onclick="ejecutarPurgaSelectiva()">
+        <i class="fas fa-eraser"></i> Purgar seleccionadas
+      </button>
+    </div>
+
+    <!-- Purga total -->
+    <div style="background:rgba(255,50,50,.05);border:1px dashed rgba(255,50,50,.3);border-radius:10px;padding:14px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#ff4d4d;margin-bottom:8px;">
+        <i class="fas fa-bomb"></i> Reseteo total (conserva usuarios)
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.6;">
+        Borra <b>todo</b>: estudiantes, notas, asistencia, reportes, plantillas aprendidas. Los usuarios del sistema <b>no</b> se eliminan.
+      </div>
+      <div id="db-confirm-box" style="display:none;margin-bottom:10px;">
+        <input class="form-input" id="db-confirm-input"
+               placeholder='Escribe "BORRAR TODO" para confirmar'
+               style="border-color:#ff4d4d;">
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-action" style="border-color:#ff4d4d;color:#ff4d4d;" onclick="toggleConfirmTotal()">
+          <i class="fas fa-skull"></i> Reseteo total
+        </button>
+        <button id="db-btn-ejecutar-total" class="btn-action" style="display:none;background:#ff4d4d;color:#000;border-color:#ff4d4d;" onclick="ejecutarPurgaTotal()">
+          <i class="fas fa-check"></i> Confirmar y borrar
+        </button>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="cerrarModalDB()">Cerrar</button>
+      <button class="btn-action" onclick="cargarEstadoDB()"><i class="fas fa-sync"></i> Actualizar</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- ════════════════════════════════════
+     JAVASCRIPT
+════════════════════════════════════ -->
+<script>
+// ── ESTADO GLOBAL ──────────────────────────────────────────────
+var TODOS_DATOS = [];
+var filtroActivo = 'todos';
+var filtroEstado = 'todos';
+var filtroCiclo   = '';
+var filtroSeccion = ''; // '' = todas, 'A','B','C','D','E'
+var gradosActivos = [];
+var mencionesActivas = [];
+var vistaActual = 'tabla';
+
+// Inicializar filtros desde perfil del profesor
+var ES_PROFESOR = {{ 'true' if es_profesor else 'false' }};
+var PROF_GRADO   = {{ prof_grado | tojson }};
+var PROF_MENCION = {{ prof_mencion | tojson }};
+
+var CACHE_KEY = 'mt_datos_v4';
+var CACHE_TTL = 90000; // 90 segundos
+function clearCache() {
+  try { sessionStorage.removeItem(CACHE_KEY); } catch(e) {}
+}
+
+// ── INICIALIZACIÓN ─────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', function() {
+  if (ES_PROFESOR) {
+    if (PROF_GRADO)   gradosActivos   = [PROF_GRADO.toLowerCase()];
+    if (PROF_MENCION) mencionesActivas = [PROF_MENCION.toUpperCase()];
+  }
+  cargarDatos(false);
+});
+
+// ── CARGAR DATOS DESDE API ──────────────────────────────────────
+function cargarDatos(forzar) {
+  if (!forzar) {
+    try {
+      var raw = sessionStorage.getItem(CACHE_KEY);
+      if (raw) {
+        var cached = JSON.parse(raw);
+        if (Date.now() - cached.ts < CACHE_TTL) {
+          procesarDatos(cached.data);
+          return;
+        }
+      }
+    } catch(e) {}
+  }
+
+  document.getElementById('tabla-container').innerHTML =
+    '<div class="empty-state"><div class="ei">⏳</div><div class="et">Cargando...</div></div>';
+
+  fetch('/api/datos')
+    .then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function(d) {
+      try { sessionStorage.setItem(CACHE_KEY, JSON.stringify({ts:Date.now(), data:d})); } catch(e) {}
+      procesarDatos(d);
+    })
+    .catch(function(err) {
+      document.getElementById('tabla-container').innerHTML =
+        '<div class="empty-state"><div class="ei">⚠</div>' +
+        '<div class="et">Sin conexión</div>' +
+        '<div class="es">' + err.message + '</div></div>';
+    });
+}
+
+// ── PROCESAR Y RENDERIZAR ───────────────────────────────────────
+function procesarDatos(data) {
+  TODOS_DATOS = data || [];
+  actualizarContadoresSidebar();
+  actualizarKPIs();
+  filtrar();
+}
+
+function actualizarContadoresSidebar() {
+  var cnts = {todos:0,
+              '1ro':0,'2do':0,'3ro':0,'4to':0,'5to':0,'6to':0,
+              ciclo1:0, ciclo2:0,
+              mm:0, th:0, mu:0, av:0, allM:0};
+  TODOS_DATOS.forEach(function(e) {
+    cnts.todos++;
+    var g = (e.grado || '').toLowerCase();
+    if (g.includes('1'))      cnts['1ro']++;
+    if (g.includes('2'))      cnts['2do']++;
+    if (g.includes('3'))      cnts['3ro']++;
+    if (g.includes('4'))      cnts['4to']++;
+    if (g.includes('5'))      cnts['5to']++;
+    if (g.includes('6'))      cnts['6to']++;
+    var ec = (e.ciclo || 'segundo_ciclo');
+    if (ec === 'primer_ciclo') cnts.ciclo1++; else cnts.ciclo2++;
+    var cc = (e.curso || '').toUpperCase();
+    cnts.allM++;
+    if (cc.includes('MULTIMEDIA')) cnts.mm++;
+    if (cc.includes('TEATRO'))     cnts.th++;
+    if (cc.includes('MUSICA') || cc.includes('MÚSICA')) cnts.mu++;
+    if (cc.includes('VISUAL') || cc.includes('ARTES')) cnts.av++;
+  });
+  function setc(id, v) { var el = document.getElementById(id); if(el) el.textContent = v; }
+  setc('sb-cnt-todos',  cnts.todos);
+  setc('sb-cnt-1ro',    cnts['1ro']);
+  setc('sb-cnt-2do',    cnts['2do']);
+  setc('sb-cnt-3ro',    cnts['3ro']);
+  setc('sb-cnt-4to',    cnts['4to']);
+  setc('sb-cnt-5to',    cnts['5to']);
+  setc('sb-cnt-6to',    cnts['6to']);
+  setc('sb-cnt-ciclo1', cnts.ciclo1);
+  setc('sb-cnt-ciclo2', cnts.ciclo2);
+  setc('sb-cnt-all-m',  cnts.allM);
+  setc('sb-cnt-mm',     cnts.mm);
+  setc('sb-cnt-th',     cnts.th);
+  setc('sb-cnt-mu',     cnts.mu);
+  setc('sb-cnt-av',     cnts.av);
+}
+
+function actualizarKPIs() {
+  var total = TODOS_DATOS.length;
+  var conNotas = TODOS_DATOS.filter(function(e) { return e.tiene_notas; }).length;
+  var alertas  = TODOS_DATOS.filter(function(e) { return e.categoria === 'ALERTA DE REPROBACIÓN'; }).length;
+  var silenc   = TODOS_DATOS.filter(function(e) { return e.categoria === 'CASO SILENCIOSO'; }).length;
+  var sinNotas = total - conNotas;
+  var promsArr = TODOS_DATOS.filter(function(e) { return (e.p_acad||0) > 0; }).map(function(e){ return e.p_acad; });
+  var promGen  = promsArr.length ? (promsArr.reduce(function(a,b){return a+b;}, 0) / promsArr.length).toFixed(1) : '—';
+
+  function setk(id, v) { var el = document.getElementById(id); if(el) el.textContent = v; }
+  setk('kpi-total',      total);
+  setk('kpi-con-notas',  conNotas);
+  setk('kpi-prom',       promGen);
+  setk('kpi-alertas',    alertas);
+  setk('kpi-silenciosos',silenc);
+  setk('kpi-sin-notas',  sinNotas);
+}
+
+// ── FILTROS ────────────────────────────────────────────────────
+function filtrar() {
+  var q      = (document.getElementById('busqueda').value || '').toLowerCase().trim();
+  var orden  = document.getElementById('ordenar').value;
+
+  var datos = TODOS_DATOS.filter(function(e) {
+    // Búsqueda de texto
+    if (q) {
+      var nombre = ((e.nombre||'') + ' ' + (e.apellido||'')).toLowerCase();
+      var curso  = (e.curso || '').toLowerCase();
+      if (!nombre.includes(q) && !curso.includes(q)) return false;
+    }
+
+    // Filtro de categoría (chips principales)
+    if (filtroActivo !== 'todos') {
+      if ((e.categoria || '') !== filtroActivo) return false;
+    }
+
+    // Filtro de estado (sidebar)
+    if (filtroEstado !== 'todos') {
+      var cat = (e.categoria || '').toLowerCase();
+      if (filtroEstado === 'alerta'     && !cat.includes('alerta'))     return false;
+      if (filtroEstado === 'silencioso' && !cat.includes('silencioso')) return false;
+      if (filtroEstado === 'estable'    && cat !== '')                  return false;
+    }
+
+    // Filtro de grados (chips)
+    if (gradosActivos.length > 0) {
+      var g = (e.grado || '').toLowerCase();
+      var gradoNorm = g.replace('1ero','1ro').replace('3ero','3ro').replace('2do','2do');
+      var match = gradosActivos.some(function(ga) { return gradoNorm.includes(ga.toLowerCase()); });
+      if (!match) return false;
+    }
+
+    // Filtro de menciones (chips)
+    if (mencionesActivas.length > 0) {
+      var c = (e.curso || '').toUpperCase();
+      var match2 = mencionesActivas.some(function(ma) {
+        if (ma === 'VISUAL') return c.includes('VISUAL') || c.includes('ARTES');
+        if (ma === 'MUSICA') return c.includes('MUSICA') || c.includes('MÚSICA');
+        return c.includes(ma);
+      });
+      if (!match2) return false;
+    }
+
+    // Filtro de ciclo
+    if (filtroCiclo) {
+      if ((e.ciclo || 'segundo_ciclo') !== filtroCiclo) return false;
+    }
+
+    return true;
+  });
+
+  // Ordenar
+  datos.sort(function(a, b) {
+    if (orden === 'p_acad_desc')     return (b.p_acad||0)      - (a.p_acad||0);
+    if (orden === 'p_acad_asc')      return (a.p_acad||0)      - (b.p_acad||0);
+    if (orden === 'riesgo_desc')     return (b.indice_riesgo||0)- (a.indice_riesgo||0);
+    if (orden === 'riesgo_asc')      return (a.indice_riesgo||0)- (b.indice_riesgo||0);
+    if (orden === 'proyeccion_desc') return (b.proyeccion||0)   - (a.proyeccion||0);
+    if (orden === 'nombre_asc') {
+      var na = ((a.apellido||'') + ' ' + (a.nombre||'')).toLowerCase();
+      var nb = ((b.apellido||'') + ' ' + (b.nombre||'')).toLowerCase();
+      return na < nb ? -1 : na > nb ? 1 : 0;
+    }
+    return 0;
+  });
+
+  document.getElementById('total-info').textContent =
+    datos.length + ' de ' + TODOS_DATOS.length + ' estudiantes';
+
+  if (vistaActual === 'cards') {
+    renderCards(datos);
+  } else {
+    renderTabla(datos);
+  }
+}
+
+// ── RENDERIZAR TABLA ───────────────────────────────────────────
+function renderTabla(datos) {
+  var cont = document.getElementById('tabla-container');
+  if (!datos || datos.length === 0) {
+    cont.innerHTML = '<div class="empty-state">' +
+      '<div class="ei">🔍</div>' +
+      '<div class="et">Sin resultados</div>' +
+      '<div class="es">Prueba otro filtro</div></div>';
+    return;
+  }
+
+  var html = '<table><thead><tr>' +
+    '<th>#</th>' +
+    '<th>Estudiante</th>' +
+    '<th>Grado / Mención</th>' +
+    '<th>Prom. Acad.</th>' +
+    '<th>Módulos</th>' +
+    '<th>Proyección</th>' +
+    '<th>Conducta</th>' +
+    '<th>Estado</th>' +
+    '<th>Notas</th>' +
+    '</tr></thead><tbody>';
+
+  datos.forEach(function(e, i) {
+    var acad  = (e.p_acad  || 0).toFixed(1);
+    var mods  = (e.prom_modulos || 0).toFixed(1);
+    var proy  = (e.proyeccion || 0).toFixed(1);
+    var cond  = (e.p_cond || 0).toFixed(1);
+    var cat   = e.categoria || '';
+    var tend  = e.tendencia || 'igual';
+    var tendIcon = tend === 'subiendo' ? '↗' : tend === 'bajando' ? '↘' : '→';
+    var tendColor= tend === 'subiendo' ? 'var(--accent)' : tend === 'bajando' ? '#ff6b6b' : 'var(--muted)';
+
+    var badge = '';
+    var alerta = e.alerta_nivel || 0;
+    var cat_display = e.categoria || cat;
+    if (alerta === 2 || cat === 'ALERTA CRÍTICA' || cat === 'ALERTA DE REPROBACIÓN') {
+      badge = '<span class="badge" style="background:rgba(239,68,68,.2);color:#ef4444;border:1px solid rgba(239,68,68,.4);">🔴 Alerta Crítica</span>';
+    } else if (alerta === 1 || cat === 'ESTUDIANTE EN OBSERVACIÓN') {
+      badge = '<span class="badge" style="background:rgba(249,115,22,.2);color:#f97316;border:1px solid rgba(249,115,22,.4);">🟠 En Observación</span>';
+    } else if (cat === 'EXCELENTE') {
+      badge = '<span class="badge" style="background:rgba(34,197,94,.15);color:#22c55e;border:1px solid rgba(34,197,94,.3);">⭐ Excelente</span>';
+    } else if (e.tiene_notas) {
+      badge = '<span class="badge badge-estable">✓ Regular</span>';
+    } else {
+      badge = '<span class="badge badge-sin">sin datos</span>';
+    }
+
+    var notasIcon = e.tiene_notas
+      ? '<i class="fas fa-check-circle" style="color:var(--accent);font-size:13px;"></i>'
+      : '<i class="fas fa-circle" style="color:#333;font-size:13px;"></i>';
+
+    var inicial = ((e.nombre||'X')[0] + (e.apellido||'X')[0]).toUpperCase();
+    var acadColor = bc(parseFloat(acad));
+
+    var rowBg = (alerta===2) ? 'rgba(239,68,68,.07)' : (alerta===1) ? 'rgba(249,115,22,.07)' : 'transparent';
+    html += '<tr onclick="irAPerfil(' + e.id + ')" style="cursor:pointer;background:' + rowBg + ';">' +
+      '<td style="color:var(--muted);font-size:11px;font-family:\'DM Mono\',monospace;">' + (i+1) + '</td>' +
+      '<td class="td-nombre">' +
+        '<div style="display:flex;align-items:center;gap:8px;">' +
+        '<div style="width:30px;height:30px;border-radius:50%;background:rgba(var(--accent-rgb),.15);' +
+          'display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;' +
+          'color:var(--accent);flex-shrink:0;">' + inicial + '</div>' +
+        '<div>' +
+          '<div style="font-weight:600;">' + (e.nombre||'') + ' ' + (e.apellido||'') + '</div>' +
+          '<div style="font-size:10px;color:var(--muted);">' + (e.cedula || '') + '</div>' +
+        '</div></div>' +
+      '</td>' +
+      '<td>' +
+        '<div style="font-weight:600;font-size:12px;">' + (e.grado||'') + '</div>' +
+        '<div style="font-size:10px;color:var(--muted);">' + (e.curso||'') + '</div>' +
+        (e.seccion ? '<div style="font-size:9px;color:#6366f1;font-weight:700;">Sec. ' + e.seccion + '</div>' : '') +
+      '</td>' +
+      '<td>' +
+        '<span style="font-size:15px;font-weight:800;color:' + acadColor + ';font-family:\'DM Mono\',monospace;">' + (e.p_acad > 0 ? acad : '—') + '</span>' +
+        (e.p_acad > 0 ? '<div class="mini-bar"><div class="mini-bar-fill" style="width:' + acad + '%;background:' + acadColor + ';"></div></div>' : '') +
+      '</td>' +
+      '<td>' +
+        '<span style="font-size:13px;font-weight:700;font-family:\'DM Mono\',monospace;color:' + bc(parseFloat(mods)) + ';">' +
+        (e.prom_modulos > 0 ? mods : '—') + '</span>' +
+      '</td>' +
+      '<td>' +
+        '<span style="font-size:12px;font-weight:700;color:' + tendColor + ';">' + tendIcon + ' ' +
+        (e.proyeccion > 0 ? proy : '—') + '</span>' +
+      '</td>' +
+      '<td>' +
+        '<span style="font-size:12px;color:' + bc(parseFloat(cond)) + ';">' +
+        (e.p_cond > 0 ? cond : '—') + '</span>' +
+      '</td>' +
+      '<td>' + badge + '</td>' +
+      '<td style="text-align:center;">' + notasIcon + '</td>' +
+      '</tr>';
+  });
+
+  html += '</tbody></table>';
+  cont.innerHTML = html;
+}
+
+// ── RENDERIZAR CARDS ───────────────────────────────────────────
+function renderCards(datos) {
+  var grid = document.getElementById('cards-grid');
+  if (!datos || datos.length === 0) {
+    grid.innerHTML = '<div class="empty-state"><div class="ei">🔍</div><div class="et">Sin resultados</div></div>';
+    return;
+  }
+
+  var html = '';
+  datos.forEach(function(e) {
+    var acad = (e.p_acad || 0).toFixed(1);
+    var cat  = e.categoria || '';
+    var inicial = ((e.nombre||'X')[0] + (e.apellido||'X')[0]).toUpperCase();
+    var acadColor = bc(parseFloat(acad));
+
+    var badgeTxt = '';
+    if (cat === 'ALERTA DE REPROBACIÓN') badgeTxt = '⚠ Alerta';
+    else if (cat === 'CASO SILENCIOSO')  badgeTxt = '🔇 Silencioso';
+    else if (e.tiene_notas)              badgeTxt = '✓ Estable';
+
+    // Indicadores del expediente
+    var indBadges = '';
+    var indMap = {
+      conducta:  { critico:'🔴', alerta:'🟠', observacion:'🟡', neutro:'' },
+      psico:     { critico:'🔵', alerta:'🔵', observacion:'🔵', neutro:'' },
+      academico: { critico:'🔴', alerta:'🟠', observacion:'🟡', neutro:'' },
+      logros:    { destacado:'⭐⭐', activo:'⭐', neutro:'' }
+    };
+    var indLabels = {
+      conducta:'Conducta', psico:'Psico', academico:'Académico', logros:'Logros'
+    };
+    var indColors = {
+      critico:'rgba(239,68,68,.18)', alerta:'rgba(249,115,22,.18)',
+      observacion:'rgba(255,196,77,.15)', destacado:'rgba(200,240,96,.18)',
+      activo:'rgba(200,240,96,.1)', neutro:''
+    };
+    var indTextColors = {
+      critico:'#ef4444', alerta:'#f97316', observacion:'#ffc44d',
+      destacado:'#c8f060', activo:'#a8d04a', neutro:''
+    };
+    [['conducta', e.ind_conducta], ['psico', e.ind_psico],
+     ['academico', e.ind_academico], ['logros', e.ind_logros]].forEach(function(pair) {
+      var key = pair[0]; var val = pair[1] || 'neutro';
+      var icon = (indMap[key]||{})[val] || '';
+      if (!icon && val === 'neutro') return;
+      var bg = indColors[val] || '';
+      var tc = indTextColors[val] || 'var(--muted)';
+      if (bg) {
+        indBadges += '<span style="background:'+bg+';color:'+tc+';padding:1px 6px;border-radius:10px;font-size:9px;font-weight:700;margin-right:3px;">'+icon+' '+indLabels[key]+'</span>';
+      }
+    });
+
+    html += '<div class="est-card" onclick="irAPerfil(' + e.id + ')">' +
+      '<div class="ec-header">' +
+        '<div class="ec-avatar">' + inicial + '</div>' +
+        '<div>' +
+          '<div class="ec-name">' + (e.nombre||'') + ' ' + (e.apellido||'') + '</div>' +
+          '<div class="ec-course">' + (e.grado||'') + ' · ' + (e.curso||'') + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="ec-stat"><span class="ec-stat-lbl">Promedio</span>' +
+        '<span class="ec-stat-val" style="color:' + acadColor + ';">' + (e.p_acad > 0 ? acad : '—') + '</span></div>' +
+      '<div class="ec-stat"><span class="ec-stat-lbl">Proyección</span>' +
+        '<span class="ec-stat-val">' + (e.proyeccion > 0 ? (e.proyeccion).toFixed(1) : '—') + '</span></div>' +
+      (indBadges ? '<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:3px;">' + indBadges + '</div>' : '') +
+      (badgeTxt ? '<div style="margin-top:6px;font-size:10px;color:var(--muted);">' + badgeTxt + '</div>' : '') +
+      '</div>';
+  });
+
+  grid.innerHTML = html;
+}
+
+// ── COLOR HELPER ───────────────────────────────────────────────
+function bc(v) {
+  var isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+  if (isNaN(v) || v === 0) return 'var(--muted)';
+  if (isDark) return v >= 85 ? '#4dffb4' : v >= 70 ? '#c8f060' : '#ff4d4d';
+  return v >= 85 ? '#2563EB' : v >= 70 ? '#0284C7' : '#EF4444';
+}
+
+// ── NAVEGACIÓN ─────────────────────────────────────────────────
+function irAPerfil(id) {
+  window.location.href = '/perfil/' + id;
+}
+
+// ── SETTERS DE FILTRO ──────────────────────────────────────────
+function setFiltro(btn) {
+  document.querySelectorAll('.chip[data-filtro]').forEach(function(c) { c.classList.remove('active'); });
+  btn.classList.add('active');
+  filtroActivo = btn.getAttribute('data-filtro') || 'todos';
+  filtrar();
+}
+
+function setFiltro2(estado) {
+  filtroEstado = estado;
+  document.querySelectorAll('.sb-section .sb-item').forEach(function(b) {
+    b.classList.remove('active');
+  });
+  filtrar();
+}
+
+function toggleGrado(btn) {
+  var g = btn.getAttribute('data-grado');
+  if (btn.classList.contains('active')) {
+    btn.classList.remove('active');
+    gradosActivos = gradosActivos.filter(function(x) { return x !== g; });
+  } else {
+    btn.classList.add('active');
+    gradosActivos.push(g);
+  }
+  filtrar();
+}
+
+function toggleMencion(btn) {
+  var m = btn.getAttribute('data-mencion');
+  if (btn.classList.contains('active')) {
+    btn.classList.remove('active');
+    mencionesActivas = mencionesActivas.filter(function(x) { return x !== m; });
+  } else {
+    btn.classList.add('active');
+    mencionesActivas.push(m);
+  }
+  filtrar();
+}
+
+function sbSetGrado(g) {
+  // Limpiar chips de grado activos en toolbar
+  document.querySelectorAll('.chip[data-grado]').forEach(function(c) { c.classList.remove('active'); });
+  gradosActivos = g ? [g] : [];
+  if (g) {
+    var chip = document.querySelector('.chip[data-grado="' + g + '"]');
+    if (chip) chip.classList.add('active');
+  }
+  // Sincronizar filtroCiclo automáticamente
+  if (g) {
+    var pc = ['1ro','2do','3ro'];
+    filtroCiclo = pc.includes(g.toLowerCase()) ? 'primer_ciclo' : 'segundo_ciclo';
+  } else {
+    filtroCiclo = '';
+  }
+  // Actualizar indicador de ciclo activo en sidebar
+  document.querySelectorAll('[id^="sb-ciclo-"]').forEach(function(b){ b.classList.remove('active'); });
+  var cicloMap = {'primer_ciclo':'sb-ciclo-primero','segundo_ciclo':'sb-ciclo-segundo','':'sb-ciclo-todos'};
+  var cicloEl = document.getElementById(cicloMap[filtroCiclo]||'sb-ciclo-todos');
+  if(cicloEl) cicloEl.classList.add('active');
+  // Actualizar grado activo en sidebar
+  document.querySelectorAll('[id^="sb-1ro"],[id^="sb-2do"],[id^="sb-3ro"],[id^="sb-4to"],[id^="sb-5to"],[id^="sb-6to"],#sb-todos').forEach(function(b) {
+    b.classList.remove('active');
+  });
+  var sbId = g ? 'sb-' + g.toLowerCase() : 'sb-todos';
+  var sbEl = document.getElementById(sbId);
+  if (sbEl) sbEl.classList.add('active');
+  filtrar();
+}
+
+function sbSetCiclo(ciclo) {
+  filtroCiclo = ciclo;
+  document.querySelectorAll('[id^="sb-ciclo-"]').forEach(function(b){b.classList.remove('active');});
+  var map = {'':'sb-ciclo-todos','primer_ciclo':'sb-ciclo-primero','segundo_ciclo':'sb-ciclo-segundo'};
+  var el = document.getElementById(map[ciclo]||'sb-ciclo-todos');
+  if(el) el.classList.add('active');
+  gradosActivos=[]; mencionesActivas=[]; filtroSeccion='';
+  document.querySelectorAll('.sb-item[id^="sb-"]:not([id^="sb-ciclo"])').forEach(function(b){b.classList.remove('active');});
+  var todosEl = document.getElementById('sb-todos');
+  if(todosEl) todosEl.classList.add('active');
+  var secTodas = document.getElementById('sb-sec-todas');
+  if(secTodas) secTodas.classList.add('active');
+  filtrar();
+}
+
+function sbSetSeccion(s) {
+  filtroSeccion = s;
+  document.querySelectorAll('[id^="sb-sec-"]').forEach(function(b){ b.classList.remove('active'); });
+  var target = document.getElementById(s ? 'sb-sec-'+s.toLowerCase() : 'sb-sec-todas');
+  if (target) target.classList.add('active');
+  filtrar();
+}
+
+function sbSetMencion(m) {
+  document.querySelectorAll('.chip[data-mencion]').forEach(function(c) { c.classList.remove('active'); });
+  mencionesActivas = m ? [m] : [];
+  if (m) {
+    var chip = document.querySelector('.chip[data-mencion="' + m + '"]');
+    if (chip) chip.classList.add('active');
+  }
+  // Actualizar sidebar
+  ['sb-all-m','sb-multimedia','sb-teatro','sb-musica','sb-visual'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.classList.remove('active');
+  });
+  if (!m && document.getElementById('sb-all-m')) document.getElementById('sb-all-m').classList.add('active');
+  var sbMap = {'MULTIMEDIA':'sb-multimedia','TEATRO':'sb-teatro','MUSICA':'sb-musica','VISUAL':'sb-visual'};
+  if (sbMap[m] && document.getElementById(sbMap[m])) document.getElementById(sbMap[m]).classList.add('active');
+  filtrar();
+}
+
+function setVista(v) {
+  vistaActual = v;
+  var cont  = document.getElementById('tabla-container');
+  var cards = document.getElementById('cards-grid');
+  if (v === 'cards') {
+    cont.style.display  = 'none';
+    cards.style.display = 'flex';
+  } else {
+    cont.style.display  = '';
+    cards.style.display = 'none';
+  }
+  document.getElementById('btn-vista-tabla').classList.toggle('active', v === 'tabla');
+  document.getElementById('btn-vista-cards').classList.toggle('active', v === 'cards');
+  filtrar();
+}
+
+// ── SECCIONES ──────────────────────────────────────────────────
+function showSection(sec) {
+  document.getElementById('estudiantes-section').style.display = 'none';
+  document.getElementById('upload-section').style.display     = 'none';
+  document.getElementById('usuarios-section').style.display   = 'none';
+
+  if (sec === 'students') {
+    document.getElementById('estudiantes-section').style.display = 'block';
+  } else if (sec === 'upload') {
+    document.getElementById('upload-section').style.display = 'block';
+  } else if (sec === 'usuarios') {
+    document.getElementById('usuarios-section').style.display = 'block';
+    cargarUsuarios();
+  }
+}
+
+// ── CARGAS DE ARCHIVOS ─────────────────────────────────────────
+function mostrarStatus(id, msg, tipo) {
+  var el = document.getElementById(id);
+  el.textContent = msg;
+  el.className = 'upload-status ' + (tipo === 'ok' ? 'ok' : 'err');
+  el.style.display = 'block';
+}
+
+function cargarBoletinIndex(input) {
+  if (!input.files[0]) return;
+  var fd = new FormData();
+  fd.append('file', input.files[0]);
+  mostrarStatus('status-boletin', '⏳ Procesando boletín...', 'ok');
+  fetch('/api/cargar-boletin', {method:'POST', body:fd})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (d.ok) {
+        var msg = '✓ ' + (d.mensaje || (d.estudiantes_procesados+' estudiantes, '+d.materias_guardadas+' calificaciones cargadas.'));
+        mostrarStatus('status-boletin', msg, 'ok');
+        if (d.errores && d.errores.length) {
+          var el = document.getElementById('status-boletin');
+          el.innerHTML += '<div style="font-size:10px;color:#ffc44d;margin-top:4px;">⚠ ' + d.errores[0] + '</div>';
+        }
+        clearCache(); cargarDatos(true);
+      } else {
+        var errMsg = (d.error || 'Error al cargar el boletín');
+        mostrarStatus('status-boletin', '✗ ' + errMsg, 'err');
+      }
+      input.value = '';
+    })
+    .catch(function(e){
+      mostrarStatus('status-boletin', '✗ Error de conexión: ' + e.message, 'err');
+    });
+}
+
+function cargarListado(input) {
+  var file = input.files[0];
+  if (!file) return;
+  mostrarStatus('status-listado', '⏳ Procesando listado...', 'ok');
+  var fd = new FormData();
+  fd.append('file', file);
+  fetch('/api/cargar-listado', {method:'POST', body:fd})
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.ok || d.status === 'success') {
+        mostrarStatus('status-listado', '✓ ' + (d.mensaje || 'Listado cargado'), 'ok');
+        toast('Listado cargado correctamente', 'ok');
+        clearCache(); cargarDatos(true);
+      } else {
+        mostrarStatus('status-listado', '✗ ' + (d.error || 'Error'), 'err');
+      }
+    })
+    .catch(function(e) { mostrarStatus('status-listado', '✗ Error: ' + e.message, 'err'); });
+}
+
+function cargarPlantilla(input) {
+  var file = input.files[0];
+  if (!file) return;
+  mostrarStatus('status-plantilla', '⏳ Analizando plantilla BJ...', 'ok');
+  var fd = new FormData();
+  fd.append('file', file);
+  fetch('/api/cargar-plantilla-bj', {method:'POST', body:fd})
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.ok) {
+        var msg = '✓ ' + (d.mensaje || 'Plantilla cargada');
+        mostrarStatus('status-plantilla', msg, 'ok');
+        toast(msg, 'ok');
+        clearCache(); cargarDatos(true);
+      } else {
+        // Fallback: try old /cargar endpoint for legacy Plantilla MultimediaTrack
+        var fd2 = new FormData();
+        fd2.append('file', input.files[0]);
+        fetch('/cargar', {method:'POST', body:fd2})
+          .then(function(r2) { return r2.json(); })
+          .then(function(d2) {
+            if (d2.status === 'success') {
+              mostrarStatus('status-plantilla', '✓ ' + (d2.mensaje || 'Plantilla cargada'), 'ok');
+              toast('Plantilla cargada: ' + (d2.actualizados || 0) + ' estudiantes', 'ok');
+              clearCache(); cargarDatos(true);
+            } else {
+              mostrarStatus('status-plantilla', '✗ ' + (d.error || d2.error || 'Error'), 'err');
+            }
+          });
+      }
+    })
+    .catch(function(e) { mostrarStatus('status-plantilla', '✗ ' + e.message, 'err'); });
+}
+
+function cargarRegistro(input) {
+  var file = input.files[0];
+  if (!file) return;
+  mostrarStatus('status-registro', '⏳ Detectando formato automáticamente...', 'ok');
+  var fd = new FormData();
+  fd.append('file', file);
+  fetch('/api/cargar-plantilla-bj', {method:'POST', body:fd})
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.ok) {
+        var msg = '✓ ' + (d.mensaje || 'Archivo cargado correctamente');
+        mostrarStatus('status-registro', msg, 'ok');
+        toast(msg, 'ok');
+        if (typeof cargarEstadoDB === 'function' &&
+            document.getElementById('modal-db').classList.contains('open')) {
+          cargarEstadoDB();
+        }
+        clearCache(); cargarDatos(true);
+      } else {
+        // Fallback: legacy cargar-registro (formato MINERD estándar)
+        var fd2 = new FormData();
+        fd2.append('file', file);
+        fetch('/api/cargar-registro', {method:'POST', body:fd2})
+          .then(function(r2) { return r2.json(); })
+          .then(function(d2) {
+            if (d2.ok || d2.status === 'success') {
+              var msg2 = '✓ ' + (d2.mensaje || 'Cargado');
+              mostrarStatus('status-registro', msg2, 'ok');
+              toast(msg2, 'ok');
+              clearCache(); cargarDatos(true);
+            } else {
+              mostrarStatus('status-registro',
+                '✗ ' + (d2.error || d.error || 'No se reconoció el formato'), 'err');
+            }
+          })
+          .catch(function(e) { mostrarStatus('status-registro', '✗ ' + e.message, 'err'); });
+      }
+    })
+    .catch(function(e) { mostrarStatus('status-registro', '✗ ' + e.message, 'err'); });
+}
+
+function rolLabel(rol) {
+  var labels = {
+    'directora':                  '👑 Directora',
+    'coordinador_general':        '🏛 Coord. General',
+    'coordinador_primer_ciclo':   '📚 Coord. 1er Ciclo',
+    'coordinador_segundo_ciclo':  '🎓 Coord. 2do Ciclo',
+    'psicologa_primer_ciclo':     '🧠 Psicóloga 1er Ciclo',
+    'psicologa_segundo_ciclo':    '🧠 Psicóloga 2do Ciclo',
+    'coordinador':                '🏛 Coord. General',
+    'profesor':                   '🏫 Profesor/a'
+  };
+  return labels[rol] || rol;
+}
+
+function rolStyle(rol) {
+  var cols = {
+    'directora':                  'background:rgba(251,191,36,.15);color:#fbbf24;border-color:#fbbf24;',
+    'coordinador_general':        'background:rgba(139,92,246,.15);color:#8b5cf6;border-color:#8b5cf6;',
+    'coordinador_primer_ciclo':   'background:rgba(99,102,241,.15);color:#818cf8;',
+    'coordinador_segundo_ciclo':  'background:rgba(59,130,246,.15);color:#3b82f6;',
+    'psicologa_primer_ciclo':     'background:rgba(236,72,153,.15);color:#ec4899;',
+    'psicologa_segundo_ciclo':    'background:rgba(236,72,153,.15);color:#ec4899;',
+    'coordinador':                'background:rgba(139,92,246,.15);color:#8b5cf6;',
+    'profesor':                   'background:rgba(34,197,94,.15);color:#22c55e;'
+  };
+  return cols[rol] || '';
+}
+
+function cargarUsuarios() {
+  var grid = document.getElementById('usuarios-grid');
+  if (!grid) return;
+  grid.innerHTML = '<div style="color:var(--muted);font-size:13px;">Cargando...</div>';
+  fetch('/api/usuarios')
+    .then(function(r) { return r.json(); })
+    .then(function(usuarios) {
+      if (!usuarios.length) {
+        grid.innerHTML = '<div style="color:var(--muted);">No hay usuarios.</div>';
+        return;
+      }
+      var html = '';
+      usuarios.forEach(function(u) {
+        var ini = u.nombre ? u.nombre[0].toUpperCase() : '?';
+        html += '<div class="user-card">' +
+          '<div class="uc-header">' +
+            '<div class="uc-avatar">' + ini + '</div>' +
+            '<div>' +
+              '<div class="uc-name">' + escHtml(u.nombre) + '</div>' +
+              '<div class="uc-user">@' + escHtml(u.username) + '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="uc-meta">' +
+            '<span class="uc-tag" style="' + rolStyle(u.rol) + '">' + rolLabel(u.rol) + '</span>' +
+            (u.grado   ? '<span class="uc-tag">' + escHtml(u.grado) + '</span>' : '') +
+            (u.mencion ? '<span class="uc-tag">' + escHtml(u.mencion) + '</span>' : '') +
+            '<span class="uc-tag" style="color:' + (u.activo ? 'var(--accent)' : '#ff6b6b') + ';">' +
+              (u.activo ? 'activo' : 'inactivo') + '</span>' +
+          '</div>' +
+          '<div class="uc-actions">' +
+            '<button class="uc-btn" data-uid="' + u.id + '" onclick="editarUsuario(parseInt(this.dataset.uid))">✏ Editar</button>' +
+            '<button class="uc-btn del" data-uid="' + u.id + '" data-uname="' + escHtml(u.username) + '" onclick="eliminarUsuario(parseInt(this.dataset.uid),this.dataset.uname)">🗑 Eliminar</button>' +
+          '</div>' +
+          '</div>';
+      });
+      grid.innerHTML = html;
+    })
+    .catch(function(e) {
+      grid.innerHTML = '<div style="color:#ff6b6b;">Error: ' + e.message + '</div>';
+    });
+}
+
+function abrirModalUsuario() {
+  document.getElementById('modal-titulo').textContent = 'Nuevo usuario';
+  document.getElementById('cu-id').value = '';
+  document.getElementById('cu-nombre').value = '';
+  document.getElementById('cu-username').value = '';
+  document.getElementById('cu-password').value = '';
+  document.getElementById('cu-asignaturas').value = '';
+  document.getElementById('cu-rol').value = 'profesor';
+  document.querySelectorAll('[name="cu-grado"]').forEach(function(r) { r.checked = false; });
+  document.querySelectorAll('[name="cu-mencion"]').forEach(function(r) { r.checked = false; });
+  toggleRolFields();
+  document.getElementById('modal-usuario').classList.add('open');
+}
+
+function editarUsuario(uid) {
+  fetch('/api/usuarios')
+    .then(function(r) { return r.json(); })
+    .then(function(usuarios) {
+      var u = usuarios.find(function(x) { return x.id === uid; });
+      if (!u) return;
+      document.getElementById('modal-titulo').textContent = 'Editar usuario';
+      document.getElementById('cu-id').value = uid;
+      document.getElementById('cu-nombre').value = u.nombre || '';
+      document.getElementById('cu-username').value = u.username || '';
+      document.getElementById('cu-password').value = '';
+      document.getElementById('cu-asignaturas').value = u.asignaturas || '';
+      document.getElementById('cu-rol').value = u.rol || 'profesor';
+      document.querySelectorAll('[name="cu-grado"]').forEach(function(r) {
+        r.checked = r.value === (u.grado || '');
+      });
+      document.querySelectorAll('[name="cu-mencion"]').forEach(function(r) {
+        r.checked = r.value === (u.mencion || '').toLowerCase();
+      });
+      toggleRolFields();
+      document.getElementById('modal-usuario').classList.add('open');
+    });
+}
+
+function cerrarModal() {
+  document.getElementById('modal-usuario').classList.remove('open');
+}
+
+function toggleRolFields() {
+  var rol = document.getElementById('cu-rol').value;
+  var showProf = rol === 'profesor';
+  document.getElementById('prof-fields').style.display = showProf ? 'block' : 'none';
+  // For primer ciclo roles, hide mention fields
+  var mencEl = document.getElementById('mencion-fields');
+  if (mencEl) {
+    var esPrimerCiclo = document.querySelector('[name="cu-grado"]:checked');
+    var gradoVal = esPrimerCiclo ? esPrimerCiclo.value : '';
+    var esPrimer = ['1ro','2do','3ro'].includes(gradoVal);
+    mencEl.style.display = esPrimer ? 'none' : 'block';
+  }
+  // Label update based on role
+  var rolesLabel = {
+    'coordinador_general': '👤 Coordinador General',
+    'coordinador_primer_ciclo': '📚 Coordinador 1er Ciclo (1ro–3ro)',
+    'coordinador_segundo_ciclo': '🎓 Coordinador 2do Ciclo (4to–6to)',
+    'psicologa_primer_ciclo': '🧠 Psicóloga 1er Ciclo',
+    'psicologa_segundo_ciclo': '🧠 Psicóloga 2do Ciclo',
+    'profesor': '🏫 Profesor/a'
+  };
+  var lbl = document.getElementById('rol-label-hint');
+  if (lbl) lbl.textContent = rolesLabel[rol] || '';
+}
+
+function cargarSugerenciasMaterias() {
+  // When grado + mención is selected in modal, suggest subjects from the plan
+  var gradoEl  = document.querySelector('[name="cu-grado"]:checked');
+  var mencEl   = document.querySelector('[name="cu-mencion"]:checked');
+  if (!gradoEl || !mencEl) return;
+
+  var grado   = gradoEl.value;
+  var mencion = mencEl.value.toUpperCase();
+  var cont    = document.getElementById('sugerencias-materias');
+  if (!cont) return;
+
+  fetch('/api/plan-estudio?grado=' + grado + '&mencion=' + mencion)
+    .then(r => r.json())
+    .then(data => {
+      if (!data.asignaturas) return;
+      // Only show specialty subjects (non-common)
+      var comunes = ['lengua española','inglés','matemática','ciencias sociales',
+                     'ciencias de la naturaleza','formación integral','educación física',
+                     'identidad, cultura'];
+      var especificas = data.asignaturas.filter(a => {
+        var n = a.nombre.toLowerCase();
+        return !comunes.some(c => n.includes(c));
+      });
+      cont.innerHTML = especificas.map(a =>
+        '<button style="padding:3px 8px;border-radius:6px;border:1px solid var(--border);' +
+        'background:rgba(var(--accent-rgb),.08);color:var(--accent);font-size:10px;cursor:pointer;' +
+        (a.horas_semana===0 ? "border-style:dashed;" : "") + '" ' +
+        'onclick="agregarMateria(this)" data-mat="' + escHtml(a.nombre) + '">' +
+        escHtml(a.nombre) + (a.horas_semana === 0 ? ' ★' : '') +
+        '</button>'
+      ).join('');
+    })
+    .catch(() => {});
+}
+
+function agregarMateria(btn) {
+  var mat = btn.getAttribute('data-mat');
+  var inp = document.getElementById('cu-asignaturas');
+  var current = inp.value.split(',').map(s => s.trim()).filter(Boolean);
+  if (!current.includes(mat)) current.push(mat);
+  inp.value = current.join(', ');
+  btn.style.background = 'rgba(var(--accent-rgb),.2)';
+  btn.style.fontWeight = '700';
+}
+
+function guardarUsuario() {
+  var uid = document.getElementById('cu-id').value;
+  var nombre   = document.getElementById('cu-nombre').value.trim();
+  var username = document.getElementById('cu-username').value.trim();
+  var password = document.getElementById('cu-password').value.trim();
+  var rol      = document.getElementById('cu-rol').value;
+  var asigs    = document.getElementById('cu-asignaturas').value.trim();
+  var gradoEl  = document.querySelector('[name="cu-grado"]:checked');
+  var mencEl   = document.querySelector('[name="cu-mencion"]:checked');
+  var grado    = gradoEl ? gradoEl.value : '';
+  var mencion  = mencEl  ? mencEl.value  : '';
+
+  if (!nombre || !username) { toast('Nombre y usuario son requeridos', 'err'); return; }
+
+  var body = {nombre:nombre, username:username, rol:rol, grado:grado, mencion:mencion, asignaturas:asigs};
+  if (password) body.password = password;
+
+  var url    = uid ? '/api/usuarios/' + uid : '/api/usuarios';
+  var method = uid ? 'PATCH' : 'POST';
+  if (!uid) body.username = username;
+  if (!uid && !password) { toast('La contraseña es requerida para usuarios nuevos', 'err'); return; }
+
+  fetch(url, {
+    method: method,
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(body)
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.ok) {
+      toast(uid ? 'Usuario actualizado' : 'Usuario creado', 'ok');
+      cerrarModal();
+      cargarUsuarios();
+    } else {
+      toast(d.error || 'Error al guardar', 'err');
+    }
+  })
+  .catch(function(e) { toast('Error: ' + e.message, 'err'); });
+}
+
+function eliminarUsuario(uid, uname) {
+  if (!confirm('¿Eliminar usuario "' + uname + '"? Esta acción no se puede deshacer.')) return;
+  fetch('/api/usuarios/' + uid, {method:'DELETE'})
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.ok) { toast('Usuario eliminado', 'ok'); cargarUsuarios(); }
+      else       { toast(d.error || 'Error', 'err'); }
+    });
+}
+
+// ── TOAST ──────────────────────────────────────────────────────
+function toast(msg, tipo) {
+  var cont = document.getElementById('toast');
+  var el = document.createElement('div');
+  el.className = 'toast-item ' + (tipo === 'ok' ? 'toast-ok' : 'toast-err');
+  el.textContent = msg;
+  cont.appendChild(el);
+  setTimeout(function() { el.remove(); }, 3500);
+}
+
+// ── HELPERS ────────────────────────────────────────────────────
+function escHtml(s) {
+  return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Cerrar modal al click en overlay
+document.getElementById('modal-usuario').addEventListener('click', function(e) {
+  if (e.target === this) cerrarModal();
+});
+
+
+// ══════════════════════════════════════════════════════
+//   BASE DE DATOS — GESTIÓN Y PURGA
+// ══════════════════════════════════════════════════════
+var _dbConfirmVisible = false;
+
+var DB_TABLAS = [
+  { key: "estudiantes",             label: "Estudiantes",            icon: "👥", color: "#60b8f0" },
+  { key: "registro_liceo",          label: "Listado del liceo",      icon: "📋", color: "#60b8f0" },
+  { key: "materias_calificaciones", label: "Calificaciones",         icon: "📊", color: "var(--accent)" },
+  { key: "asistencia",              label: "Asistencia",             icon: "✅", color: "var(--accent)" },
+  { key: "calificaciones_periodo",  label: "Cal. por período",       icon: "📅", color: "var(--accent)" },
+  { key: "plan_personalizado",      label: "Materias aprendidas",    icon: "🧠", color: "#ff9f60" },
+  { key: "mapeos_excel",            label: "Mapeos Excel",           icon: "🗂",  color: "#ff9f60" },
+  { key: "reportes",                label: "Reportes",               icon: "🚩", color: "#ff6b6b" },
+  { key: "historial_planificaciones", label: "Planificaciones",      icon: "📝", color: "#c060f0" }
+];
+
+function abrirModalDB() {
+  document.getElementById('modal-db').classList.add('open');
+  cargarEstadoDB();
+  renderCheckboxesDB();
+}
+
+function cerrarModalDB() {
+  document.getElementById('modal-db').classList.remove('open');
+}
+
+function renderCheckboxesDB() {
+  var cont = document.getElementById('db-checkboxes');
+  var html = '';
+  for (var i = 0; i < DB_TABLAS.length; i++) {
+    var t = DB_TABLAS[i];
+    html += '<label style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;' +
+      'border-radius:8px;border:1px solid var(--border);background:var(--hover);' +
+      'font-size:11px;cursor:pointer;">' +
+      '<input type="checkbox" class="db-check" value="' + t.key + '" ' +
+      'style="accent-color:' + t.color + ';"> ' +
+      t.icon + ' ' + t.label + '</label>';
+  }
+  cont.innerHTML = html;
+}
+
+function cargarEstadoDB() {
+  var grid = document.getElementById('db-estado-grid');
+  grid.innerHTML = '<div style="color:var(--muted);font-size:12px;grid-column:1/-1;">Cargando...</div>';
+  fetch('/api/db/estado')
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      var tablas = d.tablas || {};
+      var html = '';
+      Object.keys(tablas).forEach(function(key) {
+        var info  = tablas[key];
+        var meta  = DB_TABLAS.find(function(t) { return t.key === key; });
+        var icon  = meta ? meta.icon : '🗄';
+        var color = info.registros > 0 ? (meta ? meta.color : 'var(--accent)') : 'var(--muted)';
+        html += '<div style="display:flex;align-items:center;justify-content:space-between;' +
+          'padding:7px 10px;border-radius:8px;background:var(--hover);border:1px solid var(--border);">' +
+          '<span style="font-size:11px;">' + icon + ' ' + escHtml(info.label) + '</span>' +
+          '<span style="font-family:var(--font-mono,monospace);font-size:12px;font-weight:700;color:' + color + ';">' +
+          info.registros.toLocaleString() + '</span></div>';
+      });
+      grid.innerHTML = html || '<div style="color:var(--muted);">Sin datos</div>';
+    })
+    .catch(function(e) {
+      grid.innerHTML = '<div style="color:#ff6b6b;font-size:12px;">Error: ' + e.message + '</div>';
+    });
+}
+
+function ejecutarPurgaSelectiva() {
+  var checks = document.querySelectorAll('.db-check:checked');
+  if (!checks.length) { toast('Selecciona al menos una tabla', 'err'); return; }
+  var tablas = Array.from(checks).map(function(c) { return c.value; });
+  var labels = tablas.map(function(k) {
+    var m = DB_TABLAS.find(function(t) { return t.key === k; });
+    return (m ? m.label : k);
+  }).join(', ');
+  if (!confirm('Purgar: ' + labels + '. Esta accion no se puede deshacer.')) return;
+  fetch('/api/db/purgar', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ tablas: tablas, confirmar: 'CONFIRMAR' })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.ok) {
+      toast('Purga completada', 'ok');
+      cargarEstadoDB();
+      clearCache(); cargarDatos(true);
+      document.querySelectorAll('.db-check').forEach(function(c) { c.checked = false; });
+    } else {
+      toast((d.errores || [d.error || 'Error']).join(' | '), 'err');
+    }
+  })
+  .catch(function(e) { toast('Error: ' + e.message, 'err'); });
+}
+
+function toggleConfirmTotal() {
+  _dbConfirmVisible = !_dbConfirmVisible;
+  document.getElementById('db-confirm-box').style.display = _dbConfirmVisible ? 'block' : 'none';
+  document.getElementById('db-btn-ejecutar-total').style.display = _dbConfirmVisible ? 'inline-flex' : 'none';
+  if (_dbConfirmVisible) document.getElementById('db-confirm-input').focus();
+}
+
+function ejecutarPurgaTotal() {
+  var val = (document.getElementById('db-confirm-input').value || '').trim();
+  if (val !== 'BORRAR TODO') { toast('Escribe exactamente: BORRAR TODO', 'err'); return; }
+  if (!confirm('ULTIMO AVISO: se borrara todo excepto usuarios. Continuar?')) return;
+  fetch('/api/db/purgar-todo', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ confirmar: 'BORRAR TODO', yo_entiendo: true })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.ok) {
+      toast(d.mensaje || 'BD reseteada', 'ok');
+      cargarEstadoDB();
+      clearCache(); cargarDatos(true);
+      toggleConfirmTotal();
+      document.getElementById('db-confirm-input').value = '';
+    } else {
+      toast(d.error || 'Error', 'err');
+    }
+  })
+  .catch(function(e) { toast('Error: ' + e.message, 'err'); });
+}
+
+document.getElementById('modal-db').addEventListener('click', function(e) {
+  if (e.target === this) cerrarModalDB();
+});
+
+// ── CALENDARIO ESCOLAR ───────────────────────────────────────────────────────
+function agregarDiaCalendario() {
+  var fecha = document.getElementById('cal-fecha').value;
+  var tipo  = document.getElementById('cal-tipo').value;
+  var desc  = (document.getElementById('cal-desc').value || '').trim();
+  var stEl  = document.getElementById('status-calendario');
+  if (!fecha) { if(stEl) stEl.innerHTML='<span style="color:#ff6b6b;">Elige una fecha</span>'; return; }
+  fetch('/api/calendario', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({fecha:fecha, tipo:tipo, descripcion:desc})
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    if (d.ok) {
+      if(stEl) stEl.innerHTML='<span style="color:#4dffb4;">✓ Día registrado</span>';
+      document.getElementById('cal-fecha').value='';
+      document.getElementById('cal-desc').value='';
+      cargarCalendarioReciente();
+    } else {
+      if(stEl) stEl.innerHTML='<span style="color:#ff6b6b;">'+(d.error||'Error')+'</span>';
+    }
+  });
+}
+
+function cargarCalendarioReciente() {
+  var y = new Date().getFullYear();
+  var anio = (new Date().getMonth()+1) >= 8 ? y+'-'+(y+1) : (y-1)+'-'+y;
+  fetch('/api/calendario?anio_escolar='+anio)
+    .then(function(r){ return r.json(); })
+    .then(function(dias){
+      var el = document.getElementById('cal-lista-reciente');
+      if (!el) return;
+      var TIPOS_LABELS = {
+        feriado:'🔴',vacacion_navidad:'🎄',vacacion_semana_santa:'✝️',
+        vacacion_verano:'☀️',incidente_climatico:'🌧️',no_docencia:'📌',otro:'⚪'
+      };
+      if (!dias || !dias.length) { el.innerHTML='<div style="color:var(--muted);font-size:11px;">Sin días registrados.</div>'; return; }
+      // Show last 6
+      var html = '';
+      dias.slice(-6).reverse().forEach(function(d){
+        html += '<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--border);font-size:10px;">'
+          + '<span>' + (TIPOS_LABELS[d.tipo]||'⚪') + '</span>'
+          + '<span style="color:var(--text);">' + d.fecha + '</span>'
+          + '<span style="color:var(--muted);flex:1;">' + (d.descripcion || d.tipo) + '</span>'
+          + '<button class="btn-del-cal" data-fecha="' + d.fecha + '" style="background:none;border:none;color:#ff4d4d;cursor:pointer;font-size:10px;">✕</button>'
+          + '</div>';
+      });
+      el.innerHTML = html;
+      el.querySelectorAll('.btn-del-cal').forEach(function(btn){
+        btn.addEventListener('click', function(){ eliminarDiaCalendario(this.dataset.fecha); });
+      });
+    });
+}
+
+function eliminarDiaCalendario(fecha) {
+  if (!confirm('¿Eliminar '+fecha+' del calendario?')) return;
+  fetch('/api/calendario/'+fecha, {method:'DELETE'})
+    .then(function(r){ return r.json(); })
+    .then(function(d){ if(d.ok) cargarCalendarioReciente(); });
+}
+
+// Cargar calendario al abrir panel de carga
+document.addEventListener('DOMContentLoaded', function(){
+  var cardCal = document.getElementById('card-calendario');
+  if (cardCal) cargarCalendarioReciente();
+});
+
+</script>
+</body>
+</html>

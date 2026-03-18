@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asistente Docente — Planificación Multimedia</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        :root {
+            --bg: #0f1117;
+            --surface: #181c27;
+            --surface2: #1e2335;
+            --border: #2a3050;
+            --accent: #e8b84b;
+            --accent2: #4b7fe8;
+            --danger: #e85b4b;
+            --success: #4be87a;
+            --info: #4bbfe8;
+            --purple: #b44be8;
+            --text: #eef0f7;
+            --text-muted: #7a82a0;
+            --font-display: 'Syne', sans-serif;
+            --font-body: 'DM Sans', sans-serif;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { background:var(--bg); color:var(--text); font-family:var(--font-body); font-size:14px; min-height:100vh; }
+
+        /* HEADER */
+        header {
+            background:var(--surface); border-bottom:1px solid var(--border);
+            padding:0 32px; display:flex; align-items:center;
+            justify-content:space-between; height:64px; position:sticky; top:0; z-index:100;
+        }
+        .logo { display:flex; align-items:center; gap:12px; text-decoration:none; color:inherit; }
+        .logo-icon { width:36px; height:36px; background:var(--accent); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:18px; }
+        .logo-text { font-family:var(--font-display); font-weight:800; font-size:17px; }
+        .logo-text span { color:var(--accent); }
+        .back-btn { display:flex; align-items:center; gap:8px; background:var(--surface2); border:1px solid var(--border); color:var(--text-muted); padding:9px 16px; border-radius:8px; font-size:13px; cursor:pointer; text-decoration:none; transition:all .2s; }
+        .back-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+        main { max-width:1100px; margin:0 auto; padding:32px; }
+
+        /* PAGE TITLE */
+        .page-title { margin-bottom:28px; }
+        .page-title h1 { font-family:var(--font-display); font-size:28px; font-weight:800; margin-bottom:6px; }
+        .page-title p { color:var(--text-muted); font-size:14px; }
+
+        /* TABS */
+        .tabs {
+            display:flex; gap:4px; background:var(--surface2);
+            padding:5px; border-radius:12px; margin-bottom:28px;
+            border:1px solid var(--border);
+        }
+        .tab-btn {
+            flex:1; padding:10px 16px; border:none; background:transparent;
+            color:var(--text-muted); font-family:var(--font-display);
+            font-weight:600; font-size:12px; border-radius:9px; cursor:pointer;
+            transition:all .2s; display:flex; align-items:center; justify-content:center; gap:7px;
+        }
+        .tab-btn.active { background:var(--surface); color:var(--text); box-shadow:0 2px 8px rgba(0,0,0,.3); }
+        .tab-btn:hover:not(.active) { color:var(--text); }
+
+        /* PANEL */
+        .panel { display:none; animation: fadeUp .3s ease both; }
+        .panel.active { display:block; }
+
+        @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+
+        /* GRID */
+        .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px; }
+        .form-grid.col3 { grid-template-columns:1fr 1fr 1fr; }
+        .form-full { grid-column:1/-1; }
+
+        /* FORM ELEMENTS */
+        .form-group { display:flex; flex-direction:column; gap:7px; }
+        .form-group label { font-size:11px; font-weight:600; letter-spacing:.8px; text-transform:uppercase; color:var(--text-muted); }
+        .form-group select, .form-group input, .form-group textarea {
+            background:var(--surface2); border:1px solid var(--border);
+            color:var(--text); padding:11px 14px; border-radius:9px;
+            font-family:var(--font-body); font-size:13px; outline:none; transition:border-color .2s;
+        }
+        .form-group select:focus, .form-group input:focus, .form-group textarea:focus { border-color:var(--accent); }
+        .form-group textarea { resize:vertical; min-height:80px; line-height:1.6; }
+        select option { background:var(--surface2); }
+
+        /* CURRICULO PREVIEW */
+        .curriculo-box {
+            background:var(--surface2); border:1px solid var(--border);
+            border-radius:12px; padding:16px; margin-bottom:20px;
+            display:none;
+        }
+        .curriculo-box.show { display:block; }
+        .curriculo-title { font-family:var(--font-display); font-size:12px; font-weight:700; color:var(--accent); letter-spacing:1px; text-transform:uppercase; margin-bottom:12px; }
+        .curriculo-seccion { margin-bottom:10px; }
+        .curriculo-seccion-title { font-size:11px; font-weight:600; color:var(--text-muted); letter-spacing:.6px; text-transform:uppercase; margin-bottom:5px; }
+        .curriculo-tag {
+            display:inline-block; background:var(--surface);
+            border:1px solid var(--border); padding:3px 9px;
+            border-radius:4px; font-size:11px; margin:2px 3px 2px 0;
+            color:var(--text-muted);
+        }
+
+        /* INDICADORES */
+        .indicador-item {
+            display:flex; align-items:flex-start; gap:8px; padding:8px 12px;
+            background:var(--surface); border:1px solid var(--border);
+            border-radius:8px; cursor:pointer; transition:all .2s;
+            margin-bottom:6px;
+        }
+        .indicador-item:hover { border-color:var(--accent); }
+        .indicador-item.selected { border-color:var(--accent); background:rgba(232,184,75,.08); }
+        .indicador-check { font-size:11px; margin-top:1px; color:var(--text-muted); flex-shrink:0; }
+        .indicador-item.selected .indicador-check { color:var(--accent); }
+        .indicador-texto { font-size:12px; line-height:1.5; }
+
+        /* GENERATE BTN */
+        .gen-btn {
+            width:100%; background:var(--accent); color:#000; border:none;
+            padding:14px; border-radius:10px; font-family:var(--font-display);
+            font-weight:700; font-size:14px; cursor:pointer; transition:opacity .2s;
+            display:flex; align-items:center; justify-content:center; gap:9px;
+        }
+        .gen-btn:hover { opacity:.85; }
+        .gen-btn:disabled { opacity:.5; cursor:not-allowed; }
+
+        /* RESULTADO */
+        .resultado-box {
+            background:var(--surface); border:1px solid var(--border);
+            border-radius:14px; padding:24px; margin-top:20px;
+            display:none;
+        }
+        .resultado-box.show { display:block; animation:fadeUp .4s ease both; }
+        .resultado-header {
+            display:flex; align-items:center; justify-content:space-between;
+            margin-bottom:18px; padding-bottom:14px;
+            border-bottom:1px solid var(--border);
+        }
+        .resultado-badge {
+            display:inline-flex; align-items:center; gap:6px;
+            background:var(--surface2); border:1px solid var(--border);
+            padding:4px 12px; border-radius:20px; font-size:10px;
+            font-weight:700; letter-spacing:.8px; text-transform:uppercase;
+            color:var(--text-muted);
+        }
+        .copy-btn {
+            background:transparent; border:1px solid var(--border);
+            color:var(--text-muted); padding:7px 14px; border-radius:7px;
+            font-size:11px; cursor:pointer; transition:all .2s;
+        }
+        .copy-btn:hover { border-color:var(--success); color:var(--success); }
+        .resultado-content { line-height:1.8; font-size:13.5px; }
+
+        /* SECCIONES DEL RESULTADO */
+        .res-seccion { margin-top:20px; padding-top:16px; border-top:1px solid var(--border); }
+        .res-seccion:first-child { margin-top:0; padding-top:0; border-top:none; }
+        .res-titulo {
+            font-family:var(--font-display); font-size:11px; font-weight:700;
+            letter-spacing:1px; text-transform:uppercase; margin-bottom:10px;
+        }
+        .res-cuerpo { color:var(--text); font-size:13px; line-height:1.8; }
+        .res-cuerpo ul { padding-left:20px; }
+        .res-cuerpo li { margin-bottom:5px; }
+
+        /* LOADING */
+        .loading-box { text-align:center; padding:40px 24px; display:none; }
+        .loading-box.show { display:block; }
+        .spinner { width:24px; height:24px; border:2px solid rgba(232,184,75,.2); border-top-color:var(--accent); border-radius:50%; animation:spin .7s linear infinite; display:inline-block; margin-bottom:12px; }
+        @keyframes spin { to { transform:rotate(360deg); } }
+        .loading-txt { font-size:13px; color:var(--text-muted); }
+
+        /* CURRICULO CARDS */
+        .materias-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:24px; }
+        .materia-card {
+            background:var(--surface); border:1px solid var(--border);
+            border-radius:14px; padding:20px; cursor:pointer; transition:all .2s;
+        }
+        .materia-card:hover { border-color:var(--accent); transform:translateY(-2px); }
+        .materia-card.selected { border-color:var(--accent); background:rgba(232,184,75,.06); }
+        .materia-emoji { font-size:32px; margin-bottom:10px; }
+        .materia-nombre { font-family:var(--font-display); font-size:16px; font-weight:700; margin-bottom:4px; }
+        .materia-comp { font-size:11px; color:var(--text-muted); line-height:1.4; }
+        .materia-horas { margin-top:10px; font-size:11px; background:var(--surface2); border:1px solid var(--border); display:inline-block; padding:2px 8px; border-radius:4px; color:var(--text-muted); }
+
+        /* ERROR */
+        .error-box { background:rgba(232,91,75,.08); border:1px solid rgba(232,91,75,.25); border-radius:10px; padding:14px 18px; margin-top:16px; font-size:12px; color:var(--danger); display:none; }
+        .error-box.show { display:block; }
+
+        .historial-item {
+        background:var(--surface); border:1px solid var(--border);
+        border-radius:12px; padding:16px 18px; margin-bottom:10px;
+        cursor:pointer; transition:all .2s;
+    }
+    .historial-item:hover { border-color:var(--accent); transform:translateY(-1px); }
+
+    @media(max-width:768px) {
+            .form-grid, .form-grid.col3, .materias-grid { grid-template-columns:1fr; }
+            main { padding:16px; }
+            header { padding:0 16px; }
+            .tabs { flex-direction:column; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <a href="/" class="logo">
+        <div class="logo-icon">🎨</div>
+        <div>
+            <div class="logo-text">Multimedia<span>Track</span></div>
+        </div>
+    </a>
+    <a href="/" class="back-btn"><i class="fas fa-arrow-left"></i> Dashboard</a>
+</header>
+
+<main>
+    <div class="page-title">
+        <h1>🧑‍🏫 Asistente Docente con IA</h1>
+        <p>Planificaciones, rúbricas y estrategias alineadas al currículo oficial MINERD — Modalidad en Artes — C.E. Benito Juárez</p>
+    </div>
+
+    <!-- TABS -->
+    <div class="tabs">
+        <button class="tab-btn active" onclick="setTab('planificacion', this)">
+            <i class="fas fa-clipboard-list"></i> Planificación de Clase
+        </button>
+        <button class="tab-btn" onclick="setTab('rubrica', this)">
+            <i class="fas fa-star-half-alt"></i> Crear Rúbrica
+        </button>
+        <button class="tab-btn" onclick="setTab('estrategia', this)">
+            <i class="fas fa-lightbulb"></i> Estrategias Didácticas
+        </button>
+        <button class="tab-btn" onclick="setTab('curriculo', this)">
+            <i class="fas fa-book-open"></i> Ver Currículo MINERD
+        </button>
+        <button class="tab-btn" onclick="setTab('historial', this); cargarHistorial()">
+            <i class="fas fa-clock-rotate-left"></i> Historial
+        </button>
+    </div>
+
+    <!-- ═══ TAB 1: PLANIFICACIÓN ═══ -->
+    <div id="panel-planificacion" class="panel active">
+        <div class="form-grid">
+            <div class="form-group">
+                <label>Mención</label>
+                <select id="p-mencion" onchange="actualizarSelectMaterias()">
+                    <option value="MULTIMEDIA">🎬 Multimedia</option>
+                    <option value="MÚSICA">🎵 Música</option>
+                    <option value="TEATRO">🎭 Teatro</option>
+                    <option value="ARTES VISUALES">🎨 Artes Visuales</option>
+                    <option value="DANZA">💃 Danza</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Grado</label>
+                <select id="p-grado" onchange="actualizarSelectMaterias()">
+                    <option value="4TO">4to (Primer año mención)</option>
+                    <option value="5TO">5to (Segundo año mención)</option>
+                    <option value="6TO">6to (Tercer año mención)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Asignatura</label>
+                <select id="p-materia" onchange="cargarCurriculo('p-materia', 'p-curriculo'); actualizarTemas()">
+                    <option value="">Selecciona una materia...</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Preview del currículo -->
+        <div id="p-curriculo" class="curriculo-box"></div>
+
+        <div class="form-grid col3">
+            <div class="form-group form-full">
+                <label>Tema específico a desarrollar</label>
+                <input type="text" id="p-tema" placeholder="Ej: Manejo del diafragma y la profundidad de campo...">
+            </div>
+            <div class="form-group">
+                <label>Duración (clases de 45 min)</label>
+                <select id="p-duracion">
+                    <option value="1">1 clase (45 min)</option>
+                    <option value="2" selected>2 clases (90 min)</option>
+                    <option value="3">3 clases (135 min)</option>
+                    <option value="4">4 clases (3 horas)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Nivel del grupo</label>
+                <select id="p-nivel">
+                    <option value="Básico">Básico — requiere más apoyo</option>
+                    <option value="Intermedio" selected>Intermedio — ritmo regular</option>
+                    <option value="Avanzado">Avanzado — ritmo acelerado</option>
+                    <option value="Mixto">Mixto — niveles variados</option>
+                </select>
+            </div>
+        </div>
+
+        <button class="gen-btn" onclick="generarPlanificacion()">
+            <i class="fas fa-brain"></i> Generar Planificación con LLaMA 3
+        </button>
+
+        <div id="p-loading" class="loading-box">
+            <div class="spinner"></div>
+            <div class="loading-txt" id="p-loading-txt">Generando planificación...</div>
+        </div>
+        <div id="p-error" class="error-box"></div>
+        <div id="p-resultado" class="resultado-box">
+            <div class="resultado-header">
+                <span class="resultado-badge">✦ llama-3.3-70b · planificación</span>
+                <div style="display:flex; gap:8px;">
+                    <button class="copy-btn" onclick="copiarResultado('p-content')"><i class="fas fa-copy"></i> Copiar</button>
+                    <button class="copy-btn" id="p-guardar-btn" onclick="guardarDesdeResultado()"
+                        style="border-color:var(--success); color:var(--success);">
+                        <i class="fas fa-bookmark"></i> Guardar
+                    </button>
+                </div>
+            </div>
+            <div id="p-content" class="resultado-content"></div>
+        </div>
+    </div>
+
+    <!-- ═══ TAB 2: RÚBRICA ═══ -->
+    <div id="panel-rubrica" class="panel">
+        <div class="form-grid">
+            <div class="form-group">
+                <label>Asignatura</label>
+                <select id="r-materia" onchange="cargarIndicadores()">
+                    <option value="">Selecciona una materia...</option>
+                    <option value="Fotografía">📸 Fotografía</option>
+                    <option value="Lenguaje_Visual">🎨 Lenguaje Visual, Dibujo y Creación de Personajes</option>
+                    <option value="Diseño">🖥️ Diseño Básico y Expresión Visual</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Grado</label>
+                <select id="r-grado">
+                    <option value="4to">4to</option>
+                    <option value="5to">5to</option>
+                    <option value="6to">6to</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:16px;">
+            <label>Indicador de Logro a evaluar (selecciona uno)</label>
+            <div id="r-indicadores" style="margin-top:6px;">
+                <div style="color:var(--text-muted); font-size:12px; padding:12px; background:var(--surface2); border-radius:8px;">
+                    Selecciona una materia para ver los indicadores de logro oficiales del MINERD.
+                </div>
+            </div>
+        </div>
+
+        <button class="gen-btn" onclick="generarRubrica()">
+            <i class="fas fa-table"></i> Generar Rúbrica con LLaMA 3
+        </button>
+
+        <div id="r-loading" class="loading-box">
+            <div class="spinner"></div>
+            <div class="loading-txt">Construyendo rúbrica de evaluación...</div>
+        </div>
+        <div id="r-error" class="error-box"></div>
+        <div id="r-resultado" class="resultado-box">
+            <div class="resultado-header">
+                <span class="resultado-badge">✦ llama-3.3-70b · rúbrica</span>
+                <button class="copy-btn" onclick="copiarResultado('r-content')"><i class="fas fa-copy"></i> Copiar</button>
+            </div>
+            <div id="r-content" class="resultado-content"></div>
+        </div>
+    </div>
+
+    <!-- ═══ TAB 3: ESTRATEGIAS ═══ -->
+    <div id="panel-estrategia" class="panel">
+        <div class="form-grid">
+            <div class="form-group">
+                <label>Asignatura</label>
+                <select id="e-materia">
+                    <option value="">Selecciona una materia...</option>
+                    <option value="Fotografía">📸 Fotografía</option>
+                    <option value="Lenguaje_Visual">🎨 Lenguaje Visual, Dibujo y Creación de Personajes</option>
+                    <option value="Diseño">🖥️ Diseño Básico y Expresión Visual</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Perfil del grupo</label>
+                <input type="text" id="e-perfil" placeholder="Ej: 28 estudiantes, nivel básico, poca motivación...">
+            </div>
+        </div>
+        <div class="form-group" style="margin-bottom:16px;">
+            <label>Dificultad o problema que quieres resolver</label>
+            <textarea id="e-problema" placeholder="Ej: Los estudiantes no comprenden la regla de los tercios en fotografía y sus composiciones quedan desequilibradas..."></textarea>
+        </div>
+
+        <button class="gen-btn" onclick="generarEstrategia()">
+            <i class="fas fa-lightbulb"></i> Generar Estrategias con LLaMA 3
+        </button>
+
+        <div id="e-loading" class="loading-box">
+            <div class="spinner"></div>
+            <div class="loading-txt">Buscando estrategias pedagógicas...</div>
+        </div>
+        <div id="e-error" class="error-box"></div>
+        <div id="e-resultado" class="resultado-box">
+            <div class="resultado-header">
+                <span class="resultado-badge">✦ llama-3.3-70b · estrategias</span>
+                <button class="copy-btn" onclick="copiarResultado('e-content')"><i class="fas fa-copy"></i> Copiar</button>
+            </div>
+            <div id="e-content" class="resultado-content"></div>
+        </div>
+    </div>
+
+    <!-- ═══ TAB 4: CURRÍCULO ═══ -->
+    <div id="panel-curriculo" class="panel">
+        <p style="color:var(--text-muted); font-size:13px; margin-bottom:20px;">
+            Contenidos oficiales del <strong style="color:var(--text);">MINERD</strong> del <strong style="color:var(--text);">Plan de Estudio Benito Juárez</strong> — Segundo Ciclo, todas las menciones.
+        </p>
+
+        <!-- Selector de mención -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+          <span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;">Mención:</span>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;" id="mencion-tabs-curriculo">
+            <button class="chip active" onclick="planBJsetMencion('MULTIMEDIA',this)">🎬 Multimedia</button>
+            <button class="chip"        onclick="planBJsetMencion('TEATRO',this)">🎭 Teatro</button>
+            <button class="chip"        onclick="planBJsetMencion('MUSICA',this)">🎵 Música</button>
+            <button class="chip"        onclick="planBJsetMencion('VISUAL',this)">🎨 Artes Visuales</button>
+          </div>
+          <div style="margin-left:auto;">
+            <select id="filtro-grado-plan" style="background:var(--bg-card);border:1px solid var(--border);color:var(--text);padding:4px 10px;border-radius:8px;font-size:12px;" onchange="planBJrender()">
+              <option value="">Todos los grados</option>
+              <option value="4to">4to Grado</option>
+              <option value="5to">5to Grado</option>
+              <option value="6to">6to Grado</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Plan de horas por grado (dinámico) -->
+        <div id="plan-bj-grid" style="margin-bottom:20px;"></div>
+
+        <!-- Currículo detallado (Multimedia inicial) -->
+        <details open style="margin-bottom:12px;">
+          <summary style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);cursor:pointer;padding:6px 0;">
+            Currículo detallado disponible ▾
+          </summary>
+          <div class="materias-grid" style="margin-top:10px;">
+            <div class="materia-card" onclick="verDetalleCurriculo('Fotografía', this)">
+                <div class="materia-emoji">📸</div>
+                <div class="materia-nombre">Fotografía</div>
+                <div class="materia-comp">DCM.1.2 — Diseño y Creatividad Multimedia</div>
+                <div class="materia-horas">4 horas semanales</div>
+            </div>
+            <div class="materia-card" onclick="verDetalleCurriculo('Lenguaje_Visual', this)">
+                <div class="materia-emoji">🎨</div>
+                <div class="materia-nombre">Lenguaje Visual</div>
+                <div class="materia-comp">AA.1.1 — Competencia Animación Artística</div>
+                <div class="materia-horas">5 horas semanales</div>
+            </div>
+            <div class="materia-card" onclick="verDetalleCurriculo('Diseño', this)">
+                <div class="materia-emoji">🖥️</div>
+                <div class="materia-nombre">Diseño Básico y Expresión Visual</div>
+                <div class="materia-comp">DCM.1.1 — Diseño y Creatividad Multimedia</div>
+                <div class="materia-horas">4 horas semanales</div>
+            </div>
+          </div>
+        </details>
+
+        <div id="c-detalle" class="curriculo-box show" style="display:none;">
+        </div>
+    </div>
+    <!-- ═══ TAB 5: HISTORIAL ═══ -->
+    <div id="panel-historial" class="panel">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+            <p style="color:var(--text-muted); font-size:13px;">
+                Planificaciones guardadas — haz clic en una para verla completa.
+            </p>
+            <div style="display:flex; gap:8px; align-items:center;">
+                <label style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.6px;">Filtrar por estudiante:</label>
+                <input type="text" id="h-filtro" placeholder="Nombre..." oninput="filtrarHistorial()"
+                    style="background:var(--surface2); border:1px solid var(--border); color:var(--text);
+                           padding:8px 12px; border-radius:8px; font-size:12px; outline:none; width:160px;">
+            </div>
+        </div>
+        <div id="h-lista"></div>
+        <div id="h-detalle" style="display:none; margin-top:20px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+                <span style="font-family:var(--font-display); font-weight:700; font-size:14px;">Detalle de Planificación</span>
+                <button onclick="cerrarDetalle()"
+                    style="background:transparent; border:1px solid var(--border); color:var(--text-muted);
+                           padding:6px 14px; border-radius:7px; font-size:12px; cursor:pointer;">
+                    ✕ Cerrar
+                </button>
+            </div>
+            <div id="h-detalle-content" class="resultado-box show" style="margin-top:0;">
+                <div class="resultado-header">
+                    <span id="h-detalle-badge" class="resultado-badge"></span>
+                    <button class="copy-btn" onclick="copiarResultado('h-detalle-texto')">
+                        <i class="fas fa-copy"></i> Copiar
+                    </button>
+                </div>
+                <div id="h-detalle-texto" class="resultado-content"></div>
+            </div>
+        </div>
+    </div>
+
+</main>
+
+<script>
+    // ── TAB NAVIGATION ─────────────────────────────────────────────────────
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // CURRÍCULO COMPLETO C.E. BENITO JUÁREZ — Modalidad en Artes · MINERD RD
+    // ═══════════════════════════════════════════════════════════════════════
+    const MATERIAS_COMUNES = [
+        { value: "Lengua_Espanola",      label: "Lengua Española",                      horas: 5 },
+        { value: "Idioma_Ingles",        label: "Idioma Inglés",                        horas: 3 },
+        { value: "Matematica",           label: "Matemática",                           horas: 5 },
+        { value: "Ciencias_Sociales",    label: "Ciencias Sociales",                    horas: 4 },
+        { value: "Ciencias_Naturales",   label: "Ciencias de la Naturaleza",            horas: 4 },
+        { value: "Educacion_Fisica",     label: "Educación Física",                     horas: 2 },
+        { value: "FIHR",                 label: "Formación Integral Humana y Religiosa", horas: 2 },
+    ];
+
+    const MATERIAS_TECNICAS = {
+        "MULTIMEDIA": {
+            "4TO": [
+                { value: "Identidad_Cultura", label: "Identidad, Cultura y Emprendimiento", horas: 3 },
+                { value: "Historia_Arte",     label: "Historia del Arte Universal",          horas: 3 },
+                { value: "Lenguaje_Visual",   label: "Lenguaje Visual, Dibujo y Creación de Personajes", horas: 5 },
+                { value: "Diseno_Basico",     label: "Diseño Básico y Expresión Visual",     horas: 5 },
+                { value: "Fotografia",        label: "Fotografía",                           horas: 5 },
+                { value: "Lenguaje_Musical",  label: "Lenguaje Musical",                     horas: 2 },
+                { value: "Lenguaje_Danzario", label: "Lenguaje Danzario y Teatral",          horas: 2 },
+            ],
+            "5TO": [
+                { value: "Identidad_Cultura",       label: "Identidad, Cultura y Emprendimiento", horas: 3 },
+                { value: "Historia_Arte",           label: "Historia del Arte Universal",          horas: 3 },
+                { value: "Produccion_Audiovisual",  label: "Producción Audiovisual",               horas: 5 },
+                { value: "Diseno_Grafico_Digital",  label: "Diseño Gráfico y Digital",             horas: 5 },
+                { value: "Fotografia_Avanzada",     label: "Fotografía Avanzada",                  horas: 5 },
+                { value: "Animacion_Digital",       label: "Animación Digital",                    horas: 3 },
+            ],
+            "6TO": [
+                { value: "Identidad_Cultura",              label: "Identidad, Cultura y Emprendimiento", horas: 3 },
+                { value: "Historia_Arte",                  label: "Historia del Arte Universal",          horas: 3 },
+                { value: "Proyecto_Multimedia",            label: "Proyecto Multimedia Integrador",       horas: 6 },
+                { value: "Diseno_Web_UX",                  label: "Diseño Web y UX",                      horas: 5 },
+                { value: "Produccion_Audiovisual_Avanzada",label: "Producción Audiovisual Avanzada",      horas: 5 },
+                { value: "Pasantia_Multimedia",            label: "Pasantía en Industria Multimedia",     horas: 4 },
+            ],
+        },
+        "MÚSICA": {
+            "4TO": [
+                { value: "Identidad_Cultura",   label: "Identidad, Cultura y Emprendimiento", horas: 3 },
+                { value: "Historia_Arte",       label: "Historia del Arte Universal",          horas: 3 },
+                { value: "Teoria_Musical",      label: "Teoría Musical y Solfeo",              horas: 4 },
+                { value: "Instrumento_I",       label: "Instrumento Principal I",              horas: 5 },
+                { value: "Conjunto_Musical",    label: "Conjunto Musical / Ensamble",          horas: 3 },
+                { value: "Historia_Musica_RD",  label: "Historia de la Música Dominicana",     horas: 2 },
+                { value: "Lenguaje_Danzario",   label: "Lenguaje Danzario",                    horas: 2 },
+            ],
+            "5TO": [
+                { value: "Identidad_Cultura",    label: "Identidad, Cultura y Emprendimiento", horas: 3 },
+                { value: "Historia_Arte",        label: "Historia del Arte Universal",          horas: 3 },
+                { value: "Armonia_Contrapunto",  label: "Armonía y Contrapunto",               horas: 4 },
+                { value: "Instrumento_II",       label: "Instrumento Principal II",             horas: 5 },
+                { value: "Conjunto_Musical_II",  label: "Conjunto Musical / Ensamble II",       horas: 3 },
+                { value: "Composicion_Arreglos", label: "Composición y Arreglos",              horas: 3 },
+            ],
+            "6TO": [
+                { value: "Identidad_Cultura",  label: "Identidad, Cultura y Emprendimiento", horas: 3 },
+                { value: "Historia_Arte",      label: "Historia del Arte Universal",          horas: 3 },
+                { value: "Instrumento_III",    label: "Instrumento Principal III",            horas: 5 },
+                { value: "Proyecto_Musical",   label: "Proyecto Musical Integrador",          horas: 5 },
+                { value: "Gestion_Cultural",   label: "Gestión y Producción Cultural",        horas: 3 },
+                { value: "Pasantia_Musical",   label: "Pasantía Musical",                     horas: 4 },
+            ],
+        },
+        "TEATRO": {
+            "4TO": [
+                { value: "Identidad_Cultura",  label: "Identidad, Cultura y Emprendimiento", horas: 3 },
+                { value: "Historia_Arte",      label: "Historia del Arte Universal",          horas: 3 },
+                { value: "Tecnica_Vocal",      label: "Técnica Vocal y Dicción",              horas: 3 },
+                { value: "Expresion_Corporal", label: "Expresión Corporal y Movimiento",      horas: 3 },
+                { value: "Actuacion_I",        label: "Actuación I",                          horas: 5 },
+                { value: "Historia_Teatro",    label: "Historia del Teatro Universal",         horas: 3 },
+                { value: "Lenguaje_Danzario",  label: "Lenguaje Danzario y Teatral",          horas: 2 },
+            ],
+            "5TO": [
+                { value: "Identidad_Cultura",  label: "Identidad, Cultura y Emprendimiento", horas: 3 },
+                { value: "Historia_Arte",      label: "Historia del Arte Universal",          horas: 3 },
+                { value: "Actuacion_II",       label: "Actuación II",                         horas: 5 },
+                { value: "Dramaturgia",        label: "Dramaturgia y Escritura Escénica",     horas: 3 },
+                { value: "Direccion_Escena",   label: "Dirección Escénica",                   horas: 3 },
+                { value: "Caracterizacion",    label: "Caracterización y Maquillaje",         horas: 3 },
+            ],
+            "6TO": [
+                { value: "Identidad_Cultura",  label: "Identidad, Cultura y Emprendimiento", horas: 3 },
+                { value: "Historia_Arte",      label: "Historia del Arte Universal",          horas: 3 },
+                { value: "Produccion_Teatral", label: "Producción Teatral",                   horas: 5 },
+                { value: "Proyecto_Escena",    label: "Proyecto Escénico Integrador",         horas: 5 },
+                { value: "Gestion_Cultural",   label: "Gestión y Producción Cultural",        horas: 3 },
+                { value: "Pasantia_Teatro",    label: "Pasantía Teatral",                     horas: 4 },
+            ],
+        },
+        "ARTES VISUALES": {
+            "4TO": [
+                { value: "Identidad_Cultura",  label: "Identidad, Cultura y Emprendimiento", horas: 3 },
+                { value: "Historia_Arte",      label: "Historia del Arte Universal",          horas: 3 },
+                { value: "Dibujo_Artistico",   label: "Dibujo Artístico",                    horas: 5 },
+                { value: "Pintura_I",          label: "Pintura I",                            horas: 5 },
+                { value: "Lenguaje_Visual_AV", label: "Lenguaje Visual y Composición",        horas: 4 },
+                { value: "Escultura_Modelado", label: "Escultura y Modelado",                 horas: 3 },
+            ],
+            "5TO": [
+                { value: "Identidad_Cultura",  label: "Identidad, Cultura y Emprendimiento", horas: 3 },
+                { value: "Historia_Arte",      label: "Historia del Arte Universal",          horas: 3 },
+                { value: "Pintura_II",         label: "Pintura II",                           horas: 5 },
+                { value: "Grabado_Estampado",  label: "Grabado y Estampado",                  horas: 4 },
+                { value: "Arte_Digital",       label: "Arte Digital",                         horas: 4 },
+                { value: "Ceramica",           label: "Cerámica y Artesanía",                 horas: 3 },
+            ],
+            "6TO": [
+                { value: "Identidad_Cultura",  label: "Identidad, Cultura y Emprendimiento", horas: 3 },
+                { value: "Historia_Arte",      label: "Historia del Arte Universal",          horas: 3 },
+                { value: "Pintura_Mural",      label: "Pintura Mural y Técnicas Mixtas",      horas: 5 },
+                { value: "Proyecto_Visual",    label: "Proyecto Visual Integrador",           horas: 5 },
+                { value: "Gestion_Cultural",   label: "Gestión y Producción Cultural",        horas: 3 },
+                { value: "Pasantia_Visual",    label: "Pasantía en Artes Visuales",           horas: 4 },
+            ],
+        },
+        "DANZA": {
+            "4TO": [
+                { value: "Identidad_Cultura",       label: "Identidad, Cultura y Emprendimiento", horas: 3 },
+                { value: "Historia_Arte",           label: "Historia del Arte Universal",          horas: 3 },
+                { value: "Tecnica_Danza_Clasica",   label: "Técnica de Danza Clásica",            horas: 5 },
+                { value: "Danza_Folclorica_RD",     label: "Danza Folclórica Dominicana",         horas: 4 },
+                { value: "Expresion_Corporal_Danza",label: "Expresión Corporal",                  horas: 3 },
+                { value: "Musica_Danzante",         label: "Música para Danzantes",               horas: 2 },
+            ],
+            "5TO": [
+                { value: "Identidad_Cultura",           label: "Identidad, Cultura y Emprendimiento", horas: 3 },
+                { value: "Historia_Arte",               label: "Historia del Arte Universal",          horas: 3 },
+                { value: "Tecnica_Danza_Contemporanea", label: "Técnica de Danza Contemporánea",       horas: 5 },
+                { value: "Coreografia",                 label: "Coreografía y Composición",            horas: 4 },
+                { value: "Danza_Popular_Caribe",        label: "Danza Popular del Caribe",             horas: 3 },
+            ],
+            "6TO": [
+                { value: "Identidad_Cultura",  label: "Identidad, Cultura y Emprendimiento", horas: 3 },
+                { value: "Historia_Arte",      label: "Historia del Arte Universal",          horas: 3 },
+                { value: "Produccion_Danza",   label: "Producción en Danza",                  horas: 5 },
+                { value: "Proyecto_Danza",     label: "Proyecto Coreográfico Integrador",     horas: 5 },
+                { value: "Gestion_Cultural",   label: "Gestión y Producción Cultural",        horas: 3 },
+                { value: "Pasantia_Danza",     label: "Pasantía en Danza",                    horas: 4 },
+            ],
+        },
+    };
+
+    function actualizarSelectMaterias() {
+        const mencion = document.getElementById('p-mencion')?.value || 'MULTIMEDIA';
+        const grado   = document.getElementById('p-grado')?.value   || '4TO';
+        const select  = document.getElementById('p-materia');
+        if (!select) return;
+        const tecnicas = MATERIAS_TECNICAS[mencion]?.[grado] || [];
+        select.innerHTML = '<option value="">Selecciona una materia...</option>';
+        const grp1 = document.createElement('optgroup');
+        grp1.label = '📚 Componente Académico';
+        MATERIAS_COMUNES.forEach(m => {
+            const o = document.createElement('option');
+            o.value = m.value;
+            o.textContent = m.label + ' (' + m.horas + 'h)';
+            grp1.appendChild(o);
+        });
+        select.appendChild(grp1);
+        if (tecnicas.length > 0) {
+            const grp2 = document.createElement('optgroup');
+            grp2.label = '🎨 Componente Técnico — ' + mencion;
+            tecnicas.forEach(m => {
+                const o = document.createElement('option');
+                o.value = m.value;
+                o.textContent = m.label + ' (' + m.horas + 'h)';
+                grp2.appendChild(o);
+            });
+            select.appendChild(grp2);
+        }
+    }
+    // Poblar al cargar la página
+    document.addEventListener('DOMContentLoaded', actualizarSelectMaterias);
+
+    function setTab(nombre, btn) {
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('panel-' + nombre).classList.add('active');
+        btn.classList.add('active');
+    }
+
+    // ── CARGAR CURRÍCULO EN PREVIEW ─────────────────────────────────────────
+    async function cargarCurriculo(selectId, boxId) {
+        const materia = document.getElementById(selectId).value;
+        const box = document.getElementById(boxId);
+        if (!materia) { box.classList.remove('show'); return; }
+
+        const res = await fetch(`/api/planificacion/curriculo/${materia}`);
+        const c = await res.json();
+        if (c.error) { box.classList.remove('show'); return; }
+
+        box.innerHTML = `
+            <div class="curriculo-title">📋 Currículo MINERD — ${materia.replace('_',' ')}</div>
+            <div style="font-size:12px; color:var(--info); margin-bottom:10px;">${c.competencia}</div>
+            <div class="curriculo-seccion">
+                <div class="curriculo-seccion-title">Saberes Conceptuales</div>
+                ${c.saberes_conceptuales.slice(0,5).map(s => `<span class="curriculo-tag">${s}</span>`).join('')}
+            </div>
+            <div class="curriculo-seccion">
+                <div class="curriculo-seccion-title">Indicadores de Logro</div>
+                ${c.indicadores_logro.slice(0,4).map(s => `<span class="curriculo-tag">✓ ${s}</span>`).join('')}
+            </div>
+            <div style="margin-top:8px; font-size:11px; color:var(--accent);">
+                <i class="fas fa-star"></i> Evidencia de desempeño: ${c.evidencias}
+            </div>
+        `;
+        box.classList.add('show');
+    }
+
+    // ── CARGAR INDICADORES PARA RÚBRICA ────────────────────────────────────
+    let indicadorSeleccionado = '';
+
+    async function cargarIndicadores() {
+        const materia = document.getElementById('r-materia').value;
+        const cont = document.getElementById('r-indicadores');
+        indicadorSeleccionado = '';
+        if (!materia) return;
+
+        const res = await fetch(`/api/planificacion/curriculo/${materia}`);
+        const c = await res.json();
+
+        cont.innerHTML = c.indicadores_logro.map(ind => `
+            <div class="indicador-item" onclick="seleccionarIndicador(this, '${ind.replace(/'/g,"\\'")}')">
+                <span class="indicador-check">○</span>
+                <span class="indicador-texto">${ind}</span>
+            </div>
+        `).join('');
+    }
+
+    function seleccionarIndicador(el, texto) {
+        document.querySelectorAll('.indicador-item').forEach(i => i.classList.remove('selected'));
+        el.classList.add('selected');
+        el.querySelector('.indicador-check').textContent = '●';
+        indicadorSeleccionado = texto;
+    }
+
+    // ── VER DETALLE CURRÍCULO ───────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+// PLAN DE ESTUDIO BENITO JUÁREZ — visualización dinámica
+// ═══════════════════════════════════════════════════════════
+var _planBJ_mencion = 'MULTIMEDIA';
+var _COMUNES_NOMBRES = ['lengua española','inglés','ingles','matemática','matematica',
+  'ciencias sociales','ciencias de la naturaleza','formación integral',
+  'formacion integral','educación física','educacion fisica',
+  'identidad, cultura'];
+
+function planBJsetMencion(m, btn) {
+  _planBJ_mencion = m;
+  document.querySelectorAll('#mencion-tabs-curriculo .chip').forEach(c => c.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  planBJrender();
+}
+
+function planBJrender() {
+  var grado = (document.getElementById('filtro-grado-plan') || {}).value || '';
+  var grid  = document.getElementById('plan-bj-grid');
+  if (!grid) return;
+  grid.innerHTML = '<div style="color:var(--text-muted);font-size:12px;">Cargando...</div>';
+
+  var url = '/api/plan-estudio?mencion=' + _planBJ_mencion + (grado ? '&grado=' + grado : '');
+  fetch(url)
+    .then(r => r.json())
+    .then(data => {
+      var html = '';
+      if (data.asignaturas) {
+        html = _renderPlanGrado(grado || '—', data.asignaturas);
+      } else if (data.plan) {
+        var mencionData = data.plan[_planBJ_mencion] || {};
+        ['4to','5to','6to'].forEach(g => {
+          if (mencionData[g]) html += _renderPlanGrado(g, mencionData[g]);
+        });
+      }
+      grid.innerHTML = html || '<div style="color:var(--text-muted);font-size:12px;">Sin datos</div>';
+    })
+    .catch(e => { grid.innerHTML = '<div style="color:#ff6b6b;font-size:12px;">Error: ' + e.message + '</div>'; });
+}
+
+function _renderPlanGrado(grado, asigs) {
+  var esp  = asigs.filter(a => !_COMUNES_NOMBRES.some(c => a.nombre.toLowerCase().includes(c)));
+  var com  = asigs.filter(a =>  _COMUNES_NOMBRES.some(c => a.nombre.toLowerCase().includes(c)));
+  var tot  = asigs.reduce((s,a) => s+(a.horas_semana||0), 0);
+
+  var emoji = {'MULTIMEDIA':'🎬','TEATRO':'🎭','MUSICA':'🎵','VISUAL':'🎨'}[_planBJ_mencion] || '📚';
+
+  return '<div style="margin-bottom:12px;background:var(--bg-card);border:1px solid var(--border);' +
+    'border-radius:12px;overflow:hidden;">' +
+    '<div style="padding:9px 14px;background:rgba(var(--accent-rgb),.07);border-bottom:1px solid var(--border);' +
+    'display:flex;align-items:center;justify-content:space-between;">' +
+    '<span style="font-weight:800;font-size:14px;">' + emoji + ' ' + grado + ' Grado</span>' +
+    '<span style="font-size:11px;color:var(--text-muted);">' + tot + ' h/sem</span>' +
+    '</div>' +
+    '<div style="padding:10px 14px;display:flex;flex-wrap:wrap;gap:5px;">' +
+    esp.map(a =>
+      '<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:99px;' +
+      'background:rgba(var(--accent-rgb),.1);border:1px solid rgba(var(--accent-rgb),.2);' +
+      'font-size:11px;font-weight:600;color:var(--accent);">' +
+      a.nombre +
+      (a.horas_semana > 0 ? ' <span style="opacity:.55;font-size:10px;">(' + a.horas_semana + 'h)</span>' : '') +
+      (a.horas_semana === 0 ? ' <span style="color:#f0c060;font-size:10px;">★ aprendida</span>' : '') +
+      '</span>'
+    ).join('') +
+    com.map(a =>
+      '<span style="display:inline-flex;align-items:center;padding:4px 10px;border-radius:99px;' +
+      'background:var(--bg);border:1px solid var(--border);font-size:10px;color:var(--text-muted);">' +
+      a.nombre + '</span>'
+    ).join('') +
+    '</div></div>';
+}
+
+// Auto-render when curriculo tab is opened
+(function() {
+  var _origCambiar = null;
+  document.addEventListener('DOMContentLoaded', function() {
+    _origCambiar = window.cambiarTab;
+    window.cambiarTab = function(tab) {
+      if (_origCambiar) _origCambiar(tab);
+      if (tab === 'curriculo') setTimeout(planBJrender, 150);
+    };
+  });
+})();
+
+async function verDetalleCurriculo(materia, card) {
+        document.querySelectorAll('.materia-card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+
+        const res = await fetch(`/api/planificacion/curriculo/${materia}`);
+        const c = await res.json();
+        const box = document.getElementById('c-detalle');
+
+        box.style.display = 'block';
+        box.innerHTML = `
+            <div class="curriculo-title">📋 ${materia.replace('_',' ')} — Detalle Curricular MINERD</div>
+            <div style="font-size:12px; color:var(--info); margin-bottom:14px;">${c.competencia} &nbsp;|&nbsp; ${c.horas} horas semanales</div>
+            <p style="font-size:13px; color:var(--text-muted); margin-bottom:16px; line-height:1.6;">${c.descripcion}</p>
+
+            <div class="curriculo-seccion" style="margin-bottom:16px;">
+                <div class="curriculo-seccion-title">📚 Saberes Conceptuales</div>
+                ${c.saberes_conceptuales.map(s => `<span class="curriculo-tag">${s}</span>`).join('')}
+            </div>
+            <div class="curriculo-seccion" style="margin-bottom:16px;">
+                <div class="curriculo-seccion-title">🔧 Saberes Procedimentales</div>
+                ${c.saberes_procedimentales.map(s => `<span class="curriculo-tag">${s}</span>`).join('')}
+            </div>
+            <div class="curriculo-seccion" style="margin-bottom:16px;">
+                <div class="curriculo-seccion-title">💡 Saberes Actitudinales</div>
+                ${c.saberes_actitudinales.map(s => `<span class="curriculo-tag">${s}</span>`).join('')}
+            </div>
+            <div class="curriculo-seccion" style="margin-bottom:12px;">
+                <div class="curriculo-seccion-title">✅ Indicadores de Logro Oficiales</div>
+                ${c.indicadores_logro.map((s,i) => `<div style="font-size:12px; padding:6px 0; border-bottom:1px solid var(--border); color:var(--text);">${i+1}. ${s}</div>`).join('')}
+            </div>
+            <div style="margin-top:12px; padding:12px; background:rgba(232,184,75,.08); border-radius:8px; border:1px solid rgba(232,184,75,.25);">
+                <span style="font-size:11px; font-weight:700; color:var(--accent);">⭐ EVIDENCIA DE DESEMPEÑO:</span>
+                <span style="font-size:12px; color:var(--text); margin-left:8px;">${c.evidencias}</span>
+            </div>
+        `;
+    }
+
+    // ── GENERAR PLANIFICACIÓN ───────────────────────────────────────────────
+    async function generarPlanificacion() {
+        const materia  = document.getElementById('p-materia').value;
+        const grado    = document.getElementById('p-grado').value;
+        const tema     = document.getElementById('p-tema').value.trim();
+        const duracion = document.getElementById('p-duracion').value;
+        const nivel    = document.getElementById('p-nivel').value;
+
+        if (!materia) return alert('Selecciona una materia');
+        if (!tema)    return alert('Escribe el tema específico a trabajar');
+
+        mostrarLoading('p', true);
+        rotateMsgs('p-loading-txt', [
+            'Consultando currículo MINERD...', 'Diseñando actividades...', 'Casi listo...'
+        ]);
+
+        try {
+            const res = await fetch('/api/planificacion/generar', {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({materia, grado, tema, duracion, nivel_grupo: nivel})
+            });
+            const data = await res.json();
+            mostrarLoading('p', false);
+            if (data.error) { mostrarError('p', data.error); return; }
+            mostrarResultado('p', data.resultado);
+        } catch(ex) {
+            mostrarLoading('p', false);
+            mostrarError('p', 'Error de conexión con el servidor.');
+        }
+    }
+
+    // ── GENERAR RÚBRICA ─────────────────────────────────────────────────────
+    async function generarRubrica() {
+        const materia = document.getElementById('r-materia').value;
+        const nivel   = document.getElementById('r-grado').value;
+
+        if (!materia)            return alert('Selecciona una materia');
+        if (!indicadorSeleccionado) return alert('Selecciona un indicador de logro');
+
+        mostrarLoading('r', true);
+        try {
+            const res = await fetch('/api/planificacion/rubrica', {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({materia, indicador: indicadorSeleccionado, nivel})
+            });
+            const data = await res.json();
+            mostrarLoading('r', false);
+            if (data.error) { mostrarError('r', data.error); return; }
+            mostrarResultado('r', data.resultado);
+        } catch(ex) {
+            mostrarLoading('r', false);
+            mostrarError('r', 'Error de conexión.');
+        }
+    }
+
+    // ── GENERAR ESTRATEGIA ──────────────────────────────────────────────────
+    async function generarEstrategia() {
+        const materia  = document.getElementById('e-materia').value;
+        const problema = document.getElementById('e-problema').value.trim();
+        const perfil   = document.getElementById('e-perfil').value.trim();
+
+        if (!materia)  return alert('Selecciona una materia');
+        if (!problema) return alert('Describe el problema o dificultad');
+
+        mostrarLoading('e', true);
+        try {
+            const res = await fetch('/api/planificacion/estrategia', {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({materia, problema, perfil_grupo: perfil})
+            });
+            const data = await res.json();
+            mostrarLoading('e', false);
+            if (data.error) { mostrarError('e', data.error); return; }
+            mostrarResultado('e', data.resultado);
+        } catch(ex) {
+            mostrarLoading('e', false);
+            mostrarError('e', 'Error de conexión.');
+        }
+    }
+
+    // ── HELPERS ─────────────────────────────────────────────────────────────
+    function mostrarLoading(prefix, show) {
+        document.getElementById(prefix + '-loading').classList.toggle('show', show);
+        document.getElementById(prefix + '-resultado').classList.remove('show');
+        document.getElementById(prefix + '-error').classList.remove('show');
+    }
+
+    function mostrarError(prefix, msg) {
+        const el = document.getElementById(prefix + '-error');
+        el.textContent = '⚠ ' + msg;
+        el.classList.add('show');
+    }
+
+    function mostrarResultado(prefix, texto) {
+        const box = document.getElementById(prefix + '-resultado');
+        const content = document.getElementById(prefix + '-content');
+        content.innerHTML = formatearTexto(texto);
+        box.classList.add('show');
+    }
+
+    function copiarResultado(contentId) {
+        const texto = document.getElementById(contentId).innerText;
+        navigator.clipboard.writeText(texto).then(() => {
+            event.target.textContent = '✓ Copiado';
+            setTimeout(() => event.target.innerHTML = '<i class="fas fa-copy"></i> Copiar', 2000);
+        });
+    }
+
+    function formatearTexto(texto) {
+        const colores = {
+            'COMPETENCIAS': '#4bbfe8',
+            'OBJETIVO': '#4be87a',
+            'MOTIVACIÓN': '#e8b84b',
+            'DESARROLLO': '#b44be8',
+            'ACTIVIDAD': '#e87a4b',
+            'EVALUACIÓN': '#4be87a',
+            'RECURSOS': '#e8b84b',
+            'INTEGRACIÓN': '#4bbfe8',
+            'DIAGNÓSTICO': '#4bbfe8',
+            'FORTALEZAS': '#4be87a',
+            'PLAN': '#e8b84b',
+            'SEGUIMIENTO': '#b44be8',
+            'ESTRATEGIAS': '#e87a4b',
+            'RÚBRICA': '#4be87a',
+            'TABLA': '#4bbfe8',
+            'ESCALA': '#e8b84b',
+            'INDICACIONES': '#b44be8'
+        };
+
+        let html = texto;
+
+        // Convertir encabezados numerados
+        html = html.replace(/^(\d+)\.\s+([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ\s()]+)/gm, (match, num, titulo) => {
+            const key = Object.keys(colores).find(k => titulo.includes(k));
+            const color = key ? colores[key] : 'var(--accent)';
+            return `<div class="res-seccion"><div class="res-titulo" style="color:${color};">${num}. ${titulo}</div><div class="res-cuerpo">`;
+        });
+
+        // Cerrar secciones abiertas
+        const aperturas = (html.match(/class="res-cuerpo">/g) || []).length;
+        html += '</div></div>'.repeat(aperturas);
+
+        // Listas con guión
+        html = html.replace(/^[-•]\s+(.+)$/gm,
+            '<div style="display:flex;gap:8px;margin-bottom:5px;"><span style="color:var(--accent);flex-shrink:0;">▸</span><span>$1</span></div>'
+        );
+
+        // Negritas
+        html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+
+        // Saltos de línea
+        html = html.replace(/\n{2,}/g, '<br><br>').replace(/\n/g, '<br>');
+
+        return html || texto;
+    }
+
+    let msgInterval = null;
+    function rotateMsgs(elId, msgs) {
+        clearInterval(msgInterval);
+        let i = 0;
+        msgInterval = setInterval(() => {
+            i = (i + 1) % msgs.length;
+            const el = document.getElementById(elId);
+            if (el) el.textContent = msgs[i];
+        }, 2000);
+    }
+
+    // ── GUARDAR DESDE RESULTADO ─────────────────────────────────────────────
+    async function guardarDesdeResultado() {
+        const btn = document.getElementById('p-guardar-btn');
+        const contenido = document.getElementById('p-content').innerText;
+        if (!contenido) return;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+        btn.disabled = true;
+        await guardarPlanificacion(contenido);
+        btn.innerHTML = '<i class="fas fa-check"></i> Guardado';
+        setTimeout(() => {
+            btn.innerHTML = '<i class="fas fa-bookmark"></i> Guardar';
+            btn.disabled = false;
+        }, 2000);
+    }
+
+    // ── GUARDAR PLANIFICACIÓN ────────────────────────────────────────────────
+    async function guardarPlanificacion(contenido) {
+        const materia  = document.getElementById('p-materia').value;
+        const grado    = document.getElementById('p-grado').value;
+        const tema     = document.getElementById('p-tema').value;
+        const nivel    = document.getElementById('p-nivel').value;
+
+        await fetch('/api/planificacion/guardar', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                estudiante_id:     estudiantePreId || null,
+                nombre_estudiante: estudiantePreNombre || '',
+                materia, grado, tema,
+                nivel_grupo: nivel,
+                contenido
+            })
+        });
+    }
+
+    // ── HISTORIAL ────────────────────────────────────────────────────────────
+    let historialData = [];
+
+    async function cargarHistorial() {
+        const lista = document.getElementById('h-lista');
+        lista.innerHTML = '<div style="color:var(--text-muted); font-size:13px; padding:20px;">Cargando...</div>';
+        try {
+            const res = await fetch('/api/planificacion/historial');
+            historialData = await res.json();
+            renderHistorial(historialData);
+        } catch(ex) {
+            lista.innerHTML = '<div style="color:var(--danger);">Error al cargar historial.</div>';
+        }
+    }
+
+    function renderHistorial(items) {
+        const lista = document.getElementById('h-lista');
+        if (!items.length) {
+            lista.innerHTML = '<div style="color:var(--text-muted); font-size:13px; padding:20px; text-align:center;">'
+                + '<i class="fas fa-inbox" style="font-size:32px; display:block; margin-bottom:12px; opacity:.3;"></i>'
+                + 'No hay planificaciones guardadas aún.<br>Genera una y haz clic en "Guardar".</div>';
+            return;
+        }
+
+        const materiaColor = {
+            'Fotografía':     '#4bbfe8',
+            'Lenguaje_Visual':'#b44be8',
+            'Diseño':         '#e8b84b'
+        };
+        const materiaIcon = {
+            'Fotografía':     '📸',
+            'Lenguaje_Visual':'🎨',
+            'Diseño':         '🖥️'
+        };
+
+        lista.innerHTML = '';
+        items.forEach(function(item) {
+            var color = materiaColor[item.materia] || 'var(--accent)';
+            var icon  = materiaIcon[item.materia]  || '📋';
+            var fecha = new Date(item.fecha).toLocaleDateString('es-DO', {
+                day:'2-digit', month:'short', year:'numeric'
+            });
+
+            var card = document.createElement('div');
+            card.className = 'historial-item';
+            card.onclick = function(){ verDetalle(item.id); };
+
+            var nombreEst = item.nombre_estudiante
+                ? '<span style="color:var(--accent); font-size:11px;">👤 ' + item.nombre_estudiante + '</span> &nbsp;'
+                : '';
+
+            card.innerHTML = '<div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">'
+                + '<div style="flex:1;">'
+                + '<div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">'
+                + '<span style="font-size:16px;">' + icon + '</span>'
+                + '<span style="font-family:var(--font-display); font-weight:700; font-size:13px; color:' + color + ';">' + item.materia.replace('_',' ') + '</span>'
+                + '<span style="font-size:10px; background:var(--surface2); border:1px solid var(--border); padding:2px 7px; border-radius:4px; color:var(--text-muted);">' + item.grado + '</span>'
+                + '</div>'
+                + '<div style="font-size:13px; font-weight:500; margin-bottom:4px;">' + item.tema + '</div>'
+                + '<div style="font-size:11px; color:var(--text-muted);">' + nombreEst
+                + '<i class="fas fa-clock" style="font-size:10px;"></i> ' + fecha + '</div>'
+                + '</div>'
+                + '</div>';
+
+            var delBtn = document.createElement('button');
+            delBtn.title = 'Eliminar';
+            delBtn.style.cssText = 'background:transparent; border:1px solid transparent; color:var(--text-muted); padding:4px 8px; border-radius:6px; font-size:11px; cursor:pointer; flex-shrink:0;';
+            delBtn.innerHTML = '<i class="fas fa-trash"></i>';
+            delBtn.addEventListener('mouseover', function(){ this.style.borderColor='var(--danger)'; this.style.color='var(--danger)'; });
+            delBtn.addEventListener('mouseout',  function(){ this.style.borderColor='transparent'; this.style.color='var(--text-muted)'; });
+            delBtn.addEventListener('click', function(e){ e.stopPropagation(); eliminarPlanificacion(item.id); });
+            card.querySelector('div').appendChild(delBtn);
+
+            lista.appendChild(card);
+        });
+    }
+
+    function filtrarHistorial() {
+        const q = document.getElementById('h-filtro').value.toLowerCase();
+        const filtrado = historialData.filter(i =>
+            i.nombre_estudiante.toLowerCase().includes(q) ||
+            i.tema.toLowerCase().includes(q) ||
+            i.materia.toLowerCase().includes(q)
+        );
+        renderHistorial(filtrado);
+    }
+
+    function verDetalle(id) {
+        const item = historialData.find(i => i.id === id);
+        if (!item) return;
+        document.getElementById('h-detalle-badge').textContent =
+            item.materia.replace('_',' ') + ' · ' + item.grado + ' · ' + item.tema;
+        document.getElementById('h-detalle-texto').innerHTML = formatearTexto(item.contenido);
+        document.getElementById('h-detalle').style.display = 'block';
+        document.getElementById('h-detalle').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function cerrarDetalle() {
+        document.getElementById('h-detalle').style.display = 'none';
+    }
+
+    async function eliminarPlanificacion(id) {
+        if (!confirm('¿Eliminar esta planificación?')) return;
+        await fetch('/api/planificacion/historial/' + id, { method: 'DELETE' });
+        historialData = historialData.filter(i => i.id !== id);
+        renderHistorial(historialData);
+        cerrarDetalle();
+    }
+
+    // ── PRECARGAR ESTUDIANTE DESDE URL ───────────────────────────────────────
+    let estudiantePreId = null;
+    let estudiantePreNombre = '';
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('estudiante_id')) {
+        estudiantePreId     = params.get('estudiante_id');
+        estudiantePreNombre = params.get('nombre') || '';
+
+        // Mostrar banner de contexto
+        const banner = document.createElement('div');
+        banner.style.cssText = 'background:rgba(232,184,75,.1); border:1px solid rgba(232,184,75,.3); '
+            + 'border-radius:10px; padding:12px 16px; margin-bottom:20px; '
+            + 'display:flex; align-items:center; gap:10px; font-size:13px;';
+        banner.innerHTML = '<span style="font-size:18px;">👤</span>'
+            + '<span>Planificando para <strong style="color:var(--accent);">'
+            + estudiantePreNombre + '</strong></span>'
+            + '<a href="/planificacion" style="margin-left:auto; font-size:11px; '
+            + 'color:var(--text-muted); text-decoration:none;">✕ Quitar filtro</a>';
+        document.querySelector('main').insertBefore(banner, document.querySelector('.tabs'));
+
+        // Auto-precargar materia si viene en URL
+        if (params.get('materia')) {
+            const sel = document.getElementById('p-materia');
+            sel.value = params.get('materia');
+            cargarCurriculo('p-materia', 'p-curriculo');
+        }
+    }
+</script>
+</body>
+</html>

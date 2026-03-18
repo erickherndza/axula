@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MultimediaTrack — Acceso</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── Colores: ver theme.css (día/noche automático) ── */
+:root { --font-display:'Syne',sans-serif; --font-mono:'DM Mono',monospace; --font-body:'DM Sans',sans-serif; }
+*{box-sizing:border-box;margin:0;padding:0;}
+body {
+  background:var(--bg); color:var(--text);
+  font-family:'DM Sans',sans-serif;
+  min-height:100vh; display:flex; align-items:center; justify-content:center;
+  position:relative; overflow:hidden;
+}
+
+/* Background grid decoration */
+body::before {
+  content:'';
+  position:fixed; inset:0;
+  background-image:
+    linear-gradient(rgba(200,240,96,.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(200,240,96,.03) 1px, transparent 1px);
+  background-size:40px 40px;
+  pointer-events:none;
+}
+
+/* Glowing orb */
+body::after {
+  content:'';
+  position:fixed;
+  width:600px; height:600px;
+  background: radial-gradient(circle, rgba(200,240,96,.06) 0%, transparent 70%);
+  top:50%; left:50%; transform:translate(-50%,-50%);
+  pointer-events:none;
+}
+
+.login-wrap {
+  position:relative; z-index:1;
+  width:100%; max-width:380px;
+  padding:16px;
+  animation: fadeUp .5s ease both;
+}
+
+@keyframes fadeUp {
+  from { opacity:0; transform:translateY(20px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+/* Logo */
+.logo-block {
+  text-align:center; margin-bottom:36px;
+}
+.logo-icon {
+  width:52px; height:52px; border-radius:14px;
+  background: var(--accent);
+  display:inline-flex; align-items:center; justify-content:center;
+  font-size:26px; margin-bottom:12px;
+  box-shadow: 0 0 30px rgba(200,240,96,.25);
+}
+.logo-title {
+  font-family:'Syne',sans-serif; font-size:20px; font-weight:800;
+  letter-spacing:-.3px;
+}
+.logo-title span { color:var(--accent); }
+.logo-sub {
+  font-size:11px; color:var(--muted);
+  text-transform:uppercase; letter-spacing:.8px; margin-top:3px;
+}
+
+/* Card */
+.card {
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:16px; padding:28px;
+}
+
+.card-title {
+  font-family:'Syne',sans-serif;
+  font-size:16px; font-weight:800; margin-bottom:4px;
+}
+.card-sub {
+  font-size:12px; color:var(--muted); margin-bottom:24px;
+}
+
+.field { margin-bottom:16px; }
+.field label {
+  display:block; font-size:11px; color:var(--muted);
+  text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px;
+}
+.field input {
+  width:100%; background:#111; border:1px solid #2a2a2a;
+  color:var(--text); padding:10px 14px; border-radius:9px;
+  font-size:13px; outline:none; font-family:'DM Sans',sans-serif;
+  transition: border-color .2s, box-shadow .2s;
+}
+.field input:focus {
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px rgba(200,240,96,.08);
+}
+
+.btn-login {
+  width:100%; padding:11px;
+  background:var(--accent); border:none; border-radius:9px;
+  color:#000; font-size:13px; font-weight:700;
+  font-family:'Syne',sans-serif; cursor:pointer;
+  transition:background .2s, transform .1s;
+  margin-top:4px;
+}
+.btn-login:hover  { background:#b0e040; }
+.btn-login:active { transform:scale(.98); }
+
+.error-msg {
+  background:rgba(255,107,107,.1); border:1px solid rgba(255,107,107,.25);
+  color:#ff6b6b; border-radius:8px; padding:10px 14px;
+  font-size:12px; margin-bottom:16px;
+  display:flex; align-items:center; gap:8px;
+}
+
+.hint {
+  margin-top:20px; padding:12px 14px;
+  background:rgba(200,240,96,.04);
+  border:1px solid rgba(200,240,96,.1);
+  border-radius:10px; font-size:11px; color:#555;
+  line-height:1.7;
+}
+.hint b { color:#888; }
+
+.footer {
+  text-align:center; margin-top:20px;
+  font-size:11px; color:var(--muted);
+}
+
+/* ── THEME TOGGLE (inyectado por theme.js) ─────── */
+.mt-theme-toggle {
+  display:flex; align-items:center; gap:2px;
+  background:var(--theme-toggle-bg,#1e1e1e);
+  border:1px solid var(--border); border-radius:99px;
+  padding:3px; margin-right:6px;
+}
+.mt-tbtn {
+  padding:4px 10px; border-radius:99px; border:none;
+  cursor:pointer; font-family:inherit; font-size:11px;
+  font-weight:700; color:var(--theme-toggle-text,#888);
+  background:transparent; transition:all .2s;
+  white-space:nowrap;
+}
+.mt-tbtn.theme-btn-active {
+  background:var(--theme-toggle-actbg,rgba(200,240,96,.1));
+  color:var(--theme-toggle-act,#c8f060);
+  box-shadow:0 1px 3px rgba(0,0,0,.3);
+}
+</style>
+  <link rel="stylesheet" href="/static/theme.css">
+  <script src="/static/theme.js"></script>
+</head>
+<body>
+
+<div class="login-wrap">
+
+  <div class="logo-block">
+    <div class="logo-icon">🎨</div>
+    <div class="logo-title">Multimedia<span>Track</span></div>
+    <div class="logo-sub">C.E. Benito Juárez — Modalidad en Artes</div>
+    <div style="font-size:9px;color:#333;margin-top:3px;font-family:'DM Mono',monospace;letter-spacing:.3px;">
+      Seguimiento Estudiantil · MINERD RD
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Iniciar sesión</div>
+    <div class="card-sub">Modalidad Artes · Bachiller RD</div>
+
+    {% if error %}
+    <div class="error-msg">
+      <span>⚠</span> {{ error }}
+    </div>
+    {% endif %}
+
+    <form method="POST" action="/login">
+      <div class="field">
+        <label>Correo institucional</label>
+        <input type="email" name="username" placeholder="nombre@educacion.edu.do" autofocus autocomplete="email">
+      </div>
+      <div class="field">
+        <label>Contraseña</label>
+        <input type="password" name="password" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <button type="submit" class="btn-login">Entrar →</button>
+    </form>
+
+    <div class="hint">
+      <b>Correo:</b> usa tu correo institucional @educacion.edu.do<br>
+      <b>Coordinador:</b> acceso completo a perfiles, reportes y análisis.<br>
+      <b>Profesor:</b> acceso a sus estudiantes y materias asignadas.
+    </div>
+  </div>
+
+  <div class="footer">MultimediaTrack · Modalidad Artes &copy; 2025</div>
+
+</div>
+
+</body>
+</html>

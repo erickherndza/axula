@@ -1,0 +1,1564 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portal Docente — MultimediaTrack</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+/* ── Colores: ver theme.css (día/noche automático) ── */
+:root { --font-display:'Syne',sans-serif; --font-mono:'DM Mono',monospace; --font-body:'DM Sans',sans-serif; }
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;min-height:100vh;}
+
+/* NAV */
+nav{display:flex;align-items:center;gap:10px;padding:0 24px;height:50px;
+    background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;}
+.logo{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:var(--accent);letter-spacing:-.5px;text-decoration:none;}
+.logo span{color:var(--muted);}
+.nav-badge{font-size:9px;padding:2px 8px;border-radius:10px;background:rgba(96,184,240,.12);
+           color:var(--blue);font-weight:700;text-transform:uppercase;letter-spacing:.4px;}
+.nav-r{margin-left:auto;display:flex;align-items:center;gap:10px;}
+.nav-link{font-size:12px;color:var(--muted);text-decoration:none;display:flex;align-items:center;gap:5px;
+          padding:5px 10px;border-radius:7px;transition:all .15s;}
+.nav-link:hover{color:var(--text);background:var(--surface2);}
+.nav-link.danger{color:#ff6b6b;}
+
+/* MAIN */
+main{max-width:1200px;margin:0 auto;padding:24px;}
+
+/* HERO */
+.prof-hero{background:var(--surface);border:1px solid var(--border);border-radius:14px;
+           padding:20px 24px;margin-bottom:24px;
+           display:flex;align-items:center;gap:16px;}
+.prof-avatar{width:52px;height:52px;border-radius:12px;background:rgba(96,184,240,.12);
+             color:var(--blue);font-family:'Syne',sans-serif;font-size:20px;font-weight:800;
+             display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.prof-name{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;margin-bottom:4px;}
+.prof-meta{display:flex;gap:10px;flex-wrap:wrap;}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:10px;padding:3px 10px;
+      border-radius:20px;border:1px solid var(--border);color:var(--muted);font-weight:600;
+      text-transform:uppercase;letter-spacing:.4px;}
+.pill.green{border-color:rgba(77,255,180,.3);color:var(--success);background:rgba(77,255,180,.06);}
+.pill.blue{border-color:rgba(96,184,240,.3);color:var(--blue);background:rgba(96,184,240,.06);}
+.pill.warn{border-color:rgba(255,196,77,.3);color:var(--warn);background:rgba(255,196,77,.06);}
+
+/* TABS */
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:24px;}
+.tab-btn{padding:12px 20px;background:transparent;border:none;border-bottom:2px solid transparent;
+         color:var(--muted);font-size:12px;font-family:'DM Sans',sans-serif;cursor:pointer;
+         transition:all .15s;display:flex;align-items:center;gap:7px;}
+.tab-btn:hover{color:var(--text);}
+.tab-btn.active{color:var(--text);border-bottom-color:var(--accent);}
+
+/* CARD */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px;}
+.card-title{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;
+            letter-spacing:.6px;color:var(--muted);margin-bottom:16px;
+            display:flex;align-items:center;gap:8px;}
+.card-title i{color:var(--accent);}
+
+/* PASE DE LISTA */
+.lista-controls{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:flex-end;}
+.fld{display:flex;flex-direction:column;gap:4px;}
+.fld label{font-size:10px;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:.4px;}
+.fld input, .fld select{background:#111;border:1px solid #333;color:var(--text);
+                        padding:8px 12px;border-radius:8px;font-size:12px;
+                        font-family:'DM Sans',sans-serif;outline:none;}
+.fld input:focus, .fld select:focus{border-color:var(--accent);}
+
+.btn-primary{background:var(--accent);border:none;color:#000;font-weight:700;
+             padding:8px 18px;border-radius:8px;font-size:12px;cursor:pointer;
+             font-family:'DM Sans',sans-serif;display:inline-flex;align-items:center;gap:7px;
+             transition:all .15s;}
+.btn-primary:hover{background:#d8ff70;}
+.btn-sec{background:transparent;border:1px solid #333;color:#888;
+         padding:8px 16px;border-radius:8px;font-size:12px;cursor:pointer;
+         font-family:'DM Sans',sans-serif;display:inline-flex;align-items:center;gap:6px;
+         transition:all .15s;}
+.btn-sec:hover{border-color:var(--text);color:var(--text);}
+
+/* Lista de estudiantes */
+.lista-grid{display:flex;flex-direction:column;gap:6px;}
+.est-row{display:flex;align-items:center;gap:12px;padding:10px 14px;
+         background:var(--surface2);border-radius:10px;border:1px solid var(--border);}
+.est-ini{width:30px;height:30px;border-radius:8px;background:rgba(200,240,96,.1);
+         color:var(--accent);font-family:'Syne',sans-serif;font-size:11px;font-weight:800;
+         display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.est-nombre{flex:1;font-size:12px;font-weight:500;}
+.est-curso{font-size:10px;color:#555;}
+.asist-btns{display:flex;gap:5px;}
+.asist-btn{padding:5px 11px;border-radius:7px;font-size:11px;font-weight:600;
+           cursor:pointer;border:1px solid transparent;transition:all .12s;font-family:'DM Sans',sans-serif;}
+.asist-btn.p{background:rgba(77,255,180,.1);color:var(--success);border-color:rgba(77,255,180,.3);}
+.asist-btn.p.sel,.asist-btn.p:hover{background:var(--success);color:#000;}
+.asist-btn.t{background:rgba(255,196,77,.1);color:var(--warn);border-color:rgba(255,196,77,.3);}
+.asist-btn.t.sel,.asist-btn.t:hover{background:var(--warn);color:#000;}
+.asist-btn.a{background:rgba(255,77,77,.1);color:#ff6b6b;border-color:rgba(255,77,77,.3);}
+.asist-btn.a.sel,.asist-btn.a:hover{background:#ff6b6b;color:#fff;}
+.asist-btn.j{background:rgba(96,184,240,.1);color:var(--blue);border-color:rgba(96,184,240,.3);}
+.asist-btn.j.sel,.asist-btn.j:hover{background:var(--blue);color:#000;}
+.obs-inp{background:#111;border:1px solid #222;color:#888;padding:4px 8px;
+         border-radius:6px;font-size:11px;width:120px;font-family:'DM Sans',sans-serif;outline:none;}
+.obs-inp:focus{border-color:#444;}
+
+/* Estadísticas */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:20px;}
+.stat-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center;}
+.stat-val{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;line-height:1;}
+.stat-lbl{font-size:9px;color:#555;text-transform:uppercase;letter-spacing:.5px;margin-top:4px;}
+
+/* Historial de asistencia */
+.hist-table{width:100%;border-collapse:collapse;}
+.hist-table th{text-align:left;padding:6px 10px;font-size:9px;color:#555;
+               text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);
+               font-family:'DM Mono',monospace;}
+.hist-table td{padding:9px 10px;border-bottom:1px solid #1a1a1a;font-size:12px;}
+.hist-table tr:hover td{background:#1a1a1a;}
+.est-tag{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;}
+.est-tag.presente{background:rgba(77,255,180,.1);color:var(--success);}
+.est-tag.tardanza{background:rgba(255,196,77,.1);color:var(--warn);}
+.est-tag.ausente{background:rgba(255,77,77,.1);color:#ff6b6b;}
+.est-tag.justificado{background:rgba(96,184,240,.1);color:var(--blue);}
+
+/* Plan de estudio */
+.plan-table{width:100%;border-collapse:collapse;}
+.plan-table th{text-align:left;padding:6px 12px;font-size:9px;color:#555;
+               text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);}
+.plan-table td{padding:10px 12px;border-bottom:1px solid #1a1a1a;font-size:12px;}
+.plan-table tr:hover td{background:#1a1a1a;}
+.horas-bar{display:flex;align-items:center;gap:8px;}
+.horas-fill{height:6px;border-radius:3px;background:var(--accent);}
+
+/* Alertas normativa */
+.alerta-minerd{background:rgba(255,196,77,.06);border:1px solid rgba(255,196,77,.2);
+               border-radius:10px;padding:12px 16px;margin-bottom:16px;
+               display:flex;gap:10px;align-items:flex-start;}
+.alerta-minerd i{color:var(--warn);font-size:14px;margin-top:1px;flex-shrink:0;}
+.alerta-minerd .al-title{font-weight:700;font-size:12px;margin-bottom:2px;}
+.alerta-minerd .al-text{font-size:11px;color:#888;line-height:1.5;}
+
+/* Toast */
+#toast{position:fixed;top:66px;right:22px;padding:10px 17px;border-radius:8px;font-size:12px;
+       z-index:999;background:#222;border:1px solid #333;opacity:0;transform:translateY(-8px);
+       transition:all .25s;pointer-events:none;}
+#toast.show{opacity:1;transform:translateY(0);}
+
+/* Panel resumen por estudiante */
+.resumen-asist{padding:16px;border-radius:10px;border:1px solid var(--border);}
+.bar-asist{height:6px;background:#1a1a1a;border-radius:3px;overflow:hidden;margin-top:4px;}
+.bar-fill{height:100%;border-radius:3px;transition:width .4s;}
+
+/* ── THEME TOGGLE (inyectado por theme.js) ─────── */
+.mt-theme-toggle {
+  display:flex; align-items:center; gap:2px;
+  background:var(--theme-toggle-bg,#1e1e1e);
+  border:1px solid var(--border); border-radius:99px;
+  padding:3px; margin-right:6px;
+}
+.mt-tbtn {
+  padding:4px 10px; border-radius:99px; border:none;
+  cursor:pointer; font-family:inherit; font-size:11px;
+  font-weight:700; color:var(--theme-toggle-text,#888);
+  background:transparent; transition:all .2s;
+  white-space:nowrap;
+}
+.mt-tbtn.theme-btn-active {
+  background:var(--theme-toggle-actbg,rgba(200,240,96,.1));
+  color:var(--theme-toggle-act,#c8f060);
+  box-shadow:0 1px 3px rgba(0,0,0,.3);
+}
+</style>
+  <link rel="stylesheet" href="/static/theme.css">
+  <script src="/static/theme.js"></script>
+</head>
+<body>
+
+<nav>
+  <a href="/profesor" class="logo" style="flex-direction:column;line-height:1;align-items:flex-start;">
+    <div><span style="color:var(--accent);">Multimedia</span>Track</div>
+    <div style="font-size:7px;font-family:'DM Mono',monospace;color:#333;letter-spacing:.5px;text-transform:uppercase;margin-top:1px;">C.E. Benito Juárez</div>
+  </a
+  <span class="nav-badge"><i class="fas fa-chalkboard-teacher" style="margin-right:4px;"></i>Portal Docente</span>
+  <div class="nav-r">
+    <a href="/" class="nav-link"><i class="fas fa-table-columns"></i> Dashboard</a>
+    {% if profesor %}
+    <div style="display:flex;align-items:center;gap:7px;padding:4px 10px;background:var(--surface2);
+                border-radius:9px;border:1px solid var(--border);">
+      <div style="width:24px;height:24px;border-radius:7px;background:rgba(96,184,240,.12);
+                  display:flex;align-items:center;justify-content:center;
+                  font-family:'Syne',sans-serif;font-size:10px;font-weight:800;color:var(--blue);">
+        {{ (profesor.nombre or '?')[0].upper() }}
+      </div>
+      <div style="line-height:1.2;">
+        <div style="font-size:11px;font-weight:600;">{{ profesor.nombre }}</div>
+        <div style="font-size:9px;color:#555;text-transform:uppercase;">Profesor</div>
+      </div>
+    </div>
+    {% endif %}
+    <a href="/logout" class="nav-link danger" title="Cerrar sesión">
+      <i class="fas fa-right-from-bracket"></i>
+    </a>
+  </div>
+</nav>
+
+<div id="toast"></div>
+
+<main>
+
+  <!-- Hero del profesor -->
+  <div class="prof-hero">
+    <div class="prof-avatar">{{ (profesor.nombre or '?')[0].upper() }}</div>
+    <div>
+      <div class="prof-name">{{ profesor.nombre }}</div>
+      <div class="prof-meta">
+        {% if profesor.grado %}
+        <span class="pill green"><i class="fas fa-graduation-cap"></i> {{ profesor.grado }}</span>
+        {% endif %}
+        {% if profesor.mencion %}
+        <span class="pill blue"><i class="fas fa-palette"></i> {{ profesor.mencion }}</span>
+        {% endif %}
+        {% if profesor.asignaturas %}
+        <span class="pill warn"><i class="fas fa-book"></i> {{ profesor.asignaturas }}</span>
+        {% endif %}
+        <span class="pill"><i class="fas fa-users"></i> {{ estudiantes|length }} estudiantes</span>
+      </div>
+    </div>
+    <div style="margin-left:auto;text-align:right;">
+      <div style="font-size:10px;color:#555;margin-bottom:4px;">Año escolar 2025-2026</div>
+      <div style="font-size:10px;color:#555;">MINERD · Ordenanza 04-2023</div>
+      <div style="font-size:10px;color:var(--warn);margin-top:4px;">
+        <i class="fas fa-triangle-exclamation"></i> Mínimo aprobatorio: 70 pts · Max. 20% inasistencias
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="showTab('pase')">
+      <i class="fas fa-clipboard-check"></i> Pase de Lista
+    </button>
+    <button class="tab-btn" onclick="showTab('historial')">
+      <i class="fas fa-clock-rotate-left"></i> Historial
+    </button>
+    <button class="tab-btn" onclick="showTab('resumen')">
+      <i class="fas fa-chart-pie"></i> Resumen por Estudiante
+    </button>
+    <button class="tab-btn" onclick="showTab('notas')">
+      <i class="fas fa-star-half-stroke"></i> Registro de Notas
+    </button>
+    <button class="tab-btn" onclick="showTab('plan')">
+      <i class="fas fa-book-open"></i> Plan de Estudio MINERD
+    </button>
+    <button class="tab-btn" onclick="showTab('cuaderno')">
+      <i class="fas fa-book-bookmark"></i> Cuaderno Anecdótico
+    </button>
+    <button class="tab-btn" onclick="showTab('progreso')">
+      <i class="fas fa-chart-line"></i> Progreso Estudiantil
+    </button>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- TAB: PASE DE LISTA -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <div id="tab-pase">
+
+    <div class="alerta-minerd">
+      <i class="fas fa-scale-balanced"></i>
+      <div>
+        <div class="al-title">Normativa MINERD — Asistencia (Ordenanza 1'96 mod. 1'98)</div>
+        <div class="al-text">
+          Art. 51: El estudiante <strong>reprueba la asignatura</strong> si acumula más del 20% de inasistencias injustificadas.
+          El promedio de asistencia se calcula como: <strong>(horas presentes ÷ horas totales impartidas) × 100</strong>.
+          Las tardanzas cuentan como ½ hora ausente. Las inasistencias justificadas no penalizan.
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <div class="card-title" style="margin:0;"><i class="fas fa-clipboard-list"></i> Registrar Asistencia</div>
+        <div id="lista-hoy-indicator"></div>
+      </div>
+
+      <div class="lista-controls">
+        <div class="fld">
+          <label>Fecha *</label>
+          <input type="date" id="lista-fecha" value="{{ fecha_hoy }}">
+        </div>
+        <div class="fld">
+          <label>Materia *</label>
+          <select id="lista-materia" onchange="onMateriaChange();">
+            {% for asig, horas in plan %}
+            <option value="{{ asig }}" data-horas="{{ horas }}">{{ asig }} ({{ horas }}h/sem)</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="fld">
+          <label>Horas de clase hoy</label>
+          <select id="lista-horas">
+            <option value="1">1 hora</option>
+            <option value="2">2 horas</option>
+            <option value="3">3 horas</option>
+            <option value="4">4 horas</option>
+          </select>
+        </div>
+        <div class="fld">
+          <label>Período</label>
+          <select id="lista-periodo">
+            <option value="P1">P1 — Primer Período</option>
+            <option value="P2">P2 — Segundo Período</option>
+            <option value="P3">P3 — Tercer Período</option>
+            <option value="P4">P4 — Cuarto Período</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:6px;align-items:flex-end;">
+          <button class="btn-sec" onclick="marcarTodos('presente')">
+            <i class="fas fa-check-double"></i> Todos presentes
+          </button>
+          <button class="btn-primary" onclick="guardarAsistencia()" id="btn-guardar">
+            <i class="fas fa-save"></i> Guardar lista
+          </button>
+        </div>
+      </div>
+
+      <!-- Contadores en tiempo real -->
+      <div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap;">
+        <span id="cnt-p" style="font-size:11px;color:var(--success);">✔ 0 presentes</span>
+        <span id="cnt-t" style="font-size:11px;color:var(--warn);">⏱ 0 tardanzas</span>
+        <span id="cnt-a" style="font-size:11px;color:#ff6b6b;">✗ 0 ausentes</span>
+        <span id="cnt-j" style="font-size:11px;color:var(--blue);">📋 0 justificados</span>
+        <span id="cnt-sin" style="font-size:11px;color:#555;">⚪ <span id="cnt-sin-n">{{ estudiantes|length }}</span> sin marcar</span>
+      </div>
+
+      <div class="lista-grid" id="lista-container">
+        {% for est in estudiantes %}
+        <div class="est-row" data-id="{{ est.id }}">
+          <div class="est-ini">{{ est.nombre[0] }}{{ est.apellido[0] }}</div>
+          <div style="flex:1;">
+            <div class="est-nombre">{{ est.apellido }}, {{ est.nombre }}</div>
+            <div class="est-curso">{{ est.curso }}</div>
+          </div>
+          <div class="asist-btns">
+            <button class="asist-btn p" onclick="setEstado(this,'presente')">P</button>
+            <button class="asist-btn t" onclick="setEstado(this,'tardanza')">T</button>
+            <button class="asist-btn a" onclick="setEstado(this,'ausente')">A</button>
+            <button class="asist-btn j" onclick="setEstado(this,'justificado')">J</button>
+          </div>
+          <input class="obs-inp" placeholder="Observación…" title="Observación">
+        </div>
+        {% endfor %}
+        {% if not estudiantes %}
+        <div style="text-align:center;padding:30px;color:#444;">
+          <div style="font-size:24px;margin-bottom:8px;">📭</div>
+          No hay estudiantes asignados a tu perfil.<br>
+          <span style="color:#333;font-size:11px;">El coordinador debe asignarte un grado y mención.</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- TAB: HISTORIAL -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <div id="tab-historial" style="display:none;">
+    <div class="card">
+      <div class="card-title"><i class="fas fa-clock-rotate-left"></i> Historial de Clases</div>
+
+      <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:flex-end;">
+        <div class="fld">
+          <label>Materia</label>
+          <select id="hist-materia" onchange="cargarHistorial()">
+            <option value="">Todas</option>
+            {% for asig, horas in plan %}
+            <option value="{{ asig }}">{{ asig }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="fld">
+          <label>Período</label>
+          <select id="hist-periodo" onchange="cargarHistorial()">
+            <option value="">Todos</option>
+            <option value="1">P1</option>
+            <option value="2">P2</option>
+            <option value="3">P3</option>
+            <option value="4">P4</option>
+          </select>
+        </div>
+        <div class="fld">
+          <label>Desde</label>
+          <input type="date" id="hist-desde" onchange="cargarHistorial()">
+        </div>
+        <div class="fld">
+          <label>Hasta</label>
+          <input type="date" id="hist-hasta" onchange="cargarHistorial()">
+        </div>
+        <button class="btn-sec" onclick="cargarHistorial()"><i class="fas fa-rotate"></i> Actualizar</button>
+      </div>
+
+      <div style="overflow-x:auto;">
+        <table class="hist-table">
+          <thead>
+            <tr>
+              <th>Fecha</th><th>Estudiante</th><th>Materia</th>
+              <th>Estado</th><th>Horas</th><th>P</th><th>Observación</th>
+            </tr>
+          </thead>
+          <tbody id="hist-body">
+            <tr><td colspan="7" style="text-align:center;padding:20px;color:#555;">
+              Selecciona un filtro para cargar el historial
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- TAB: RESUMEN POR ESTUDIANTE -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <div id="tab-resumen" style="display:none;">
+    <div class="card">
+      <div class="card-title"><i class="fas fa-chart-pie"></i> Resumen de Asistencia por Estudiante</div>
+
+      <div style="display:flex;gap:10px;margin-bottom:16px;align-items:flex-end;">
+        <div class="fld" style="flex:1;max-width:300px;">
+          <label>Estudiante</label>
+          <select id="res-est" onchange="cargarResumen()">
+            <option value="">— Selecciona un estudiante —</option>
+            {% for est in estudiantes %}
+            <option value="{{ est.id }}">{{ est.apellido }}, {{ est.nombre }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div id="resumen-container">
+        <div style="text-align:center;padding:30px;color:#444;">
+          <div style="font-size:24px;margin-bottom:8px;">📊</div>
+          Selecciona un estudiante para ver su resumen de asistencia
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- TAB: REGISTRO DE NOTAS (P1-P4) -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <div id="tab-notas" style="display:none;">
+
+    <div class="alerta-minerd" style="border-color:rgba(247,183,49,.3);background:rgba(247,183,49,.05);">
+      <i class="fas fa-star-half-stroke" style="color:#f7b731;font-size:20px;"></i>
+      <div>
+        <div class="al-title" style="color:#f7b731;">Registro de Calificaciones — Ordenanza 04-2023</div>
+        <div class="al-text">
+          Ingresa la nota del período (0–100) por estudiante y materia. Mínimo aprobatorio:
+          <strong>70 puntos</strong>. Entre 50–69 → Prueba Completiva (Ord. 1'96 Art. 65).
+          Menor de 50 → Reprobado directo. El promedio final es (P1+P2+P3+P4) ÷ 4.
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><i class="fas fa-table"></i> Libro de Calificaciones</div>
+
+      <!-- Controles filtro -->
+      <div class="lista-controls" style="margin-bottom:16px;">
+        <div class="fld">
+          <label>Materia</label>
+          <select id="notas-materia" onchange="cargarTablaNotas()">
+            {% for asig, horas in plan %}
+            <option value="{{ asig }}">{{ asig }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="fld">
+          <label>Período</label>
+          <select id="notas-periodo" onchange="cargarTablaNotas()">
+            <option value="P1">P1 — Primer Período</option>
+            <option value="P2">P2 — Segundo Período</option>
+            <option value="P3">P3 — Tercer Período</option>
+            <option value="P4">P4 — Cuarto Período</option>
+          </select>
+        </div>
+        <div class="fld">
+          <label>Año Escolar</label>
+          <select id="notas-anio" onchange="cargarTablaNotas()">
+            <option value="" id="opt-anio-actual">Cargando…</option>
+          </select>
+        </div>
+        <div style="display:flex;align-items:flex-end;gap:8px;">
+          <button onclick="guardarTodasNotas()" id="btn-guardar-notas"
+            style="background:var(--accent);border:none;color:#000;font-weight:700;padding:8px 16px;
+                   border-radius:8px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:6px;">
+            <i class="fas fa-save"></i> Guardar Notas
+          </button>
+          <button onclick="cargarTablaNotas()" 
+            style="background:none;border:1px solid #333;color:#888;padding:8px 14px;
+                   border-radius:8px;cursor:pointer;font-size:12px;">
+            <i class="fas fa-rotate"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Badges de estado -->
+      <div id="notas-stats" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;"></div>
+
+      <!-- Tabla de notas -->
+      <div id="notas-table-container">
+        <div style="text-align:center;padding:30px;color:#444;">
+          <div style="font-size:24px;margin-bottom:8px;">📝</div>
+          Selecciona materia y período para ver la lista
+        </div>
+      </div>
+
+      <!-- Footer guardado -->
+      <div id="notas-footer" style="display:none;margin-top:12px;padding:10px;
+           background:rgba(77,255,180,.05);border:1px solid rgba(77,255,180,.15);border-radius:8px;
+           display:flex;align-items:center;gap:8px;font-size:11px;color:#4dffb4;">
+        <i class="fas fa-circle-check"></i>
+        <span id="notas-footer-msg">Notas guardadas ✓</span>
+      </div>
+    </div>
+
+    <!-- Vista global por estudiante -->
+    <div class="card" style="margin-top:16px;">
+      <div class="card-title"><i class="fas fa-chart-bar"></i> Vista Global — Todos los Períodos</div>
+      <div style="display:flex;gap:10px;margin-bottom:14px;align-items:flex-end;">
+        <div class="fld" style="flex:1;max-width:340px;">
+          <label>Estudiante</label>
+          <select id="notas-est-global" onchange="cargarResumenNotas()">
+            <option value="">— Selecciona un estudiante —</option>
+            {% for est in estudiantes %}
+            <option value="{{ est.id }}">{{ est.apellido }}, {{ est.nombre }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div id="notas-global-container">
+        <div style="text-align:center;padding:20px;color:#444;font-size:12px;">
+          Selecciona un estudiante para ver su boletín de notas y asistencia
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- TAB: PLAN DE ESTUDIO MINERD -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <div id="tab-plan" style="display:none;">
+    <div class="alerta-minerd">
+      <i class="fas fa-book-open"></i>
+      <div>
+        <div class="al-title">Plan de Estudio Oficial — Bachillerato en Artes, Mención Arte Multimedia</div>
+        <div class="al-text">
+          Fuente: Dirección de la Modalidad en Artes, MINERD. Segundo Ciclo (4to, 5to y 6to).
+          Total: <strong>40 horas semanales</strong> por grado. Año escolar aproximado: <strong>36 semanas</strong> (~180 días).
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><i class="fas fa-calendar-days"></i>
+        {{ profesor.grado or '4to' }} Grado — Asignaturas y Horas Semanales
+      </div>
+      <table class="plan-table">
+        <thead>
+          <tr>
+            <th>Asignatura</th>
+            <th>Horas/semana</th>
+            <th>Horas/año (~36 sem)</th>
+            <th>% del total</th>
+            <th>Distribución</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for asig, horas in plan %}
+          {% set horas_anio = horas * 36 %}
+          {% set pct = ((horas / 40) * 100) | round(1) %}
+          <tr>
+            <td style="font-weight:500;">{{ asig }}</td>
+            <td style="font-family:'DM Mono',monospace;color:var(--accent);">{{ horas }}h</td>
+            <td style="font-family:'DM Mono',monospace;color:#888;">{{ horas_anio }}h</td>
+            <td style="font-family:'DM Mono',monospace;color:#888;">{{ pct }}%</td>
+            <td>
+              <div class="horas-bar">
+                <div style="flex:1;height:6px;background:#1a1a1a;border-radius:3px;">
+                  <div class="horas-fill" style="width:{{ pct }}%;"></div>
+                </div>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+          <tr style="border-top:2px solid var(--border);">
+            <td style="font-weight:700;color:var(--accent);">TOTAL</td>
+            <td style="font-family:'DM Mono',monospace;font-weight:700;color:var(--accent);">40h</td>
+            <td style="font-family:'DM Mono',monospace;color:#888;">1,440h</td>
+            <td></td><td></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div style="margin-top:20px;padding:14px;background:#111;border-radius:10px;
+                  border-left:3px solid var(--warn);">
+        <div style="font-size:11px;font-weight:700;color:var(--warn);margin-bottom:6px;">
+          <i class="fas fa-calculator"></i> Cálculo del Umbral de Inasistencia (Art. 51 Ord. 1'98)
+        </div>
+        <div style="font-size:11px;color:#888;line-height:1.7;">
+          {% for asig, horas in plan %}
+          {% set max_ausencias = ((horas * 36 * 0.20) | round(1)) %}
+          <span style="display:inline-block;margin-right:14px;margin-bottom:4px;">
+            <span style="color:#555;">{{ asig }}:</span>
+            <strong style="color:var(--text);">{{ max_ausencias }}h</strong> máx. sin justificar
+          </span>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- TAB: CUADERNO ANECDÓTICO -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <div id="tab-cuaderno" style="display:none;">
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title"><i class="fas fa-book-bookmark"></i> Cuaderno Anecdótico</div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:16px;">
+        Registra incidencias de conducta, estado emocional o cualquier observación relevante
+        sobre tus estudiantes. Puedes convertir una entrada en reporte para que aparezca en
+        el perfil del estudiante.
+      </p>
+
+      <!-- Selector de estudiante + formulario -->
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+        <select id="ca-estudiante" style="flex:1;min-width:200px;padding:8px 12px;
+          background:var(--surface);border:1px solid var(--border);border-radius:8px;
+          color:var(--text);font-size:13px;" onchange="cargarCuaderno()">
+          <option value="">— Selecciona un estudiante —</option>
+          {% for est in estudiantes %}
+          <option value="{{ est.id }}">{{ est.apellido }}, {{ est.nombre }}</option>
+          {% endfor %}
+        </select>
+        <select id="ca-tipo" style="padding:8px 12px;background:var(--surface);
+          border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;">
+          <option value="conductual">🔴 Conductual</option>
+          <option value="emocional">🟡 Emocional</option>
+          <option value="académico">🔵 Académico</option>
+          <option value="familiar">🟠 Familiar</option>
+          <option value="otro">⚪ Otro</option>
+        </select>
+        <input type="date" id="ca-fecha" style="padding:8px 12px;background:var(--surface);
+          border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;">
+      </div>
+
+      <textarea id="ca-descripcion" placeholder="Descripción del incidente u observación..."
+        style="width:100%;min-height:90px;padding:10px;background:var(--surface);
+        border:1px solid var(--border);border-radius:8px;color:var(--text);
+        font-size:13px;resize:vertical;box-sizing:border-box;margin-bottom:10px;"></textarea>
+
+      <textarea id="ca-seguimiento" placeholder="Seguimiento / acción tomada (opcional)..."
+        style="width:100%;min-height:60px;padding:10px;background:var(--surface);
+        border:1px solid var(--border);border-radius:8px;color:var(--text);
+        font-size:13px;resize:vertical;box-sizing:border-box;margin-bottom:10px;"></textarea>
+
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <label style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;">
+          <input type="checkbox" id="ca-privado"> Entrada privada (solo psicóloga y coordinación)
+        </label>
+        <button class="btn-action" onclick="guardarEntradaCuaderno()"
+          style="margin-left:auto;">
+          <i class="fas fa-plus"></i> Guardar entrada
+        </button>
+      </div>
+    </div>
+
+    <!-- Lista de entradas del estudiante seleccionado -->
+    <div id="ca-lista" style="display:none;">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;
+                  letter-spacing:.08em;margin-bottom:10px;">
+        Entradas del estudiante
+      </div>
+      <div id="ca-entradas"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- TAB: PROGRESO ESTUDIANTIL -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <div id="tab-progreso" style="display:none;">
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title"><i class="fas fa-chart-line"></i> Progreso Estudiantil</div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:16px;">
+        Visualiza el avance de cada estudiante por período. Agrega una evaluación
+        narrativa que quedará registrada en su perfil.
+      </p>
+
+      <select id="pg-estudiante" style="width:100%;padding:8px 12px;background:var(--surface);
+        border:1px solid var(--border);border-radius:8px;color:var(--text);
+        font-size:13px;margin-bottom:16px;" onchange="cargarProgreso()">
+        <option value="">— Selecciona un estudiante —</option>
+        {% for est in estudiantes %}
+        <option value="{{ est.id }}">{{ est.apellido }}, {{ est.nombre }}</option>
+        {% endfor %}
+      </select>
+
+      <div id="pg-contenido" style="display:none;">
+
+        <!-- KPIs del estudiante -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));
+                    gap:10px;margin-bottom:16px;" id="pg-kpis"></div>
+
+        <!-- Notas por materia y período -->
+        <div style="margin-bottom:16px;">
+          <div style="font-size:11px;font-weight:700;color:var(--muted);
+                      text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">
+            Calificaciones por Período
+          </div>
+          <div id="pg-materias" style="overflow-x:auto;"></div>
+        </div>
+
+        <!-- Asistencia mensual -->
+        <div style="margin-bottom:16px;">
+          <div style="font-size:11px;font-weight:700;color:var(--muted);
+                      text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">
+            Asistencia Mensual
+          </div>
+          <div id="pg-asistencia"></div>
+        </div>
+
+        <!-- Evaluación narrativa -->
+        <div class="card" style="border:1px solid var(--border);">
+          <div class="card-title" style="font-size:13px;">
+            <i class="fas fa-pen-to-square"></i> Evaluación Narrativa del Período
+          </div>
+          <div style="display:flex;gap:10px;margin-bottom:10px;">
+            <select id="pg-periodo" style="padding:7px 10px;background:var(--surface);
+              border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;">
+              <option value="1">Período 1</option>
+              <option value="2">Período 2</option>
+              <option value="3">Período 3</option>
+              <option value="4">Período 4</option>
+            </select>
+          </div>
+          <textarea id="pg-narrativa" placeholder="Escribe tu evaluación del progreso del estudiante este período..."
+            style="width:100%;min-height:100px;padding:10px;background:var(--surface);
+            border:1px solid var(--border);border-radius:8px;color:var(--text);
+            font-size:13px;resize:vertical;box-sizing:border-box;margin-bottom:10px;"></textarea>
+          <button class="btn-action" onclick="guardarNarrativa()">
+            <i class="fas fa-save"></i> Guardar evaluación
+          </button>
+          <div id="pg-narrativas-prev" style="margin-top:14px;"></div>
+        </div>
+
+        <!-- Cuaderno anecdótico resumen -->
+        <div style="margin-top:14px;">
+          <div style="font-size:11px;font-weight:700;color:var(--muted);
+                      text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">
+            Cuaderno Anecdótico — Últimas observaciones
+          </div>
+          <div id="pg-cuaderno-prev"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+var ESTUDIANTES = {{ estudiantes | tojson }};
+var PLAN = {{ plan | tojson }};
+var ESTADOS = {};  // {estudiante_id: {estado, observacion}}
+
+// ── UTILIDADES ──────────────────────────────────────────────────────────────
+function tk(msg, tipo) {
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.borderColor = tipo==='success'?'rgba(77,255,180,.4)':tipo==='error'?'rgba(255,77,77,.4)':'rgba(255,196,77,.4)';
+    t.style.color = tipo==='success'?'#4dffb4':tipo==='error'?'#ff6b6b':'#ffc44d';
+    t.classList.add('show');
+    setTimeout(function(){ t.classList.remove('show'); }, 3000);
+}
+
+function showTab(name) {
+    ['pase','historial','resumen','notas','plan','cuaderno','progreso'].forEach(function(t){
+        var el = document.getElementById('tab-'+t);
+        if(el) el.style.display = t===name?'block':'none';
+    });
+    document.querySelectorAll('.tab-btn').forEach(function(b){
+        var txt = b.textContent.trim().toLowerCase();
+        var match = false;
+        if(name==='pase'     && txt.includes('lista'))    match=true;
+        if(name==='historial'&& txt.includes('historial'))match=true;
+        if(name==='resumen'  && txt.includes('resumen'))  match=true;
+        if(name==='notas'    && txt.includes('notas'))    match=true;
+        if(name==='plan'     && txt.includes('plan'))     match=true;
+        if(name==='cuaderno' && txt.includes('anecdo'))   match=true;
+        if(name==='progreso' && txt.includes('progreso')) match=true;
+        b.classList.toggle('active', match);
+    });
+    if(name==='historial') cargarHistorial();
+    if(name==='notas')     inicializarNotas();
+    if(name==='cuaderno')  initCuaderno();
+    if(name==='progreso')  initProgreso();
+}
+
+// ── PASE DE LISTA ────────────────────────────────────────────────────────────
+function setEstado(btn, estado) {
+    var row = btn.closest('.est-row');
+    var estId = parseInt(row.dataset.id);
+    var obs = row.querySelector('.obs-inp').value;
+
+    // Deselect siblings
+    row.querySelectorAll('.asist-btn').forEach(function(b){ b.classList.remove('sel'); });
+    btn.classList.add('sel');
+
+    ESTADOS[estId] = { estado: estado, observacion: obs };
+    actualizarContadores();
+}
+
+function marcarTodos(estado) {
+    document.querySelectorAll('.est-row').forEach(function(row){
+        var btn = row.querySelector('.asist-btn.' + estado[0]);
+        if (btn) setEstado(btn, estado);
+    });
+}
+
+function actualizarContadores() {
+    var counts = {presente:0,tardanza:0,ausente:0,justificado:0};
+    var total = ESTUDIANTES.length;
+    var marcados = Object.keys(ESTADOS).length;
+
+    Object.values(ESTADOS).forEach(function(e){ if(counts[e.estado]!==undefined) counts[e.estado]++; });
+
+    document.getElementById('cnt-p').textContent = '✔ '+counts.presente+' presentes';
+    document.getElementById('cnt-t').textContent = '⏱ '+counts.tardanza+' tardanzas';
+    document.getElementById('cnt-a').textContent = '✗ '+counts.ausente+' ausentes';
+    document.getElementById('cnt-j').textContent = '📋 '+counts.justificado+' justificados';
+    document.getElementById('cnt-sin-n').textContent = (total - marcados);
+}
+
+async function guardarAsistencia() {
+    var fecha   = document.getElementById('lista-fecha').value;
+    var materia = document.getElementById('lista-materia').value;
+    var horas   = parseInt(document.getElementById('lista-horas').value);
+    var periodo = document.getElementById('lista-periodo').value;
+
+    if (!fecha || !materia) { tk('Selecciona fecha y materia', 'warn'); return; }
+    if (Object.keys(ESTADOS).length === 0) { tk('Marca al menos un estudiante', 'warn'); return; }
+
+    var btn = document.getElementById('btn-guardar');
+    btn.textContent = 'Guardando…'; btn.disabled = true;
+
+    var registros = Object.entries(ESTADOS).map(function(kv){
+        return { estudiante_id: parseInt(kv[0]), estado: kv[1].estado, observacion: kv[1].observacion };
+    });
+
+    try {
+        var res = await fetch('/api/asistencia', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ fecha, materia, horas_clase: horas, periodo, registros })
+        });
+        var d = await res.json();
+        if (d.ok) {
+            tk('Asistencia guardada: ' + d.registrados + ' registros', 'success');
+            ESTADOS = {};
+            actualizarContadores();
+            document.querySelectorAll('.asist-btn.sel').forEach(function(b){ b.classList.remove('sel'); });
+        } else {
+            tk(d.error || 'Error al guardar', 'error');
+        }
+    } catch(e) {
+        tk('Error de conexión', 'error');
+    } finally {
+        btn.innerHTML = '<i class="fas fa-save"></i> Guardar lista';
+        btn.disabled = false;
+    }
+}
+
+// ── HISTORIAL ────────────────────────────────────────────────────────────────
+async function cargarHistorial() {
+    var materia = document.getElementById('hist-materia').value;
+    var periodo = document.getElementById('hist-periodo').value;
+    var desde   = document.getElementById('hist-desde').value;
+    var hasta   = document.getElementById('hist-hasta').value;
+
+    var url = '/api/asistencia?';
+    if (materia) url += 'materia='+encodeURIComponent(materia)+'&';
+    if (periodo) url += 'periodo='+periodo+'&';
+    if (desde)   url += 'fecha_ini='+desde+'&';
+    if (hasta)   url += 'fecha_fin='+hasta+'&';
+
+    var tbody = document.getElementById('hist-body');
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:#555;">Cargando…</td></tr>';
+
+    try {
+        var res  = await fetch(url);
+        var data = await res.json();
+
+        if (!data.length) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:#555;">Sin registros</td></tr>';
+            return;
+        }
+
+        var cols = {presente:'presente',tardanza:'tardanza',ausente:'ausente',justificado:'justificado'};
+        tbody.innerHTML = data.map(function(r){
+            return '<tr>' +
+                '<td style="font-family:\'DM Mono\',monospace;color:#888;">'+r.fecha+'</td>' +
+                '<td><strong>'+(r.apellido||'')+', '+(r.nombre||'')+'</strong><br><span style="font-size:10px;color:#555;">'+(r.curso||'')+'</span></td>' +
+                '<td>'+r.materia+'</td>' +
+                '<td><span class="est-tag '+r.estado+'">'+r.estado+'</span></td>' +
+                '<td style="font-family:\'DM Mono\',monospace;color:#888;">'+r.horas_clase+'h</td>' +
+                '<td style="color:#666;">P'+r.periodo+'</td>' +
+                '<td style="font-size:11px;color:#555;">'+(r.observacion||'')+'</td>' +
+            '</tr>';
+        }).join('');
+    } catch(e) {
+        tbody.innerHTML = '<tr><td colspan="7" style="color:#ff6b6b;padding:16px;">Error cargando historial</td></tr>';
+    }
+}
+
+// ── RESUMEN POR ESTUDIANTE ────────────────────────────────────────────────────
+async function cargarResumen() {
+    var estId = document.getElementById('res-est').value;
+    var cont  = document.getElementById('resumen-container');
+    if (!estId) return;
+
+    cont.innerHTML = '<div style="text-align:center;padding:20px;color:#555;">Calculando…</div>';
+
+    try {
+        var res  = await fetch('/api/asistencia/resumen/' + estId);
+        var data = await res.json();
+
+        if (!data.length) {
+            cont.innerHTML = '<div style="text-align:center;padding:24px;color:#555;">Sin registros de asistencia para este estudiante</div>';
+            return;
+        }
+
+        // Group by materia
+        var materias = {};
+        data.forEach(function(r){
+            if (!materias[r.materia]) materias[r.materia] = [];
+            materias[r.materia].push(r);
+        });
+
+        var html = Object.keys(materias).map(function(mat){
+            var periodos = materias[mat];
+            var totalH   = periodos.reduce(function(s,p){ return s+(p.horas_total||0); }, 0);
+            var presH    = periodos.reduce(function(s,p){ return s+(p.horas_presente||0); }, 0);
+            var ausH     = periodos.reduce(function(s,p){ return s+(p.horas_ausente||0); }, 0);
+            var pct      = totalH ? Math.round(presH/totalH*100) : 0;
+            var inasist  = totalH ? Math.round(ausH/totalH*100) : 0;
+            var critico  = inasist >= 20;
+            var alerta   = inasist >= 15 && !critico;
+            var color    = critico?'#ff6b6b': alerta?'#ffc44d':'#4dffb4';
+
+            return '<div class="resumen-asist" style="margin-bottom:10px;border-color:'+(critico?'rgba(255,77,77,.3)':alerta?'rgba(255,196,77,.3)':'var(--border)')+';">' +
+                '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">' +
+                    '<div style="font-weight:600;flex:1;">'+mat+'</div>' +
+                    (critico ? '<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(255,77,77,.12);color:#ff6b6b;font-weight:700;">🚨 RIESGO REPROBACIÓN</span>' :
+                     alerta  ? '<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(255,196,77,.12);color:#ffc44d;font-weight:700;">⚠ ALERTA</span>' : '') +
+                    '<span style="font-family:\'DM Mono\',monospace;font-size:16px;font-weight:800;color:'+color+';">'+pct+'%</span>' +
+                '</div>' +
+                '<div class="bar-asist"><div class="bar-fill" style="width:'+pct+'%;background:'+color+';"></div></div>' +
+                '<div style="display:flex;gap:16px;margin-top:8px;font-size:10px;color:#555;">' +
+                    '<span>Total: <strong style="color:#888;">'+totalH+'h</strong></span>' +
+                    '<span>Presente: <strong style="color:#4dffb4;">'+presH+'h</strong></span>' +
+                    '<span>Ausente: <strong style="color:#ff6b6b;">'+ausH+'h</strong></span>' +
+                    '<span>Inasistencia: <strong style="color:'+color+';">'+inasist+'%</strong></span>' +
+                '</div>' +
+                '<div style="margin-top:8px;display:flex;gap:6px;">' +
+                    periodos.map(function(p){
+                        var pc = p.pct_asistencia || 0;
+                        var pc_col = pc>=80?'#4dffb4':pc>=70?'#ffc44d':'#ff6b6b';
+                        return '<div style="background:#111;border-radius:7px;padding:6px 10px;font-size:10px;">' +
+                               '<div style="color:#555;margin-bottom:2px;">P'+p.periodo+'</div>' +
+                               '<div style="font-family:\'DM Mono\',monospace;color:'+pc_col+';font-weight:700;">'+pc+'%</div>' +
+                               '</div>';
+                    }).join('') +
+                '</div>' +
+            '</div>';
+        }).join('');
+
+        cont.innerHTML = html;
+    } catch(e) {
+        cont.innerHTML = '<div style="color:#ff6b6b;padding:16px;">Error cargando resumen</div>';
+    }
+}
+
+// Set today's date
+document.getElementById('lista-fecha').value = new Date().toISOString().split('T')[0];
+
+// ════════════════════════════════════════════════════════════════════════════
+// TAB NOTAS — REGISTRO DE CALIFICACIONES POR PERÍODO
+// ════════════════════════════════════════════════════════════════════════════
+
+var NOTAS_BUFFER = {};  // {estudiante_id: nota_value}
+var NOTAS_CARGADAS = {}; // {estudiante_id: nota guardada en BD}
+
+function _anioEscolarActual() {
+    var m = new Date().getMonth() + 1; // 1-12
+    var y = new Date().getFullYear();
+    return m >= 8 ? y + '-' + (y+1) : (y-1) + '-' + y;
+}
+
+function _periodoActual() {
+    var m = new Date().getMonth() + 1;
+    if ([8,9,10].includes(m))  return 'P1';
+    if ([11,12,1].includes(m)) return 'P2';
+    if ([2,3,4].includes(m))   return 'P3';
+    return 'P4';
+}
+
+function _colorNota(n) {
+    if (n === null || n === '') return '#555';
+    n = parseFloat(n);
+    if (n >= 70) return '#4dffb4';
+    if (n >= 50) return '#f7b731';
+    return '#ff4d4d';
+}
+
+function _estadoNota(n) {
+    if (n === null || n === '') return '';
+    n = parseFloat(n);
+    if (n >= 70) return '✓ Aprobado';
+    if (n >= 50) return '⚡ Completiva';
+    return '✗ Reprobado';
+}
+
+function inicializarNotas() {
+    // Poner año escolar en selector
+    var anio = _anioEscolarActual();
+    var prev = (parseInt(anio.split('-')[0]) - 1) + '-' + anio.split('-')[0];
+    var sel = document.getElementById('notas-anio');
+    sel.innerHTML = '<option value="'+anio+'">'+anio+' (actual)</option>'
+                  + '<option value="'+prev+'">'+prev+'</option>';
+    
+    // Auto-set período actual
+    var periodoSel = document.getElementById('notas-periodo');
+    periodoSel.value = _periodoActual();
+    
+    cargarTablaNotas();
+}
+
+async function cargarTablaNotas() {
+    var materia = document.getElementById('notas-materia').value;
+    var periodo = document.getElementById('notas-periodo').value;
+    var anio    = document.getElementById('notas-anio').value;
+    var cont    = document.getElementById('notas-table-container');
+    var stats   = document.getElementById('notas-stats');
+
+    if (!materia || !periodo || !anio) return;
+
+    NOTAS_BUFFER = {};
+    NOTAS_CARGADAS = {};
+
+    cont.innerHTML = '<div style="text-align:center;padding:20px;color:#555;font-size:12px;">'
+                   + '<i class="fas fa-spinner fa-spin"></i> Cargando…</div>';
+
+    try {
+        // Cargar notas existentes del período
+        var url = '/api/calificaciones?materia=' + encodeURIComponent(materia)
+                + '&periodo=' + periodo + '&anio=' + anio;
+        var res = await fetch(url);
+        var notasArr = await res.json();
+
+        // Indexar por estudiante
+        var notasMap = {};
+        notasArr.forEach(function(n){ notasMap[n.estudiante_id] = n.calificacion; });
+
+        NOTAS_CARGADAS = Object.assign({}, notasMap);
+
+        // Construir tabla
+        var aprobados = 0, completivas = 0, reprobados = 0, sinNota = 0;
+
+        var html = '<table style="width:100%;border-collapse:collapse;font-size:12px;">'
+                 + '<thead><tr style="border-bottom:1px solid #222;">'
+                 + '<th style="text-align:left;padding:8px 10px;color:#555;font-size:10px;text-transform:uppercase;">#</th>'
+                 + '<th style="text-align:left;padding:8px 10px;color:#555;font-size:10px;text-transform:uppercase;">Estudiante</th>'
+                 + '<th style="padding:8px 10px;color:#555;font-size:10px;text-transform:uppercase;">Grado</th>'
+                 + '<th style="padding:8px 10px;color:#f7b731;font-size:10px;text-transform:uppercase;">Nota ' + periodo + '</th>'
+                 + '<th style="padding:8px 10px;color:#555;font-size:10px;text-transform:uppercase;">Estado</th>'
+                 + '</tr></thead><tbody>';
+
+        ESTUDIANTES.forEach(function(est, idx) {
+            var nota = notasMap[est.id] !== undefined ? notasMap[est.id] : '';
+            if (nota !== '') {
+                nota = parseFloat(nota);
+                if (nota >= 70) aprobados++;
+                else if (nota >= 50) completivas++;
+                else reprobados++;
+            } else { sinNota++; }
+
+            var color = _colorNota(nota !== '' ? nota : null);
+            var estado = _estadoNota(nota !== '' ? nota : null);
+            var rowBg = (idx % 2 === 0) ? '#0a0a0a' : 'transparent';
+
+            html += '<tr style="background:' + rowBg + ';border-bottom:1px solid #111;">'
+                  + '<td style="padding:7px 10px;color:#444;">' + (idx+1) + '</td>'
+                  + '<td style="padding:7px 10px;">'
+                  + '<div style="font-weight:600;color:var(--text);">' + (est.apellido||'') + ', ' + est.nombre + '</div>'
+                  + '</td>'
+                  + '<td style="padding:7px 10px;text-align:center;color:#555;font-size:11px;">' + (est.grado||est.curso||'') + '</td>'
+                  + '<td style="padding:5px 10px;text-align:center;">'
+                  + '<input type="number" min="0" max="100" step="0.5" '
+                  + 'data-est-id="' + est.id + '" '
+                  + 'class="nota-input" '
+                  + 'value="' + (nota !== '' ? nota : '') + '" '
+                  + 'placeholder="—" '
+                  + 'oninput="onNotaInput(this)" '
+                  + 'style="width:70px;background:#111;border:1px solid #2a2a2a;color:' + color + ';'
+                  + 'padding:5px 8px;border-radius:6px;text-align:center;font-size:14px;font-weight:700;'
+                  + 'font-family:var(--font-mono);">'
+                  + '</td>'
+                  + '<td style="padding:7px 10px;text-align:center;font-size:10px;color:' + color + ';" id="est-estado-'+est.id+'">'
+                  + estado + '</td>'
+                  + '</tr>';
+        });
+
+        html += '</tbody></table>';
+        cont.innerHTML = html;
+
+        // Stats
+        stats.innerHTML = 
+            '<span style="padding:3px 10px;background:rgba(77,255,180,.1);border:1px solid rgba(77,255,180,.25);'
+            + 'border-radius:20px;font-size:10px;color:#4dffb4;">✓ ' + aprobados + ' aprobados</span>'
+          + '<span style="padding:3px 10px;background:rgba(247,183,49,.1);border:1px solid rgba(247,183,49,.25);'
+            + 'border-radius:20px;font-size:10px;color:#f7b731;">⚡ ' + completivas + ' completivas</span>'
+          + '<span style="padding:3px 10px;background:rgba(255,77,77,.1);border:1px solid rgba(255,77,77,.25);'
+            + 'border-radius:20px;font-size:10px;color:#ff6b6b;">✗ ' + reprobados + ' reprobados</span>'
+          + '<span style="padding:3px 10px;background:rgba(80,80,80,.2);border:1px solid #222;'
+            + 'border-radius:20px;font-size:10px;color:#555;">— ' + sinNota + ' sin nota</span>';
+
+    } catch(e) {
+        cont.innerHTML = '<div style="color:#ff6b6b;padding:16px;">Error cargando notas: '+e.message+'</div>';
+    }
+}
+
+function onNotaInput(input) {
+    var estId = parseInt(input.dataset.estId);
+    var val   = input.value.trim();
+    if (val === '') {
+        delete NOTAS_BUFFER[estId];
+        input.style.color = '#555';
+        document.getElementById('est-estado-' + estId).textContent = '';
+        return;
+    }
+    var nota = parseFloat(val);
+    if (isNaN(nota) || nota < 0 || nota > 100) {
+        input.style.borderColor = '#ff4d4d';
+        return;
+    }
+    input.style.borderColor = '#2a2a2a';
+    input.style.color = _colorNota(nota);
+    document.getElementById('est-estado-' + estId).textContent = _estadoNota(nota);
+    document.getElementById('est-estado-' + estId).style.color = _colorNota(nota);
+    NOTAS_BUFFER[estId] = nota;
+}
+
+async function guardarTodasNotas() {
+    var materia = document.getElementById('notas-materia').value;
+    var periodo = document.getElementById('notas-periodo').value;
+    var anio    = document.getElementById('notas-anio').value;
+    var btn     = document.getElementById('btn-guardar-notas');
+
+    // Recoger TODOS los inputs con valor (no solo los modificados)
+    var batch = [];
+    document.querySelectorAll('.nota-input').forEach(function(inp) {
+        if (inp.value.trim() === '') return;
+        var nota = parseFloat(inp.value);
+        if (isNaN(nota) || nota < 0 || nota > 100) return;
+        batch.push({
+            estudiante_id: parseInt(inp.dataset.estId),
+            materia: materia,
+            periodo: periodo,
+            calificacion: nota,
+            anio_escolar: anio
+        });
+    });
+
+    if (batch.length === 0) { tk('No hay notas para guardar', 'warn'); return; }
+
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando…';
+    btn.disabled = true;
+
+    try {
+        var res = await fetch('/api/calificaciones', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify(batch)
+        });
+        var d = await res.json();
+        if (d.ok || d.guardados > 0) {
+            tk('Guardadas ' + d.guardados + ' calificaciones de ' + materia + ' ' + periodo, 'success');
+            // Show footer
+            var footer = document.getElementById('notas-footer');
+            footer.style.display = 'flex';
+            document.getElementById('notas-footer-msg').textContent =
+                d.guardados + ' notas guardadas — ' + materia + ' ' + periodo + ' ' + anio;
+            setTimeout(function(){ footer.style.display = 'none'; }, 5000);
+            NOTAS_BUFFER = {};
+            await cargarTablaNotas(); // refresh to confirm
+        } else {
+            tk(JSON.stringify(d.errores) || 'Error al guardar', 'error');
+        }
+    } catch(e) {
+        tk('Error de conexión: ' + e.message, 'error');
+    } finally {
+        btn.innerHTML = '<i class="fas fa-save"></i> Guardar Notas';
+        btn.disabled = false;
+    }
+}
+
+// ── RESUMEN GLOBAL DE NOTAS POR ESTUDIANTE ───────────────────────────────────
+async function cargarResumenNotas() {
+    var estId = document.getElementById('notas-est-global').value;
+    var cont  = document.getElementById('notas-global-container');
+    if (!estId) { cont.innerHTML = ''; return; }
+
+    cont.innerHTML = '<div style="text-align:center;padding:20px;color:#555;">'
+                   + '<i class="fas fa-spinner fa-spin"></i> Cargando boletín…</div>';
+
+    try {
+        var res = await fetch('/api/calificaciones/boletin/' + estId);
+        var d   = await res.json();
+        if (!d.materias) throw new Error('Sin datos');
+
+        var est = d.estudiante;
+        var resumen = d.resumen;
+
+        var html = '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">'
+          + '<span style="padding:4px 12px;background:rgba(77,255,180,.1);border:1px solid rgba(77,255,180,.25);border-radius:20px;font-size:11px;color:#4dffb4;">✓ ' + resumen.aprobadas + ' aprobadas</span>'
+          + '<span style="padding:4px 12px;background:rgba(247,183,49,.1);border:1px solid rgba(247,183,49,.25);border-radius:20px;font-size:11px;color:#f7b731;">⚡ ' + resumen.completivas + ' completivas</span>'
+          + '<span style="padding:4px 12px;background:rgba(255,77,77,.1);border:1px solid rgba(255,77,77,.25);border-radius:20px;font-size:11px;color:#ff6b6b;">✗ ' + resumen.reprobadas + ' reprobadas</span>'
+          + (resumen.promueve
+              ? '<span style="padding:4px 12px;background:rgba(77,255,180,.15);border:1px solid rgba(77,255,180,.4);border-radius:20px;font-size:11px;color:#4dffb4;font-weight:700;">📋 Promovido</span>'
+              : '<span style="padding:4px 12px;background:rgba(255,77,77,.15);border:1px solid rgba(255,77,77,.4);border-radius:20px;font-size:11px;color:#ff4d4d;font-weight:700;">⛔ Repite grado</span>')
+          + '</div>';
+
+        html += '<table style="width:100%;border-collapse:collapse;font-size:11px;">'
+              + '<thead><tr style="border-bottom:1px solid #1c1c1c;">'
+              + '<th style="text-align:left;padding:7px 10px;color:#555;font-size:10px;text-transform:uppercase;">Materia</th>'
+              + ['P1','P2','P3','P4'].map(function(p){
+                  return '<th style="padding:7px 8px;color:#888;font-size:10px;text-transform:uppercase;text-align:center;">'+p+'</th>';
+                }).join('')
+              + '<th style="padding:7px 10px;color:#f7b731;font-size:10px;text-transform:uppercase;text-align:center;">Final</th>'
+              + '<th style="padding:7px 10px;color:#555;font-size:10px;text-transform:uppercase;text-align:center;">Estado</th>'
+              + '<th style="padding:7px 10px;color:#ff6b6b;font-size:10px;text-transform:uppercase;text-align:center;">Inasist.</th>'
+              + '</tr></thead><tbody>';
+
+        d.materias.forEach(function(m, i) {
+            var rowBg = i % 2 === 0 ? '#0a0a0a' : 'transparent';
+            var colorF = _colorNota(m.nota_final);
+            var asistColor = m.reprueba_asistencia ? '#ff4d4d' : m.alerta_asistencia ? '#f7b731' : '#444';
+            html += '<tr style="background:'+rowBg+';border-bottom:1px solid #0d0d0d;">'
+                  + '<td style="padding:7px 10px;color:var(--text);font-weight:500;">'+m.materia+'</td>'
+                  + ['P1','P2','P3','P4'].map(function(p){
+                      var v = m[p];
+                      return '<td style="padding:6px 8px;text-align:center;color:'
+                           + _colorNota(v) + ';font-family:var(--font-mono);font-weight:700;">'
+                           + (v !== null ? v : '<span style="color:#333">—</span>') + '</td>';
+                    }).join('')
+                  + '<td style="padding:7px 10px;text-align:center;color:'+colorF+';font-weight:700;font-family:var(--font-mono);font-size:14px;">'
+                  + (m.nota_final !== null ? m.nota_final : '—') + '</td>'
+                  + '<td style="padding:7px 10px;text-align:center;font-size:10px;color:'+colorF+';">'
+                  + (m.nota_final !== null ? _estadoNota(m.nota_final) : '—') + '</td>'
+                  + '<td style="padding:7px 10px;text-align:center;font-size:11px;color:'+asistColor+';font-weight:700;">'
+                  + m.pct_inasistencia + '%'
+                  + (m.reprueba_asistencia ? ' 🚨' : m.alerta_asistencia ? ' ⚠' : '')
+                  + '</td>'
+                  + '</tr>';
+        });
+
+        html += '</tbody></table>';
+        cont.innerHTML = html;
+
+    } catch(e) {
+        cont.innerHTML = '<div style="color:#ff6b6b;padding:16px;">Error: '+e.message+'</div>';
+    }
+}
+
+// Init notas on first tab open
+document.addEventListener('DOMContentLoaded', function() {
+    // Pre-detect periodo actual en pase de lista
+    var periodoSel = document.getElementById('lista-periodo');
+    if (periodoSel) {
+        var pActual = _periodoActual();
+        // Update to use P1/P2/P3/P4 labels
+        periodoSel.innerHTML = '<option value="P1"' + (pActual==='P1'?' selected':'') + '>P1 — Primer Período</option>'
+            + '<option value="P2"' + (pActual==='P2'?' selected':'') + '>P2 — Segundo Período</option>'
+            + '<option value="P3"' + (pActual==='P3'?' selected':'') + '>P3 — Tercer Período</option>'
+            + '<option value="P4"' + (pActual==='P4'?' selected':'') + '>P4 — Cuarto Período</option>';
+    }
+    
+    // Check if list was already passed today on load
+    verificarListaHoy();
+});
+
+// ─── AUTO-HORAS POR MATERIA ───────────────────────────────────────────────
+function onMateriaChange() {
+    var sel = document.getElementById('lista-materia');
+    if (!sel) return;
+    var opt = sel.options[sel.selectedIndex];
+    var horas = opt ? opt.getAttribute('data-horas') : null;
+    if (horas) {
+        var horasSel = document.getElementById('lista-horas');
+        if (horasSel) horasSel.value = horas;
+    }
+    verificarListaHoy();
+}
+
+
+async function verificarListaHoy() {
+    var materia = document.getElementById('lista-materia');
+    if (!materia) return;
+    var hoy = new Date().toISOString().split('T')[0];
+    try {
+        var res = await fetch('/api/asistencia?fecha_ini='+hoy+'&fecha_fin='+hoy+'&materia='+encodeURIComponent(materia.value));
+        var data = await res.json();
+        var indicator = document.getElementById('lista-hoy-indicator');
+        if (!indicator) return;
+        if (data && data.length > 0) {
+            indicator.innerHTML = '<span style="padding:3px 10px;background:rgba(77,255,180,.1);border:1px solid rgba(77,255,180,.2);border-radius:20px;font-size:10px;color:#4dffb4;"><i class=\'fas fa-circle-check\'></i> Lista ya registrada hoy — puedes editarla</span>';
+        } else {
+            indicator.innerHTML = '<span style="padding:3px 10px;background:rgba(255,196,77,.08);border:1px solid rgba(255,196,77,.15);border-radius:20px;font-size:10px;color:#ffc44d;"><i class=\'fas fa-clock\'></i> Lista pendiente para hoy</span>';
+        }
+    } catch(e) {}
+}
+
+
+
+// ══════════════════════════════════════════════════════════════════════════
+// CUADERNO ANECDÓTICO
+// ══════════════════════════════════════════════════════════════════════════
+var CA_EST_ID = null;
+
+function initCuaderno() {
+    // set today's date by default
+    var d = new Date();
+    var ds = d.getFullYear()+'-'+(String(d.getMonth()+1).padStart(2,'0'))+'-'+(String(d.getDate()).padStart(2,'0'));
+    document.getElementById('ca-fecha').value = ds;
+}
+
+function cargarCuaderno() {
+    CA_EST_ID = document.getElementById('ca-estudiante').value;
+    if(!CA_EST_ID) { document.getElementById('ca-lista').style.display='none'; return; }
+    fetch('/api/cuaderno/'+CA_EST_ID)
+        .then(function(r){ return r.json(); })
+        .then(function(data){ renderEntradas(data); })
+        .catch(function(){ tk('Error cargando entradas','error'); });
+}
+
+var TIPO_COLORES = {
+    'conductual':'#ef4444','emocional':'#f59e0b',
+    'académico':'#3b82f6','familiar':'#f97316','otro':'#6b7280'
+};
+var TIPO_EMOJIS = {
+    'conductual':'🔴','emocional':'🟡','académico':'🔵','familiar':'🟠','otro':'⚪'
+};
+
+function renderEntradas(entradas) {
+    var lista = document.getElementById('ca-lista');
+    var cont  = document.getElementById('ca-entradas');
+    lista.style.display = entradas.length ? 'block' : 'none';
+    if(!entradas.length){ cont.innerHTML='<div style="color:var(--muted);font-size:12px;">Sin entradas para este estudiante.</div>'; return; }
+    cont.innerHTML = entradas.map(function(e){
+        var col = TIPO_COLORES[e.tipo] || '#6b7280';
+        var emo = TIPO_EMOJIS[e.tipo]  || '⚪';
+        var reporteBadge = e.convertido_reporte
+            ? '<span style="background:rgba(37,99,235,.15);color:#3b82f6;font-size:9px;padding:2px 7px;border-radius:20px;margin-left:6px;">📋 En perfil</span>'
+            : '<button onclick="convertirReporte('+e.id+')" style="background:none;border:1px solid var(--border);border-radius:6px;padding:2px 8px;font-size:9px;color:var(--muted);cursor:pointer;margin-left:6px;">→ Convertir en reporte</button>';
+        return '<div style="border:1px solid var(--border);border-left:3px solid '+col+';border-radius:10px;padding:12px 14px;margin-bottom:10px;">'
+            +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+            +'<span style="font-size:11px;font-weight:700;color:'+col+';">'+emo+' '+e.tipo.toUpperCase()+'</span>'
+            +'<span style="font-size:10px;color:var(--muted);margin-left:auto;">'+e.fecha+'</span>'
+            +reporteBadge
+            +'</div>'
+            +'<div style="font-size:13px;line-height:1.5;margin-bottom:6px;">'+e.descripcion+'</div>'
+            +(e.seguimiento?'<div style="font-size:11px;color:var(--muted);border-top:1px solid var(--border);padding-top:6px;margin-top:6px;"><b>Seguimiento:</b> '+e.seguimiento+'</div>':'')
+            +'<div style="font-size:10px;color:var(--muted);margin-top:6px;">Por: '+e.autor_nombre+'</div>'
+            +'</div>';
+    }).join('');
+}
+
+function guardarEntradaCuaderno() {
+    var estId = document.getElementById('ca-estudiante').value;
+    var desc  = document.getElementById('ca-descripcion').value.trim();
+    if(!estId){ tk('Selecciona un estudiante','error'); return; }
+    if(!desc){  tk('La descripción es requerida','error'); return; }
+    fetch('/api/cuaderno', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+            estudiante_id: parseInt(estId),
+            tipo:     document.getElementById('ca-tipo').value,
+            fecha:    document.getElementById('ca-fecha').value,
+            descripcion: desc,
+            seguimiento: document.getElementById('ca-seguimiento').value.trim(),
+            privado:  document.getElementById('ca-privado').checked ? 1 : 0
+        })
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+        if(d.ok){
+            tk('Entrada guardada','success');
+            document.getElementById('ca-descripcion').value='';
+            document.getElementById('ca-seguimiento').value='';
+            document.getElementById('ca-privado').checked=false;
+            cargarCuaderno();
+        } else { tk(d.error||'Error','error'); }
+    });
+}
+
+function convertirReporte(entradaId) {
+    if(!confirm('¿Convertir esta entrada en reporte? Quedará visible en el perfil del estudiante.')) return;
+    fetch('/api/cuaderno/'+entradaId+'/convertir-reporte',{method:'POST'})
+        .then(function(r){ return r.json(); })
+        .then(function(d){
+            if(d.ok){ tk('Convertido en reporte ✓','success'); cargarCuaderno(); }
+            else { tk(d.error||'Error','error'); }
+        });
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// PROGRESO ESTUDIANTIL
+// ══════════════════════════════════════════════════════════════════════════
+var PG_EST_ID = null;
+
+function initProgreso() { /* noop — user selects student */ }
+
+function cargarProgreso() {
+    PG_EST_ID = document.getElementById('pg-estudiante').value;
+    var cont = document.getElementById('pg-contenido');
+    if(!PG_EST_ID){ cont.style.display='none'; return; }
+    fetch('/api/progreso/'+PG_EST_ID)
+        .then(function(r){ return r.json(); })
+        .then(function(d){ renderProgreso(d); cont.style.display='block'; })
+        .catch(function(){ tk('Error cargando progreso','error'); });
+}
+
+function bc2(v){
+    var isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+    if(!v||v===0) return 'var(--muted)';
+    if(isDark) return v>=85?'#4dffb4':v>=70?'#c8f060':'#ff4d4d';
+    return v>=85?'#2563EB':v>=70?'#0284C7':'#EF4444';
+}
+
+function renderProgreso(d) {
+    // KPIs
+    var est = d.estudiante;
+    var mats = d.materias || [];
+    var acad = mats.filter(function(m){ return m.tipo==='académico' && m.promedio>0; });
+    var tecn = mats.filter(function(m){ return m.tipo==='técnico'   && m.promedio>0; });
+    var promAcad = acad.length ? (acad.reduce(function(s,m){return s+m.promedio;},0)/acad.length).toFixed(1) : '—';
+    var promTecn = tecn.length ? (tecn.reduce(function(s,m){return s+m.promedio;},0)/tecn.length).toFixed(1) : '—';
+    var asist = d.asistencia || [];
+    var promAsist = asist.length ? (asist.reduce(function(s,a){return s+(a.porcentaje||0);},0)/asist.length).toFixed(1)+'%' : '—';
+    var cuadCnt = (d.cuaderno||{}).total_entradas || 0;
+
+    document.getElementById('pg-kpis').innerHTML = [
+        {lbl:'Prom. Académico', val: promAcad, col: bc2(parseFloat(promAcad))},
+        {lbl:'Prom. Técnico',   val: promTecn, col: bc2(parseFloat(promTecn))},
+        {lbl:'Asistencia',      val: promAsist, col: '#3b82f6'},
+        {lbl:'Observaciones',   val: cuadCnt,   col: '#f59e0b'},
+    ].map(function(k){
+        return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;">'
+            +'<div style="font-size:20px;font-weight:800;color:'+k.col+';">'+k.val+'</div>'
+            +'<div style="font-size:10px;color:var(--muted);margin-top:3px;">'+k.lbl+'</div>'
+            +'</div>';
+    }).join('');
+
+    // Tabla de materias por período
+    var html = '<table style="width:100%;border-collapse:collapse;font-size:12px;">'
+        +'<thead><tr style="border-bottom:1px solid var(--border);">'
+        +'<th style="text-align:left;padding:6px 8px;color:var(--muted);font-size:10px;">Materia</th>'
+        +'<th style="text-align:left;padding:6px 8px;color:var(--muted);font-size:10px;">Tipo</th>'
+        +'<th style="text-align:center;padding:6px 8px;color:var(--muted);font-size:10px;">P1</th>'
+        +'<th style="text-align:center;padding:6px 8px;color:var(--muted);font-size:10px;">P2</th>'
+        +'<th style="text-align:center;padding:6px 8px;color:var(--muted);font-size:10px;">P3</th>'
+        +'<th style="text-align:center;padding:6px 8px;color:var(--muted);font-size:10px;">P4</th>'
+        +'<th style="text-align:center;padding:6px 8px;color:var(--muted);font-size:10px;">Prom.</th>'
+        +'</tr></thead><tbody>';
+    mats.forEach(function(m){
+        var col = bc2(m.promedio);
+        html += '<tr style="border-bottom:1px solid var(--border);">'
+            +'<td style="padding:7px 8px;font-weight:500;">'+m.materia+'</td>'
+            +'<td style="padding:7px 8px;"><span style="font-size:9px;padding:2px 7px;border-radius:20px;background:rgba(100,100,100,.15);color:var(--muted);">'+m.tipo+'</span></td>'
+            +'<td style="text-align:center;padding:7px 8px;color:'+(m.p1?bc2(m.p1):'var(--muted)')+';">'+(m.p1||'—')+'</td>'
+            +'<td style="text-align:center;padding:7px 8px;color:'+(m.p2?bc2(m.p2):'var(--muted)')+';">'+(m.p2||'—')+'</td>'
+            +'<td style="text-align:center;padding:7px 8px;color:'+(m.p3?bc2(m.p3):'var(--muted)')+';">'+(m.p3||'—')+'</td>'
+            +'<td style="text-align:center;padding:7px 8px;color:'+(m.p4?bc2(m.p4):'var(--muted)')+';">'+(m.p4||'—')+'</td>'
+            +'<td style="text-align:center;padding:7px 8px;font-weight:700;color:'+col+';">'+(m.promedio||'—')+'</td>'
+            +'</tr>';
+    });
+    html += '</tbody></table>';
+    document.getElementById('pg-materias').innerHTML = mats.length ? html : '<div style="color:var(--muted);font-size:12px;">Sin calificaciones registradas.</div>';
+
+    // Asistencia mensual
+    var MESES = ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    var aHtml = asist.length ? asist.map(function(a){
+        var col = a.porcentaje>=85?'#22c55e':a.porcentaje>=70?'#f59e0b':'#ef4444';
+        return '<div style="display:inline-block;margin:4px;padding:8px 12px;border-radius:8px;'
+            +'border:1px solid var(--border);text-align:center;min-width:70px;">'
+            +'<div style="font-size:15px;font-weight:700;color:'+col+';">'+a.porcentaje.toFixed(0)+'%</div>'
+            +'<div style="font-size:10px;color:var(--muted);">'+MESES[a.mes]+' '+a.anio+'</div>'
+            +'<div style="font-size:9px;color:var(--muted);">'+a.dias_asistio+'/'+a.dias_clase_impartidos+' días</div>'
+            +(a.validado?'<div style="font-size:8px;color:#22c55e;">✓ Validado</div>':'')
+            +'</div>';
+    }).join('') : '<div style="color:var(--muted);font-size:12px;">Sin registros de asistencia mensual.</div>';
+    document.getElementById('pg-asistencia').innerHTML = aHtml;
+
+    // Narrativas previas
+    var narr = d.evaluaciones_narrativas || [];
+    document.getElementById('pg-narrativas-prev').innerHTML = narr.length
+        ? '<div style="font-size:11px;color:var(--muted);margin-bottom:6px;">Evaluaciones guardadas:</div>'
+          + narr.map(function(n){
+              return '<div style="border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px;">'
+                  +'<div style="font-size:10px;color:var(--muted);margin-bottom:4px;">Período '+n.periodo+' — '+n.profesor_nombre+'</div>'
+                  +'<div style="font-size:12px;line-height:1.5;">'+n.texto+'</div>'
+                  +'</div>';
+          }).join('')
+        : '';
+
+    // Cuaderno anecdótico reciente
+    var cuad = (d.cuaderno||{}).recientes || [];
+    document.getElementById('pg-cuaderno-prev').innerHTML = cuad.length
+        ? cuad.map(function(c){
+            var col = TIPO_COLORES[c.tipo]||'#6b7280';
+            return '<div style="border-left:3px solid '+col+';padding:8px 12px;margin-bottom:8px;background:var(--surface);border-radius:0 8px 8px 0;">'
+                +'<div style="font-size:10px;color:var(--muted);">'+c.fecha+' · '+c.autor+'</div>'
+                +'<div style="font-size:12px;margin-top:3px;">'+c.descripcion+'</div>'
+                +'</div>';
+          }).join('')
+        : '<div style="color:var(--muted);font-size:12px;">Sin observaciones anecdóticas.</div>';
+}
+
+function guardarNarrativa() {
+    if(!PG_EST_ID){ tk('Selecciona un estudiante','error'); return; }
+    var texto = document.getElementById('pg-narrativa').value.trim();
+    if(!texto){ tk('Escribe la evaluación','error'); return; }
+    fetch('/api/evaluacion-narrativa', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+            estudiante_id: parseInt(PG_EST_ID),
+            periodo: parseInt(document.getElementById('pg-periodo').value),
+            texto: texto
+        })
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+        if(d.ok){ tk('Evaluación guardada ✓','success'); cargarProgreso(); }
+        else { tk(d.error||'Error','error'); }
+    });
+}
+
+
+</script>
+</body>
+</html>

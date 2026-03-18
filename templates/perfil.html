@@ -1,0 +1,3226 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ e.nombre }} {{ e.apellido }} — Perfil Pedagógico</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    <style>
+        /* Colores via theme.css */
+:root { --font-display:'Syne',sans-serif; --font-mono:'DM Mono',monospace; --font-body:'DM Sans',sans-serif; }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--font-body);
+            font-size: 14px;
+            min-height: 100vh;
+        }
+
+        /* ── HEADER ── */
+        header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 0 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 64px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .logo-icon {
+            width: 36px; height: 36px;
+            background: var(--accent);
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px;
+        }
+
+        .logo-text {
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: 17px;
+        }
+        .logo-text span { color: var(--accent); }
+
+        .back-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 9px 16px;
+            border-radius: 8px;
+            font-family: var(--font-body);
+            font-size: 13px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all .2s;
+        }
+        .back-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+        /* ── LAYOUT ── */
+        main {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 32px 32px;
+        }
+
+        /* ── HERO HEADER ── */
+        .perfil-hero {
+            display: flex;
+            align-items: flex-start;
+            gap: 24px;
+            margin-bottom: 32px;
+            padding: 28px 32px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .perfil-hero::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 4px;
+            background: {{ e.color }};
+        }
+
+        .avatar {
+            width: 80px; height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, {{ e.color }}, #1e2335);
+            display: flex; align-items: center; justify-content: center;
+            font-family: var(--font-display);
+            font-size: 28px;
+            font-weight: 800;
+            flex-shrink: 0;
+            border: 3px solid {{ e.color }};
+        }
+
+        .perfil-info { flex: 1; }
+
+        .perfil-nombre {
+            font-family: var(--font-display);
+            font-size: 32px;
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: 6px;
+        }
+
+        .perfil-curso {
+            color: var(--text-muted);
+            font-size: 13px;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .perfil-curso::before {
+            content: '';
+            display: inline-block;
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: var(--accent);
+        }
+
+        .estado-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: .8px;
+            text-transform: uppercase;
+            border: 1px solid {{ e.color }}44;
+            background: {{ e.color }}18;
+            color: {{ e.color }};
+        }
+
+        .perfil-reporte {
+            margin-top: 14px;
+            padding: 12px 16px;
+            background: var(--surface2);
+            border-left: 3px solid {{ e.color }};
+            border-radius: 0 8px 8px 0;
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.6;
+            {% if not e.reporte %} display: none; {% endif %}
+        }
+
+        /* ── GRID DE CARDS ── */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 22px;
+            position: relative;
+        }
+
+        .card-title {
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+        }
+        .card-title i { font-size: 12px; }
+
+        /* ── MÉTRICAS GRANDES ── */
+        .metrica-grande {
+            text-align: center;
+        }
+
+        .metrica-valor {
+            font-family: var(--font-display);
+            font-size: 52px;
+            font-weight: 800;
+            line-height: 1;
+            margin-bottom: 4px;
+        }
+
+        .metrica-label {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        /* ── RADIAL PROGRESS ── */
+        .radial-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .radial-svg { transform: rotate(-90deg); }
+
+        .radial-track {
+            fill: none;
+            stroke: var(--border);
+            stroke-width: 8;
+        }
+
+        .radial-fill {
+            fill: none;
+            stroke-width: 8;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1);
+        }
+
+        .radial-center {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            inset: 0;
+        }
+
+        .radial-container {
+            position: relative;
+            width: 110px;
+            height: 110px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .radial-val {
+            font-family: var(--font-display);
+            font-size: 22px;
+            font-weight: 800;
+            position: absolute;
+        }
+
+        /* ── BARRAS DE COMPETENCIAS ── */
+        .comp-list { display: flex; flex-direction: column; gap: 18px; }
+
+        .comp-item {}
+
+        .comp-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 7px;
+        }
+
+        .comp-nombre {
+            font-size: 13px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+        }
+
+        .comp-valor {
+            font-family: var(--font-display);
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .barra-track {
+            height: 8px;
+            background: var(--border);
+            border-radius: 99px;
+            overflow: hidden;
+        }
+
+        .barra-fill {
+            height: 100%;
+            border-radius: 99px;
+            transition: width 1s cubic-bezier(.4,0,.2,1);
+        }
+
+        /* ── TENDENCIA + PROYECCIÓN ── */
+        .tendencia-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            text-align: center;
+            min-height: 120px;
+        }
+
+        .tendencia-icon {
+            font-size: 42px;
+            line-height: 1;
+        }
+
+        .tendencia-texto {
+            font-family: var(--font-display);
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .tendencia-desc {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        /* ── PROYECCIÓN ── */
+        .proyeccion-valor {
+            font-family: var(--font-display);
+            font-size: 48px;
+            font-weight: 800;
+            text-align: center;
+            margin: 10px 0 4px;
+        }
+
+        .proyeccion-desc {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        .ia-badge {
+            display: inline-block;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            padding: 3px 8px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+        }
+
+        /* ── SILENCIOSO ALERT ── */
+        .alerta-silencioso {
+            background: rgba(75, 191, 232, 0.08);
+            border: 1px solid rgba(75, 191, 232, 0.3);
+            border-radius: 14px;
+            padding: 20px 24px;
+            display: flex;
+            gap: 16px;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .alerta-silencioso .alerta-icon {
+            font-size: 28px;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .alerta-silencioso h4 {
+            font-family: var(--font-display);
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--info);
+            margin-bottom: 4px;
+        }
+
+        .alerta-silencioso p {
+            font-size: 12px;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+
+        /* ── CONDUCTA ── */
+        .conducta-gauge {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* ── COLOR HELPERS ── */
+        .c-success { color: var(--success); }
+        .c-warning  { color: var(--warning); }
+        .c-danger   { color: var(--danger); }
+        .c-info     { color: var(--info); }
+
+        /* ── PRINT / EXPORT BTN ── */
+        .export-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 9px 16px;
+            border-radius: 8px;
+            font-family: var(--font-body);
+            font-size: 12px;
+            cursor: pointer;
+            transition: all .2s;
+        }
+        .export-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+        /* ── ANIMACIÓN ── */
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .perfil-hero { animation: fadeUp .4s ease both; }
+        .grid-2 > *, .grid-3 > * { animation: fadeUp .4s ease both; }
+        .grid-2 > *:nth-child(1) { animation-delay: .08s; }
+        .grid-2 > *:nth-child(2) { animation-delay: .14s; }
+        .grid-3 > *:nth-child(1) { animation-delay: .10s; }
+        .grid-3 > *:nth-child(2) { animation-delay: .16s; }
+        .grid-3 > *:nth-child(3) { animation-delay: .22s; }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 768px) {
+            .grid-2, .grid-3 { grid-template-columns: 1fr; }
+            .perfil-hero { flex-direction: column; }
+            .perfil-nombre { font-size: 24px; }
+            main { padding: 20px 16px; }
+            header { padding: 0 16px; }
+        }
+
+        @media print {
+            header, .back-btn, .export-btn { display: none; }
+            body { background: white; color: black; }
+            .card, .perfil-hero { border: 1px solid #ccc; }
+        }
+    </style>
+  <link rel="stylesheet" href="/static/theme.css">
+</head>
+<body data-est-id="{{ e.id }}" data-est-nombre="{{ e.nombre }} {{ e.apellido }}" data-est-condicion="{{ e.condicion or 'ACTIVO' }}">
+  <script src="/static/theme.js"></script>
+
+{% if not e.tiene_notas %}
+<div style="background:#1a1a00;border-bottom:2px solid #c8f060;padding:10px 28px;font-size:13px;display:flex;align-items:center;gap:10px;">
+  <span style="font-size:16px;">&#128203;</span>
+  <span style="color:#c8f060;font-weight:600;">Perfil de identidad</span>
+  <span style="color:#888;"> — Registrado desde el Listado oficial. Sin calificaciones cargadas aun. Los valores mostrados son 0.</span>
+</div>
+{% endif %}
+
+<!-- HEADER -->
+<header>
+    <a href="/" class="logo" style="text-decoration:none; color:inherit;">
+        <div class="logo-icon">🎨</div>
+        <div>
+            <div class="logo-text">Multimedia<span>Track</span></div>
+            <div style="font-size:8px;font-family:'DM Mono',monospace;color:#333;letter-spacing:.4px;text-transform:uppercase;margin-top:1px;">C.E. Benito Juárez</div>
+        </div>
+    </a>
+    <div style="display:flex; gap:10px; align-items:center;">
+        <button class="export-btn" onclick="window.print()">
+            <i class="fas fa-print"></i> Imprimir
+        </button>
+        <a href="/" class="back-btn">
+            <i class="fas fa-arrow-left"></i> Volver
+        </a>
+        <div style="display:flex;gap:8px;">
+            <button onclick="window.open('/reportes','_blank')" title="Ver reportes del estudiante"
+                    style="background:rgba(255,196,77,.1);border:1px solid rgba(255,196,77,.3);
+                           color:#ffc44d;padding:9px 14px;border-radius:8px;font-size:12px;cursor:pointer;">
+                <i class="fas fa-flag"></i> Reportes
+            </button>
+            <button onclick="abrirEditar()" title="Editar datos manuales"
+                    style="background:rgba(200,240,96,.1);border:1px solid rgba(200,240,96,.3);
+                           color:#c8f060;padding:9px 14px;border-radius:8px;font-size:12px;cursor:pointer;">
+                <i class="fas fa-edit"></i> Editar
+            </button>
+            <button onclick="cambiarCondicion()" id="btn-condicion" title="Cambiar estado"
+                    style="background:rgba(96,184,240,.1);border:1px solid rgba(96,184,240,.3);
+                           color:#60b8f0;padding:9px 14px;border-radius:8px;font-size:12px;cursor:pointer;">
+                <i class="fas fa-user-tag"></i> {{ e.condicion or 'ACTIVO' }}
+            </button>
+            <button onclick="confirmarEliminar()" title="Eliminar perfil"
+                    style="background:rgba(255,77,77,.08);border:1px solid rgba(255,77,77,.25);
+                           color:#ff6b6b;padding:9px 14px;border-radius:8px;font-size:12px;cursor:pointer;">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+        <a id="btn-planificar" href="/planificacion"
+           style="display:inline-flex; align-items:center; gap:8px;
+                  background:rgba(232,184,75,.12); border:1px solid rgba(232,184,75,.35);
+                  color:var(--accent); padding:10px 16px; border-radius:10px;
+                  font-family:var(--font-display); font-weight:600; font-size:12px;
+                  text-decoration:none; transition:all .2s;"
+           onmouseover="this.style.background='rgba(232,184,75,.2)'"
+           onmouseout="this.style.background='rgba(232,184,75,.12)'">
+            &#129489;&#8205;&#127979; Planificar para este estudiante
+        </a>
+    </div>
+</header>
+
+<main>
+
+    <!-- ── CASO SILENCIOSO ALERT ── -->
+    {% if e.silencioso %}
+    <div class="alerta-silencioso">
+        <div class="alerta-icon">🔵</div>
+        <div>
+            <h4>Caso Silencioso Detectado (Erick's Rule)</h4>
+            <p>Este estudiante presenta rendimiento académico alto (≥80%) con indicadores de bienestar emocional críticos (Autoestima &lt;70). Esto sugiere que el estudiante puede estar gestionando presión interna de forma no visible. <strong style="color:var(--info);">Se recomienda programar una Entrevista de Bienestar de forma prioritaria.</strong></p>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ── HERO ── -->
+    {% set riesgo_color = '#e85b4b' if (e.indice_riesgo or 0) >= 50 else ('#e8a84b' if (e.indice_riesgo or 0) >= 30 else '#4be87a') %}
+    {% set cond_color   = '#4be87a' if e.condicion == 'ACTIVO' else ('#e8a84b' if e.condicion == 'RETIRADO' else '#60b8f0') %}
+    <div class="perfil-hero">
+        <!-- Avatar con foto -->
+        <div class="avatar" id="avatar-wrap" onclick="document.getElementById('foto-input').click()"
+             title="Clic para cambiar foto"
+             style="cursor:pointer; position:relative; overflow:hidden;">
+            {% if e.foto_path %}
+                <img src="{{ e.foto_path }}" id="avatar-img"
+                     style="width:100%;height:100%;object-fit:cover;border-radius:inherit;"
+                     alt="Foto {{ e.nombre }}">
+            {% else %}
+                <span id="avatar-initials">{{ e.nombre[0] }}{{ e.apellido[0] }}</span>
+            {% endif %}
+            <div id="avatar-overlay" style="
+                position:absolute;inset:0;background:rgba(0,0,0,.55);
+                display:none;align-items:center;justify-content:center;
+                border-radius:inherit;font-size:18px;">📷</div>
+        </div>
+        <input type="file" id="foto-input" accept="image/jpeg,image/png,image/webp"
+               style="display:none;" onchange="subirFoto(this)">
+        {% if e.foto_path %}
+        <div style="text-align:center; margin-top:4px;">
+            <button onclick="borrarFoto()"
+                    style="background:none;border:none;color:#555;font-size:9px;cursor:pointer;
+                           text-decoration:underline;padding:0;">Quitar foto</button>
+        </div>
+        {% endif %}
+        <div class="perfil-info">
+            <div class="perfil-nombre">{{ e.nombre }} {{ e.apellido }}</div>
+            <div class="perfil-curso">
+                <i class="fas fa-graduation-cap" style="color:var(--accent); font-size:11px;"></i>
+                {{ e.curso or '—' }} — Modalidad Artes, Bachiller RD
+            </div>
+
+            <!-- Badges de estado -->
+            <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; align-items:center;">
+                <span style="background:{{ cond_color }}22; color:{{ cond_color }}; border:1px solid {{ cond_color }}55;
+                             padding:3px 10px; border-radius:20px; font-size:10px; font-weight:700;">
+                    {{ e.condicion or 'ACTIVO' }}
+                </span>
+                {% if e.indice_riesgo and e.indice_riesgo > 0 %}
+                <span style="background:{{ riesgo_color }}22; color:{{ riesgo_color }}; border:1px solid {{ riesgo_color }}55;
+                             padding:3px 10px; border-radius:20px; font-size:10px; font-weight:700;">
+                    ⚡ Riesgo {{ e.nivel_riesgo or 'Bajo' }}: {{ e.indice_riesgo | round(0) | int }}
+                </span>
+                {% endif %}
+                {% if e.cluster_label %}
+                <span style="background:{{ e.cluster_color or '#333' }}33; color:{{ e.cluster_color or '#aaa' }};
+                             border:1px solid {{ e.cluster_color or '#444' }}66;
+                             padding:3px 10px; border-radius:20px; font-size:10px; font-weight:700;">
+                    🔮 {{ e.cluster_label }}
+                </span>
+                {% endif %}
+                {% if e.silencioso %}
+                <span style="background:#60b8f022; color:#60b8f0; border:1px solid #60b8f044;
+                             padding:3px 10px; border-radius:20px; font-size:10px; font-weight:700;">
+                    🔵 Caso Silencioso
+                </span>
+                {% endif %}
+                {% if e.categoria == 'ALERTA DE REPROBACIÓN' %}
+                <span style="background:#e85b4b22; color:#e85b4b; border:1px solid #e85b4b44;
+                             padding:3px 10px; border-radius:20px; font-size:10px; font-weight:700;">
+                    ⚠ Alerta Reprobación
+                </span>
+                {% endif %}
+            </div>
+            {% if e.reporte %}
+            <div class="perfil-reporte" style="margin-top:6px;">
+                <i class="fas fa-clipboard-list" style="margin-right:6px; opacity:.6;"></i>
+                {{ e.reporte }}
+            </div>
+            {% endif %}
+        </div>
+        <!-- Alerta mini badge en hero -->
+        {% set p_h = e.p_acad or 0 %}
+        {% if p_h > 0 and p_h < 70 %}
+        <div style="background:rgba(239,68,68,.15);color:#ef4444;padding:5px 11px;
+            border-radius:20px;font-size:10px;font-weight:800;
+            border:1px solid rgba(239,68,68,.3);margin-bottom:6px;">
+            🚨 ALERTA CRÍTICA
+        </div>
+        {% elif p_h >= 70 and p_h < 80 %}
+        <div style="background:rgba(249,115,22,.12);color:#f97316;padding:5px 11px;
+            border-radius:20px;font-size:10px;font-weight:700;
+            border:1px solid rgba(249,115,22,.3);margin-bottom:6px;">
+            ⚠️ EN OBSERVACIÓN
+        </div>
+        {% endif %}
+        <!-- KPIs rápidos en hero -->
+        <div style="margin-left:auto; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+            {% set kpis = [
+                ('Académico', e.p_acad, '📚'),
+                ('Conducta',  e.p_cond, '🧑‍🏫'),
+                ('Emocional', e.p_emocional, '💚'),
+            ] %}
+            {% for label, val, icon in kpis %}
+            {% set vc = '#4be87a' if (val or 0) >= 85 else ('#e8a84b' if (val or 0) >= 70 else ('#e85b4b' if (val or 0) > 0 else '#444')) %}
+            <div style="text-align:center; min-width:52px;">
+                <div style="font-size:18px;">{{ icon }}</div>
+                <div style="font-family:var(--font-display); font-size:16px; font-weight:800; color:{{ vc }};">
+                    {% if val and val > 0 %}{{ val | round(0) | int }}{% else %}—{% endif %}
+                </div>
+                <div style="font-size:9px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px;">{{ label }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- ══ BANNER DE ALERTA ══════════════════════════════════════════════ -->
+    {% set p_calc = e.p_acad or 0 %}
+    {% if p_calc > 0 and p_calc < 70 %}
+    <div style="margin-bottom:20px;padding:16px 20px;border-radius:12px;
+                background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.4);
+                display:flex;align-items:flex-start;gap:14px;">
+        <div style="font-size:28px;line-height:1;flex-shrink:0;">🚨</div>
+        <div>
+            <div style="font-size:14px;font-weight:800;color:#ef4444;margin-bottom:4px;
+                        letter-spacing:.03em;">ALERTA CRÍTICA — BAJO RENDIMIENTO</div>
+            <div style="font-size:12px;color:#fca5a5;line-height:1.6;">
+                Promedio académico <strong style="color:#ef4444;">{{ p_calc | round(1) }}%</strong>
+                — por debajo del mínimo aprobatorio (70%).
+                Se requiere <strong>coordinar reunión urgente con los padres/tutores</strong>
+                y <strong>cita con la psicóloga del ciclo</strong>.
+            </div>
+            <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
+                <button onclick="abrirModalReporte()" style="background:rgba(239,68,68,.2);
+                    border:1px solid rgba(239,68,68,.5);color:#ef4444;padding:5px 12px;
+                    border-radius:8px;font-size:11px;cursor:pointer;font-weight:700;">
+                    <i class="fas fa-flag"></i> Generar reporte urgente
+                </button>
+            </div>
+        </div>
+    </div>
+    {% elif p_calc >= 70 and p_calc < 80 %}
+    <div style="margin-bottom:20px;padding:14px 18px;border-radius:12px;
+                background:rgba(249,115,22,.1);border:1px solid rgba(249,115,22,.35);
+                display:flex;align-items:flex-start;gap:12px;">
+        <div style="font-size:24px;line-height:1;flex-shrink:0;">⚠️</div>
+        <div>
+            <div style="font-size:13px;font-weight:800;color:#f97316;margin-bottom:3px;">
+                ESTUDIANTE EN OBSERVACIÓN
+            </div>
+            <div style="font-size:12px;color:#fdba74;line-height:1.5;">
+                Promedio académico <strong style="color:#f97316;">{{ p_calc | round(1) }}%</strong>
+                — en zona de riesgo. Se recomienda seguimiento cercano y apoyo académico.
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ── FILA 1: Académico · Autoestima · Conducta ── -->
+    <div class="grid-3">
+
+        {% macro ring_card(title, icon, val, label, labels_map, px_list, px_names) %}
+        {% set vc = '#4be87a' if (val or 0) >= 85 else ('#e8a84b' if (val or 0) >= 70 else ('#e85b4b' if (val or 0) > 0 else '#333')) %}
+        <div class="card">
+            <div class="card-title"><i class="fas fa-{{ icon }}"></i> {{ title }}</div>
+            <div class="radial-wrap">
+                <div class="radial-container">
+                    <svg class="radial-svg" width="110" height="110" viewBox="0 0 110 110">
+                        <circle class="radial-track" cx="55" cy="55" r="46"/>
+                        <circle class="radial-fill" cx="55" cy="55" r="46"
+                            stroke="{{ vc }}"
+                            data-val="{{ val or 0 }}"
+                            stroke-dasharray="289" stroke-dashoffset="289"/>
+                    </svg>
+                    <span class="radial-val" style="color:{{ vc }};">
+                        {% if val and val > 0 %}{{ val | round(1) }}{% else %}—{% endif %}
+                    </span>
+                </div>
+                <div class="metrica-label">{{ label }}</div>
+                <div style="font-size:11px; color:var(--text-muted); text-align:center; margin-top:4px;">
+                    {% if not val or val == 0 %}
+                        <span style="color:#555;"><i class="fas fa-clock"></i> Sin datos aún</span>
+                    {% else %}
+                        {% set lkey = 'excelente' if val >= 85 else ('adecuado' if val >= 70 else 'atencion') %}
+                        <span class="{{ 'c-success' if val >= 85 else ('c-warning' if val >= 70 else 'c-danger') }}">
+                            <i class="fas fa-{{ 'star' if val >= 85 else ('minus' if val >= 70 else 'exclamation') }}"></i>
+                            {{ labels_map[lkey] }}
+                        </span>
+                    {% endif %}
+                </div>
+                {% set ns2 = namespace(has=false) %}
+                {% for pv in px_list %}{% if pv and pv > 0 %}{% set ns2.has = true %}{% endif %}{% endfor %}
+                {% if ns2.has %}
+                <div style="display:flex; gap:8px; margin-top:10px; justify-content:center;">
+                    {% for idx2 in range(px_list | length) %}
+                    {% set pv = px_list[idx2] %}
+                    {% set pn = px_names[idx2] %}
+                    {% set pc = '#4be87a' if (pv or 0)>=85 else ('#e8a84b' if (pv or 0)>=70 else ('#e85b4b' if (pv or 0)>0 else '#2a2a2a')) %}
+                    <div style="text-align:center;">
+                        <div style="font-size:12px; font-weight:800; color:{{ pc }}; font-family:var(--font-display);">
+                            {% if pv and pv > 0 %}{{ pv | round(0) | int }}{% else %}—{% endif %}
+                        </div>
+                        <div style="font-size:9px; color:#555; letter-spacing:.3px;">{{ pn }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endmacro %}
+
+        {{ ring_card(
+            'Promedio Académico', 'book-open', e.p_acad, 'sobre 100 puntos',
+            {'excelente':'Rendimiento excelente','adecuado':'Rendimiento adecuado','atencion':'Requiere atención'},
+            [e.acad_p1, e.acad_p2, e.acad_p3, e.acad_p4], ['P1','P2','P3','P4']
+        ) }}
+
+        {{ ring_card(
+            'Bienestar Emocional', 'heart', e.p_auto, 'autoestima & motivación',
+            {'excelente':'Estado emocional óptimo','adecuado':'Estabilidad normal','atencion':'Necesita apoyo'},
+            [e.motivacion, e.estado_emocional, e.interes_futuro, e.apoyo_familiar], ['Mot','Emoc','Int','Fam']
+        ) }}
+
+        {{ ring_card(
+            'Índice Conductual', 'users', e.p_cond, 'comportamiento en clase',
+            {'excelente':'Conducta ejemplar','adecuado':'Conducta regular','atencion':'Conducta crítica'},
+            [e.puntualidad, e.participacion, e.tareas, e.rendimiento], ['Punt','Part','Tar','Rend']
+        ) }}
+
+    </div>    </div>
+
+    <!-- ── EXPEDIENTE: Indicadores en vivo ── -->
+    <div id="expediente-hero" style="margin-bottom:20px;">
+        <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;font-weight:700;">
+            📋 Expediente estudiantil
+        </div>
+        <div id="expediente-indicadores-hero" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
+            <div style="background:rgba(100,100,100,.08);color:#666;padding:8px 12px;border-radius:8px;font-size:11px;font-weight:700;text-align:center;">
+                <div style="font-size:9px;opacity:.7;margin-bottom:2px;">Conducta</div>Cargando…
+            </div>
+            <div style="background:rgba(100,100,100,.08);color:#666;padding:8px 12px;border-radius:8px;font-size:11px;font-weight:700;text-align:center;">
+                <div style="font-size:9px;opacity:.7;margin-bottom:2px;">Psicológico</div>Cargando…
+            </div>
+            <div style="background:rgba(100,100,100,.08);color:#666;padding:8px 12px;border-radius:8px;font-size:11px;font-weight:700;text-align:center;">
+                <div style="font-size:9px;opacity:.7;margin-bottom:2px;">Académico</div>Cargando…
+            </div>
+            <div style="background:rgba(100,100,100,.08);color:#666;padding:8px 12px;border-radius:8px;font-size:11px;font-weight:700;text-align:center;">
+                <div style="font-size:9px;opacity:.7;margin-bottom:2px;">Logros</div>Cargando…
+            </div>
+        </div>
+    </div>
+
+    <!-- ── AVISO: sin notas cargadas ── -->
+    {% if not e.p_acad and not e.fotografia_p1 and not e.lv_p1 and not e.diseno_p1 %}
+    {% set tiene_materias_excel = false %}
+    <div style="background:#1a1200;border:1px solid #4a3a00;border-radius:12px;padding:14px 18px;
+                display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+        <span style="font-size:22px;">📋</span>
+        <div>
+            <div style="font-weight:700;font-size:13px;color:#c8a84b;">Estudiante sin notas cargadas aún</div>
+            <div style="font-size:12px;color:#888;margin-top:3px;">
+                Este perfil todavía no tiene calificaciones. Para alimentarlo puedes:
+                <strong style="color:#c8f060;">① Cargar la Plantilla</strong> desde el Dashboard ·
+                <strong style="color:#60b8f0;">② Subir el Excel del profesor</strong> (botón "Agregar materia" abajo) ·
+                <strong style="color:#f0c060;">③ Editar manualmente</strong> con el botón ✏️ Editar
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ── FILA 2: Módulos Multimedia + Tendencia/Proyección ── -->
+    <div class="grid-2">
+
+        <!-- Módulos Técnicos — visible para todos, título dinámico según mención -->
+        <!-- Módulos Técnicos — dinámico para TODAS las menciones desde materias_calificaciones -->
+        <div class="card" id="card-modulos-mencion">
+            <div class="card-title">
+                <i class="fas fa-layer-group"></i>
+                Módulos Técnicos ·
+                {% if 'multimedia' in (e.curso or '')|lower %}🎬 Multimedia
+                {% elif 'teatro' in (e.curso or '')|lower %}🎭 Teatro
+                {% elif 'musica' in (e.curso or '')|lower or 'música' in (e.curso or '')|lower %}🎵 Música
+                {% elif 'artes' in (e.curso or '')|lower or 'visual' in (e.curso or '')|lower %}🎨 Artes Visuales
+                {% else %}{{ e.curso or e.grado }}{% endif %}
+            </div>
+            <div id="modulos-mencion-container">
+                <div style="text-align:center;color:var(--text-muted);font-size:12px;padding:20px 0;">
+                    <i class="fas fa-spinner fa-spin"></i> Cargando...
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Tendencia + Proyección -->
+        <div style="display:flex; flex-direction:column; gap:16px;">
+
+            <!-- Tendencia -->
+            <div class="card" style="flex:1;">
+                <div class="card-title"><i class="fas fa-chart-line"></i> Tendencia Pedagógica</div>
+                <div class="tendencia-card">
+                    {% if e.tendencia == 'subiendo' %}
+                        <div class="tendencia-icon">📈</div>
+                        <div class="tendencia-texto c-success">En Mejora</div>
+                        <div class="tendencia-desc">El estudiante muestra progreso<br>respecto al período anterior</div>
+                    {% elif e.tendencia == 'bajando' %}
+                        <div class="tendencia-icon">📉</div>
+                        <div class="tendencia-texto c-danger">En Declive</div>
+                        <div class="tendencia-desc">El promedio baja respecto<br>al período anterior</div>
+                    {% else %}
+                        <div class="tendencia-icon">➡️</div>
+                        <div class="tendencia-texto" style="color:var(--text-muted);">Estable</div>
+                        <div class="tendencia-desc">Sin cambio significativo<br>entre períodos</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Proyección IA -->
+            <div class="card" style="flex:1;">
+                <div class="card-title"><i class="fas fa-brain"></i> Predicción Fin de Año</div>
+                <div style="text-align:center;">
+                    <div class="ia-badge">✦ análisis IA</div>
+                    <div class="proyeccion-valor" style="color:{{ '#4be87a' if e.proyeccion >= 85 else ('#e8a84b' if e.proyeccion >= 70 else '#e85b4b') }};">
+                        {{ e.proyeccion | round(1) }}%
+                    </div>
+                    <div class="proyeccion-desc">
+                        Proyección calculada a partir de<br>la tendencia académica actual
+                    </div>
+                    {% if e.proyeccion < 70 %}
+                    <div style="margin-top:12px; padding:8px 12px; background:rgba(232,91,75,.1); border-radius:8px; font-size:11px; color:var(--danger);">
+                        <i class="fas fa-triangle-exclamation"></i> Riesgo de reprobación proyectado
+                    </div>
+                    {% elif e.proyeccion >= 85 %}
+                    <div style="margin-top:12px; padding:8px 12px; background:rgba(75,232,122,.1); border-radius:8px; font-size:11px; color:var(--success);">
+                        <i class="fas fa-check-circle"></i> Proyección de aprobación sólida
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ── PLANIFICACIÓN IA ── -->
+    <div class="card" id="card-ia" style="margin-top:0; animation: fadeUp .4s ease .28s both;">
+        <div class="card-title">
+            <i class="fas fa-brain"></i> Planificación Pedagógica con IA
+            <span style="margin-left:auto; font-size:9px; background:var(--surface2); border:1px solid var(--border); padding:3px 8px; border-radius:4px; letter-spacing:.5px;">
+                LLaMA 3.3 · Groq
+            </span>
+        </div>
+
+        <!-- Estado: sin generar -->
+        <div id="ia-sin-generar">
+            <div style="display:flex; gap:16px; align-items:center; padding: 8px 0 20px;">
+                <div style="font-size:36px; opacity:.4;">🤖</div>
+                <div>
+                    <div style="font-weight:500; margin-bottom:4px;">Análisis IA no generado aún</div>
+                    <div style="font-size:12px; color:var(--text-muted); line-height:1.6;">
+                        Genera un análisis pedagógico personalizado con estrategias concretas
+                        para este estudiante usando inteligencia artificial.
+                    </div>
+                </div>
+            </div>
+            <button class="btn-generar" onclick="generarPlan(false)">
+                <i class="fas fa-wand-magic-sparkles"></i>
+                Generar Planificación con IA
+            </button>
+        </div>
+
+        <!-- Estado: cargando -->
+        <div id="ia-cargando" style="display:none; padding:24px; text-align:center;">
+            <div class="ia-spinner"></div>
+            <div style="margin-top:14px; font-size:13px; color:var(--text-muted);">
+                Analizando perfil con LLaMA 3.3…
+            </div>
+            <div style="font-size:11px; color:var(--text-muted); margin-top:4px; opacity:.6;">
+                Esto toma solo unos segundos
+            </div>
+        </div>
+
+        <!-- Estado: resultado -->
+        <div id="ia-resultado" style="display:none;">
+            <div id="ia-texto" style="
+                font-size: 13px;
+                line-height: 1.7;
+                color: var(--text);
+                font-family: var(--font-body);
+            "></div>
+
+            <div style="display:flex; gap:10px; margin-top:14px; align-items:center;">
+                <button class="btn-generar btn-secondary" onclick="generarPlan(true)">
+                    <i class="fas fa-rotate"></i> Regenerar
+                </button>
+                <button class="btn-generar btn-secondary" onclick="copiarPlan()">
+                    <i class="fas fa-copy"></i> Copiar texto
+                </button>
+                <span id="cache-badge" style="
+                    margin-left:auto;
+                    font-size:10px;
+                    color:var(--text-muted);
+                    display:flex; align-items:center; gap:5px;
+                "></span>
+            </div>
+        </div>
+
+        <!-- Estado: error -->
+        <div id="ia-error" style="display:none; padding:16px; background:rgba(232,91,75,.08); border-radius:10px; border:1px solid rgba(232,91,75,.2);">
+            <div style="color:var(--danger); font-weight:600; font-size:13px; margin-bottom:6px;">
+                <i class="fas fa-triangle-exclamation"></i> Error al conectar con Groq
+            </div>
+            <div id="ia-error-msg" style="font-size:12px; color:var(--text-muted);"></div>
+            <button class="btn-generar btn-secondary" onclick="generarPlan(false)" style="margin-top:12px;">
+                Reintentar
+            </button>
+        </div>
+    </div>
+
+
+    <!-- ══ ASISTENCIA + DETALLE CONDUCTUAL + EMOCIONAL ══════════════════════ -->
+
+    {% set tiene_asistencia = (e.asistencia_p1 or 0) > 0 or (e.asistencia_p2 or 0) > 0 %}
+    {% set tiene_conductual  = (e.puntualidad or 0) > 0 or (e.interrupciones or 0) > 0 %}
+
+    {% if tiene_asistencia or tiene_conductual %}
+    <div class="grid-2" style="margin-top:20px;">
+
+        <!-- ASISTENCIA POR PERÍODO -->
+        {% if tiene_asistencia %}
+        <div class="card">
+            <div class="card-title"><i class="fas fa-calendar-check"></i> Asistencia por Período</div>
+            <div style="display:flex; flex-direction:column; gap:10px; margin-top:8px;">
+                {% for pv, pn in [(e.asistencia_p1,'Período 1'),(e.asistencia_p2,'Período 2'),(e.asistencia_p3,'Período 3'),(e.asistencia_p4,'Período 4')] %}
+                {% if pv and pv > 0 %}
+                {% set ac = '#4be87a' if pv >= 90 else ('#e8a84b' if pv >= 75 else '#e85b4b') %}
+                <div>
+                    <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                        <span style="font-size:11px; color:var(--text-muted);">{{ pn }}</span>
+                        <span style="font-family:var(--font-display); font-size:12px; font-weight:800; color:{{ ac }};">{{ pv | round(0) | int }}%</span>
+                    </div>
+                    <div class="barra-track">
+                        <div class="barra-fill" data-valor="{{ pv }}"
+                             style="width:0%; height:8px; border-radius:4px; background:{{ ac }};"></div>
+                    </div>
+                </div>
+                {% endif %}
+                {% endfor %}
+                {% set ns = namespace(sum=0, cnt=0) %}
+                {% for av in [e.asistencia_p1, e.asistencia_p2, e.asistencia_p3, e.asistencia_p4] %}
+                    {% if av and av > 0 %}{% set ns.sum = ns.sum + av %}{% set ns.cnt = ns.cnt + 1 %}{% endif %}
+                {% endfor %}
+                {% if ns.cnt > 0 %}
+                {% set prom_a = ns.sum / ns.cnt %}
+                <div style="margin-top:4px; padding-top:10px; border-top:1px solid var(--border);
+                            display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:11px; color:var(--text-muted);">Promedio asistencia</span>
+                    <span style="font-family:var(--font-display); font-size:18px; font-weight:800;
+                                 color:{{ '#4be87a' if prom_a >= 90 else ('#e8a84b' if prom_a >= 75 else '#e85b4b') }};">
+                        {{ prom_a | round(1) }}%
+                    </span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- DETALLE CONDUCTUAL -->
+        {% if tiene_conductual %}
+        <div class="card">
+            <div class="card-title"><i class="fas fa-clipboard-check"></i> Indicadores Conductuales</div>
+            <div style="display:flex; flex-direction:column; gap:7px; margin-top:8px;">
+                {% set cond_items = [
+                    ('Puntualidad',     e.puntualidad,       '✅'),
+                    ('Tareas',          e.tareas,            '📝'),
+                    ('Participación',   e.participacion,     '🙋'),
+                    ('Comprensión',     e.comprension,       '💡'),
+                    ('Rendimiento',     e.rendimiento,       '📊'),
+                    ('Interrupciones',  e.interrupciones,    '🔴'),
+                    ('Conflictos',      e.conflictos,        '⚡'),
+                    ('Distracción',     e.distraccion,       '📱'),
+                    ('Falta de respeto',e.falta_respeto,     '🚫'),
+                ] %}
+                {% for label, val, icon in cond_items %}
+                {% if val and val > 0 %}
+                {% set is_neg = label in ['Interrupciones','Conflictos','Distracción','Falta de respeto'] %}
+                {% set cc = ('#e85b4b' if val >= 60 else ('#e8a84b' if val >= 30 else '#4be87a')) if is_neg else ('#4be87a' if val >= 85 else ('#e8a84b' if val >= 70 else '#e85b4b')) %}
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:11px; min-width:110px; color:var(--text-muted);">{{ icon }} {{ label }}</span>
+                    <div class="barra-track" style="flex:1;">
+                        <div class="barra-fill" data-valor="{{ val }}"
+                             style="width:0%; height:6px; border-radius:3px; background:{{ cc }};"></div>
+                    </div>
+                    <span style="font-size:11px; font-weight:700; color:{{ cc }}; min-width:28px; text-align:right;">{{ val | round(0) | int }}</span>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+    {% endif %}
+
+    <!-- ══ SECCIÓN INDICADORES POR PERÍODO ══════════════════════════════════ -->
+    <section style="margin-top:32px;" id="seccion-materias">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+            <h2 style="font-family:var(--font-display);font-size:16px;font-weight:800;margin:0;">
+                <i class="fas fa-book-open" style="color:var(--accent);margin-right:8px;"></i>
+                Calificaciones por Materia
+            </h2>
+            <button onclick="document.getElementById('fm-perfil').click()"
+                    style="background:transparent;border:1px solid #60b8f0;color:#60b8f0;padding:6px 14px;
+                           border-radius:8px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px;">
+                <i class="fas fa-plus"></i> Agregar materia
+            </button>
+            <input type="file" id="fm-perfil" accept=".xlsx,.xls,.xlsm" onchange="iniciarCargaMateria(this)" style="display:none;">
+        </div>
+        <div id="materias-container">
+            <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:32px;text-align:center;color:var(--text-muted);">
+                <i class="fas fa-spinner fa-spin" style="font-size:24px;display:block;margin-bottom:12px;opacity:.4;"></i>
+                <div style="font-size:13px;">Cargando materias...</div>
+            </div>
+        </div>
+    </section>
+
+
+    <!-- ══ EVALUACIÓN POR COMPETENCIAS ═════════════════════════════════════ -->
+    <section style="margin-top:32px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
+            <h2 style="font-family:var(--font-display); font-size:16px; font-weight:800; margin:0;">
+                <i class="fas fa-star-half-stroke" style="color:var(--accent); margin-right:8px;"></i>
+                Evaluación por Competencias
+            </h2>
+            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                <!-- Botón promoción -->
+                <div id="promo-container">
+                    <button id="btn-promover" onclick="togglePromover()"
+                        style="display:inline-flex; align-items:center; gap:8px;
+                               background:transparent; border:1px solid var(--border);
+                               color:var(--text-muted); padding:10px 16px; border-radius:10px;
+                               font-family:var(--font-display); font-weight:600; font-size:12px;
+                               cursor:pointer; transition:all .2s;">
+                        <i class="fas fa-graduation-cap"></i>
+                        <span id="promo-label">Promover a 5to</span>
+                    </button>
+                </div>
+                <button onclick="generarCompetencias()"
+                    style="display:inline-flex; align-items:center; gap:8px;
+                           background:var(--accent); color:#000; border:none;
+                           padding:10px 18px; border-radius:10px;
+                           font-family:var(--font-display); font-weight:700; font-size:12px;
+                           cursor:pointer; transition:opacity .2s;"
+                    onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+                    <i class="fas fa-wand-magic-sparkles"></i> Generar Evaluación IA
+                </button>
+            </div>
+        </div>
+
+        <!-- Estado grado -->
+        <div id="grado-badge" style="display:inline-flex; align-items:center; gap:6px;
+             background:var(--surface2); border:1px solid var(--border);
+             padding:6px 14px; border-radius:20px; font-size:11px; margin-bottom:16px;">
+            <i class="fas fa-school"></i>
+            <span id="grado-texto">{{ e.grado or '4to' }} Multimedia</span>
+        </div>
+
+        <!-- Resultado competencias -->
+        <div id="comp-sin-datos" style="background:var(--surface); border:1px solid var(--border);
+             border-radius:14px; padding:24px; text-align:center; color:var(--text-muted); font-size:13px;">
+            <i class="fas fa-wand-magic-sparkles" style="font-size:28px; display:block; margin-bottom:10px; opacity:.3;"></i>
+            Presiona <strong>Generar Evaluación IA</strong> para obtener un informe
+            de competencias basado en los indicadores reales del estudiante.
+        </div>
+
+        <div id="comp-cargando" style="display:none; padding:24px; text-align:center;">
+            <div class="ia-spinner"></div>
+            <div style="margin-top:12px; color:var(--text-muted); font-size:13px;">Analizando competencias...</div>
+        </div>
+
+        <div id="comp-resultado" style="display:none;">
+            <div id="comp-texto" style="font-size:13px; line-height:1.7; font-family:var(--font-body);"></div>
+            <div style="display:flex; gap:10px; margin-top:14px;">
+                <button onclick="copiarCompetencias()"
+                    style="background:var(--surface2); border:1px solid var(--border); color:var(--text-muted);
+                           padding:8px 16px; border-radius:8px; font-size:12px; cursor:pointer;">
+                    <i class="fas fa-copy"></i> Copiar
+                </button>
+                <button onclick="generarCompetencias()"
+                    style="background:var(--surface2); border:1px solid var(--border); color:var(--text-muted);
+                           padding:8px 16px; border-radius:8px; font-size:12px; cursor:pointer;">
+                    <i class="fas fa-rotate"></i> Regenerar
+                </button>
+            </div>
+        </div>
+
+        <div id="comp-error" style="display:none; padding:16px; background:rgba(232,91,75,.08);
+             border-radius:10px; border:1px solid rgba(232,91,75,.2);">
+            <div style="color:var(--danger); font-weight:600; font-size:13px; margin-bottom:6px;">
+                <i class="fas fa-triangle-exclamation"></i> Error
+            </div>
+            <div id="comp-error-msg" style="font-size:12px; color:var(--text-muted);"></div>
+        </div>
+    </section>
+
+
+    <!-- ══ CALIFICACIONES Y ASISTENCIA OFICIAL ══════════════════════════════ -->
+    <section style="margin-top:32px;" id="seccion-boletin">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+            <div style="font-family:var(--font-display); font-size:14px; font-weight:800;
+                        color:var(--text); display:flex; align-items:center; gap:8px;">
+                <span style="width:28px;height:28px;border-radius:8px;background:rgba(200,240,96,.12);
+                             display:flex;align-items:center;justify-content:center;font-size:14px;">📊</span>
+                Calificaciones y Asistencia — Oficial MINERD
+            </div>
+            <div id="boletin-anio" style="font-size:10px;color:#444;font-family:'DM Mono',monospace;"></div>
+        </div>
+
+        <!-- Loading state -->
+        <div id="boletin-loading" style="text-align:center;padding:32px;color:#333;">
+            <i class="fas fa-spinner fa-spin" style="font-size:20px;margin-bottom:8px;display:block;"></i>
+            Cargando boletín…
+        </div>
+
+        <!-- Error state -->
+        <div id="boletin-error" style="display:none;padding:16px;background:rgba(255,77,77,.05);
+             border:1px solid rgba(255,77,77,.15);border-radius:10px;color:#ff6b6b;font-size:12px;">
+            <i class="fas fa-triangle-exclamation"></i> No se pudo cargar el boletín.
+        </div>
+
+        <!-- Summary badges -->
+        <div id="boletin-summary" style="display:none;"></div>
+
+        <!-- Table -->
+        <div id="boletin-tabla" style="display:none;overflow-x:auto;margin-top:12px;">
+            <table style="width:100%;border-collapse:collapse;font-size:12px;">
+                <thead>
+                    <tr>
+                        <th style="text-align:left;padding:10px 12px;background:#111;color:#888;
+                                   font-family:'DM Mono',monospace;font-size:10px;font-weight:600;
+                                   letter-spacing:.5px;border-bottom:1px solid #222;">MATERIA</th>
+                        <th style="text-align:center;padding:10px 8px;background:#111;color:#888;
+                                   font-family:'DM Mono',monospace;font-size:10px;font-weight:600;
+                                   letter-spacing:.5px;border-bottom:1px solid #222;">P1</th>
+                        <th style="text-align:center;padding:10px 8px;background:#111;color:#888;
+                                   font-family:'DM Mono',monospace;font-size:10px;font-weight:600;
+                                   letter-spacing:.5px;border-bottom:1px solid #222;">P2</th>
+                        <th style="text-align:center;padding:10px 8px;background:#111;color:#888;
+                                   font-family:'DM Mono',monospace;font-size:10px;font-weight:600;
+                                   letter-spacing:.5px;border-bottom:1px solid #222;">P3</th>
+                        <th style="text-align:center;padding:10px 8px;background:#111;color:#888;
+                                   font-family:'DM Mono',monospace;font-size:10px;font-weight:600;
+                                   letter-spacing:.5px;border-bottom:1px solid #222;">P4</th>
+                        <th style="text-align:center;padding:10px 8px;background:#111;color:#c8f060;
+                                   font-family:'DM Mono',monospace;font-size:10px;font-weight:700;
+                                   letter-spacing:.5px;border-bottom:1px solid #222;">PROM.</th>
+                        <th style="text-align:center;padding:10px 8px;background:#111;color:#888;
+                                   font-family:'DM Mono',monospace;font-size:10px;font-weight:600;
+                                   letter-spacing:.5px;border-bottom:1px solid #222;">% ASIST.</th>
+                        <th style="text-align:center;padding:10px 12px;background:#111;color:#888;
+                                   font-family:'DM Mono',monospace;font-size:10px;font-weight:600;
+                                   letter-spacing:.5px;border-bottom:1px solid #222;">ESTADO</th>
+                    </tr>
+                </thead>
+                <tbody id="boletin-tbody"></tbody>
+            </table>
+        </div>
+
+        <!-- MINERD legend -->
+        <div id="boletin-leyenda" style="display:none;margin-top:12px;display:flex;gap:12px;
+             flex-wrap:wrap;font-size:10px;color:#444;">
+            <span><span style="display:inline-block;width:10px;height:10px;background:rgba(77,255,180,.25);
+                              border-radius:3px;margin-right:4px;"></span>≥ 70 Aprobado</span>
+            <span><span style="display:inline-block;width:10px;height:10px;background:rgba(240,192,96,.25);
+                              border-radius:3px;margin-right:4px;"></span>50–69 Completiva</span>
+            <span><span style="display:inline-block;width:10px;height:10px;background:rgba(255,77,77,.2);
+                              border-radius:3px;margin-right:4px;"></span>< 50 Reprobado</span>
+            <span><span style="display:inline-block;width:10px;height:10px;background:rgba(255,107,107,.15);
+                              border:1px solid rgba(255,107,107,.3);border-radius:3px;margin-right:4px;"></span>
+                  🚨 Riesgo por asistencia (≥20% inasistencia)</span>
+        </div>
+    </section>
+
+    <script>
+    // ─── BOLETÍN LOADER ───────────────────────────────────────────────────────
+    (function loadBoletin() {
+        var estId = {{ e.id }};
+
+        function nc(v) {
+            // nota color
+            if (v === null || v === undefined || v === '') return '#444';
+            if (v >= 70) return '#4dffb4';
+            if (v >= 50) return '#f0c060';
+            return '#ff6b6b';
+        }
+        function nb(v) {
+            // nota background
+            if (v === null || v === undefined || v === '') return 'transparent';
+            if (v >= 70) return 'rgba(77,255,180,.08)';
+            if (v >= 50) return 'rgba(240,192,96,.1)';
+            return 'rgba(255,77,77,.1)';
+        }
+        function fmt(v) {
+            if (v === null || v === undefined || v === '') return '<span style="color:#333;">—</span>';
+            return '<span style="font-weight:700;color:' + nc(v) + ';">' + Math.round(v * 10) / 10 + '</span>';
+        }
+        function estadoBadge(est, asistPct) {
+            // Build badge based on estado and attendance
+            var asistRisk = asistPct !== null && asistPct >= 20;
+            var badge = '';
+            if (asistRisk) {
+                badge += '<span style="padding:2px 7px;border-radius:12px;font-size:9px;font-weight:700;'
+                       + 'background:rgba(255,77,77,.15);color:#ff6b6b;border:1px solid rgba(255,77,77,.25);">'
+                       + '🚨 Asistencia</span> ';
+            }
+            if (est === 'aprobado') {
+                badge += '<span style="padding:2px 7px;border-radius:12px;font-size:9px;font-weight:700;'
+                       + 'background:rgba(77,255,180,.12);color:#4dffb4;border:1px solid rgba(77,255,180,.2);">✓ Aprobado</span>';
+            } else if (est === 'completiva') {
+                badge += '<span style="padding:2px 7px;border-radius:12px;font-size:9px;font-weight:700;'
+                       + 'background:rgba(240,192,96,.15);color:#f0c060;border:1px solid rgba(240,192,96,.25);">⚠ Completiva</span>';
+            } else if (est === 'reprobado') {
+                badge += '<span style="padding:2px 7px;border-radius:12px;font-size:9px;font-weight:700;'
+                       + 'background:rgba(255,77,77,.15);color:#ff6b6b;border:1px solid rgba(255,77,77,.25);">✗ Reprobado</span>';
+            } else {
+                badge += '<span style="padding:2px 7px;border-radius:12px;font-size:9px;'
+                       + 'background:rgba(255,255,255,.05);color:#444;">— Sin nota</span>';
+            }
+            return badge;
+        }
+
+        fetch('/api/calificaciones/boletin/' + estId)
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                document.getElementById('boletin-loading').style.display = 'none';
+                if (!d || !d.materias) {
+                    document.getElementById('boletin-error').style.display = 'block';
+                    document.getElementById('boletin-error').innerHTML = '<i class="fas fa-info-circle"></i> Sin calificaciones registradas aún para este estudiante.';
+                    return;
+                }
+
+                // Año escolar
+                if (d.anio_escolar) {
+                    document.getElementById('boletin-anio').textContent = 'Año Escolar ' + d.anio_escolar;
+                }
+
+                // Summary badges
+                var total = d.materias.length;
+                var aprobadas = d.materias.filter(function(m){ return m.estado === 'aprobado'; }).length;
+                var completivas = d.materias.filter(function(m){ return m.estado === 'completiva'; }).length;
+                var reprobadas = d.materias.filter(function(m){ return m.estado === 'reprobado'; }).length;
+                var riesgoAsist = d.materias.filter(function(m){ return m.pct_inasistencia_injustificada >= 20; }).length;
+
+                var summaryHTML = '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">';
+                summaryHTML += '<div style="padding:6px 12px;border-radius:8px;background:rgba(77,255,180,.08);border:1px solid rgba(77,255,180,.15);font-size:11px;color:#4dffb4;font-weight:700;">'
+                             + '✓ Aprobadas: ' + aprobadas + '</div>';
+                if (completivas > 0) summaryHTML += '<div style="padding:6px 12px;border-radius:8px;background:rgba(240,192,96,.08);border:1px solid rgba(240,192,96,.2);font-size:11px;color:#f0c060;font-weight:700;">'
+                             + '⚠ Completivas: ' + completivas + '</div>';
+                if (reprobadas > 0) summaryHTML += '<div style="padding:6px 12px;border-radius:8px;background:rgba(255,77,77,.08);border:1px solid rgba(255,77,77,.2);font-size:11px;color:#ff6b6b;font-weight:700;">'
+                             + '✗ Reprobadas: ' + reprobadas + '</div>';
+                if (riesgoAsist > 0) summaryHTML += '<div style="padding:6px 12px;border-radius:8px;background:rgba(255,77,77,.05);border:1px solid rgba(255,107,107,.2);font-size:11px;color:#ff8c8c;font-weight:700;">'
+                             + '🚨 Riesgo asistencia: ' + riesgoAsist + '</div>';
+                summaryHTML += '</div>';
+
+                var summaryEl = document.getElementById('boletin-summary');
+                summaryEl.innerHTML = summaryHTML;
+                summaryEl.style.display = 'block';
+
+                // Build table rows
+                var tbody = document.getElementById('boletin-tbody');
+                var rows = d.materias.map(function(m, i) {
+                    var pctAsist = m.pct_inasistencia_injustificada;
+                    var asistColor = pctAsist === null ? '#444'
+                                   : pctAsist >= 20 ? '#ff6b6b'
+                                   : pctAsist >= 15 ? '#f0c060' : '#4dffb4';
+                    var asistText = pctAsist === null ? '—'
+                                  : (pctAsist >= 20 ? '🚨 ' : pctAsist >= 15 ? '⚠ ' : '✓ ')
+                                  + (100 - pctAsist).toFixed(0) + '%';
+                    var rowBg = i % 2 === 0 ? 'rgba(255,255,255,.02)' : 'transparent';
+                    return '<tr style="background:' + rowBg + ';border-bottom:1px solid #1a1a1a;">'
+                         + '<td style="padding:9px 12px;color:var(--text);font-size:12px;">' + m.materia + '</td>'
+                         + '<td style="text-align:center;padding:9px 8px;background:' + nb(m.p1) + ';">' + fmt(m.p1) + '</td>'
+                         + '<td style="text-align:center;padding:9px 8px;background:' + nb(m.p2) + ';">' + fmt(m.p2) + '</td>'
+                         + '<td style="text-align:center;padding:9px 8px;background:' + nb(m.p3) + ';">' + fmt(m.p3) + '</td>'
+                         + '<td style="text-align:center;padding:9px 8px;background:' + nb(m.p4) + ';">' + fmt(m.p4) + '</td>'
+                         + '<td style="text-align:center;padding:9px 8px;background:' + nb(m.promedio) + ';font-size:13px;font-weight:800;color:' + nc(m.promedio) + ';">' + (m.promedio !== null ? (Math.round(m.promedio*10)/10) : '—') + '</td>'
+                         + '<td style="text-align:center;padding:9px 8px;font-weight:700;color:' + asistColor + ';">' + asistText + '</td>'
+                         + '<td style="text-align:center;padding:9px 12px;">' + estadoBadge(m.estado, pctAsist) + '</td>'
+                         + '</tr>';
+                }).join('');
+                tbody.innerHTML = rows;
+
+                document.getElementById('boletin-tabla').style.display = 'block';
+                document.getElementById('boletin-leyenda').style.display = 'flex';
+            })
+            .catch(function() {
+                document.getElementById('boletin-loading').style.display = 'none';
+                document.getElementById('boletin-error').style.display = 'block';
+            });
+    })();
+    </script>
+
+    <!-- ══ HISTORIAL / TIMELINE ════════════════════════════════════════════ -->
+    <!-- ══════════════════════════════════════════════════════════════════════
+         SECCIÓN: CALIFICACIONES Y ASISTENCIA MINERD
+    ══════════════════════════════════════════════════════════════════════ -->
+    <section style="margin-top:36px;" id="seccion-notas">
+
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+        <div style="font-family:var(--font-display); font-size:12px; font-weight:700;
+                    text-transform:uppercase; letter-spacing:.6px; color:var(--text-muted);
+                    display:flex; align-items:center; gap:8px;">
+          <i class="fas fa-star-half-stroke" style="color:#f7b731;"></i>
+          Calificaciones y Asistencia MINERD
+        </div>
+        <div style="display:flex;gap:8px;">
+          <select id="notas-anio-perfil" onchange="cargarBoletin()"
+            style="background:#111;border:1px solid #222;color:#666;padding:4px 10px;
+                   border-radius:6px;font-size:11px;">
+            <option value="">Cargando…</option>
+          </select>
+          <button onclick="cargarBoletin()"
+            style="background:none;border:1px solid #222;color:#666;padding:5px 12px;
+                   border-radius:8px;font-size:11px;cursor:pointer;">
+            <i class="fas fa-rotate"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Loading state -->
+      <div id="notas-loading" style="text-align:center;padding:30px;color:#444;">
+        <i class="fas fa-spinner fa-spin" style="font-size:20px;margin-bottom:8px;display:block;"></i>
+        Cargando calificaciones…
+      </div>
+
+      <!-- Resumen pills -->
+      <div id="notas-resumen-pills" style="display:none;flex-wrap:wrap;gap:8px;margin-bottom:16px;"></div>
+
+      <!-- Tabla boletín -->
+      <div id="notas-tabla-container" style="display:none;">
+        <table style="width:100%;border-collapse:collapse;font-size:12px;">
+          <thead>
+            <tr style="border-bottom:1px solid #1c1c1c;">
+              <th style="text-align:left;padding:8px 10px;color:#555;font-size:10px;text-transform:uppercase;">Materia</th>
+              <th style="padding:8px;color:#888;font-size:10px;text-transform:uppercase;text-align:center;" title="Primer Período">P1</th>
+              <th style="padding:8px;color:#888;font-size:10px;text-transform:uppercase;text-align:center;" title="Segundo Período">P2</th>
+              <th style="padding:8px;color:#888;font-size:10px;text-transform:uppercase;text-align:center;" title="Tercer Período">P3</th>
+              <th style="padding:8px;color:#888;font-size:10px;text-transform:uppercase;text-align:center;" title="Cuarto Período">P4</th>
+              <th style="padding:8px 10px;color:#f7b731;font-size:10px;text-transform:uppercase;text-align:center;">Final</th>
+              <th style="padding:8px 10px;color:#555;font-size:10px;text-transform:uppercase;text-align:center;">Estado</th>
+              <th style="padding:8px 10px;color:#ff6b6b;font-size:10px;text-transform:uppercase;text-align:center;" title="% Inasistencia injustificada">Inasist.</th>
+            </tr>
+          </thead>
+          <tbody id="notas-tbody"></tbody>
+        </table>
+      </div>
+
+      <!-- Sin datos -->
+      <div id="notas-vacio" style="display:none;text-align:center;padding:30px;color:#444;">
+        <div style="font-size:24px;margin-bottom:8px;">📝</div>
+        <div>No hay calificaciones registradas para este estudiante en el año escolar.</div>
+        <div style="margin-top:6px;font-size:11px;color:#333;">
+          Los profesores registran las notas desde el Portal Docente.
+        </div>
+      </div>
+
+    </section>
+
+
+    <section style="margin-top:36px;" id="seccion-historial">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+            <div style="font-family:var(--font-display); font-size:12px; font-weight:700;
+                        text-transform:uppercase; letter-spacing:.6px; color:var(--text-muted);
+                        display:flex; align-items:center; gap:8px;">
+                <i class="fas fa-clock-rotate-left" style="color:var(--accent);"></i>
+                Historial del Estudiante
+            </div>
+            <button onclick="abrirModalReporte()"
+                    style="background:transparent; border:1px solid #333; color:#888;
+                           padding:5px 12px; border-radius:8px; font-size:11px; cursor:pointer;
+                           display:flex; align-items:center; gap:6px; transition:all .2s;"
+                    onmouseover="this.style.borderColor='#ffc44d';this.style.color='#ffc44d';"
+                    onmouseout="this.style.borderColor='#333';this.style.color='#888';">
+                <i class="fas fa-plus"></i> Nuevo reporte
+            </button>
+            <button onclick="abrirModalLogro()" style="background:rgba(200,240,96,.1);
+                            border:1px solid rgba(200,240,96,.3); color:#c8f060;
+                            padding:5px 12px; border-radius:8px; font-size:11px; cursor:pointer;
+                            display:flex; align-items:center; gap:6px;">
+                <i class="fas fa-trophy"></i> Nuevo logro
+            </button>
+        </div>
+        <!-- Indicadores del expediente -->
+        <div id="expediente-indicadores" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px;">
+        </div>
+        <div id="timeline-container">
+            <div style="text-align:center; padding:30px; color:#444; font-size:12px;">
+                <div style="font-size:24px; margin-bottom:8px;">📋</div>
+                Cargando historial…
+            </div>
+        </div>
+    </section>
+
+    <!-- ══ CUADERNO ANECDÓTICO ══════════════════════════════════════════════ -->
+    <section style="margin-top:36px;" id="seccion-cuaderno">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+            <div style="font-family:var(--font-display); font-size:12px; font-weight:700;
+                        text-transform:uppercase; letter-spacing:.6px; color:var(--text-muted);
+                        display:flex; align-items:center; gap:8px;">
+                <i class="fas fa-book-bookmark" style="color:#f59e0b;"></i>
+                Cuaderno Anecdótico
+            </div>
+            <span id="ca-perfil-cnt" style="font-size:10px; color:var(--text-muted);"></span>
+        </div>
+
+        <!-- Agregar nueva entrada (visible si tiene permisos) -->
+        <div id="ca-nueva-entrada" style="display:none; border:1px solid var(--border);
+             border-radius:12px; padding:16px; margin-bottom:16px; background:var(--surface);">
+            <div style="font-size:11px; font-weight:700; color:var(--text-muted);
+                        margin-bottom:10px; text-transform:uppercase; letter-spacing:.05em;">
+                Nueva entrada
+            </div>
+            <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
+                <select id="ca-p-tipo" style="padding:7px 10px; background:var(--bg);
+                    border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:12px;">
+                    <option value="conductual">🔴 Conductual</option>
+                    <option value="emocional">🟡 Emocional</option>
+                    <option value="académico">🔵 Académico</option>
+                    <option value="familiar">🟠 Familiar</option>
+                    <option value="otro">⚪ Otro</option>
+                </select>
+                <input type="date" id="ca-p-fecha" style="padding:7px 10px; background:var(--bg);
+                    border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:12px;">
+            </div>
+            <textarea id="ca-p-descripcion" placeholder="Descripción del incidente u observación..."
+                style="width:100%; min-height:80px; padding:10px; background:var(--bg);
+                border:1px solid var(--border); border-radius:8px; color:var(--text);
+                font-size:12px; resize:vertical; box-sizing:border-box; margin-bottom:8px;"></textarea>
+            <textarea id="ca-p-seguimiento" placeholder="Seguimiento / acción tomada (opcional)..."
+                style="width:100%; min-height:55px; padding:10px; background:var(--bg);
+                border:1px solid var(--border); border-radius:8px; color:var(--text);
+                font-size:12px; resize:vertical; box-sizing:border-box; margin-bottom:10px;"></textarea>
+            <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                <label style="font-size:11px; color:var(--text-muted); display:flex; align-items:center; gap:6px;">
+                    <input type="checkbox" id="ca-p-privado"> Solo psicóloga/coordinación
+                </label>
+                <button onclick="guardarEntradaDesdenPerfil()"
+                    style="margin-left:auto; background:var(--accent); color:#000;
+                    border:none; border-radius:8px; padding:7px 16px; font-size:12px;
+                    font-weight:700; cursor:pointer;">
+                    <i class="fas fa-plus"></i> Guardar
+                </button>
+            </div>
+        </div>
+
+        <div id="ca-perfil-lista">
+            <div style="text-align:center; padding:24px; color:var(--text-muted); font-size:12px;">
+                Cargando cuaderno anecdótico…
+            </div>
+        </div>
+    </section>
+
+    <!-- ══ ASISTENCIA MENSUAL ══════════════════════════════════════════════ -->
+    <section style="margin-top:36px;" id="seccion-asistencia-mensual">
+        <div style="font-family:var(--font-display); font-size:12px; font-weight:700;
+                    text-transform:uppercase; letter-spacing:.6px; color:var(--text-muted);
+                    display:flex; align-items:center; gap:8px; margin-bottom:16px;">
+            <i class="fas fa-calendar-check" style="color:#3b82f6;"></i>
+            Asistencia Mensual
+        </div>
+        <div id="asist-mensual-contenido">
+            <div style="text-align:center; padding:24px; color:var(--text-muted); font-size:12px;">
+                Cargando asistencia…
+            </div>
+        </div>
+    </section>
+
+    <!-- ══ EVALUACIONES NARRATIVAS ════════════════════════════════════════ -->
+    <section style="margin-top:36px;" id="seccion-narrativas">
+        <div style="font-family:var(--font-display); font-size:12px; font-weight:700;
+                    text-transform:uppercase; letter-spacing:.6px; color:var(--text-muted);
+                    display:flex; align-items:center; gap:8px; margin-bottom:16px;">
+            <i class="fas fa-pen-to-square" style="color:#818cf8;"></i>
+            Evaluaciones Narrativas
+        </div>
+        <div id="narrativas-contenido">
+            <div style="text-align:center; padding:24px; color:var(--text-muted); font-size:12px;">
+                Cargando evaluaciones…
+            </div>
+        </div>
+    </section>
+
+    <!-- ══ ACCIONES RÁPIDAS / IMPRIMIR ══════════════════════════════════════ -->
+    <div style="margin-top:36px; padding:18px; background:var(--surface);
+                border:1px solid var(--border); border-radius:12px;
+                display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+        <span style="font-size:11px; color:#555; font-weight:700;
+                     text-transform:uppercase; letter-spacing:.5px;">Acciones</span>
+        <button onclick="imprimirPerfil()"
+                style="background:transparent; border:1px solid #333; color:#888;
+                       padding:7px 16px; border-radius:8px; font-size:12px; cursor:pointer;
+                       display:flex; align-items:center; gap:7px; transition:all .2s;"
+                onmouseover="this.style.borderColor='#c8f060';this.style.color='#c8f060';"
+                onmouseout="this.style.borderColor='#333';this.style.color='#888';">
+            <i class="fas fa-print"></i> Imprimir / PDF
+        </button>
+        <button onclick="abrirModalReporte()"
+                style="background:transparent; border:1px solid #333; color:#888;
+                       padding:7px 16px; border-radius:8px; font-size:12px; cursor:pointer;
+                       display:flex; align-items:center; gap:7px; transition:all .2s;"
+                onmouseover="this.style.borderColor='#ffc44d';this.style.color='#ffc44d';"
+                onmouseout="this.style.borderColor='#333';this.style.color='#888';">
+            <i class="fas fa-flag"></i> Crear reporte
+        </button>
+        <a href="/reportes" target="_blank"
+                style="background:transparent; border:1px solid #333; color:#888;
+                       padding:7px 16px; border-radius:8px; font-size:12px; cursor:pointer;
+                       display:flex; align-items:center; gap:7px; transition:all .2s;
+                       text-decoration:none;"
+                onmouseover="this.style.borderColor='#60b8f0';this.style.color='#60b8f0';"
+                onmouseout="this.style.borderColor='#333';this.style.color='#888';">
+            <i class="fas fa-list"></i> Ver reportes
+        </a>
+        <span style="margin-left:auto; font-size:10px; color:#333;">ID: {{ e.id }}</span>
+    </div>
+
+    <!-- ══ MODAL CREAR REPORTE INLINE ══════════════════════════════════════ -->
+    <div id="modal-reporte-perfil" style="display:none;position:fixed;inset:0;z-index:1000;
+         background:rgba(0,0,0,.7);align-items:center;justify-content:center;">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;
+                    padding:24px;width:min(480px,92vw);max-height:90vh;overflow-y:auto;">
+            <div style="font-size:14px;font-weight:700;margin-bottom:16px;display:flex;
+                        align-items:center;justify-content:space-between;">
+                <span><i class="fas fa-flag" style="color:#ffc44d;margin-right:8px;"></i>
+                Nuevo Reporte — {{ e.nombre }} {{ e.apellido }}</span>
+                <button onclick="cerrarModalReporte()"
+                    style="background:none;border:none;color:var(--text-muted);
+                    font-size:18px;cursor:pointer;padding:0 4px;">✕</button>
+            </div>
+            <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+                <select id="rp-tipo" style="flex:1;min-width:140px;padding:8px;
+                    background:var(--bg);border:1px solid var(--border);
+                    border-radius:8px;color:var(--text);font-size:12px;">
+                    <option value="Académico">📘 Académico</option>
+                    <option value="Conductual">🔴 Conductual</option>
+                    <option value="Emocional">🟡 Emocional</option>
+                    <option value="Asistencia">📅 Asistencia</option>
+                    <option value="Familiar">🟠 Familiar</option>
+                    <option value="Otro">⚪ Otro</option>
+                </select>
+                <select id="rp-severidad" style="padding:8px;background:var(--bg);
+                    border:1px solid var(--border);border-radius:8px;
+                    color:var(--text);font-size:12px;">
+                    <option value="Baja">🟢 Baja</option>
+                    <option value="Media" selected>🟡 Media</option>
+                    <option value="Alta">🔴 Alta</option>
+                </select>
+            </div>
+            <input id="rp-titulo" placeholder="Título del reporte"
+                style="width:100%;padding:8px 10px;background:var(--bg);
+                border:1px solid var(--border);border-radius:8px;color:var(--text);
+                font-size:12px;box-sizing:border-box;margin-bottom:10px;">
+            <textarea id="rp-descripcion" placeholder="Descripción detallada..."
+                style="width:100%;min-height:90px;padding:8px 10px;background:var(--bg);
+                border:1px solid var(--border);border-radius:8px;color:var(--text);
+                font-size:12px;resize:vertical;box-sizing:border-box;margin-bottom:10px;"></textarea>
+            <div style="display:flex;justify-content:flex-end;gap:8px;">
+                <button onclick="cerrarModalReporte()"
+                    style="padding:8px 16px;background:none;border:1px solid var(--border);
+                    border-radius:8px;color:var(--text-muted);font-size:12px;cursor:pointer;">
+                    Cancelar
+                </button>
+                <button onclick="guardarReportePerfil()"
+                    style="padding:8px 20px;background:var(--accent);color:#000;
+                    border:none;border-radius:8px;font-size:12px;
+                    font-weight:700;cursor:pointer;">
+                    <i class="fas fa-save"></i> Guardar reporte
+                </button>
+            </div>
+            <div id="rp-status" style="font-size:11px;margin-top:8px;min-height:14px;"></div>
+        </div>
+    </div>
+
+</main>
+
+<style>
+
+    /* ── PRINT STYLES ── */
+    @media print {
+        nav, #btn-condicion, #btn-planificar,
+        .btn-generar, button, .barra-track,
+        #card-ia, section#seccion-materias > button,
+        #seccion-historial > div:first-child > button,
+        div[style*="Acciones"] { display: none !important; }
+
+        body { background: #fff !important; color: #000 !important; font-size: 11pt; }
+        .perfil-hero { border: 1px solid #ddd; border-radius: 8px; padding: 12px; }
+        .avatar { background: #000 !important; color: #fff !important; }
+        .card { border: 1px solid #ddd !important; background: #fff !important;
+                break-inside: avoid; page-break-inside: avoid; }
+        .card-title { color: #333 !important; }
+        .grid-2, .grid-3 { display: grid !important; }
+        main { max-width: 100%; padding: 10px; }
+        .radial-val { color: #000 !important; }
+        .barra-fill { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+        #seccion-historial .timeline-item { border-left-color: #999 !important; }
+        h1, h2, h3 { color: #000 !important; }
+        a { color: #000 !important; text-decoration: none; }
+
+        @page { margin: 15mm; size: A4; }
+    }
+
+    .ia-seccion { margin-bottom: 16px; }
+    .ia-seccion-titulo {
+        font-family: var(--font-display);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        margin-bottom: 8px;
+        padding: 8px 12px;
+        background: var(--surface2);
+        border-radius: 6px;
+        border-left: 3px solid currentColor;
+    }
+    .ia-seccion-cuerpo {
+        padding: 4px 12px;
+        font-size: 13px;
+        line-height: 1.8;
+    }
+    .ia-bullet {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 6px;
+        align-items: flex-start;
+    }
+    .ia-bullet-dot {
+        color: var(--accent);
+        flex-shrink: 0;
+        margin-top: 2px;
+    }
+
+    .btn-generar {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: var(--accent);
+        color: #000;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 9px;
+        font-family: var(--font-display);
+        font-weight: 700;
+        font-size: 13px;
+        cursor: pointer;
+        transition: opacity .2s;
+    }
+    .btn-generar:hover { opacity: .85; }
+    .btn-generar.btn-secondary {
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        color: var(--text-muted);
+        font-family: var(--font-body);
+        font-weight: 500;
+    }
+    .btn-generar.btn-secondary:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+        opacity: 1;
+    }
+
+    .ia-spinner {
+        width: 36px; height: 36px;
+        border: 3px solid var(--border);
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        animation: spin .8s linear infinite;
+        margin: 0 auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+
+<script>
+    const ESTUDIANTE_ID = {{ e.id }};
+    const PLAN_GUARDADO = {{ e.ia_analisis | tojson if e.ia_analisis else 'null' }};
+
+    // Animar barras de competencias al cargar
+    window.addEventListener('load', () => {
+        // Barras lineales de módulos
+        document.querySelectorAll('.comp-bar').forEach(bar => {
+            const val = parseFloat(bar.dataset.valor) || 0;
+            setTimeout(() => { bar.style.width = val + '%'; }, 100);
+        });
+
+        // Anillos radiales — usa data-val en cada circle.radial-fill
+        document.querySelectorAll('circle.radial-fill').forEach(function(el, i) {
+            var v = parseFloat(el.dataset.val) || 0;
+            var offset = 289 - (v / 100 * 289);
+            setTimeout(function() {
+                el.style.transition = 'stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1)';
+                el.style.strokeDashoffset = offset;
+            }, 200 + i * 80);
+        });
+        cargarMaterias();
+    });
+
+    function animarAnillo(id, valor) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        var offset = 289 - (valor / 100 * 289);
+        setTimeout(function() {
+            el.style.transition = 'stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1)';
+            el.style.strokeDashoffset = offset;
+        }, 200);
+    }
+
+    // ── PLANIFICACIÓN IA ─────────────────────────────────────────────────────
+
+    // Si ya hay plan guardado, mostrarlo al cargar la página
+    if (PLAN_GUARDADO) {
+        mostrarPlan(PLAN_GUARDADO, true);
+    }
+
+    async function generarPlan(forzar = false) {
+        setEstadoIA('cargando');
+
+        try {
+            const res = await fetch(`/api/analisis-ia/${ESTUDIANTE_ID}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ forzar })
+            });
+
+            const data = await res.json();
+
+            if (data.error) {
+                setEstadoIA('error', data.error);
+                return;
+            }
+
+            mostrarPlan(data.analisis, data.cached);
+
+        } catch (e) {
+            setEstadoIA('error', 'No se pudo conectar con el servidor. ¿Está corriendo Flask?');
+        }
+    }
+
+    function mostrarPlan(texto, desdeCache) {
+        document.getElementById('ia-texto').innerHTML = formatearAnalisis(texto);
+        document.getElementById('cache-badge').innerHTML = desdeCache
+            ? '<i class="fas fa-database" style="font-size:9px;"></i> Desde caché'
+            : '<i class="fas fa-sparkles" style="font-size:9px; color:var(--accent);"></i> Recién generado';
+        setEstadoIA('resultado');
+    }
+
+    function formatearAnalisis(texto) {
+        if (!texto) return '';
+
+        var colores = {
+            'DIAGNOSTICO':    { color: '#4bbfe8', icon: '&#128269;' },
+            'SENALES':        { color: '#e85b4b', icon: '&#9888;' },
+            'RECOMENDACIONES':{ color: '#4be87a', icon: '&#128161;' },
+            'PLAN':           { color: '#e8b84b', icon: '&#127919;' },
+            'SEGUIMIENTO':    { color: '#b44be8', icon: '&#128202;' }
+        };
+
+        function getColor(titulo) {
+            var t = titulo.toUpperCase()
+                .replace(/[ÁÉÍÓÚ]/g, function(c){return {Á:'A',É:'E',Í:'I',Ó:'O',Ú:'U'}[c]||c;})
+                .replace('Ñ','N');
+            for (var k in colores) {
+                if (t.indexOf(k) === 0) return colores[k];
+            }
+            return { color: 'var(--accent)', icon: '&#9658;' };
+        }
+
+        var lineas = texto.split('\n');
+        var html = '';
+        var enSeccion = false;
+
+        for (var i = 0; i < lineas.length; i++) {
+            var linea = lineas[i];
+            var m = linea.match(/^(\d+)\. ([A-Z\u00C0-\u00FF].+)$/);
+            if (m) {
+                if (enSeccion) html += '</div></div>';
+                var cfg = getColor(m[2]);
+                html += '<div class="ia-seccion">'
+                     + '<div class="ia-seccion-titulo" style="color:' + cfg.color + ';">'
+                     + cfg.icon + ' ' + m[1] + '. ' + m[2]
+                     + '</div><div class="ia-seccion-cuerpo">';
+                enSeccion = true;
+            } else if (linea.match(/^[\-\u2022] /)) {
+                html += '<div class="ia-bullet"><span class="ia-bullet-dot">&#9658;</span><span>'
+                     + linea.slice(2) + '</span></div>';
+            } else if (linea.trim() === '') {
+                html += '<br>';
+            } else {
+                html += linea.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') + '<br>';
+            }
+        }
+        if (enSeccion) html += '</div></div>';
+        return html;
+    }
+    function setEstadoIA(estado, errorMsg = '') {
+        document.getElementById('ia-sin-generar').style.display = estado === 'idle'     ? 'block' : 'none';
+        document.getElementById('ia-cargando').style.display    = estado === 'cargando' ? 'block' : 'none';
+        document.getElementById('ia-resultado').style.display   = estado === 'resultado'? 'block' : 'none';
+        document.getElementById('ia-error').style.display       = estado === 'error'    ? 'block' : 'none';
+
+        if (estado === 'error') {
+            document.getElementById('ia-error-msg').textContent = errorMsg;
+        }
+    }
+
+    // ── INDICADORES POR PERÍODO ─────────────────────────────────────────────
+    const EST_ID = {{ e.id }};
+    let materiasDisponibles = [];
+    let materiaActiva = null;
+
+    async function cargarIndicadoresMaterias() {
+        try {
+        const res = await fetch('/api/indicadores/materias/' + EST_ID);
+        if (!res.ok) { console.warn('indicadores/materias error:', res.status); materiasDisponibles = []; return; }
+        materiasDisponibles = await res.json();
+        // Notificar a otros scripts que las materias ya están disponibles
+        window._materiasListas = materiasDisponibles;
+        document.dispatchEvent(new CustomEvent('materiasListas', {detail: materiasDisponibles}));
+
+        const tabsEl = document.getElementById('materia-tabs');
+        if (!materiasDisponibles.length) {
+            var _sd = document.getElementById('ind-sin-datos');
+            if (_sd) _sd.style.display = 'block';
+            return;
+        }
+
+        var _sd2 = document.getElementById('ind-sin-datos');
+        if (_sd2) _sd2.style.display = 'none';
+        if (!tabsEl) return;
+
+        var colores = {'Fotografía':'#4bbfe8','Lenguaje_Visual':'#b44be8','Diseño':'#e8b84b'};
+        tabsEl.innerHTML = '';
+        materiasDisponibles.forEach(function(m) {
+            var c = colores[m.materia] || 'var(--accent)';
+            var label = m.materia.replace('_',' ');
+            var btn = document.createElement('button');
+            btn.id = 'tab-' + m.materia;
+            btn.textContent = label;
+            btn.style.cssText = 'background:transparent; border:1px solid var(--border); color:var(--text-muted); padding:8px 14px; border-radius:8px; font-size:11px; font-weight:600; cursor:pointer; transition:all .2s;';
+            btn.addEventListener('mouseover', function(){ if(materiaActiva !== m.materia) this.style.borderColor = c; });
+            btn.addEventListener('mouseout',  function(){ if(materiaActiva !== m.materia) this.style.borderColor = 'var(--border)'; });
+            btn.addEventListener('click', function(){ verMateria(m.materia); });
+            tabsEl.appendChild(btn);
+        });
+
+        verMateria(materiasDisponibles[0].materia);
+        } catch(e) { console.error('cargarIndicadoresMaterias:', e); }
+    }
+
+    async function verMateria(materia) {
+        materiaActiva = materia;
+        var colores = {'Fotografía':'#4bbfe8','Lenguaje_Visual':'#b44be8','Diseño':'#e8b84b'};
+        var c = colores[materia] || 'var(--accent)';
+
+        // Update tab styles
+        materiasDisponibles.forEach(function(m) {
+            var btn = document.getElementById('tab-' + m.materia);
+            if (!btn) return;
+            if (m.materia === materia) {
+                btn.style.borderColor = colores[m.materia] || 'var(--accent)';
+                btn.style.color = colores[m.materia] || 'var(--accent)';
+                btn.style.background = 'rgba(75,191,232,.08)';
+            } else {
+                btn.style.borderColor = 'var(--border)';
+                btn.style.color = 'var(--text-muted)';
+                btn.style.background = 'transparent';
+            }
+        });
+
+        const res = await fetch('/api/indicadores/' + EST_ID + '?materia=' + encodeURIComponent(materia));
+        const indicadores = await res.json();
+
+        document.getElementById('ind-contenido').style.display = 'block';
+
+        // Calcular promedios por período
+        function promPeriodo(p) {
+            var vals = indicadores.map(function(ind){return ind[p];}).filter(function(v){return v !== null && v !== undefined;});
+            return vals.length ? Math.round(vals.reduce(function(a,b){return a+b;},0)/vals.length*10)/10 : null;
+        }
+
+        var promedios = {p1: promPeriodo('p1'), p2: promPeriodo('p2'), p3: promPeriodo('p3'), p4: promPeriodo('p4')};
+        var maxProm = Math.max(...Object.values(promedios).filter(function(v){return v!==null;}));
+
+        // Render barras
+        ['p1','p2','p3','p4'].forEach(function(p) {
+            var val = promedios[p];
+            var bar = document.getElementById('bar-' + p);
+            var lbl = document.getElementById('bar-' + p + '-label');
+            if (val !== null) {
+                var pct = (val / 100) * 80;
+                setTimeout(function(){
+                    bar.style.height = pct + 'px';
+                    bar.style.background = val >= 80 ? '#4be87a' : val >= 70 ? '#e8b84b' : '#e85b4b';
+                }, 100);
+                lbl.textContent = val + '%';
+                lbl.style.color = val >= 80 ? '#4be87a' : val >= 70 ? '#e8b84b' : '#e85b4b';
+            } else {
+                bar.style.height = '0';
+                lbl.textContent = '—';
+            }
+        });
+
+        // Asistencia
+        var asist = indicadores[0];
+        if (asist) {
+            var asistVals = [
+                asist.asistencia_p1 ? 'P1: ' + asist.asistencia_p1 + '%' : null,
+                asist.asistencia_p2 ? 'P2: ' + asist.asistencia_p2 + '%' : null,
+                asist.asistencia_p3 ? 'P3: ' + asist.asistencia_p3 + '%' : null,
+                asist.asistencia_p4 ? 'P4: ' + asist.asistencia_p4 + '%' : null,
+            ].filter(Boolean);
+            document.getElementById('asist-detalle').innerHTML = asistVals.join('<br>');
+            var asistNums = [asist.asistencia_p1, asist.asistencia_p2, asist.asistencia_p3, asist.asistencia_p4]
+                .filter(function(v){return v !== null;});
+            var promAsist = asistNums.length ? Math.round(asistNums.reduce(function(a,b){return a+b;})/asistNums.length) : null;
+            document.getElementById('asist-promedio').textContent = promAsist ? promAsist + '% prom.' : '—';
+        }
+
+        // Render tabla
+        var tbody = document.getElementById('ind-tabla-body');
+        tbody.innerHTML = indicadores.map(function(ind, i) {
+            function celda(val) {
+                if (val === null || val === undefined) return '<td style="padding:10px 8px; text-align:center; color:var(--text-muted); font-size:11px;">—</td>';
+                var bg = val >= 80 ? 'rgba(75,232,122,.1)' : val >= 70 ? 'rgba(232,184,75,.1)' : 'rgba(232,91,75,.1)';
+                var col = val >= 80 ? '#4be87a' : val >= 70 ? '#e8b84b' : '#e85b4b';
+                return '<td style="padding:10px 8px; text-align:center; background:' + bg + '; color:' + col + '; font-weight:700;">' + val + '</td>';
+            }
+
+            // Tendencia P1→P2
+            var tend = '';
+            if (ind.p1 !== null && ind.p2 !== null) {
+                if (ind.p2 > ind.p1) tend = '<span style="color:#4be87a;">↑ +' + (ind.p2-ind.p1) + '</span>';
+                else if (ind.p2 < ind.p1) tend = '<span style="color:#e85b4b;">↓ ' + (ind.p2-ind.p1) + '</span>';
+                else tend = '<span style="color:var(--text-muted);">→ =</span>';
+            }
+
+            var rowBg = i % 2 === 0 ? 'var(--surface)' : 'transparent';
+            return '<tr style="border-bottom:1px solid var(--border); background:' + rowBg + ';">'
+                + '<td style="padding:10px 16px; color:var(--text); font-size:12px;">'
+                + '<span style="color:' + c + '; font-weight:700; margin-right:6px;">' + ind.indicador_num + '.</span>'
+                + ind.indicador_texto + '</td>'
+                + celda(ind.p1) + celda(ind.p2) + celda(ind.p3) + celda(ind.p4)
+                + '<td style="padding:10px 8px; text-align:center; font-size:12px;">' + (tend || '—') + '</td>'
+                + '</tr>';
+        }).join('');
+    }
+
+    // Cargar materias al iniciar
+    cargarMaterias();
+
+    // ── PLANIFICACIÓN IA ─────────────────────────────────────────────────────
+    // Actualizar botón planificar con datos del estudiante
+    (function() {
+        const btn = document.getElementById('btn-planificar');
+        if (btn) {
+            const nombre = "{{ e.nombre }} {{ e.apellido }}";
+            const id = "{{ e.id }}";
+            btn.href = '/planificacion?estudiante_id=' + id + '&nombre=' + encodeURIComponent(nombre);
+        }
+    })();
+
+    // ── EVALUACIÓN POR COMPETENCIAS ─────────────────────────────────────────
+    var GRADO_ACTUAL = {{ (e.grado or '4to') | tojson }};
+
+    async function generarCompetencias() {
+        document.getElementById('comp-sin-datos').style.display  = 'none';
+        document.getElementById('comp-cargando').style.display   = 'block';
+        document.getElementById('comp-resultado').style.display  = 'none';
+        document.getElementById('comp-error').style.display      = 'none';
+
+        try {
+            var res = await fetch('/api/competencias-ia/' + EST_ID, { method: 'POST' });
+            var data = await res.json();
+            if (data.error) {
+                document.getElementById('comp-cargando').style.display = 'none';
+                document.getElementById('comp-error').style.display    = 'block';
+                document.getElementById('comp-error-msg').textContent  = data.error;
+                return;
+            }
+            document.getElementById('comp-cargando').style.display  = 'none';
+            document.getElementById('comp-resultado').style.display  = 'block';
+            document.getElementById('comp-texto').innerHTML = formatearAnalisis(data.resultado);
+        } catch(ex) {
+            document.getElementById('comp-cargando').style.display = 'none';
+            document.getElementById('comp-error').style.display    = 'block';
+            document.getElementById('comp-error-msg').textContent  = ex.message;
+        }
+    }
+
+    async function copiarCompetencias() {
+        var texto = document.getElementById('comp-texto').innerText;
+        await navigator.clipboard.writeText(texto);
+        alert('Copiado al portapapeles');
+    }
+
+    // ── PROMOCIÓN A 5TO ──────────────────────────────────────────────────────
+    function togglePromover() {
+        var esActualmente4to = GRADO_ACTUAL === '4to';
+        var nuevoGrado = esActualmente4to ? '5to' : '4to';
+        var msg = esActualmente4to
+            ? '¿Promover a ' + document.getElementById('nombre-est').textContent + ' a 5to Multimedia?'
+            : '¿Revertir a 4to Multimedia?';
+
+        if (!confirm(msg)) return;
+
+        fetch('/api/promover/' + EST_ID, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ grado: nuevoGrado })
+        })
+        .then(function(r){ return r.json(); })
+        .then(function(data) {
+            if (data.ok) {
+                GRADO_ACTUAL = nuevoGrado;
+                document.getElementById('grado-texto').textContent = nuevoGrado + ' Multimedia';
+                document.getElementById('grado-badge').style.borderColor = nuevoGrado === '5to' ? 'rgba(75,232,122,.4)' : 'var(--border)';
+                document.getElementById('grado-badge').style.color = nuevoGrado === '5to' ? '#4be87a' : 'var(--text-muted)';
+                document.getElementById('promo-label').textContent = nuevoGrado === '5to' ? 'Revertir a 4to' : 'Promover a 5to';
+                document.getElementById('btn-promover').style.borderColor = nuevoGrado === '5to' ? 'rgba(75,232,122,.4)' : 'var(--border)';
+            }
+        });
+    }
+
+    // Set nombre-est for confirm message
+    document.addEventListener('DOMContentLoaded', function() {
+        var header = document.querySelector('.logo-text');
+        if (!header) {
+            var h1 = document.querySelector('h1');
+            if (h1) h1.id = 'nombre-est';
+        }
+    });
+
+    async function copiarPlan() {
+        const texto = document.getElementById('ia-texto').textContent;
+        await navigator.clipboard.writeText(texto);
+        const btn = event.currentTarget;
+        btn.innerHTML = '<i class="fas fa-check"></i> ¡Copiado!';
+        setTimeout(() => { btn.innerHTML = '<i class="fas fa-copy"></i> Copiar texto'; }, 2000);
+    }
+
+    // ── MATERIAS DINAMICAS ────────────────────────────────────────────────────
+    function cargarMaterias() {
+        fetch('/api/materias/' + EST_ID)
+            .then(function(r){
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.json();
+            })
+            .then(function(materias){
+                var cont = document.getElementById('materias-container');
+                if (!materias || materias.length === 0) {
+                    cont.innerHTML =
+                        '<div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;'+
+                        'padding:28px;text-align:center;">' +
+                        '<i class="fas fa-folder-open" style="font-size:28px;display:block;margin-bottom:10px;color:#444;"></i>' +
+                        '<div style="font-size:13px;color:#888;margin-bottom:5px;">Sin materias cargadas aún.</div>' +
+                        '<div style="font-size:11px;color:#555;">Usa <b>Agregar materia</b> para cargar el Excel del profesor.</div>' +
+                        '</div>';
+                    // Still try to load indicators
+                    cargarIndicadoresMaterias();
+                    return;
+                }
+                // Separar por tipo
+                var academicas = materias.filter(function(m){ return (m.tipo||'académico') === 'académico'; });
+                var tecnicas   = materias.filter(function(m){ return (m.tipo||'académico') === 'técnico'; });
+
+                function renderGrupo(lista) {
+                    return lista.map(function(m) {
+                        var prom  = m.promedio || 0;
+                        var color = prom >= 85 ? '#4dffb4' : prom >= 70 ? '#c8f060' : '#ff4d4d';
+                        var periodos = ['p1','p2','p3','p4'].map(function(p, idx) {
+                            var v = m[p];
+                            var c = v ? (v>=85?'#4dffb4':v>=70?'#c8f060':'#ff4d4d') : '#444';
+                            return '<div style="text-align:center;flex:1;">' +
+                                '<div style="font-size:10px;color:#666;margin-bottom:3px;">P'+(idx+1)+'</div>' +
+                                '<div style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:'+c+';">'+(v != null ? v : '&#8212;')+'</div>' +
+                                '</div>';
+                        }).join('');
+                        return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;">' +
+                            '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">' +
+                            '<span style="font-weight:700;font-size:13px;">'+m.materia+'</span>' +
+                            '<span style="font-family:var(--font-mono);font-size:15px;font-weight:800;color:'+color+';">'+prom+'</span>' +
+                            '</div>' +
+                            '<div style="display:flex;gap:4px;margin-bottom:10px;">'+periodos+'</div>' +
+                            '<div style="height:3px;background:#222;border-radius:2px;">' +
+                            '<div style="height:100%;width:'+Math.min(prom,100)+'%;background:'+color+';border-radius:2px;"></div>' +
+                            '</div>' +
+                            '<div style="font-size:10px;color:#555;margin-top:6px;">' +
+                            (m.profesor ? '👤 ' + m.profesor + ' · ' : '') +
+                            (m.fecha_carga ? 'Actualizado: '+m.fecha_carga : '') +
+                            '</div></div>';
+                    }).join('');
+                }
+
+                var html = '';
+                if (academicas.length) {
+                    html += '<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">📚 Académicas</div>';
+                    html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;margin-bottom:16px;">' + renderGrupo(academicas) + '</div>';
+                }
+                if (tecnicas.length) {
+                    html += '<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">🎨 Técnicas / Especialidad</div>';
+                    html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;">' + renderGrupo(tecnicas) + '</div>';
+                }
+                cont.innerHTML = html;
+                // Siempre cargar indicadores después de renderizar las tarjetas
+                cargarIndicadoresMaterias();
+            })
+            .catch(function(err) {
+                console.error('cargarMaterias error:', err);
+                var cont = document.getElementById('materias-container');
+                if (cont) cont.innerHTML =
+                    '<div style="color:#666;font-size:13px;padding:16px;"><i class="fas fa-exclamation-circle"></i> Error cargando materias. Recarga la página.</div>';
+                cargarIndicadoresMaterias();
+            });
+    }
+
+    // ── CARGA DE MATERIA DESDE PERFIL ────────────────────────────────────────
+    var _materiaFile  = null;
+    var _materiaMapeo = null;
+    var _columnas     = [];
+
+    function iniciarCargaMateria(input) {
+        if (!input.files[0]) return;
+        _materiaFile = input.files[0];
+        input.value  = '';
+
+        var nombre = prompt('Nombre de la materia (ej: Historia del Arte, Matematica, Emprendimiento):');
+        if (!nombre || !nombre.trim()) { _materiaFile = null; return; }
+
+        var btn = document.querySelector('[onclick*="fm-perfil"]');
+        if (btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analizando...'; btn.disabled = true; }
+
+        var fd = new FormData();
+        fd.append('file', _materiaFile);
+        fd.append('materia', nombre.trim());
+
+        fetch('/api/interpretar-excel', { method: 'POST', body: fd })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.error) { alert('Error: ' + data.error); return; }
+                _materiaMapeo = data.mapeo;
+                _columnas     = data.columnas_disponibles || [];
+                mostrarModal(data);
+            })
+            .catch(function() { alert('Error de conexion con el servidor'); })
+            .finally(function() {
+                if (btn) { btn.innerHTML = '<i class="fas fa-plus"></i> Agregar materia'; btn.disabled = false; }
+            });
+    }
+
+    function mostrarModal(data) {
+        var mapeo = data.mapeo || {};
+        document.getElementById('modal-materia').value = data.materia || '';
+
+        var conf = data.confianza || 'media';
+        var confColor = conf==='alta'||conf==='guardado' ? '#4dffb4' : conf==='media' ? '#c8f060' : '#ff4d4d';
+        document.getElementById('modal-confianza').innerHTML =
+            '<span style="background:rgba(255,255,255,.05);padding:5px 12px;border-radius:20px;font-size:12px;color:'+confColor+';">' +
+            (conf==='guardado' ? '&#128190; Mapeo recordado' : '&#129302; Confianza: ' + conf) +
+            '</span><span style="font-size:12px;color:#666;margin-left:8px;">' + (data.archivo||'') + '</span>';
+
+        var campos = [
+            { id:'sel-nombre',   label:'Columna Nombre',            key:'col_nombre' },
+            { id:'sel-apellido', label:'Columna Apellido',           key:'col_apellido' },
+            { id:'sel-nc',       label:'Nombre Completo (una col)',  key:'col_nombre_completo' },
+            { id:'sel-p1',       label:'Promedio P1',                key:'col_p1' },
+            { id:'sel-p2',       label:'Promedio P2',                key:'col_p2' },
+            { id:'sel-p3',       label:'Promedio P3',                key:'col_p3' },
+            { id:'sel-p4',       label:'Promedio P4',                key:'col_p4' },
+        ];
+
+        var html = '';
+        campos.forEach(function(c) {
+            var val  = mapeo[c.key] || '';
+            var opts = '<option value="">-- ninguna --</option>';
+            _columnas.forEach(function(col) {
+                opts += '<option value="' + col + '"' + (col===val?' selected':'') + '>' + col + '</option>';
+            });
+            if (val && _columnas.indexOf(val) === -1) {
+                opts += '<option value="' + val + '" selected>' + val + ' (IA)</option>';
+            }
+            html += '<div>' +
+                '<label style="font-size:11px;color:#888;display:block;margin-bottom:4px;">' + c.label + '</label>' +
+                '<select id="' + c.id + '" style="width:100%;background:#111;border:1px solid #333;color:#f0f0f0;' +
+                'padding:6px 8px;border-radius:6px;font-size:12px;outline:none;">' + opts + '</select>' +
+                '</div>';
+        });
+        document.getElementById('modal-campos').innerHTML = html;
+
+        var notas = mapeo.notas || data.mensaje || '';
+        document.getElementById('modal-notas-ia').innerHTML = notas
+            ? '<i class="fas fa-robot" style="color:#c8f060;margin-right:6px;"></i>' +
+              '<span style="font-size:12px;color:#888;">' + notas + '</span>'
+            : '';
+
+        document.getElementById('modal-mapeo').style.display = 'flex';
+    }
+
+    function cerrarModal() {
+        document.getElementById('modal-mapeo').style.display = 'none';
+        _materiaFile = null; _materiaMapeo = null;
+    }
+
+    function confirmarCarga() {
+        var materia = document.getElementById('modal-materia').value.trim();
+        if (!materia) { alert('Escribe el nombre de la materia'); return; }
+        if (!_materiaFile) { cerrarModal(); return; }
+
+        var mapeoFinal = {
+            col_nombre:          document.getElementById('sel-nombre').value   || null,
+            col_apellido:        document.getElementById('sel-apellido').value  || null,
+            col_nombre_completo: document.getElementById('sel-nc').value        || null,
+            col_p1: document.getElementById('sel-p1').value || null,
+            col_p2: document.getElementById('sel-p2').value || null,
+            col_p3: document.getElementById('sel-p3').value || null,
+            col_p4: document.getElementById('sel-p4').value || null,
+            fila_inicio_datos: (_materiaMapeo && _materiaMapeo.fila_inicio_datos) || 1,
+            // CRITICAL: pass modo and hojas so backend uses correct reader
+            modo:  (_materiaMapeo && _materiaMapeo.modo)  || 'llama',
+            hojas: (_materiaMapeo && _materiaMapeo.hojas) || [],
+        };
+
+        var btn = document.getElementById('btn-confirmar');
+        btn.textContent = 'Cargando...'; btn.disabled = true;
+
+        var fd = new FormData();
+        fd.append('file', _materiaFile);
+        fd.append('materia', materia);
+        fd.append('mapeo', JSON.stringify(mapeoFinal));
+        var profEl = document.getElementById('modal-profesor');
+        if (profEl && profEl.value.trim()) fd.append('profesor', profEl.value.trim());
+        var grado   = document.getElementById('modal-grado')   ? document.getElementById('modal-grado').value   : '';
+        var mencion = document.getElementById('modal-mencion') ? document.getElementById('modal-mencion').value : '';
+        if(grado)   fd.append('grado',   grado);
+        if(mencion) fd.append('mencion', mencion);
+
+        fetch('/api/cargar-materia', { method: 'POST', body: fd })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.ok) {
+                    cerrarModal();
+                    // Show success and refresh materias section
+                    var msg = document.createElement('div');
+                    msg.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#4dffb4;color:#000;' +
+                        'padding:12px 20px;border-radius:8px;z-index:9999;font-size:13px;font-weight:600;';
+                    msg.textContent = data.mensaje;
+                    document.body.appendChild(msg);
+                    setTimeout(function(){ msg.remove(); }, 4000);
+                    cargarMaterias();
+                } else {
+                    alert('Error: ' + (data.error || 'desconocido'));
+                }
+            })
+            .catch(function() { alert('Error de conexion'); })
+            .finally(function() {
+                btn.textContent = 'Confirmar y Cargar'; btn.disabled = false;
+            });
+    }
+
+
+
+</script>
+
+
+<!-- Modal confirmacion mapeo -->
+<div id="modal-mapeo" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;align-items:center;justify-content:center;">
+  <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:16px;padding:28px;width:92%;max-width:600px;max-height:85vh;overflow-y:auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <h3 style="font-family:var(--font-display);font-size:15px;font-weight:800;color:#c8f060;margin:0;">
+        <i class="fas fa-robot" style="margin-right:8px;"></i> LLaMA interpreto el Excel
+      </h3>
+      <button onclick="cerrarModal()" style="background:transparent;border:none;color:#666;font-size:18px;cursor:pointer;">&#10005;</button>
+    </div>
+    <div id="modal-confianza" style="margin-bottom:16px;"></div>
+    <div style="margin-bottom:12px;">
+      <label style="font-size:11px;color:#888;display:block;margin-bottom:5px;">Profesor</label>
+      <input id="modal-profesor" type="text" placeholder="ej: Prof. García"
+             style="width:100%;background:#111;border:1px solid #333;color:#f0f0f0;padding:7px 10px;border-radius:7px;font-size:12px;outline:none;">
+    </div>
+    <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;margin-bottom:16px;">
+      <div>
+        <label style="font-size:11px;color:#888;display:block;margin-bottom:5px;">Nombre de la materia</label>
+        <input id="modal-materia" type="text" placeholder="ej: Historia del Arte"
+               style="width:100%;background:#111;border:1px solid #333;color:#f0f0f0;padding:7px 10px;border-radius:7px;font-size:13px;outline:none;">
+      </div>
+      <div>
+        <label style="font-size:11px;color:#888;display:block;margin-bottom:5px;">Grado</label>
+        <select id="modal-grado" style="width:100%;background:#111;border:1px solid #333;color:#f0f0f0;padding:7px 8px;border-radius:7px;font-size:12px;outline:none;">
+          <option value="">Todos</option>
+          <option value="4to">4to</option>
+          <option value="5to">5to</option>
+          <option value="6to">6to</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:11px;color:#888;display:block;margin-bottom:5px;">Mencion</label>
+        <select id="modal-mencion" style="width:100%;background:#111;border:1px solid #333;color:#f0f0f0;padding:7px 8px;border-radius:7px;font-size:12px;outline:none;">
+          <option value="">Todas</option>
+          <option value="MULTIMEDIA">Multimedia</option>
+          <option value="TEATRO">Teatro</option>
+          <option value="MUSICA">Musica</option>
+          <option value="VISUAL">Artes Visuales</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;" id="modal-campos"></div>
+    <div id="modal-notas-ia" style="background:#111;border-radius:8px;padding:12px;margin-bottom:20px;"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button onclick="cerrarModal()" style="background:transparent;border:1px solid #333;color:#888;padding:8px 18px;border-radius:8px;font-size:13px;cursor:pointer;">Cancelar</button>
+      <button onclick="confirmarCarga()" id="btn-confirmar"
+              style="background:#c8f060;border:none;color:#000;padding:8px 20px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">
+        <i class="fas fa-check"></i> Confirmar y Cargar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL EDITAR DATOS MANUALES ═════════════════════════════════════════ -->
+<div id="modal-editar" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);
+     z-index:300;align-items:flex-start;justify-content:center;padding:40px 12px;overflow-y:auto;">
+  <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:16px;padding:28px;
+              width:100%;max-width:680px;margin-bottom:40px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <h3 style="font-family:var(--font-display);font-size:15px;font-weight:800;color:#c8f060;margin:0;">
+        ✏️ Editar perfil
+      </h3>
+      <button onclick="cerrarEditar()" style="background:none;border:none;color:#666;font-size:18px;cursor:pointer;">✕</button>
+    </div>
+
+    <!-- Pestañas -->
+    <div id="edit-tabs" style="display:flex;gap:6px;margin-bottom:20px;border-bottom:1px solid #2a2a2a;padding-bottom:12px;flex-wrap:wrap;">
+      <button onclick="showTab('ident')"  id="tab-ident"  class="etab">Identidad</button>
+      <button onclick="showTab('cond')"   id="tab-cond"   class="etab">Conductual</button>
+      <button onclick="showTab('emoc')"   id="tab-emoc"   class="etab">Emocional</button>
+      <button onclick="showTab('mod')"    id="tab-mod"    class="etab">Módulos</button>
+    </div>
+
+    <!-- ── TAB: IDENTIDAD ── -->
+    <div id="panel-ident" class="edit-panel">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div><label class="elabel">Nombre</label>
+          <input id="ef-nombre"   class="einput" type="text" value="{{ e.nombre or '' }}"></div>
+        <div><label class="elabel">Apellido</label>
+          <input id="ef-apellido" class="einput" type="text" value="{{ e.apellido or '' }}"></div>
+        <div><label class="elabel">Grado</label>
+          <input id="ef-grado"    class="einput" type="text" value="{{ e.grado or '' }}"></div>
+        <div><label class="elabel">Sección</label>
+          <input id="ef-curso"    class="einput" type="text" value="{{ e.curso or '' }}"></div>
+        <div><label class="elabel">Edad</label>
+          <input id="ef-edad"     class="einput" type="number" min="10" max="25" value="{{ e.edad or '' }}"></div>
+        <div><label class="elabel">Uso celular</label>
+          <select id="ef-uso_celular" class="einput">
+            <option value="No"      {% if (e.uso_celular or 'No')=='No' %}selected{% endif %}>No</option>
+            <option value="Si"      {% if (e.uso_celular or '')=='Si' or (e.uso_celular or '')=='Sí' %}selected{% endif %}>Sí</option>
+            <option value="A veces" {% if (e.uso_celular or '')=='A veces' %}selected{% endif %}>A veces</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TAB: CONDUCTUAL ── -->
+    <div id="panel-cond" class="edit-panel" style="display:none;">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+        <div><label class="elabel">Puntualidad</label>
+          <input id="ef-puntualidad"      class="einput" type="number" min="0" max="100" value="{{ e.puntualidad or '' }}"></div>
+        <div><label class="elabel">Tareas</label>
+          <input id="ef-tareas"           class="einput" type="number" min="0" max="100" value="{{ e.tareas or '' }}"></div>
+        <div><label class="elabel">Participación</label>
+          <input id="ef-participacion"    class="einput" type="number" min="0" max="100" value="{{ e.participacion or '' }}"></div>
+        <div><label class="elabel">Comprensión</label>
+          <input id="ef-comprension"      class="einput" type="number" min="0" max="100" value="{{ e.comprension or '' }}"></div>
+        <div><label class="elabel">Rendimiento</label>
+          <input id="ef-rendimiento"      class="einput" type="number" min="0" max="100" value="{{ e.rendimiento or '' }}"></div>
+        <div><label class="elabel">Interrupciones</label>
+          <input id="ef-interrupciones"   class="einput" type="number" min="0" max="100" value="{{ e.interrupciones or '' }}"></div>
+        <div><label class="elabel">Conflictos</label>
+          <input id="ef-conflictos"       class="einput" type="number" min="0" max="100" value="{{ e.conflictos or '' }}"></div>
+        <div><label class="elabel">Desafía autoridad</label>
+          <input id="ef-desafia_autoridad" class="einput" type="number" min="0" max="100" value="{{ e.desafia_autoridad or '' }}"></div>
+        <div><label class="elabel">Distracción</label>
+          <input id="ef-distraccion"      class="einput" type="number" min="0" max="100" value="{{ e.distraccion or '' }}"></div>
+        <div><label class="elabel">Falta de respeto</label>
+          <input id="ef-falta_respeto"    class="einput" type="number" min="0" max="100" value="{{ e.falta_respeto or '' }}"></div>
+        <div style="grid-column:1/-1;font-size:10px;color:#60b8f0;font-weight:700;padding:6px 0 2px;">ASISTENCIA</div>
+        <div><label class="elabel">P1</label>
+          <input id="ef-asistencia_p1" class="einput" type="number" min="0" max="100" value="{{ e.asistencia_p1 or '' }}"></div>
+        <div><label class="elabel">P2</label>
+          <input id="ef-asistencia_p2" class="einput" type="number" min="0" max="100" value="{{ e.asistencia_p2 or '' }}"></div>
+        <div><label class="elabel">P3</label>
+          <input id="ef-asistencia_p3" class="einput" type="number" min="0" max="100" value="{{ e.asistencia_p3 or '' }}"></div>
+        <div><label class="elabel">P4</label>
+          <input id="ef-asistencia_p4" class="einput" type="number" min="0" max="100" value="{{ e.asistencia_p4 or '' }}"></div>
+        <div><label class="elabel">Asistencia general</label>
+          <input id="ef-asistencia"    class="einput" type="number" min="0" max="100" value="{{ e.asistencia or '' }}"></div>
+      </div>
+    </div>
+
+    <!-- ── TAB: EMOCIONAL ── -->
+    <div id="panel-emoc" class="edit-panel" style="display:none;">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+        <div><label class="elabel">Motivación</label>
+          <input id="ef-motivacion"       class="einput" type="number" min="0" max="100" value="{{ e.motivacion or '' }}"></div>
+        <div><label class="elabel">Autoestima</label>
+          <input id="ef-p_auto"           class="einput" type="number" min="0" max="100" value="{{ e.p_auto or '' }}"></div>
+        <div><label class="elabel">Estado emocional</label>
+          <input id="ef-estado_emocional" class="einput" type="number" min="0" max="100" value="{{ e.estado_emocional or '' }}"></div>
+        <div><label class="elabel">Interés futuro</label>
+          <input id="ef-interes_futuro"   class="einput" type="number" min="0" max="100" value="{{ e.interes_futuro or '' }}"></div>
+        <div><label class="elabel">Apoyo familiar</label>
+          <input id="ef-apoyo_familiar"   class="einput" type="number" min="0" max="100" value="{{ e.apoyo_familiar or '' }}"></div>
+      </div>
+    </div>
+
+    <!-- ── TAB: MÓDULOS ── -->
+    <div id="panel-mod" class="edit-panel" style="display:none;">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
+        <div style="grid-column:1/-1;font-size:10px;color:#60b8f0;font-weight:700;padding:4px 0;">FOTOGRAFÍA</div>
+        <div><label class="elabel">P1</label><input id="ef-fotografia_p1" class="einput sm" type="number" min="0" max="100" value="{{ e.fotografia_p1 or '' }}"></div>
+        <div><label class="elabel">P2</label><input id="ef-fotografia_p2" class="einput sm" type="number" min="0" max="100" value="{{ e.fotografia_p2 or '' }}"></div>
+        <div><label class="elabel">P3</label><input id="ef-fotografia_p3" class="einput sm" type="number" min="0" max="100" value="{{ e.fotografia_p3 or '' }}"></div>
+        <div><label class="elabel">P4</label><input id="ef-fotografia_p4" class="einput sm" type="number" min="0" max="100" value="{{ e.fotografia_p4 or '' }}"></div>
+        <div style="grid-column:1/-1;font-size:10px;color:#60b8f0;font-weight:700;padding:4px 0;">LENGUAJE VISUAL</div>
+        <div><label class="elabel">P1</label><input id="ef-lv_p1" class="einput sm" type="number" min="0" max="100" value="{{ e.lv_p1 or '' }}"></div>
+        <div><label class="elabel">P2</label><input id="ef-lv_p2" class="einput sm" type="number" min="0" max="100" value="{{ e.lv_p2 or '' }}"></div>
+        <div><label class="elabel">P3</label><input id="ef-lv_p3" class="einput sm" type="number" min="0" max="100" value="{{ e.lv_p3 or '' }}"></div>
+        <div><label class="elabel">P4</label><input id="ef-lv_p4" class="einput sm" type="number" min="0" max="100" value="{{ e.lv_p4 or '' }}"></div>
+        <div style="grid-column:1/-1;font-size:10px;color:#60b8f0;font-weight:700;padding:4px 0;">DISEÑO BÁSICO</div>
+        <div><label class="elabel">P1</label><input id="ef-diseno_p1" class="einput sm" type="number" min="0" max="100" value="{{ e.diseno_p1 or '' }}"></div>
+        <div><label class="elabel">P2</label><input id="ef-diseno_p2" class="einput sm" type="number" min="0" max="100" value="{{ e.diseno_p2 or '' }}"></div>
+        <div><label class="elabel">P3</label><input id="ef-diseno_p3" class="einput sm" type="number" min="0" max="100" value="{{ e.diseno_p3 or '' }}"></div>
+        <div><label class="elabel">P4</label><input id="ef-diseno_p4" class="einput sm" type="number" min="0" max="100" value="{{ e.diseno_p4 or '' }}"></div>
+        <div style="grid-column:1/-1;font-size:10px;color:#c8f060;font-weight:700;padding:4px 0;">PROMEDIO ACADÉMICO (módulos)</div>
+        <div><label class="elabel">P1</label><input id="ef-acad_p1" class="einput sm" type="number" min="0" max="100" value="{{ e.acad_p1 or '' }}"></div>
+        <div><label class="elabel">P2</label><input id="ef-acad_p2" class="einput sm" type="number" min="0" max="100" value="{{ e.acad_p2 or '' }}"></div>
+        <div><label class="elabel">P3</label><input id="ef-acad_p3" class="einput sm" type="number" min="0" max="100" value="{{ e.acad_p3 or '' }}"></div>
+        <div><label class="elabel">P4</label><input id="ef-acad_p4" class="einput sm" type="number" min="0" max="100" value="{{ e.acad_p4 or '' }}"></div>
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;
+                border-top:1px solid #222;padding-top:16px;">
+      <button onclick="cerrarEditar()"
+              style="background:none;border:1px solid #333;color:#666;padding:8px 18px;
+                     border-radius:8px;font-size:12px;cursor:pointer;">Cancelar</button>
+      <button onclick="guardarEdicion()" id="btn-guardar-edicion"
+              style="background:#c8f060;border:none;color:#000;padding:8px 22px;
+                     border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">
+        💾 Guardar cambios
+      </button>
+    </div>
+  </div>
+</div>
+
+<style>
+.etab { padding:6px 14px;border-radius:6px;font-size:11px;cursor:pointer;
+        border:1px solid #333;background:#111;color:#888;
+        font-family:var(--font-display);font-weight:600; }
+.etab.active { background:rgba(200,240,96,.15);color:#c8f060;border-color:rgba(200,240,96,.4); }
+.elabel { font-size:10px;color:#666;display:block;margin-bottom:3px; }
+.einput { width:100%;background:#111;border:1px solid #333;color:#f0f0f0;
+          padding:7px 9px;border-radius:7px;font-size:12px;outline:none;box-sizing:border-box; }
+.einput.sm { padding:5px 6px;font-size:11px; }
+.einput:focus { border-color:#c8f060; }
+
+/* ── THEME TOGGLE (inyectado por theme.js) ─────── */
+.mt-theme-toggle {
+  display:flex; align-items:center; gap:2px;
+  background:var(--theme-toggle-bg,#1e1e1e);
+  border:1px solid var(--border); border-radius:99px;
+  padding:3px; margin-right:6px;
+}
+.mt-tbtn {
+  padding:4px 10px; border-radius:99px; border:none;
+  cursor:pointer; font-family:inherit; font-size:11px;
+  font-weight:700; color:var(--theme-toggle-text,#888);
+  background:transparent; transition:all .2s;
+  white-space:nowrap;
+}
+.mt-tbtn.theme-btn-active {
+  background:var(--theme-toggle-actbg,rgba(200,240,96,.1));
+  color:var(--theme-toggle-act,#c8f060);
+  box-shadow:0 1px 3px rgba(0,0,0,.3);
+}
+</style>
+
+<script>
+/* ── Módulos técnicos para menciones no-Multimedia ─────────────────────── */
+(function() {
+    var container = document.getElementById('modulos-mencion-container');
+    if (!container) return; // es Multimedia, nada que hacer
+
+    function renderDesdeData(lista) {
+        if (!lista || !lista.length) {
+            container.innerHTML =
+                '<div style="text-align:center;color:var(--text-muted);font-size:12px;padding:20px 0;">' +
+                '<i class="fas fa-info-circle"></i> Sin módulos cargados aún<br>' +
+                '<span style="font-size:11px;opacity:.7;">Carga el Excel del profesor o usa Editar</span>' +
+                '</div>';
+            return;
+        }
+        var html = '<div class="comp-list">';
+        lista.forEach(function(m) {
+            var label = (m.materia || '').replace(/_/g,' ');
+            var prom  = parseFloat(m.promedio) || 0;
+            var color = prom >= 85 ? '#4be87a' : prom >= 70 ? '#e8a84b' : prom > 0 ? '#e85b4b' : '#555';
+            var icon  = '📚';
+            var ml    = label.toLowerCase();
+            if (ml.includes('teatro') || ml.includes('dramatica') || ml.includes('actuac') || ml.includes('taller')) icon = '🎭';
+            else if (ml.includes('música') || ml.includes('musica') || ml.includes('instrumento') || ml.includes('solfeo')) icon = '🎵';
+            else if (ml.includes('dibujo') || ml.includes('pintura') || ml.includes('escultura')) icon = '🎨';
+            else if (ml.includes('foto')) icon = '📸';
+            else if (ml.includes('diseño') || ml.includes('diseno')) icon = '🖥️';
+            html +=
+                '<div class="comp-item">' +
+                    '<div class="comp-header">' +
+                        '<span class="comp-nombre">' + icon + ' ' + label + '</span>' +
+                        '<span class="comp-valor" style="color:' + color + ';">' +
+                            (prom > 0 ? prom.toFixed(1) + '%' : '—') +
+                        '</span>' +
+                    '</div>' +
+                    '<div class="barra-track">' +
+                        '<div class="barra-fill" style="width:' + prom + '%;background:' + color + ';height:6px;border-radius:3px;transition:width .6s ease;"></div>' +
+                    '</div>' +
+                '</div>';
+        });
+        html += '</div>';
+        container.innerHTML = html;
+    }
+
+    // Si ya cargaron antes que este script se ejecute
+    if (window._materiasListas) {
+        renderDesdeData(window._materiasListas);
+    }
+    // Escuchar el evento cuando terminen de cargar
+    document.addEventListener('materiasListas', function(ev) {
+        renderDesdeData(ev.detail);
+    });
+})();
+
+/* ── CRUD ACTIONS: Editar · Cambiar estado · Eliminar ──────────────────── */
+(function() {
+    var body = document.body;
+    var EST_ID   = parseInt(body.dataset.estId, 10);
+    var NOMBRE   = body.dataset.estNombre   || '';
+    var CONDICION = body.dataset.estCondicion || 'ACTIVO';
+
+    // Update condicion button text on load
+    var btnCond = document.getElementById('btn-condicion');
+    if (btnCond) btnCond.textContent = CONDICION;
+
+    window.showTab = function(tab) {
+        ['ident','cond','emoc','mod'].forEach(function(t) {
+            var panel = document.getElementById('panel-'+t);
+            var btn   = document.getElementById('tab-'+t);
+            if (!panel || !btn) return;
+            panel.style.display = t===tab ? '' : 'none';
+            if (t===tab) btn.classList.add('active');
+            else         btn.classList.remove('active');
+        });
+    };
+
+    window.abrirEditar = function() {
+        var m = document.getElementById('modal-editar');
+        if (m) { m.style.display = 'flex'; showTab('ident'); }
+    };
+
+    window.cerrarEditar = function() {
+        var m = document.getElementById('modal-editar');
+        if (m) m.style.display = 'none';
+    };
+
+    window.guardarEdicion = function() {
+        var btn = document.getElementById('btn-guardar-edicion');
+        if (btn) { btn.textContent = 'Guardando...'; btn.disabled = true; }
+
+        var numFields = ['edad','puntualidad','tareas','participacion','comprension',
+            'rendimiento','interrupciones','conflictos','desafia_autoridad','distraccion',
+            'falta_respeto','motivacion','p_auto','estado_emocional','interes_futuro',
+            'apoyo_familiar','fotografia_p1','fotografia_p2','fotografia_p3','fotografia_p4',
+            'lv_p1','lv_p2','lv_p3','lv_p4','diseno_p1','diseno_p2','diseno_p3','diseno_p4',
+            'acad_p1','acad_p2','acad_p3','acad_p4',
+            'asistencia_p1','asistencia_p2','asistencia_p3','asistencia_p4','asistencia'];
+        var txtFields = ['nombre','apellido','curso','grado','uso_celular'];
+
+        var payload = {};
+        numFields.forEach(function(f) {
+            var el = document.getElementById('ef-'+f);
+            if (el && el.value.trim() !== '') payload[f] = parseFloat(el.value);
+        });
+        txtFields.forEach(function(f) {
+            var el = document.getElementById('ef-'+f);
+            if (el && el.value.trim() !== '') payload[f] = el.value.trim();
+        });
+
+        fetch('/api/estudiante/' + EST_ID, {
+            method: 'PATCH',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify(payload)
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            if (d.ok) {
+                cerrarEditar();
+                var t = document.createElement('div');
+                t.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#4dffb4;color:#000;padding:12px 20px;border-radius:8px;z-index:9999;font-size:13px;font-weight:600;';
+                t.textContent = '✓ Cambios guardados';
+                document.body.appendChild(t);
+                setTimeout(function() { t.remove(); location.reload(); }, 1500);
+            } else {
+                alert('Error: ' + (d.error || 'desconocido'));
+            }
+        })
+        .catch(function() { alert('Error de conexión'); })
+        .finally(function() {
+            if (btn) { btn.innerHTML = '💾 Guardar cambios'; btn.disabled = false; }
+        });
+    };
+
+    window.cambiarCondicion = function() {
+        var actual = (document.getElementById('btn-condicion') || {}).textContent || CONDICION;
+        actual = actual.trim();
+        var opts = ['ACTIVO','RETIRADO','GRADUADO'].filter(function(o){ return o !== actual; });
+        var nueva = prompt('Estado actual: ' + actual + '\n\nEscribe el nuevo estado:\n- ACTIVO\n- RETIRADO\n- GRADUADO', opts[0]);
+        if (!nueva) return;
+        nueva = nueva.toUpperCase().trim();
+        if (!['ACTIVO','RETIRADO','GRADUADO'].includes(nueva)) {
+            alert('Estado inválido. Usa: ACTIVO, RETIRADO o GRADUADO'); return;
+        }
+        fetch('/api/estudiante/' + EST_ID + '/condicion', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({condicion: nueva})
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            if (d.ok) {
+                var b = document.getElementById('btn-condicion');
+                if (b) b.textContent = d.condicion;
+                var t = document.createElement('div');
+                t.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#60b8f0;color:#000;padding:12px 20px;border-radius:8px;z-index:9999;font-size:13px;font-weight:600;';
+                t.textContent = '✓ Estado: ' + d.condicion;
+                document.body.appendChild(t);
+                setTimeout(function() { t.remove(); }, 2500);
+            } else { alert('Error: ' + (d.error || 'desconocido')); }
+        });
+    };
+
+    window.confirmarEliminar = function() {
+        if (!confirm('¿Eliminar el perfil de ' + NOMBRE + '?\n\nEsta acción no se puede deshacer.')) return;
+        if (!confirm('Confirmar: ¿Eliminar definitivamente a ' + NOMBRE + '?')) return;
+        fetch('/api/estudiante/' + EST_ID, { method: 'DELETE' })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            if (d.ok) { alert('Perfil eliminado.'); window.location.href = '/'; }
+            else { alert('Error: ' + (d.error || 'desconocido')); }
+        });
+    };
+})();
+
+// ── HISTORIAL / TIMELINE ─────────────────────────────────────────────────
+async function cargarHistorial() {
+    const EST_ID = {{ e.id }};
+    const container = document.getElementById('timeline-container');
+    try {
+        const res  = await fetch('/api/expediente/' + EST_ID);
+        const data = await res.json();
+        // Update indicator badges in hero
+        if (data.indicadores) renderIndicadoresBadges(data.indicadores);
+        renderTimeline(data.eventos || [], container);
+    } catch(e) {
+        container.innerHTML = '<div style="color:#555;font-size:12px;padding:20px;">Error cargando historial</div>';
+    }
+}
+
+
+function renderIndicadoresBadges(ind) {
+    // Update both the hero badges and the timeline badges
+    var containers = [
+        document.getElementById('expediente-indicadores'),
+        document.getElementById('expediente-indicadores-hero')
+    ].filter(Boolean);
+    if (!containers.length) return;
+    var container = containers[0];
+    var cfg = {
+        ind_conducta:  { label:'Conducta',    critico:'🔴 Critico', alerta:'🟠 Alerta', observacion:'🟡 Obs', neutro:'✓' },
+        ind_psico:     { label:'Psicologico', critico:'🔵 Critico', alerta:'🔵 Alerta', observacion:'🔵 Obs', neutro:'✓' },
+        ind_academico: { label:'Academico',   critico:'🔴 Critico', alerta:'🟠 Alerta', observacion:'🟡 Obs', neutro:'✓' },
+        ind_logros:    { label:'Logros',      destacado:'⭐⭐ Dest.', activo:'⭐ Activo', neutro:'—' }
+    };
+    var bgMap = { critico:'rgba(239,68,68,.15)', alerta:'rgba(249,115,22,.15)',
+                  observacion:'rgba(255,196,77,.12)', destacado:'rgba(200,240,96,.18)',
+                  activo:'rgba(200,240,96,.1)', neutro:'rgba(100,100,100,.08)' };
+    var tcMap = { critico:'#ef4444', alerta:'#f97316', observacion:'#ffc44d',
+                  destacado:'#c8f060', activo:'#a8d04a', neutro:'#666' };
+    var html = '';
+    Object.keys(cfg).forEach(function(key) {
+        var val = ind[key] || 'neutro';
+        var txt = cfg[key][val] || val;
+        html += '<div style="background:'+(bgMap[val]||bgMap.neutro)+';color:'+(tcMap[val]||tcMap.neutro)+';padding:6px 12px;border-radius:8px;font-size:11px;font-weight:700;text-align:center;">'+
+                '<div style="font-size:9px;opacity:.7;margin-bottom:2px;">'+cfg[key].label+'</div>'+txt+'</div>';
+    });
+    containers.forEach(function(c) { c.innerHTML = html; });
+}
+
+function abrirModalLogro() {
+    var m = document.getElementById('modal-logro');
+    if (!m) return;
+    document.getElementById('logro-titulo').value = '';
+    document.getElementById('logro-descripcion').value = '';
+    document.getElementById('logro-fecha').value = new Date().toISOString().split('T')[0];
+    document.getElementById('logro-status').textContent = '';
+    m.style.display = 'flex';
+}
+function cerrarModalLogro() {
+    var m = document.getElementById('modal-logro'); if (m) m.style.display = 'none';
+}
+async function guardarLogro() {
+    var titulo = document.getElementById('logro-titulo').value.trim();
+    var desc   = document.getElementById('logro-descripcion').value.trim();
+    var tipo   = document.getElementById('logro-tipo').value;
+    var fecha  = document.getElementById('logro-fecha').value;
+    var status = document.getElementById('logro-status');
+    if (!titulo) { status.innerHTML = '<span style="color:#ef4444;">El titulo es requerido</span>'; return; }
+    status.innerHTML = '<span style="color:#aaa;">Guardando...</span>';
+    const res = await fetch('/api/logros', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ estudiante_id: EST_ID, tipo, titulo, descripcion: desc, fecha })
+    });
+    const d = await res.json();
+    if (d.ok) { cerrarModalLogro(); location.reload(); }
+    else { status.innerHTML = '<span style="color:#ef4444;">'+(d.error||'Error')+'</span>'; }
+}
+
+function renderTimeline(reportes, container) {
+    if (!reportes || !reportes.length) {
+        container.innerHTML =
+            '<div style="text-align:center;padding:28px;color:#444;font-size:12px;">' +
+            '<div style="font-size:22px;margin-bottom:8px;">📭</div>' +
+            'Sin reportes registrados para este estudiante.<br>' +
+            '<span style="color:#333;">Usa el botón "Nuevo reporte" para documentar incidentes.</span>' +
+            '</div>';
+        return;
+    }
+
+    var tipoColor = {
+        conducta:'#ffc44d', psicologico:'#60b8f0',
+        academico:'#c8f060', incidente_grave:'#ff6b6b',
+        reconocimiento:'#c8f060', olimpiada:'#ffd700',
+        premio:'#ffd700', logro:'#c8f060'
+    };
+    var tipoLabel = {
+        conducta:'⚡ Conducta', psicologico:'🧠 Psicológico',
+        academico:'📚 Académico', incidente_grave:'🚨 Incidente',
+        reconocimiento:'🏆 Reconocimiento', olimpiada:'🥇 Olimpiada',
+        premio:'🎖️ Premio', logro:'⭐ Logro'
+    };
+    var sevColor = { Alta:'#ff6b6b', Media:'#ffc44d', Baja:'#4dffb4' };
+
+    var html = '<div style="position:relative;">';
+    reportes.forEach(function(r, i) {
+        var col   = tipoColor[r.tipo] || '#888';
+        var sev   = sevColor[r.severidad] || '#888';
+        var isLast = i === reportes.length - 1;
+        var isLogro = r.fuente === 'logro';
+        var registrante = isLogro ? (r.registrado_por||'') : (r.reportado_por||'');
+        html +=
+            '<div class="timeline-item" style="display:flex;gap:14px;padding-bottom:'+(isLast?'0':'20px')+';">' +
+            '<div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;">' +
+                '<div style="width:'+(isLogro?'14':'11')+'px;height:'+(isLogro?'14':'11')+'px;border-radius:50%;background:'+col+';margin-top:3px;flex-shrink:0;box-shadow:0 0 '+(isLogro?'10':'6')+'px '+col+'88;"></div>' +
+                (!isLast ? '<div style="width:2px;flex:1;background:linear-gradient('+col+',#222);margin-top:4px;border-radius:2px;"></div>' : '') +
+            '</div>' +
+            '<div style="flex:1;background:'+(isLogro?'rgba(200,240,96,.06)':'var(--surface)')+';border:1px solid '+(isLogro?'rgba(200,240,96,.3)':'var(--border)')+';border-radius:10px;padding:12px 14px;margin-bottom:0;">' +
+                '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">' +
+                    '<span style="background:'+col+'22;color:'+col+';padding:2px 9px;border-radius:20px;font-size:10px;font-weight:700;">'+(tipoLabel[r.tipo]||r.tipo)+'</span>' +
+                    (!isLogro ? '<span style="background:'+sev+'18;color:'+sev+';padding:2px 9px;border-radius:20px;font-size:10px;font-weight:700;">'+(r.severidad||'—')+'</span>' : '') +
+                    (!isLogro ? '<span style="background:'+(r.estado==='Cerrado'?'rgba(100,100,100,.15)':r.estado==='En seguimiento'?'rgba(96,184,240,.12)':'rgba(255,196,77,.1)')+';color:'+(r.estado==='Cerrado'?'#666':r.estado==='En seguimiento'?'#60b8f0':'#ffc44d')+';padding:2px 9px;border-radius:20px;font-size:10px;font-weight:700;">'+(r.estado||'')+'</span>' : '') +
+                    '<span style="margin-left:auto;font-size:10px;color:#555;">'+(r.fecha||'')+'</span>' +
+                '</div>' +
+                '<div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px;">'+(r.titulo||'Sin título')+'</div>' +
+                '<div style="font-size:12px;color:#888;line-height:1.5;">'+(r.descripcion||'').substring(0,200)+((r.descripcion||'').length>200?'…':'')+'</div>' +
+                (registrante ? '<div style="font-size:10px;color:#555;margin-top:6px;"><i class="fas fa-user" style="margin-right:4px;"></i>'+registrante+'</div>' : '') +
+                (!isLogro && r.seguimiento ? '<div style="margin-top:8px;padding:8px 10px;background:#111;border-radius:7px;font-size:11px;color:#888;border-left:3px solid '+col+';"><i class="fas fa-clipboard-check" style="margin-right:5px;color:'+col+';"></i>'+r.seguimiento.substring(0,150)+'</div>' : '') +
+            '</div>' +
+            '</div>';
+    });
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function abrirNuevoReporteDesdeAqui() {
+    abrirModalReporte();
+}
+
+function abrirModalReporte() {
+    var m = document.getElementById('modal-reporte-perfil');
+    m.style.display = 'flex';
+    document.getElementById('rp-descripcion').value = '';
+    document.getElementById('rp-titulo').value = '';
+    document.getElementById('rp-status').textContent = '';
+}
+
+function cerrarModalReporte() {
+    document.getElementById('modal-reporte-perfil').style.display = 'none';
+}
+
+function guardarReportePerfil() {
+    var titulo = document.getElementById('rp-titulo').value.trim();
+    var desc   = document.getElementById('rp-descripcion').value.trim();
+    var status = document.getElementById('rp-status');
+    if (!desc) { status.innerHTML = '<span style="color:#ff6b6b;">La descripción es requerida</span>'; return; }
+    status.innerHTML = '<span style="color:#aaa;">Guardando...</span>';
+    fetch('/api/reportes', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            estudiante_id: EST_ID,
+            tipo:          document.getElementById('rp-tipo').value,
+            severidad:     document.getElementById('rp-severidad').value,
+            titulo:        titulo,
+            descripcion:   desc,
+            reportado_por: {{ current_user.nombre | tojson if current_user else '""' }}
+        })
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+        if (d.ok) {
+            status.innerHTML = '<span style="color:#4dffb4;">✓ Reporte creado correctamente</span>';
+            setTimeout(cerrarModalReporte, 1200);
+            cargarHistorial();
+        } else {
+            status.innerHTML = '<span style="color:#ff6b6b;">✗ ' + (d.error||'Error') + '</span>';
+        }
+    })
+    .catch(function(e){ status.innerHTML = '<span style="color:#ff6b6b;">✗ Error de conexión</span>'; });
+}
+
+// Cerrar modal al hacer clic fuera
+document.getElementById('modal-reporte-perfil').addEventListener('click', function(e){
+    if (e.target === this) cerrarModalReporte();
+});
+
+function imprimirPerfil() {
+    window.print();
+}
+
+// Load historial on page load
+cargarHistorial();
+
+// ── FOTO UPLOAD ────────────────────────────────────────────────────────────
+var avatarWrap = document.getElementById('avatar-wrap');
+if (avatarWrap) {
+    avatarWrap.addEventListener('mouseenter', function(){
+        document.getElementById('avatar-overlay').style.display = 'flex';
+    });
+    avatarWrap.addEventListener('mouseleave', function(){
+        document.getElementById('avatar-overlay').style.display = 'none';
+    });
+}
+
+function subirFoto(input) {
+    var file = input.files[0];
+    if (!file) return;
+    if (file.size > 3 * 1024 * 1024) {
+        alert('La imagen debe ser menor de 3 MB');
+        return;
+    }
+    var fd = new FormData();
+    fd.append('foto', file);
+    var wrap = document.getElementById('avatar-wrap');
+    wrap.style.opacity = '.4';
+
+    fetch('/api/estudiante/{{ e.id }}/foto', { method:'POST', body:fd })
+        .then(function(r){ return r.json(); })
+        .then(function(d) {
+            wrap.style.opacity = '1';
+            if (d.ok) {
+                // Update avatar immediately
+                var img = document.getElementById('avatar-img');
+                var ini = document.getElementById('avatar-initials');
+                if (!img) {
+                    img = document.createElement('img');
+                    img.id = 'avatar-img';
+                    img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:inherit;';
+                    img.alt = 'Foto';
+                    wrap.insertBefore(img, wrap.firstChild);
+                }
+                img.src = d.url + '?t=' + Date.now();
+                if (ini) ini.style.display = 'none';
+            } else {
+                alert('Error: ' + (d.error || 'No se pudo subir la foto'));
+            }
+        })
+        .catch(function(){ wrap.style.opacity='1'; alert('Error de conexión'); });
+}
+
+function borrarFoto() {
+    if (!confirm('¿Eliminar la foto de perfil?')) return;
+    fetch('/api/estudiante/{{ e.id }}/foto', { method:'DELETE' })
+        .then(function(r){ return r.json(); })
+        .then(function(d) {
+            if (d.ok) {
+                var img = document.getElementById('avatar-img');
+                var ini = document.getElementById('avatar-initials');
+                if (img) img.remove();
+                if (!ini) {
+                    var wrap = document.getElementById('avatar-wrap');
+                    var span = document.createElement('span');
+                    span.id = 'avatar-initials';
+                    span.textContent = '{{ e.nombre[0] }}{{ e.apellido[0] }}';
+                    wrap.insertBefore(span, wrap.firstChild);
+                } else { ini.style.display = ''; }
+            }
+        });
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// BOLETÍN DE CALIFICACIONES Y ASISTENCIA MINERD
+// ════════════════════════════════════════════════════════════════════════════
+
+function _anioEscolarPerfil() {
+    var m = new Date().getMonth() + 1;
+    var y = new Date().getFullYear();
+    return m >= 8 ? y + '-' + (y+1) : (y-1) + '-' + y;
+}
+
+function _colorNotaPerfil(n) {
+    if (n === null || n === undefined) return '#333';
+    n = parseFloat(n);
+    if (n >= 70) return '#4dffb4';
+    if (n >= 50) return '#f7b731';
+    return '#ff4d4d';
+}
+
+function _estadoNotaPerfil(n) {
+    if (n === null || n === undefined) return '—';
+    n = parseFloat(n);
+    if (n >= 70) return '✓ Aprobado';
+    if (n >= 50) return '⚡ Completiva';
+    return '✗ Reprobado';
+}
+
+async function cargarBoletin() {
+    var estId = {{ e.id }};
+    var anioSel = document.getElementById('notas-anio-perfil');
+    var anio = anioSel ? anioSel.value : _anioEscolarPerfil();
+    if (!anio) anio = _anioEscolarPerfil();
+
+    var loading  = document.getElementById('notas-loading');
+    var pills    = document.getElementById('notas-resumen-pills');
+    var tableCont= document.getElementById('notas-tabla-container');
+    var tbody    = document.getElementById('notas-tbody');
+    var vacio    = document.getElementById('notas-vacio');
+
+    if (loading) loading.style.display = 'block';
+    if (tableCont) tableCont.style.display = 'none';
+    if (vacio) vacio.style.display = 'none';
+    if (pills) pills.style.display = 'none';
+
+    try {
+        var res = await fetch('/api/calificaciones/boletin/' + estId + '?anio=' + anio);
+        var d   = await res.json();
+
+        if (loading) loading.style.display = 'none';
+
+        if (!d.materias || d.materias.length === 0) {
+            if (vacio) vacio.style.display = 'block';
+            return;
+        }
+
+        var r = d.resumen;
+
+        // Pills de resumen
+        if (pills) {
+            pills.style.display = 'flex';
+            pills.innerHTML =
+                '<span style="padding:4px 12px;background:rgba(77,255,180,.1);border:1px solid rgba(77,255,180,.25);border-radius:20px;font-size:11px;color:#4dffb4;">✓ ' + r.aprobadas + ' aprobadas</span>'
+              + '<span style="padding:4px 12px;background:rgba(247,183,49,.1);border:1px solid rgba(247,183,49,.25);border-radius:20px;font-size:11px;color:#f7b731;">⚡ ' + r.completivas + ' completivas</span>'
+              + '<span style="padding:4px 12px;background:rgba(255,77,77,.1);border:1px solid rgba(255,77,77,.25);border-radius:20px;font-size:11px;color:#ff6b6b;">✗ ' + r.reprobadas + ' reprobadas</span>'
+              + (r.promueve
+                  ? '<span style="padding:4px 12px;background:rgba(77,255,180,.15);border:1px solid rgba(77,255,180,.4);border-radius:20px;font-size:11px;color:#4dffb4;font-weight:700;">📋 Promovido</span>'
+                  : '<span style="padding:4px 12px;background:rgba(255,77,77,.15);border:1px solid rgba(255,77,77,.4);border-radius:20px;font-size:11px;color:#ff4d4d;font-weight:700;">⛔ Repite el grado</span>');
+        }
+
+        // Filas de la tabla
+        tbody.innerHTML = '';
+        d.materias.forEach(function(m, i) {
+            var colorF = _colorNotaPerfil(m.nota_final);
+            var asistColor = m.reprueba_asistencia ? '#ff4d4d' : m.alerta_asistencia ? '#f7b731' : '#444';
+            var rowBg = i % 2 === 0 ? 'rgba(255,255,255,.02)' : 'transparent';
+
+            var cells = ['P1','P2','P3','P4'].map(function(p){
+                var v = m[p];
+                return '<td style="padding:7px 8px;text-align:center;color:'+_colorNotaPerfil(v)+';'
+                     + 'font-family:var(--font-mono);font-weight:700;font-size:13px;">'
+                     + (v !== null ? v : '<span style=\'color:#222\'>—</span>') + '</td>';
+            }).join('');
+
+            var row = '<tr style="background:'+rowBg+';border-bottom:1px solid #111;">'
+                + '<td style="padding:8px 10px;color:var(--text);font-weight:500;">' + m.materia + '</td>'
+                + cells
+                + '<td style="padding:8px 10px;text-align:center;color:'+colorF+';font-weight:700;font-size:15px;font-family:var(--font-mono);">'
+                + (m.nota_final !== null ? m.nota_final : '—') + '</td>'
+                + '<td style="padding:8px 10px;text-align:center;font-size:10px;color:'+colorF+';">'
+                + _estadoNotaPerfil(m.nota_final) + '</td>'
+                + '<td style="padding:8px 10px;text-align:center;font-size:11px;font-weight:700;color:'+asistColor+';">'
+                + m.pct_inasistencia + '%'
+                + (m.reprueba_asistencia ? ' <span title=\'Riesgo de reprobación por asistencia\'>🚨</span>' : m.alerta_asistencia ? ' <span title=\'Alerta MINERD\'>⚠</span>' : '')
+                + '</td>'
+                + '</tr>';
+            tbody.insertAdjacentHTML('beforeend', row);
+        });
+
+        tableCont.style.display = 'block';
+
+    } catch(e) {
+        if (loading) loading.style.display = 'none';
+        if (vacio) {
+            vacio.style.display = 'block';
+            vacio.querySelector('div:last-child').textContent = 'Error: ' + e.message;
+        }
+    }
+}
+
+// Initialize año escolar selector and load boletín on page load
+(function() {
+    var anio = _anioEscolarPerfil();
+    var prev = (parseInt(anio.split('-')[0]) - 1) + '-' + anio.split('-')[0];
+    var sel = document.getElementById('notas-anio-perfil');
+    if (sel) {
+        sel.innerHTML = '<option value="'+anio+'">'+anio+' (actual)</option>'
+                      + '<option value="'+prev+'">'+prev+'</option>';
+    }
+    cargarBoletin();
+})();
+
+// ─────────────────────────────────────────────────────────────
+// CUADERNO ANECDÓTICO — PERFIL
+// ─────────────────────────────────────────────────────────────
+var _PERFIL_EST_ID = {{ e.id }};
+var _TIPO_COLS = {conductual:'#ef4444',emocional:'#f59e0b',académico:'#3b82f6',familiar:'#f97316',otro:'#6b7280'};
+var _TIPO_EMOJIS = {conductual:'🔴',emocional:'🟡',académico:'🔵',familiar:'🟠',otro:'⚪'};
+
+function cargarCuadernoPerfil() {
+    fetch('/api/cuaderno/' + _PERFIL_EST_ID)
+        .then(function(r){ return r.json(); })
+        .then(function(data){ renderCuadernoPerfil(data); })
+        .catch(function(e){ 
+            var el = document.getElementById('cuaderno-perfil-lista');
+            if (el) el.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:16px;">Error cargando cuaderno.</div>';
+        });
+}
+
+function renderCuadernoPerfil(entradas) {
+    var cont = document.getElementById('cuaderno-perfil-lista');
+    if (!cont) return;
+    if (!entradas || !entradas.length) {
+        cont.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:12px;"><div style="font-size:24px;margin-bottom:8px;">📓</div>Sin entradas en el cuaderno anecdótico.</div>';
+        return;
+    }
+    cont.innerHTML = entradas.map(function(e){
+        var col = _TIPO_COLS[e.tipo] || '#6b7280';
+        var emo = _TIPO_EMOJIS[e.tipo] || '⚪';
+        var badge = e.convertido_reporte
+            ? '<span style="background:rgba(37,99,235,.15);color:#60b8f0;font-size:9px;padding:2px 7px;border-radius:20px;margin-left:6px;">📋 Reporte</span>'
+            : '<button onclick="convertirReportePerfil('+e.id+')" style="background:none;border:1px solid var(--border);border-radius:6px;padding:2px 8px;font-size:9px;color:var(--text-muted);cursor:pointer;margin-left:6px;">→ Hacer reporte</button>';
+        return '<div style="border:1px solid var(--border);border-left:3px solid '+col+';border-radius:10px;padding:12px 14px;margin-bottom:10px;">'            +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">'            +'<span style="font-size:11px;font-weight:700;color:'+col+';">'+emo+' '+e.tipo.toUpperCase()+'</span>'            +'<span style="font-size:10px;color:var(--text-muted);margin-left:auto;">'+e.fecha+'</span>'            +badge            +'</div>'            +'<div style="font-size:13px;line-height:1.5;margin-bottom:4px;">'+e.descripcion+'</div>'            +(e.seguimiento ? '<div style="font-size:11px;color:var(--text-muted);padding-top:5px;border-top:1px solid var(--border);margin-top:6px;"><b>Seguimiento:</b> '+e.seguimiento+'</div>' : '')            +'<div style="font-size:10px;color:var(--text-muted);margin-top:6px;">Por: '+e.autor_nombre+(e.privado?' · 🔒 Privado':'')+'</div>'            +'</div>';
+    }).join('');
+}
+
+// ─────────────────────────────────────────────────────────────
+// ASISTENCIA MENSUAL — PERFIL
+// ─────────────────────────────────────────────────────────────
+function cargarAsistenciaMensualPerfil() {
+    fetch('/api/asistencia-mensual/' + _PERFIL_EST_ID)
+        .then(function(r){ return r.json(); })
+        .then(function(data){ renderAsistenciaMensual(data); })
+        .catch(function(){
+            var el = document.getElementById('asistencia-mensual-grid');
+            if (el) el.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:16px;">Error cargando asistencia.</div>';
+        });
+}
+
+function renderAsistenciaMensual(meses) {
+    var cont = document.getElementById('asistencia-mensual-grid');
+    if (!cont) return;
+    var MESES_NAMES = ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    if (!meses || !meses.length) {
+        cont.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:12px;"><div style="font-size:24px;margin-bottom:8px;">📅</div>Sin registros de asistencia mensual validados.</div>';
+        return;
+    }
+    // Agrupar por materia
+    var porMateria = {};
+    meses.forEach(function(m){
+        if (!porMateria[m.materia]) porMateria[m.materia] = [];
+        porMateria[m.materia].push(m);
+    });
+    var html = '';
+    Object.keys(porMateria).forEach(function(mat){
+        var registros = porMateria[mat];
+        var promedio = registros.reduce(function(s,r){ return s+(r.porcentaje||0); }, 0) / registros.length;
+        var colProm = promedio >= 85 ? '#4dffb4' : promedio >= 70 ? '#f7b731' : '#ff4d4d';
+        html += '<div style="margin-bottom:14px;">'            + '<div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:8px;text-transform:uppercase;">'            + mat + ' <span style="color:'+colProm+';font-size:12px;">'+promedio.toFixed(0)+'% prom.</span></div>'            + '<div style="display:flex;flex-wrap:wrap;gap:8px;">';
+        registros.forEach(function(r){
+            var col = r.porcentaje >= 85 ? '#22c55e' : r.porcentaje >= 70 ? '#f59e0b' : '#ef4444';
+            html += '<div style="padding:8px 12px;border:1px solid var(--border);border-radius:10px;text-align:center;min-width:68px;">'                + '<div style="font-size:16px;font-weight:800;color:'+col+';">'+r.porcentaje.toFixed(0)+'%</div>'                + '<div style="font-size:10px;color:var(--text-muted);">'+MESES_NAMES[r.mes]+' '+r.anio+'</div>'                + '<div style="font-size:9px;color:var(--text-muted);">'+r.dias_asistio+'/'+r.dias_clase_impartidos+' días</div>'                + (r.validado ? '<div style="font-size:8px;color:#22c55e;">✓ Validado</div>' : '<div style="font-size:8px;color:#f59e0b;">Pendiente</div>')                + '</div>';
+        });
+        html += '</div></div>';
+    });
+    cont.innerHTML = html;
+}
+
+// ─────────────────────────────────────────────────────────────
+// EVALUACIONES NARRATIVAS — PERFIL
+// ─────────────────────────────────────────────────────────────
+function cargarNarrativasPerfil() {
+    var anio = _anioEscolarPerfil();
+    fetch('/api/evaluacion-narrativa/' + _PERFIL_EST_ID + '?anio_escolar=' + anio)
+        .then(function(r){ return r.json(); })
+        .then(function(data){ renderNarrativasPerfil(data); })
+        .catch(function(){
+            var el = document.getElementById('narrativas-perfil-cont');
+            if (el) el.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:16px;">Error cargando evaluaciones.</div>';
+        });
+}
+
+function renderNarrativasPerfil(narrs) {
+    var cont = document.getElementById('narrativas-perfil-cont');
+    if (!cont) return;
+    if (!narrs || !narrs.length) {
+        cont.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:12px;"><div style="font-size:24px;margin-bottom:8px;">✍️</div>Sin evaluaciones narrativas registradas.</div>';
+        return;
+    }
+    cont.innerHTML = narrs.map(function(n){
+        return '<div style="border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;">'            + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'            + '<span style="background:var(--surface);border:1px solid var(--border);padding:2px 10px;border-radius:20px;font-size:10px;color:var(--accent);">Período '+n.periodo+'</span>'            + '<span style="font-size:10px;color:var(--text-muted);margin-left:auto;">'+n.profesor_nombre+'</span>'            + '</div>'            + '<div style="font-size:13px;line-height:1.6;color:var(--text);">'+n.texto+'</div>'            + '</div>';
+    }).join('');
+}
+
+// Cargar secciones nuevas al iniciar
+cargarCuadernoPerfil();
+cargarAsistenciaMensualPerfil();
+cargarNarrativasPerfil();
+
+</script>
+
+<!-- Modal Nuevo Logro -->
+<div id="modal-logro" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.7);align-items:center;justify-content:center;">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;width:90%;max-width:480px;">
+        <div style="font-family:var(--font-display);font-size:15px;font-weight:700;margin-bottom:20px;">
+            🏆 Registrar Logro / Reconocimiento
+        </div>
+        <div style="margin-bottom:12px;">
+            <label style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;">Tipo</label>
+            <select id="logro-tipo" style="width:100%;background:#111;border:1px solid #2a2a2a;color:var(--text);padding:8px 12px;border-radius:8px;font-size:13px;margin-top:4px;">
+                <option value="reconocimiento">🏆 Reconocimiento general</option>
+                <option value="olimpiada">🥇 Olimpiada académica</option>
+                <option value="premio">🎖️ Premio o distinción</option>
+                <option value="logro">⭐ Logro personal</option>
+            </select>
+        </div>
+        <div style="margin-bottom:12px;">
+            <label style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;">Título *</label>
+            <input id="logro-titulo" type="text" placeholder="Ej: 1er lugar Olimpiada de Matemática 2025"
+                   style="width:100%;background:#111;border:1px solid #2a2a2a;color:var(--text);padding:8px 12px;border-radius:8px;font-size:13px;margin-top:4px;box-sizing:border-box;">
+        </div>
+        <div style="margin-bottom:12px;">
+            <label style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;">Descripción</label>
+            <textarea id="logro-descripcion" rows="3" placeholder="Detalles del logro..."
+                      style="width:100%;background:#111;border:1px solid #2a2a2a;color:var(--text);padding:8px 12px;border-radius:8px;font-size:13px;margin-top:4px;resize:vertical;box-sizing:border-box;"></textarea>
+        </div>
+        <div style="margin-bottom:20px;">
+            <label style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;">Fecha</label>
+            <input id="logro-fecha" type="date"
+                   style="width:100%;background:#111;border:1px solid #2a2a2a;color:var(--text);padding:8px 12px;border-radius:8px;font-size:13px;margin-top:4px;box-sizing:border-box;">
+        </div>
+        <div id="logro-status" style="margin-bottom:12px;font-size:12px;"></div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;">
+            <button onclick="cerrarModalLogro()" style="background:transparent;border:1px solid #333;color:#888;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:13px;">Cancelar</button>
+            <button onclick="guardarLogro()" style="background:#c8f060;border:none;color:#000;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;">
+                <i class="fas fa-save"></i> Guardar logro
+            </button>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
