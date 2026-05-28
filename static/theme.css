@@ -671,3 +671,128 @@
 .ax-badge-critico    { background:var(--ax-critico-bg); color:var(--ax-critico-text); }
 .ax-badge-obs        { background:var(--ax-obs-bg);    color:var(--ax-obs-text); }
 .ax-badge-optimo     { background:var(--ax-optimo-bg); color:var(--ax-optimo-text); }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   OVERRIDES UNIVERSALES — CONTRASTE Y LEGIBILIDAD
+   Corrigen colores hardcodeados en templates (naranja, cian, verde claro,
+   azul Microsoft legacy). Usan !important para ganar al inline <style>.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Layout principal ── */
+[data-theme="light"] .main-content { background: #F3F6FB !important; }
+[data-theme="light"] nav           { background: #fff !important; border-bottom-color: #D0DBF0 !important; }
+
+/* ── KPI cards — texto legible siempre ── */
+[data-theme="light"] .kpi {
+  background: #FFFFFF !important;
+  border: 1px solid #D0DBF0 !important;
+  box-shadow: 0 1px 4px rgba(10,22,40,.07) !important;
+}
+[data-theme="light"] .kpi-n  { color: #0A1628 !important; }
+[data-theme="light"] .kpi-l  { color: #4A6080 !important; font-weight: 600 !important; }
+[data-theme="light"] .kpi-sub { color: #04407F !important; }
+
+/* ── Sidebar item activo ── */
+[data-theme="light"] .sb-item.active {
+  background: #2661F6 !important;
+  color: #fff !important;
+  font-weight: 700 !important;
+}
+[data-theme="light"] .sb-item:hover { background: #EEF2FC !important; color: #0A1628 !important; }
+[data-theme="light"] .sb-count      { background: #EEF2FC !important; color: #04407F !important; }
+
+/* ── Mention dots — sin naranja ── */
+.dot-mm { background: #2661F6 !important; }   /* Multimedia */
+.dot-th { background: #6B3FA0 !important; }   /* Teatro */
+.dot-mu { background: #04407F !important; }   /* Música */
+.dot-av { background: #7A1A3C !important; }   /* Artes Visuales */
+
+/* ── Badges conductuales — sin naranja ni cian ── */
+.badge-alerta    { background: rgba(209,52,56,.12)  !important; color: #A32D2D !important; }
+.badge-silencioso{ background: rgba(38,97,246,.12)  !important; color: #04407F !important; }
+.badge-estable   { background: rgba(38,97,246,.1)   !important; color: #2661F6 !important; }
+[data-theme="light"] .badge-alerta     { background: #FDE4E5 !important; color: #A32D2D !important; border: 1px solid #F7C1C2 !important; }
+[data-theme="light"] .badge-silencioso { background: #EEF2FC !important; color: #04407F !important; border: 1px solid #BDD1FA !important; }
+[data-theme="light"] .badge-estable    { background: #E8EFFE !important; color: #2661F6 !important; border: 1px solid #BDD1FA !important; }
+
+/* ── Rol badges en navbar ── */
+.rol-prof  { background: rgba(38,97,246,.15) !important; color: var(--ax-periwinkle, #5B8AF7) !important; }
+.rol-coord { background: rgba(38,97,246,.15) !important; color: var(--accent, #2661F6) !important; }
+[data-theme="light"] .rol-prof  { background: #EEF2FC !important; color: #2661F6 !important; }
+[data-theme="light"] .rol-coord { background: #EEF2FC !important; color: #04407F !important; }
+
+/* ── Nav badges y avatares — sin #185FA5 legacy ── */
+[data-theme="light"] .nav-badge    { background: #EEF2FC !important; color: #2661F6 !important; }
+[data-theme="light"] .nav-user     { background: #F8FAFF !important; border-color: #D0DBF0 !important; }
+[data-theme="light"] .nav-user-av  { background: #EEF2FC !important; color: #2661F6 !important; }
+[data-theme="light"] .user-avatar  { background: var(--accent, #2661F6) !important; color: #fff !important; }
+
+/* ── Pills sin verde claro ni naranja ── */
+[data-theme="light"] .pill         { background: #F8FAFF !important; border-color: #D0DBF0 !important; color: #4A6080 !important; }
+[data-theme="light"] .pill.blue    { background: #EEF2FC !important; border-color: #BDD1FA !important; color: #2661F6 !important; }
+[data-theme="light"] .pill.green   { background: #EEF2FC !important; border-color: #BDD1FA !important; color: #04407F !important; }
+[data-theme="light"] .pill.warn    { background: #FDF3E8 !important; border-color: #DEB887 !important; color: #7A4A00 !important; }
+
+/* ── Avatares de perfil — sin #185FA5 legacy ── */
+[data-theme="light"] .prof-avatar  { background: #EEF2FC !important; color: #2661F6 !important; }
+[data-theme="light"] .ec-avatar    { background: #EEF2FC !important; color: #2661F6 !important; }
+[data-theme="light"] .uc-avatar    { background: #EEF2FC !important; color: #2661F6 !important; }
+
+/* ── Quick-access card icons — sin verde ── */
+[data-theme="light"] .qi-blue  { background: #EEF2FC !important; color: #2661F6 !important; }
+[data-theme="light"] .qi-green { background: #EEF2FC !important; color: #04407F !important; }
+[data-theme="light"] .qi-pur   { background: #F0E8FF !important; color: #6B3FA0 !important; }
+[data-theme="light"] .qi-red   { background: #FDE4E5 !important; color: #A32D2D !important; }
+[data-theme="light"] .qi-warn  { background: #FDF3E8 !important; color: #7A4A00 !important; }
+[data-theme="light"] .qi-teal  { background: #EEF2FC !important; color: #04407F !important; }
+
+/* ── Cards y hero — sin azul Microsoft legacy ── */
+[data-theme="light"] .qcard       { background: #FFFFFF !important; box-shadow: 0 1px 4px rgba(10,22,40,.07) !important; }
+[data-theme="light"] .prof-hero   { background: #FFFFFF !important; box-shadow: 0 2px 8px rgba(10,22,40,.06) !important; }
+[data-theme="light"] .stat-card   { background: #FFFFFF !important; }
+
+/* ── Texto grado/mención — mayor contraste ── */
+[data-theme="light"] td.td-nombre span,
+[data-theme="light"] .ec-course,
+[data-theme="light"] .td-grado,
+[data-theme="light"] [class*="grado"],
+[data-theme="light"] [class*="curso"],
+[data-theme="light"] [class*="mencion"] {
+  color: #04407F !important;
+  font-weight: 600 !important;
+}
+
+/* ── Toasts ── */
+[data-theme="light"] .toast-ok   { background: #04407F !important; color: #fff !important; border-color: #2661F6 !important; }
+[data-theme="light"] .toast-err  { background: #A32D2D !important; color: #fff !important; }
+
+/* ── Colores semánticos legacy → azul ── */
+[data-theme="light"] [style*="color:#60b8f0"],
+[data-theme="light"] [style*="color: #60b8f0"],
+[data-theme="light"] [style*="color:#378ADD"],
+[data-theme="light"] [style*="color:#185FA5"] { color: #2661F6 !important; }
+
+[data-theme="light"] [style*="color:#ff9f60"],
+[data-theme="light"] [style*="color: #ff9f60"],
+[data-theme="light"] [style*="color:#ca5010"],
+[data-theme="light"] [style*="color:#c8f060"],
+[data-theme="light"] [style*="color:#4dffb4"] { color: #04407F !important; }
+
+[data-theme="light"] [style*="background:rgba(96,184,240"],
+[data-theme="light"] [style*="background:rgba(255,159,96"],
+[data-theme="light"] [style*="background:rgba(192,240,96"] { background: #EEF2FC !important; }
+
+/* ── Dark mode — mismo principio, sin cian ni naranja ── */
+[data-theme="dark"] [style*="color:#60b8f0"],
+[data-theme="dark"] [style*="color: #60b8f0"] { color: #8BAEF8 !important; }
+[data-theme="dark"] [style*="color:#ff9f60"],
+[data-theme="dark"] [style*="color: #ff9f60"],
+[data-theme="dark"] [style*="color:#c8f060"]  { color: #BDD1FA !important; }
+[data-theme="dark"] .badge-alerta     { background: rgba(209,52,56,.15)  !important; color: #F08080 !important; }
+[data-theme="dark"] .badge-silencioso { background: rgba(38,97,246,.15)  !important; color: #8BAEF8 !important; }
+
+/* ── Scrollbar dark ── */
+[data-theme="dark"] ::-webkit-scrollbar-track { background: #050E1F; }
+[data-theme="dark"] ::-webkit-scrollbar-thumb { background: #2661F6; border-radius:4px; }
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover { background: #5B8AF7; }
