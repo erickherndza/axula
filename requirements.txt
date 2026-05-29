@@ -1,6 +1,53 @@
-flask>=2.3.0
-pandas>=2.0.0
-openpyxl>=3.1.0
-groq>=0.4.0
-fuzzywuzzy>=0.18.0
-python-Levenshtein>=0.21.0
+# Axula — dependencias pineadas a versiones verificadas en producción
+# Para actualizar: pip install -U <paquete> y actualizar la versión aquí manualmente.
+
+# Framework
+Flask==3.1.3
+Werkzeug==3.1.6
+Jinja2==3.1.6
+itsdangerous==2.2.0
+blinker==1.9.0
+click==8.3.1
+
+# Seguridad / Env
+python-dotenv==1.2.2
+MarkupSafe==3.0.3
+
+# PDF
+reportlab>=4.4.0
+
+# Excel
+openpyxl==3.1.5
+pandas==3.0.1
+et_xmlfile==2.0.0
+xlsxwriter>=3.1.0
+
+# IA — Groq
+groq==1.1.1
+httpx==0.28.1
+httpcore==1.0.9
+anyio==4.12.1
+sniffio==1.3.1
+h11==0.16.0
+
+# Validación (pydantic lo usa groq)
+pydantic==2.12.5
+annotated-types==0.7.0
+typing_extensions==4.15.0
+
+# HTTP
+certifi==2026.2.25
+idna==3.11
+
+# Exportar Word (planificaciones ABP)
+python-docx>=1.1.0
+
+# Compresión de respuestas (opcional)
+flask-compress>=1.14
+
+# CORS — permite consumo de la API desde otros orígenes autorizados
+flask-cors>=5.0.0
+
+# Fechas
+python-dateutil==2.9.0.post0
+six==1.17.0

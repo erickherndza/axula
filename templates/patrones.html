@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="es" data-theme="light">
+<html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Patrones de Comportamiento — MultimediaTrack</title>
+<title>Patrones de Comportamiento — Axula</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -61,13 +61,13 @@ main{max-width:1300px;margin:0 auto;padding:28px 20px;}
 .cluster-n{font-size:11px;color:var(--muted);}
 .cluster-bar-row{display:flex;align-items:center;gap:8px;margin:5px 0;}
 .cluster-bar-label{font-size:10px;color:var(--muted);width:70px;flex-shrink:0;}
-.cluster-bar-bg{flex:1;height:5px;background:#222;border-radius:3px;}
+.cluster-bar-bg{flex:1;height:5px;background:var(--border);border-radius:3px;}
 .cluster-bar-fill{height:100%;border-radius:3px;transition:width .6s ease;}
 .cluster-bar-val{font-family:var(--font-mono);font-size:10px;color:var(--muted);width:32px;text-align:right;}
 .cluster-desc{font-size:11px;color:var(--muted);margin:10px 0 8px;line-height:1.5;}
 .cluster-accion{font-size:11px;padding:8px 10px;border-radius:7px;
-                background:rgba(200,240,96,.07);border:1px solid rgba(200,240,96,.15);
-                color:#b0d050;line-height:1.4;}
+                background:rgba(55,138,221,.07);border:1px solid rgba(55,138,221,.15);
+                color:var(--text);line-height:1.4;}
 .cluster-stripe{position:absolute;top:0;left:0;width:4px;height:100%;border-radius:14px 0 0 14px;}
 
 /* STUDENTS TABLE */
@@ -79,8 +79,8 @@ table{width:100%;border-collapse:collapse;}
 thead th{padding:10px 14px;text-align:left;font-size:10px;font-weight:700;
          font-family:var(--font-display);color:var(--muted);
          border-bottom:1px solid var(--border);background:var(--surface2);}
-tbody tr{border-bottom:1px solid #1a1a1a;cursor:pointer;transition:background .15s;}
-tbody tr:hover{background:rgba(255,255,255,.03);}
+tbody tr{border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s;}
+tbody tr:hover{background:var(--hover);}
 tbody tr:last-child{border:none;}
 td{padding:10px 14px;font-size:12px;}
 .badge-cluster{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;
@@ -110,7 +110,7 @@ td{padding:10px 14px;font-size:12px;}
 .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;}
 .horiz-bar{display:flex;align-items:center;gap:10px;margin:7px 0;}
 .horiz-label{font-size:11px;color:var(--text);width:180px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.horiz-bg{flex:1;height:8px;background:#1a1a1a;border-radius:4px;}
+.horiz-bg{flex:1;height:8px;background:var(--surface2);border-radius:4px;}
 .horiz-fill{height:100%;border-radius:4px;transition:width .6s ease;}
 .horiz-val{font-family:var(--font-mono);font-size:10px;color:var(--muted);width:28px;text-align:right;}
 
@@ -133,20 +133,48 @@ td{padding:10px 14px;font-size:12px;}
   white-space:nowrap;
 }
 .mt-tbtn.theme-btn-active {
-  background:var(--theme-toggle-actbg,rgba(200,240,96,.1));
-  color:var(--theme-toggle-act,#c8f060);
+  background:var(--theme-toggle-actbg,rgba(55,138,221,.1));
+  color:var(--theme-toggle-act,#378ADD);
   box-shadow:0 1px 3px rgba(0,0,0,.3);
 }
+.dd-item{padding:8px 12px;border-radius:7px;font-size:13px;color:var(--text);
+  cursor:pointer;display:flex;align-items:center;gap:8px;transition:background .15s;}
+.dd-item:hover{background:var(--hover,rgba(255,255,255,.05));}
 </style>
-  <link rel="stylesheet" href="/static/theme.css">
+  <script>
+(function(){
+  var K='axula_theme',S=6,E=19;
+  function auto(){var h=new Date().getHours();return h>=S&&h<E?'light':'dark';}
+  function get(){try{return localStorage.getItem(K)||'auto';}catch(e){return 'auto';}}
+  function apply(p){document.documentElement.setAttribute('data-theme',p==='auto'?auto():p);}
+  apply(get());
+})();
+</script>
+<link rel="stylesheet" href="/static/theme.css">
   <script src="/static/theme.js"></script>
 </head>
 <body>
+<script>
+(function(){
+  var T="{{ csrf_token }}";
+  var o=window.fetch;
+  window.fetch=function(u,p){
+    p=p||{};
+    var m=(p.method||"GET").toUpperCase();
+    if(m!=="GET"&&m!=="HEAD"){
+      p.headers=p.headers||{};
+      if(p.headers instanceof Headers) p.headers.set("X-CSRF-Token",T);
+      else p.headers["X-CSRF-Token"]=T;
+    }
+    return o.apply(this,[u,p]);
+  };
+})();
+</script>
 
 <nav>
   <a href="/" class="logo">
     <div class="logo-icon">🎨</div>
-    <div><div class="logo-text">Multimedia<span>Track</span></div></div>
+    <div><div class="logo-text">Axula</div></div>
   </a>
   <div class="nav-links">
     <a href="/reportes" class="nav-btn"><i class="fas fa-flag"></i> Reportes</a>
@@ -154,18 +182,44 @@ td{padding:10px 14px;font-size:12px;}
     <button onclick="calcularClusters()" class="nav-btn primary" id="btn-calc">
       <i class="fas fa-brain"></i> Analizar patrones
     </button>
+    <!-- Avatar dropdown -->
+    <div class="mt-theme-toggle" title="Cambiar tema">
+      <button class="mt-tbtn" data-mt="light"  onclick="setTheme('light')">&#9728; Claro</button>
+      <button class="mt-tbtn" data-mt="auto"   onclick="setTheme('auto')">&#8635; Auto</button>
+      <button class="mt-tbtn" data-mt="dark"   onclick="setTheme('dark')">&#9790; Oscuro</button>
+    </div>
+    <div style="position:relative" id="avatar-menu-wrap">
+      <div style="display:flex;align-items:center;gap:8px;padding:5px 10px 5px 5px;
+                  border:1px solid var(--border);border-radius:99px;background:var(--surface);
+                  cursor:pointer;user-select:none;transition:border-color .15s;"
+           onclick="toggleAvatarMenu()"
+           onmouseover="this.style.borderColor='var(--accent)'"
+           onmouseout="this.style.borderColor='var(--border)'">
+        <div style="width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;
+                    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;">
+          {{ current_user.nombre[:1].upper() if current_user and current_user.nombre else 'U' }}
+        </div>
+        <div style="max-width:80px;overflow:hidden;">
+          <div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)">{{ current_user.nombre if current_user else 'Usuario' }}</div>
+          <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;font-weight:700;">{{ current_user.rol | replace('_',' ') | title if current_user else '' }}</div>
+        </div>
+        <i class="fas fa-chevron-down" style="font-size:9px;color:var(--muted)"></i>
+      </div>
+      <div id="avatar-dropdown" style="display:none;position:absolute;top:calc(100% + 6px);right:0;
+            width:200px;background:var(--surface);border:1px solid var(--border);
+            border-radius:11px;box-shadow:0 8px 24px rgba(0,0,0,.3);z-index:500;padding:6px;">
+        <div style="padding:10px 12px;border-bottom:1px solid var(--border);margin-bottom:4px">
+          <div style="font-weight:700;font-size:13px;color:var(--text)">{{ current_user.nombre if current_user else '' }}</div>
+          <div style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace">@{{ current_user.username if current_user else '' }}</div>
+        </div>
+        <a href="/mi-perfil" style="text-decoration:none"><div class="dd-item"><i class="fas fa-id-card" style="color:var(--accent);width:16px"></i> Mi perfil</div></a>
+        <a href="/" style="text-decoration:none"><div class="dd-item"><i class="fas fa-table-columns" style="color:var(--muted);width:16px"></i> Dashboard</div></a>
+        <div style="border-top:1px solid var(--border);margin-top:4px;padding-top:4px">
+          <a href="/logout" style="text-decoration:none"><div class="dd-item" style="color:#ff6b6b"><i class="fas fa-right-from-bracket" style="width:16px"></i> Cerrar sesión</div></a>
+        </div>
+      </div>
+    </div>
   </div>
-  {% if current_user %}
-  <span style="font-size:11px;color:#555;display:flex;align-items:center;gap:5px;">
-    <i class="fas fa-circle" style="font-size:6px;color:#4dffb4;"></i>
-    {{ current_user.nombre }}
-    <span style="background:rgba(200,240,96,.1);color:#c8f060;padding:1px 7px;border-radius:10px;font-size:9px;font-weight:700;">{{ current_user.rol }}</span>
-  </span>
-  <a href="/logout" style="font-size:11px;border:1px solid rgba(255,107,107,.4);color:#ff6b6b;
-     padding:5px 10px;border-radius:8px;text-decoration:none;display:inline-flex;align-items:center;gap:5px;">
-    <i class="fas fa-right-from-bracket"></i>
-  </a>
-  {% endif %}
 </nav>
 
 <main>
@@ -222,7 +276,7 @@ td{padding:10px 14px;font-size:12px;}
         Estudiantes por perfil
       </div>
       <input id="buscar-est" placeholder="Buscar estudiante..." onkeyup="filtrarTabla()"
-             style="background:#111;border:1px solid #333;color:#f0f0f0;padding:7px 12px;
+             style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:7px 12px;
                     border-radius:8px;font-size:12px;outline:none;width:200px;">
     </div>
     <div class="filter-bar" id="filter-clusters"></div>
@@ -259,7 +313,7 @@ td{padding:10px 14px;font-size:12px;}
     </div>
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;position:relative;">
       <canvas id="bubble-canvas" style="width:100%;cursor:crosshair;" height="420"></canvas>
-      <div id="bubble-tooltip" style="display:none;position:absolute;background:#1a1a1a;border:1px solid #333;
+      <div id="bubble-tooltip" style="display:none;position:absolute;background:var(--surface);border:1px solid var(--border);
            border-radius:10px;padding:10px 14px;font-size:12px;pointer-events:none;z-index:100;min-width:160px;"></div>
     </div>
     <!-- Legend -->
@@ -288,7 +342,7 @@ var ALL_DATA = null;
 var ACTIVE_CLUSTER = 'todos';
 
 function fmtFecha(f) {
-  if (!f) return '—';
+  if (!f) return '--';
   return f.substring(0, 16).replace('T',' ');
 }
 
@@ -382,7 +436,7 @@ function renderCharts(clusters) {
   var html2  = '';
   sorted.forEach(function(c, i) {
     var pct = Math.round((c.avg_riesgo||0) / maxR * 100);
-    var col = i===0 ? '#ff6b6b' : i===1 ? '#ffc94d' : '#c8f060';
+    var col = i===0 ? '#ff6b6b' : i===1 ? '#ffc94d' : '#378ADD';
     html2 += '<div class="horiz-bar">' +
       '<div class="horiz-label">'+(c.icon||'')+ ' '+c.cluster_label+'</div>' +
       '<div class="horiz-bg"><div class="horiz-fill" style="width:'+pct+'%;background:'+col+'"></div></div>' +
@@ -411,12 +465,12 @@ function renderTabla(estudiantes) {
       '<td><strong>'+e.nombre+' '+e.apellido+'</strong></td>' +
       '<td style="color:var(--muted)">'+e.grado+'</td>' +
       '<td><span class="badge-cluster" style="background:'+col+'22;color:'+col+';">' +
-        (e.cluster_label||'—') +
+        (e.cluster_label||'--') +
       '</span></td>' +
-      '<td style="font-family:var(--font-mono)">'+(e.p_acad||'—')+'</td>' +
-      '<td style="font-family:var(--font-mono);color:'+riesgoCol+'">'+(e.indice_riesgo||'—')+'</td>' +
-      '<td style="font-family:var(--font-mono);color:var(--muted)">'+(e.cluster_score||'—')+'%</td>' +
-      '<td><button style="background:none;border:1px solid #333;color:#888;padding:4px 10px;border-radius:6px;font-size:10px;cursor:pointer;" onclick="event.stopPropagation();ir('+e.id+')">Ver →</button></td>' +
+      '<td style="font-family:var(--font-mono)">'+(e.p_acad||'--')+'</td>' +
+      '<td style="font-family:var(--font-mono);color:'+riesgoCol+'">'+(e.indice_riesgo||'--')+'</td>' +
+      '<td style="font-family:var(--font-mono);color:var(--muted)">'+(e.cluster_score||'--')+'%</td>' +
+      '<td><button style="background:var(--surface2);border:1px solid var(--border);color:var(--text-muted);padding:4px 10px;border-radius:6px;font-size:10px;cursor:pointer;" onclick="event.stopPropagation();ir('+e.id+')">Ver -></button></td>' +
       '</tr>';
   });
   document.getElementById('tbody-est').innerHTML = html || '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--muted)">Sin datos</td></tr>';
@@ -476,7 +530,7 @@ async function calcularClusters() {
 
 function ir(id) { window.location.href = '/perfil/'+id; }
 
-// ── BUBBLE CHART ────────────────────────────────────────────────────────────
+// -- BUBBLE CHART ------------------------------------------------------------
 var BUBBLE_DATA    = [];
 var BUBBLE_MENCION = '';
 
@@ -533,7 +587,7 @@ function drawBubbles() {
     // Axis labels
     ctx.fillStyle = '#555'; ctx.font = '11px DM Sans,sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('Promedio Académico →', PAD.left + plotW/2, H - 4);
+    ctx.fillText('Promedio Académico ->', PAD.left + plotW/2, H - 4);
     ctx.save(); ctx.translate(13, PAD.top + plotH/2); ctx.rotate(-Math.PI/2);
     ctx.fillText('↑ Índice Riesgo', 0, 0); ctx.restore();
 
@@ -574,7 +628,7 @@ function drawBubbles() {
     var legend = document.getElementById('bubble-legend');
     if (legend && ALL_DATA && ALL_DATA.clusters) {
         legend.innerHTML = ALL_DATA.clusters.map(function(c){
-            return '<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:#888;">' +
+            return '<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-muted);">' +
                 '<div style="width:10px;height:10px;border-radius:50%;background:'+c.color+'"></div>' +
                 c.cluster_label + ' ('+c.n+')' +
             '</div>';
@@ -606,10 +660,10 @@ function drawBubbles() {
             var rc = (hit.indice_riesgo||0)>=50?'#ff6b6b':(hit.indice_riesgo||0)>=30?'#ffc44d':'#4dffb4';
             tip.innerHTML =
                 '<div style="font-weight:700;margin-bottom:4px;">' + (hit.nombre||'') + ' ' + (hit.apellido||'') + '</div>' +
-                '<div style="color:#888;font-size:11px;">' + (hit.curso||'') + '</div>' +
+                '<div style="color:var(--text-muted);font-size:11px;">' + (hit.curso||'') + '</div>' +
                 '<div style="margin-top:6px;display:flex;gap:10px;">' +
-                    '<span>📚 <b>' + (hit.p_acad||'—') + '</b></span>' +
-                    '<span style="color:'+rc+'">⚡ <b>' + (hit.indice_riesgo||'—') + '</b></span>' +
+                    '<span>📚 <b>' + (hit.p_acad||'--') + '</b></span>' +
+                    '<span style="color:'+rc+'">⚡ <b>' + (hit.indice_riesgo||'--') + '</b></span>' +
                 '</div>' +
                 (hit.cluster_label ? '<div style="margin-top:4px;font-size:10px;color:'+( hit.cluster_color||'#888')+';">'+hit.cluster_label+'</div>' : '');
         } else {
@@ -641,9 +695,11 @@ renderStats = function(data) {
 };
 
 // Cargar al inicio
-cargarPatrones();
-cargarComparativa();
-
+// Cargar al inicio
+document.addEventListener('DOMContentLoaded', function() {
+    cargarPatrones();
+    cargarComparativa();
+});
 async function cargarComparativa() {
   try {
     var res  = await fetch('/api/comparativa-mencion');
@@ -705,7 +761,7 @@ function renderComparativa(menciones) {
   });
   cards += '</div>';
 
-  // Comparison chart — horizontal bars side by side per metric
+  // Comparison chart -- horizontal bars side by side per metric
   var chart = '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;">' +
     '<div style="font-family:var(--font-display);font-size:12px;font-weight:800;margin-bottom:16px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">Métricas comparativas</div>';
 
@@ -722,11 +778,11 @@ function renderComparativa(menciones) {
       chart +=
         '<div style="display:flex;align-items:center;gap:10px;">' +
           '<div style="font-size:11px;color:var(--text);width:110px;flex-shrink:0;">'+ m.mencion +'</div>' +
-          '<div style="flex:1;height:10px;background:#1a1a1a;border-radius:5px;overflow:hidden;">' +
+          '<div style="flex:1;height:10px;background:var(--surface2);border-radius:5px;overflow:hidden;">' +
             '<div style="width:'+ pct +'%;height:100%;background:'+ col +';border-radius:5px;transition:width .8s ease;"></div>' +
           '</div>' +
           '<div style="font-family:var(--font-mono);font-size:11px;color:'+ col +';min-width:36px;text-align:right;">' +
-            (v > 0 ? v : '—') +
+            (v > 0 ? v : '--') +
           '</div>' +
         '</div>';
     });
@@ -740,7 +796,7 @@ function renderComparativa(menciones) {
 function kpiMini(label, val, color) {
   return '<div style="text-align:center;background:#111;border-radius:7px;padding:7px 4px;">' +
     '<div style="font-family:var(--font-display);font-size:16px;font-weight:800;color:'+ color +';">' +
-      (val > 0 ? val : '—') +
+      (val > 0 ? val : '--') +
     '</div>' +
     '<div style="font-size:9px;color:#555;margin-top:2px;">'+ label +'</div>' +
   '</div>';

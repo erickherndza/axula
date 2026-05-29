@@ -693,14 +693,55 @@
 [data-theme="light"] .kpi-l  { color: #4A6080 !important; font-weight: 600 !important; }
 [data-theme="light"] .kpi-sub { color: #04407F !important; }
 
-/* ── Sidebar item activo ── */
-[data-theme="light"] .sb-item.active {
-  background: #2661F6 !important;
-  color: #fff !important;
-  font-weight: 700 !important;
+/* ── Sidebar — texto gris neutro para legibilidad (user: "ponlo gris") ── */
+.sb-item              { color: #8C9BB5 !important; }
+.sb-item:hover        { color: #C8DAFB !important; background: rgba(38,97,246,.12) !important; }
+.sb-item.active       { background: rgba(38,97,246,.2) !important; color: #fff !important; font-weight:700 !important; }
+.sb-label             { color: #5A6A80 !important; }
+.sb-count             { background: rgba(38,97,246,.15) !important; color: #8BAEF8 !important; }
+
+[data-theme="light"] .sb-item        { color: #4A5E7A !important; }
+[data-theme="light"] .sb-item:hover  { color: #0A1628 !important; background: #EEF2FC !important; }
+[data-theme="light"] .sb-item.active { background: #2661F6 !important; color: #fff !important; font-weight:700 !important; }
+[data-theme="light"] .sb-label       { color: #6B7A8D !important; }
+[data-theme="light"] .sb-count       { background: #EEF2FC !important; color: #04407F !important; }
+[data-theme="light"] .sidebar        { background: #fff !important; border-right: 1px solid #D0DBF0 !important; }
+
+/* ── Contraste de tarjetas — separación visible respecto al fondo ── */
+/* Light: sombra + borde definido */
+[data-theme="light"] .kpi,
+[data-theme="light"] .est-card,
+[data-theme="light"] .qcard,
+[data-theme="light"] .upload-card,
+[data-theme="light"] .user-card,
+[data-theme="light"] .panel {
+  background: #FFFFFF !important;
+  border: 1px solid #D0DBF0 !important;
+  box-shadow: 0 1px 4px rgba(10,22,40,.10), 0 0 0 0.5px rgba(10,22,40,.06) !important;
 }
-[data-theme="light"] .sb-item:hover { background: #EEF2FC !important; color: #0A1628 !important; }
-[data-theme="light"] .sb-count      { background: #EEF2FC !important; color: #04407F !important; }
+/* Dark: borde más visible y sombra profunda */
+[data-theme="dark"] .kpi,
+[data-theme="dark"] .est-card,
+[data-theme="dark"] .qcard,
+[data-theme="dark"] .panel {
+  border: 1px solid rgba(38,97,246,.3) !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,.35) !important;
+}
+/* Tarjeta de caso "active" y variantes de estado */
+[data-theme="light"] .caso-card,
+[data-theme="light"] [class*="caso"],
+[data-theme="light"] .card {
+  background: #FFFFFF !important;
+  border: 1px solid #D0DBF0 !important;
+  box-shadow: 0 1px 4px rgba(10,22,40,.10) !important;
+}
+[data-theme="dark"] .caso-card,
+[data-theme="dark"] [class*="caso"],
+[data-theme="dark"] .card {
+  background: #081C36 !important;
+  border: 1px solid rgba(38,97,246,.28) !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,.4) !important;
+}
 
 /* ── Mention dots — sin naranja ── */
 .dot-mm { background: #2661F6 !important; }   /* Multimedia */
@@ -788,9 +829,37 @@
 [data-theme="dark"] [style*="color: #60b8f0"] { color: #8BAEF8 !important; }
 [data-theme="dark"] [style*="color:#ff9f60"],
 [data-theme="dark"] [style*="color: #ff9f60"],
-[data-theme="dark"] [style*="color:#c8f060"]  { color: #BDD1FA !important; }
+[data-theme="dark"] [style*="color:#c8f060"],
+[data-theme="dark"] [style*="color:#4dffb4"],
+[data-theme="dark"] [style*="color: #4dffb4"] { color: #BDD1FA !important; }
+[data-theme="dark"] [style*="color:#ffc44d"],
+[data-theme="dark"] [style*="color: #ffc44d"]  { color: #8BAEF8 !important; }
 [data-theme="dark"] .badge-alerta     { background: rgba(209,52,56,.15)  !important; color: #F08080 !important; }
 [data-theme="dark"] .badge-silencioso { background: rgba(38,97,246,.15)  !important; color: #8BAEF8 !important; }
+[data-theme="dark"] .badge-verde,
+[data-theme="dark"] .f-si             { background: rgba(38,97,246,.15)  !important; color: #8BAEF8 !important; border-color: rgba(38,97,246,.3) !important; }
+[data-theme="dark"] .badge-naranja    { background: rgba(38,97,246,.12)  !important; color: #8BAEF8 !important; border-color: rgba(38,97,246,.25) !important; }
+
+/* ── Global — naranja y verde neón bloqueados en AMBOS modos ── */
+/* Aplica a elementos que tienen colores inline o clases específicas */
+.badge-verde  { background: rgba(38,97,246,.1)  !important; color: #2661F6 !important; border-color: rgba(38,97,246,.25) !important; }
+.badge-naranja{ background: rgba(38,97,246,.08) !important; color: #04407F !important; border-color: rgba(38,97,246,.2)  !important; }
+.f-si         { background: rgba(38,97,246,.1)  !important; color: #2661F6 !important; }
+
+[data-theme="light"] .badge-verde  { background: #EEF2FC !important; color: #2661F6 !important; border-color: #BDD1FA !important; }
+[data-theme="light"] .badge-naranja{ background: #EEF2FC !important; color: #04407F !important; border-color: #BDD1FA !important; }
+[data-theme="light"] .f-si         { background: #EEF2FC !important; color: #2661F6 !important; }
+
+/* ── Inline style overrides — naranja en CUALQUIER elemento ── */
+[style*="color:#ffc44d"]  { color: #04407F !important; }
+[style*="color:#ff9f60"]  { color: #04407F !important; }
+[style*="color:#4dffb4"]  { color: #2661F6 !important; }
+[style*="color:#c8f060"]  { color: #2661F6 !important; }
+[style*="color:#378ADD"]  { color: #2661F6 !important; }
+[style*="color:#60b8f0"]  { color: #5B8AF7 !important; }
+
+/* Pero en dark mode estos colores se ajustan a la paleta dark */
+[data-theme="dark"] [style*="color:#378ADD"] { color: #5B8AF7 !important; }
 
 /* ── Scrollbar dark ── */
 [data-theme="dark"] ::-webkit-scrollbar-track { background: #050E1F; }

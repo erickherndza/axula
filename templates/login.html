@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="es" data-theme="light">
+<html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MultimediaTrack — Acceso</title>
+<title>Axula — Acceso</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -22,8 +22,8 @@ body::before {
   content:'';
   position:fixed; inset:0;
   background-image:
-    linear-gradient(rgba(200,240,96,.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(200,240,96,.03) 1px, transparent 1px);
+    linear-gradient(rgba(55,138,221,.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(55,138,221,.06) 1px, transparent 1px);
   background-size:40px 40px;
   pointer-events:none;
 }
@@ -33,7 +33,7 @@ body::after {
   content:'';
   position:fixed;
   width:600px; height:600px;
-  background: radial-gradient(circle, rgba(200,240,96,.06) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(55,138,221,.10) 0%, transparent 70%);
   top:50%; left:50%; transform:translate(-50%,-50%);
   pointer-events:none;
 }
@@ -59,10 +59,10 @@ body::after {
   background: var(--accent);
   display:inline-flex; align-items:center; justify-content:center;
   font-size:26px; margin-bottom:12px;
-  box-shadow: 0 0 30px rgba(200,240,96,.25);
+  box-shadow: 0 0 30px rgba(55,138,221,.30);
 }
 .logo-title {
-  font-family:'Syne',sans-serif; font-size:20px; font-weight:800;
+  font-family:'Syne',sans-serif; font-size:24px; font-weight:800;
   letter-spacing:-.3px;
 }
 .logo-title span { color:var(--accent); }
@@ -80,54 +80,55 @@ body::after {
 
 .card-title {
   font-family:'Syne',sans-serif;
-  font-size:16px; font-weight:800; margin-bottom:4px;
+  font-size:20px; font-weight:800; margin-bottom:6px;
 }
 .card-sub {
-  font-size:12px; color:var(--muted); margin-bottom:24px;
+  font-size:14px; color:var(--muted); margin-bottom:28px;
 }
 
-.field { margin-bottom:16px; }
+.field { margin-bottom:20px; }
 .field label {
-  display:block; font-size:11px; color:var(--muted);
-  text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px;
+  display:block; font-size:13px; color:var(--text);
+  font-weight:600; letter-spacing:.01em; margin-bottom:8px;
 }
 .field input {
-  width:100%; background:#111; border:1px solid #2a2a2a;
-  color:var(--text); padding:10px 14px; border-radius:9px;
-  font-size:13px; outline:none; font-family:'DM Sans',sans-serif;
+  width:100%; background:var(--surface2); border:1px solid var(--border);
+  color:var(--text); padding:11px 14px; border-radius:9px;
+  font-size:14px; outline:none; font-family:'DM Sans',sans-serif;
   transition: border-color .2s, box-shadow .2s;
 }
+.field input::placeholder { color:var(--muted); }
 .field input:focus {
   border-color:var(--accent);
-  box-shadow:0 0 0 3px rgba(200,240,96,.08);
+  box-shadow:0 0 0 3px rgba(55,138,221,.15);
 }
 
 .btn-login {
-  width:100%; padding:11px;
+  width:100%; padding:14px;
   background:var(--accent); border:none; border-radius:9px;
-  color:#000; font-size:13px; font-weight:700;
+  color:#fff; font-size:15px; font-weight:700;
   font-family:'Syne',sans-serif; cursor:pointer;
   transition:background .2s, transform .1s;
-  margin-top:4px;
+  margin-top:8px;
 }
 .btn-login:hover  { background:#b0e040; }
 .btn-login:active { transform:scale(.98); }
 
 .error-msg {
-  background:rgba(255,107,107,.1); border:1px solid rgba(255,107,107,.25);
-  color:#ff6b6b; border-radius:8px; padding:10px 14px;
-  font-size:12px; margin-bottom:16px;
+  background:rgba(185,28,28,.07); border:1px solid rgba(185,28,28,.2);
+  color:var(--danger); border-radius:8px; padding:12px 16px;
+  font-size:13px; margin-bottom:16px;
   display:flex; align-items:center; gap:8px;
 }
 
 .hint {
-  margin-top:20px; padding:12px 14px;
-  background:rgba(200,240,96,.04);
-  border:1px solid rgba(200,240,96,.1);
-  border-radius:10px; font-size:11px; color:#555;
-  line-height:1.7;
+  margin-top:20px; padding:14px 16px;
+  background:var(--surface2);
+  border:1px solid var(--border);
+  border-radius:10px; font-size:13px; color:var(--muted);
+  line-height:1.8;
 }
-.hint b { color:#888; }
+.hint b { color:var(--text); font-weight:600; }
 
 .footer {
   text-align:center; margin-top:20px;
@@ -149,21 +150,44 @@ body::after {
   white-space:nowrap;
 }
 .mt-tbtn.theme-btn-active {
-  background:var(--theme-toggle-actbg,rgba(200,240,96,.1));
-  color:var(--theme-toggle-act,#c8f060);
+  background:var(--theme-toggle-actbg,rgba(55,138,221,.15));
+  color:var(--theme-toggle-act,#378ADD);
   box-shadow:0 1px 3px rgba(0,0,0,.3);
 }
 </style>
   <link rel="stylesheet" href="/static/theme.css">
-  <script src="/static/theme.js"></script>
+<script>
+/* Axula — theme inline */
+(function(){
+  var K='axula_theme',S=6,E=19;
+  function auto(){var h=new Date().getHours();return h>=S&&h<E?'light':'dark';}
+  function get(){try{return localStorage.getItem(K)||'auto';}catch(e){return 'auto';}}
+  function set(v){try{localStorage.setItem(K,v);}catch(e){}}
+  function apply(p){document.documentElement.setAttribute('data-theme',p==='auto'?auto():p);sync(p);}
+  function sync(p){document.querySelectorAll('[data-mt]').forEach(function(b){b.classList.toggle('theme-btn-active',b.getAttribute('data-mt')===p);});}
+  window.setTheme=function(p){set(p);apply(p);};
+  window.getTheme=function(){return get();};
+  apply(get());
+  document.addEventListener('DOMContentLoaded',function(){sync(get());setInterval(function(){if(get()==='auto')apply('auto');},60000);});
+})();
+</script>
 </head>
 <body>
+
+  <!-- Theme toggle -->
+  <div style="position:fixed;top:12px;right:16px;z-index:999;">
+    <div class="mt-theme-toggle" title="Cambiar tema">
+      <button class="mt-tbtn" data-mt="light"  onclick="setTheme('light')">&#9728; Claro</button>
+      <button class="mt-tbtn" data-mt="auto"   onclick="setTheme('auto')">&#8635; Auto</button>
+      <button class="mt-tbtn" data-mt="dark"   onclick="setTheme('dark')">&#9790; Oscuro</button>
+    </div>
+  </div>
 
 <div class="login-wrap">
 
   <div class="logo-block">
     <div class="logo-icon">🎨</div>
-    <div class="logo-title">Multimedia<span>Track</span></div>
+    <div class="logo-title">Axula</div>
     <div class="logo-sub">C.E. Benito Juárez — Modalidad en Artes</div>
     <div style="font-size:9px;color:#333;margin-top:3px;font-family:'DM Mono',monospace;letter-spacing:.3px;">
       Seguimiento Estudiantil · MINERD RD
@@ -182,8 +206,8 @@ body::after {
 
     <form method="POST" action="/login">
       <div class="field">
-        <label>Correo institucional</label>
-        <input type="email" name="username" placeholder="nombre@educacion.edu.do" autofocus autocomplete="email">
+        <label>Usuario o correo institucional</label>
+        <input type="text" name="username" placeholder="usuario o nombre@educacion.edu.do" autofocus autocomplete="username">
       </div>
       <div class="field">
         <label>Contraseña</label>
@@ -192,14 +216,106 @@ body::after {
       <button type="submit" class="btn-login">Entrar →</button>
     </form>
 
+    <div style="text-align:center;margin-top:14px;">
+      <button onclick="abrirModalRecuperar()" type="button"
+              style="background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;
+                     text-decoration:underline;font-family:inherit;margin-top:4px;">
+        ¿Olvidaste tu contraseña?
+      </button>
+    </div>
+
     <div class="hint">
-      <b>Correo:</b> usa tu correo institucional @educacion.edu.do<br>
+      <b>Usuario:</b> escribe tu nombre de usuario (ej: <code style="font-size:10px;color:#666;">admin</code>) o tu correo institucional<br>
       <b>Coordinador:</b> acceso completo a perfiles, reportes y análisis.<br>
       <b>Profesor:</b> acceso a sus estudiantes y materias asignadas.
     </div>
+
+    <!-- Modal recuperar contraseña -->
+    <div id="modal-recovery" style="display:none;position:fixed;inset:0;z-index:9999;
+         background:rgba(0,0,0,.6);align-items:center;justify-content:center;padding:16px;">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;
+                  padding:32px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.3);">
+        <div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:6px;font-family:'Syne',sans-serif;">
+          🔐 Recuperar contraseña
+        </div>
+        <div style="font-size:14px;color:var(--muted);margin-bottom:24px;line-height:1.6;">
+          Ingresa tu correo institucional y te enviaremos un enlace para crear una nueva contraseña.
+        </div>
+        <div style="margin-bottom:20px;">
+          <label style="font-size:13px;font-weight:600;color:var(--text);display:block;margin-bottom:8px;">
+            Correo institucional
+          </label>
+          <input id="recovery-email" type="email" placeholder="nombre@educacion.edu.do"
+                 style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);
+                        padding:11px 14px;border-radius:9px;font-size:14px;box-sizing:border-box;
+                        outline:none;font-family:inherit;transition:border-color .2s;">
+        </div>
+        <div id="recovery-status" style="font-size:13px;margin-bottom:16px;min-height:20px;"></div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;">
+          <button onclick="cerrarModalRecuperar()" type="button"
+                  style="background:transparent;border:1px solid var(--border);color:var(--muted);padding:11px 20px;
+                         border-radius:9px;cursor:pointer;font-size:14px;font-family:inherit;transition:all .15s;">
+            Cancelar
+          </button>
+          <button onclick="enviarRecuperar()" type="button"
+                  style="background:var(--accent);border:none;color:#fff;padding:11px 20px;
+                         border-radius:9px;cursor:pointer;font-size:14px;font-weight:700;font-family:inherit;transition:opacity .15s;">
+            Enviar enlace
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+    function abrirModalRecuperar() {
+      document.getElementById('recovery-email').value = '';
+      document.getElementById('recovery-status').textContent = '';
+      document.getElementById('modal-recovery').style.display = 'flex';
+    }
+    function cerrarModalRecuperar() {
+      document.getElementById('modal-recovery').style.display = 'none';
+    }
+    async function enviarRecuperar() {
+      var email  = document.getElementById('recovery-email').value.trim();
+      var status = document.getElementById('recovery-status');
+      if (!email) { status.innerHTML = '<span style="color:#ef4444;">Ingresa tu correo</span>'; return; }
+      status.innerHTML = '<span style="color:#888;">Enviando...</span>';
+      try {
+        const res = await fetch('/api/recovery/request', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({email})
+        });
+        const d = await res.json();
+        if (d.ok) {
+          if (d.reset_url) {
+            // SMTP no configurado — mostrar enlace directo clicable
+            status.innerHTML =
+              '<div style="margin-bottom:8px;color:#ffc44d;font-size:12px;">⚠ El correo automático no está configurado aún.</div>' +
+              '<div style="color:#aaa;font-size:11px;margin-bottom:10px;">Usa este enlace directo para cambiar tu contraseña:</div>' +
+              '<a href="' + d.reset_url + '" target="_blank" ' +
+              'style="display:block;background:#185FA5;color:#fff;text-align:center;padding:10px 16px;' +
+              'border-radius:8px;font-weight:700;font-size:13px;text-decoration:none;">' +
+              '🔑 Cambiar contraseña ahora →</a>' +
+              '<div style="font-size:10px;color:#555;margin-top:6px;word-break:break-all">' + d.reset_url + '</div>';
+          } else {
+            status.innerHTML = '<span style="color:#378ADD;">✓ ' + (d.msg || 'Revisa tu bandeja de entrada') + '</span>';
+          }
+        } else {
+          status.innerHTML = '<span style="color:#ef4444;">⚠ ' + (d.error || 'Error') + '</span>';
+        }
+      } catch(e) {
+        status.innerHTML = '<span style="color:#ef4444;">Error de conexión</span>';
+      }
+    }
+    // Cerrar modal al hacer clic fuera
+    document.getElementById('modal-recovery').addEventListener('click', function(e) {
+      if (e.target === this) cerrarModalRecuperar();
+    });
+    </script>
   </div>
 
-  <div class="footer">MultimediaTrack · Modalidad Artes &copy; 2025</div>
+  <div class="footer">Axula · C.E. Benito Juárez · Modalidad Artes &copy; 2026</div>
 
 </div>
 

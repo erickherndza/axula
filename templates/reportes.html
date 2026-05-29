@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="es" data-theme="light">
+<html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Reportes — MultimediaTrack</title>
+<title>Reportes — Axula</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -43,11 +43,11 @@ main{max-width:1200px;margin:0 auto;padding:28px 20px;}
       border:1px solid var(--border);background:transparent;color:var(--muted);
       font-family:var(--font-display);font-weight:700;transition:all .2s;}
 .ftab.active,.ftab:hover{border-color:var(--accent);color:var(--accent);}
-.ftab.active{background:rgba(200,240,96,.1);}
+.ftab.active{background:rgba(55,138,221,.1);}
 .search{background:#111;border:1px solid #333;color:#f0f0f0;padding:7px 12px;
         border-radius:20px;font-size:12px;outline:none;width:200px;}
 .search:focus{border-color:var(--accent);}
-select.fsel{background:#111;border:1px solid #333;color:#888;padding:6px 10px;
+select.fsel{background:var(--surface);border:1px solid var(--border);color:var(--muted);padding:6px 10px;
             border-radius:20px;font-size:11px;outline:none;cursor:pointer;}
 
 /* TABLE */
@@ -66,7 +66,7 @@ td{padding:11px 14px;font-size:12px;vertical-align:middle;}
        border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap;}
 .b-conducta  {background:rgba(255,196,77,.12);color:#ffc44d;}
 .b-psicologico{background:rgba(96,184,240,.12);color:#60b8f0;}
-.b-academico {background:rgba(200,240,96,.12);color:#c8f060;}
+.b-academico {background:rgba(55,138,221,.12);color:#378ADD;}
 .b-incidente {background:rgba(255,107,107,.12);color:#ff6b6b;}
 .b-alta      {background:rgba(255,107,107,.15);color:#ff6b6b;}
 .b-media     {background:rgba(255,196,77,.12);color:#ffc44d;}
@@ -85,7 +85,7 @@ td{padding:11px 14px;font-size:12px;vertical-align:middle;}
              display:flex;justify-content:space-between;align-items:center;}
 .field{margin-bottom:14px;}
 .field label{font-size:11px;color:var(--muted);display:block;margin-bottom:5px;}
-.field input,.field textarea,.field select{width:100%;background:#111;border:1px solid #333;
+.field input,.field textarea,.field select{width:100%;background:var(--surface);border:1px solid var(--border);
   color:var(--text);padding:8px 11px;border-radius:8px;font-size:12px;
   outline:none;font-family:var(--font-body);}
 .field input:focus,.field textarea:focus,.field select:focus{border-color:var(--accent);}
@@ -114,7 +114,7 @@ td{padding:11px 14px;font-size:12px;vertical-align:middle;}
              border-radius:8px;margin-bottom:16px;}
 .seguimiento-box{background:#111;border:1px solid #222;border-radius:8px;padding:14px;margin-bottom:14px;}
 .seguimiento-title{font-size:11px;color:var(--accent);font-weight:700;margin-bottom:8px;}
-.seg-input{width:100%;background:#1a1a1a;border:1px solid #2a2a2a;color:var(--text);
+.seg-input{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);
            padding:7px 10px;border-radius:7px;font-size:12px;outline:none;
            font-family:var(--font-body);resize:vertical;min-height:70px;}
 .seg-input:focus{border-color:var(--accent);}
@@ -140,29 +140,67 @@ td{padding:11px 14px;font-size:12px;vertical-align:middle;}
   <script src="/static/theme.js"></script>
 </head>
 <body>
+<script>
+(function(){
+  var T="{{ csrf_token }}";
+  var o=window.fetch;
+  window.fetch=function(u,p){
+    p=p||{};
+    var m=(p.method||"GET").toUpperCase();
+    if(m!=="GET"&&m!=="HEAD"){
+      p.headers=p.headers||{};
+      if(p.headers instanceof Headers) p.headers.set("X-CSRF-Token",T);
+      else p.headers["X-CSRF-Token"]=T;
+    }
+    return o.apply(this,[u,p]);
+  };
+})();
+</script>
 
 <nav>
   <a href="/" class="logo">
     <div class="logo-icon">🎨</div>
-    <div><div class="logo-text">Multimedia<span>Track</span></div></div>
+    <div><div class="logo-text">Axula</div></div>
   </a>
   <div class="nav-links">
     <a href="/patrones" class="nbtn"><i class="fas fa-brain"></i> Patrones</a>
-    <a href="/"         class="nbtn"><i class="fas fa-arrow-left"></i> Dashboard</a>
+    <a href="/" class="nbtn"><i class="fas fa-arrow-left"></i> Dashboard</a>
     <button onclick="abrirNuevoReporte()" class="nbtn pri">
       <i class="fas fa-plus"></i> Nuevo reporte
     </button>
+    <!-- Avatar dropdown -->
+    <div style="position:relative" id="avatar-menu-wrap">
+      <div style="display:flex;align-items:center;gap:8px;padding:5px 10px 5px 5px;
+                  border:1px solid var(--border);border-radius:99px;background:var(--surface);
+                  cursor:pointer;user-select:none;transition:border-color .15s;"
+           onclick="toggleAvatarMenu()"
+           onmouseover="this.style.borderColor='var(--accent)'"
+           onmouseout="this.style.borderColor='var(--border)'">
+        <div style="width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;
+                    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;">
+          {{ current_user.nombre[:1].upper() if current_user and current_user.nombre else 'U' }}
+        </div>
+        <div style="max-width:80px;overflow:hidden;">
+          <div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)">{{ current_user.nombre if current_user else 'Usuario' }}</div>
+          <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;font-weight:700;">{{ current_user.rol | replace('_',' ') | title if current_user else '' }}</div>
+        </div>
+        <i class="fas fa-chevron-down" style="font-size:9px;color:var(--muted)"></i>
+      </div>
+      <div id="avatar-dropdown" style="display:none;position:absolute;top:calc(100% + 6px);right:0;
+            width:200px;background:var(--surface);border:1px solid var(--border);
+            border-radius:11px;box-shadow:0 8px 24px rgba(0,0,0,.3);z-index:500;padding:6px;">
+        <div style="padding:10px 12px;border-bottom:1px solid var(--border);margin-bottom:4px">
+          <div style="font-weight:700;font-size:13px;color:var(--text)">{{ current_user.nombre if current_user else '' }}</div>
+          <div style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace">@{{ current_user.username if current_user else '' }}</div>
+        </div>
+        <a href="/mi-perfil" style="text-decoration:none"><div class="dd-item"><i class="fas fa-id-card" style="color:var(--accent);width:16px"></i> Mi perfil</div></a>
+        <a href="/" style="text-decoration:none"><div class="dd-item"><i class="fas fa-table-columns" style="color:var(--muted);width:16px"></i> Dashboard</div></a>
+        <div style="border-top:1px solid var(--border);margin-top:4px;padding-top:4px">
+          <a href="/logout" style="text-decoration:none"><div class="dd-item" style="color:#ff6b6b"><i class="fas fa-right-from-bracket" style="width:16px"></i> Cerrar sesión</div></a>
+        </div>
+      </div>
+    </div>
   </div>
-  {% if current_user %}
-  <span style="font-size:11px;color:#555;display:flex;align-items:center;gap:5px;">
-    <i class="fas fa-circle" style="font-size:6px;color:#4dffb4;"></i>
-    {{ current_user.nombre }}
-    <span style="background:rgba(200,240,96,.1);color:#c8f060;padding:1px 7px;border-radius:10px;font-size:9px;font-weight:700;">{{ current_user.rol }}</span>
-  </span>
-  <a href="/logout" class="nbtn" style="border-color:rgba(255,107,107,.4);color:#ff6b6b;text-decoration:none;">
-    <i class="fas fa-right-from-bracket"></i>
-  </a>
-  {% endif %}
 </nav>
 
 <main>
@@ -177,7 +215,7 @@ td{padding:11px 14px;font-size:12px;vertical-align:middle;}
     <div class="sc" style="cursor:pointer;" onclick="setTipo('psicologico')"    title="Reportes psicológicos">
       <div class="sn" style="color:#60b8f0" id="st-psico">—</div><div class="sl">Psicológicos</div></div>
     <div class="sc" style="cursor:pointer;" title="Nuevos esta semana">
-      <div class="sn" style="color:#c8f060" id="st-semana">—</div><div class="sl">Esta semana</div></div>
+      <div class="sn" style="color:#378ADD" id="st-semana">—</div><div class="sl">Esta semana</div></div>
   </div>
 
   <!-- RESUMEN RÁPIDO — top estudiantes + distribución -->
@@ -334,7 +372,7 @@ function tipoBadge(tipo) {
 }
 function sevBadge(s) {
   var m = {Alta:'b-alta',Media:'b-media',Baja:'b-baja'};
-  return '<span class="badge '+(m[s]||'')+'">'+(s||'—')+'</span>';
+  return '<span class="badge '+(m[s]||'')+'">'+(s||'--')+'</span>';
 }
 function estadoBadge(s) {
   var m = {'Abierto':'b-abierto','Cerrado':'b-cerrado','En seguimiento':'b-seguimiento'};
@@ -463,14 +501,17 @@ function renderTabla(reportes) {
     return;
   }
   document.getElementById('tbody').innerHTML = reportes.map(function(r) {
+    var casoTag = r.caso_id
+      ? '<span title="Escalado a Caso #'+r.caso_id+'" style="margin-left:5px;padding:2px 6px;background:rgba(96,184,240,.15);border:1px solid rgba(96,184,240,.3);border-radius:4px;font-size:9px;color:#60b8f0;">⚖ Caso #'+r.caso_id+'</span>'
+      : '';
     return '<tr onclick="abrirDetalle('+r.id+')">' +
       '<td><strong>'+r.nombre+' '+r.apellido+'</strong><div style="font-size:10px;color:var(--muted)">'+r.grado+'</div></td>' +
       '<td>'+tipoBadge(r.tipo)+'</td>' +
-      '<td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(r.titulo||'<span style="color:#444">Sin título</span>')+'</td>' +
+      '<td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(r.titulo||'<span style="color:#444">Sin título</span>')+casoTag+'</td>' +
       '<td>'+sevBadge(r.severidad)+'</td>' +
       '<td>'+estadoBadge(r.estado)+'</td>' +
-      '<td style="color:var(--muted);font-size:11px">'+(r.reportado_por||'—')+'</td>' +
-      '<td style="color:var(--muted);font-size:11px;white-space:nowrap">'+(r.fecha||'—')+'</td>' +
+      '<td style="color:var(--muted);font-size:11px">'+(r.reportado_por||'--')+'</td>' +
+      '<td style="color:var(--muted);font-size:11px;white-space:nowrap">'+(r.fecha||'--')+'</td>' +
       '<td><button style="background:none;border:1px solid #333;color:#888;padding:4px 8px;border-radius:6px;font-size:10px;cursor:pointer;" onclick="event.stopPropagation();abrirDetalle('+r.id+')">Ver</button></td>' +
       '</tr>';
   }).join('');
@@ -480,15 +521,15 @@ function abrirDetalle(id) {
   var r = TODOS_REPORTES.find(function(x){ return x.id === id; });
   if (!r) return;
 
-  var col = r.tipo==='incidente_grave'?'#ff6b6b':r.tipo==='psicologico'?'#60b8f0':r.tipo==='academico'?'#c8f060':'#ffc44d';
+  var col = r.tipo==='incidente_grave'?'#ff6b6b':r.tipo==='psicologico'?'#60b8f0':r.tipo==='academico'?'#378ADD':'#ffc44d';
 
   document.getElementById('detalle-content').innerHTML =
     '<div class="detail-tipo">'+tipoBadge(r.tipo)+' '+sevBadge(r.severidad)+' '+estadoBadge(r.estado)+'</div>' +
     '<div class="detail-titulo">'+(r.titulo||'Sin título')+'</div>' +
     '<div class="detail-meta">' +
       '<strong>'+r.nombre+' '+r.apellido+'</strong> · '+r.grado+'<br>' +
-      'Subtipo: '+(r.subtipo||'—')+'<br>' +
-      'Reportado por: <strong>'+(r.reportado_por||'—')+'</strong><br>' +
+      'Subtipo: '+(r.subtipo||'--')+'<br>' +
+      'Reportado por: <strong>'+(r.reportado_por||'--')+'</strong><br>' +
       'Fecha: '+r.fecha +
     '</div>' +
     '<div class="detail-desc">'+r.descripcion+'</div>' +
@@ -502,6 +543,9 @@ function abrirDetalle(id) {
       '<button class="act-btn" onclick="cambiarEstado('+id+',\'En seguimiento\')">🔄 En seguimiento</button>' +
       '<button class="act-btn" onclick="cambiarEstado('+id+',\'Cerrado\')">✅ Cerrar</button>' +
       '<button class="act-btn" onclick="irPerfil('+r.estudiante_id+')">👤 Ver perfil</button>' +
+      (r.caso_id
+        ? '<a class="act-btn" href="/casos" style="text-decoration:none;background:rgba(96,184,240,.15);border-color:rgba(96,184,240,.4);color:#60b8f0;">⚖ Ver Caso #'+r.caso_id+'</a>'
+        : '<button class="act-btn" style="background:rgba(247,183,49,.08);border-color:rgba(247,183,49,.3);color:#f7b731;" onclick="escalarCaso('+id+')">⚖ Escalar a Caso</button>') +
       '<button class="act-btn danger" onclick="eliminarReporte('+id+')">🗑️ Eliminar</button>' +
     '</div>';
 
@@ -542,6 +586,24 @@ async function eliminarReporte(id) {
 }
 
 function irPerfil(id) { window.location.href = '/perfil/'+id; }
+
+async function escalarCaso(rid) {
+  if (!confirm('¿Escalar este reporte a un Caso formal?\n\nSe creará un caso prerellenado en el módulo de Casos.')) return;
+  var res = await fetch('/api/reportes/'+rid+'/escalar-caso', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({})
+  });
+  var d = await res.json();
+  if (d.ok) {
+    toast('⚖ Caso #'+d.caso_id+' creado. Redirigiendo...', '#60b8f0');
+    cerrarDetalle();
+    recargar();
+    cargarStats();
+  } else {
+    alert('Error: '+(d.error||'desconocido'));
+  }
+}
 
 async function cargarStats() {
   var res  = await fetch('/api/reportes/resumen');
@@ -606,7 +668,7 @@ async function renderResumen() {
   };
   var tipoColors = {
     conducta:'#ffc44d', psicologico:'#60b8f0',
-    academico:'#c8f060', incidente_grave:'#ff6b6b'
+    academico:'#378ADD', incidente_grave:'#ff6b6b'
   };
   var total = data.length || 1;
 
@@ -659,7 +721,7 @@ async function renderResumen() {
   document.getElementById('resumen-row').innerHTML = html1 + html2;
 }
 
-// ── EXPORTAR ─────────────────────────────────────────────────────────────
+// -- EXPORTAR -------------------------------------------------------------
 function exportarXLSX() {
   var tipo      = document.getElementById('sel-tipo')     ? document.getElementById('sel-tipo').value     : (FILTRO_TIPO || '');
   var estado    = document.getElementById('sel-estado')   ? document.getElementById('sel-estado').value   : '';
@@ -715,10 +777,13 @@ function imprimirReportes() {
   white-space:nowrap;
 }
 .mt-tbtn.theme-btn-active {
-  background:var(--theme-toggle-actbg,rgba(200,240,96,.1));
-  color:var(--theme-toggle-act,#c8f060);
+  background:var(--theme-toggle-actbg,rgba(55,138,221,.1));
+  color:var(--theme-toggle-act,#378ADD);
   box-shadow:0 1px 3px rgba(0,0,0,.3);
 }
+.dd-item{padding:8px 12px;border-radius:7px;font-size:13px;color:var(--text);
+  cursor:pointer;display:flex;align-items:center;gap:8px;transition:background .15s;}
+.dd-item:hover{background:var(--hover,rgba(255,255,255,.05));}
 </style>
 </body>
 </html>

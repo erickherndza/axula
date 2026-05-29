@@ -201,6 +201,32 @@
             .tabs { flex-direction:column; }
         }
     </style>
+
+<!-- CSRF Token — auto-incluido en todos los fetch() POST/PATCH/DELETE -->
+<script>
+(function() {
+  var CSRF_TOKEN = "{{ csrf_token }}";
+  var _originalFetch = window.fetch;
+  window.fetch = function(url, opts) {
+    opts = opts || {};
+    var method = (opts.method || "GET").toUpperCase();
+    if (method !== "GET" && method !== "HEAD" && method !== "OPTIONS") {
+      opts.headers = opts.headers || {};
+      // Soporta tanto Headers object como plain object
+      if (opts.headers instanceof Headers) {
+        opts.headers.set("X-CSRF-Token", CSRF_TOKEN);
+      } else {
+        opts.headers["X-CSRF-Token"] = CSRF_TOKEN;
+      }
+    }
+    return _originalFetch.apply(this, [url, opts]);
+  };
+})();
+</script>
+
+    <link rel="stylesheet" href="/static/theme.css">
+    <script src="/static/theme.js"></script>
+    <script src="/static/js/planificacion.js"></script>
 </head>
 <body>
 
@@ -208,7 +234,7 @@
     <a href="/" class="logo">
         <div class="logo-icon">🎨</div>
         <div>
-            <div class="logo-text">Multimedia<span>Track</span></div>
+            <div class="logo-text">Axula</div>
         </div>
     </a>
     <a href="/" class="back-btn"><i class="fas fa-arrow-left"></i> Dashboard</a>
@@ -231,6 +257,9 @@
         <button class="tab-btn" onclick="setTab('estrategia', this)">
             <i class="fas fa-lightbulb"></i> Estrategias Didácticas
         </button>
+        <button class="tab-btn" onclick="setTab('abp', this)">
+            <i class="fas fa-file-invoice"></i> Plantilla ABP MINERD
+        </button>
         <button class="tab-btn" onclick="setTab('curriculo', this)">
             <i class="fas fa-book-open"></i> Ver Currículo MINERD
         </button>
@@ -244,26 +273,26 @@
         <div class="form-grid">
             <div class="form-group">
                 <label>Mención</label>
-                <select id="p-mencion" onchange="actualizarSelectMaterias()">
-                    <option value="MULTIMEDIA">🎬 Multimedia</option>
+                <select id="p-mencion" onchange="actualizarMaterias('p')">
+                    <option value="MULTIMEDIA">🖥️ Multimedia</option>
+                    <option value="ARTES VISUALES">🎨 Artes Visuales</option>
                     <option value="MÚSICA">🎵 Música</option>
                     <option value="TEATRO">🎭 Teatro</option>
-                    <option value="ARTES VISUALES">🎨 Artes Visuales</option>
                     <option value="DANZA">💃 Danza</option>
                 </select>
             </div>
             <div class="form-group">
-                <label>Grado</label>
-                <select id="p-grado" onchange="actualizarSelectMaterias()">
-                    <option value="4TO">4to (Primer año mención)</option>
-                    <option value="5TO">5to (Segundo año mención)</option>
-                    <option value="6TO">6to (Tercer año mención)</option>
+                <label>Asignatura</label>
+                <select id="p-materia" onchange="window._curriculoCache=null; cargarCurriculo('p-materia', 'p-curriculo'); if(window.actualizarTemas) actualizarTemas();">
+                    <option value="">Selecciona una materia...</option>
                 </select>
             </div>
             <div class="form-group">
-                <label>Asignatura</label>
-                <select id="p-materia" onchange="cargarCurriculo('p-materia', 'p-curriculo'); actualizarTemas()">
-                    <option value="">Selecciona una materia...</option>
+                <label>Grado</label>
+                <select id="p-grado" onchange="actualizarMaterias('p')">
+                    <option value="4to">4to (Primer año mención)</option>
+                    <option value="5to">5to (Segundo año mención)</option>
+                    <option value="6to">6to (Tercer año mención)</option>
                 </select>
             </div>
         </div>
@@ -307,7 +336,7 @@
         <div id="p-error" class="error-box"></div>
         <div id="p-resultado" class="resultado-box">
             <div class="resultado-header">
-                <span class="resultado-badge">✦ llama-3.3-70b · planificación</span>
+                <span class="resultado-badge" id="badge-planificacion">✦ cargando modelo...</span>
                 <div style="display:flex; gap:8px;">
                     <button class="copy-btn" onclick="copiarResultado('p-content')"><i class="fas fa-copy"></i> Copiar</button>
                     <button class="copy-btn" id="p-guardar-btn" onclick="guardarDesdeResultado()"
@@ -324,12 +353,19 @@
     <div id="panel-rubrica" class="panel">
         <div class="form-grid">
             <div class="form-group">
+                <label>Mención</label>
+                <select id="r-mencion" onchange="actualizarMaterias('r')">
+                    <option value="MULTIMEDIA">🖥️ Multimedia</option>
+                    <option value="ARTES VISUALES">🎨 Artes Visuales</option>
+                    <option value="MÚSICA">🎵 Música</option>
+                    <option value="TEATRO">🎭 Teatro</option>
+                    <option value="DANZA">💃 Danza</option>
+                </select>
+            </div>
+            <div class="form-group">
                 <label>Asignatura</label>
                 <select id="r-materia" onchange="cargarIndicadores()">
                     <option value="">Selecciona una materia...</option>
-                    <option value="Fotografía">📸 Fotografía</option>
-                    <option value="Lenguaje_Visual">🎨 Lenguaje Visual, Dibujo y Creación de Personajes</option>
-                    <option value="Diseño">🖥️ Diseño Básico y Expresión Visual</option>
                 </select>
             </div>
             <div class="form-group">
@@ -362,7 +398,7 @@
         <div id="r-error" class="error-box"></div>
         <div id="r-resultado" class="resultado-box">
             <div class="resultado-header">
-                <span class="resultado-badge">✦ llama-3.3-70b · rúbrica</span>
+                <span class="resultado-badge" id="badge-rubrica">✦ cargando modelo...</span>
                 <button class="copy-btn" onclick="copiarResultado('r-content')"><i class="fas fa-copy"></i> Copiar</button>
             </div>
             <div id="r-content" class="resultado-content"></div>
@@ -373,12 +409,19 @@
     <div id="panel-estrategia" class="panel">
         <div class="form-grid">
             <div class="form-group">
+                <label>Mención</label>
+                <select id="e-mencion" onchange="actualizarMaterias('e')">
+                    <option value="MULTIMEDIA">🖥️ Multimedia</option>
+                    <option value="ARTES VISUALES">🎨 Artes Visuales</option>
+                    <option value="MÚSICA">🎵 Música</option>
+                    <option value="TEATRO">🎭 Teatro</option>
+                    <option value="DANZA">💃 Danza</option>
+                </select>
+            </div>
+            <div class="form-group">
                 <label>Asignatura</label>
                 <select id="e-materia">
                     <option value="">Selecciona una materia...</option>
-                    <option value="Fotografía">📸 Fotografía</option>
-                    <option value="Lenguaje_Visual">🎨 Lenguaje Visual, Dibujo y Creación de Personajes</option>
-                    <option value="Diseño">🖥️ Diseño Básico y Expresión Visual</option>
                 </select>
             </div>
             <div class="form-group">
@@ -402,7 +445,7 @@
         <div id="e-error" class="error-box"></div>
         <div id="e-resultado" class="resultado-box">
             <div class="resultado-header">
-                <span class="resultado-badge">✦ llama-3.3-70b · estrategias</span>
+                <span class="resultado-badge" id="badge-estrategia">✦ cargando modelo...</span>
                 <button class="copy-btn" onclick="copiarResultado('e-content')"><i class="fas fa-copy"></i> Copiar</button>
             </div>
             <div id="e-content" class="resultado-content"></div>
@@ -425,7 +468,7 @@
             <button class="chip"        onclick="planBJsetMencion('VISUAL',this)">🎨 Artes Visuales</button>
           </div>
           <div style="margin-left:auto;">
-            <select id="filtro-grado-plan" style="background:var(--bg-card);border:1px solid var(--border);color:var(--text);padding:4px 10px;border-radius:8px;font-size:12px;" onchange="planBJrender()">
+            <select id="filtro-grado-plan" style="background:var(--bg-card);border:1px solid var(--border);color:var(--text);padding:4px 10px;border-radius:8px;font-size:12px;" onchange="planBJrender(); renderMateriasCards()">
               <option value="">Todos los grados</option>
               <option value="4to">4to Grado</option>
               <option value="5to">5to Grado</option>
@@ -437,32 +480,8 @@
         <!-- Plan de horas por grado (dinámico) -->
         <div id="plan-bj-grid" style="margin-bottom:20px;"></div>
 
-        <!-- Currículo detallado (Multimedia inicial) -->
-        <details open style="margin-bottom:12px;">
-          <summary style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);cursor:pointer;padding:6px 0;">
-            Currículo detallado disponible ▾
-          </summary>
-          <div class="materias-grid" style="margin-top:10px;">
-            <div class="materia-card" onclick="verDetalleCurriculo('Fotografía', this)">
-                <div class="materia-emoji">📸</div>
-                <div class="materia-nombre">Fotografía</div>
-                <div class="materia-comp">DCM.1.2 — Diseño y Creatividad Multimedia</div>
-                <div class="materia-horas">4 horas semanales</div>
-            </div>
-            <div class="materia-card" onclick="verDetalleCurriculo('Lenguaje_Visual', this)">
-                <div class="materia-emoji">🎨</div>
-                <div class="materia-nombre">Lenguaje Visual</div>
-                <div class="materia-comp">AA.1.1 — Competencia Animación Artística</div>
-                <div class="materia-horas">5 horas semanales</div>
-            </div>
-            <div class="materia-card" onclick="verDetalleCurriculo('Diseño', this)">
-                <div class="materia-emoji">🖥️</div>
-                <div class="materia-nombre">Diseño Básico y Expresión Visual</div>
-                <div class="materia-comp">DCM.1.1 — Diseño y Creatividad Multimedia</div>
-                <div class="materia-horas">4 horas semanales</div>
-            </div>
-          </div>
-        </details>
+        <!-- Currículo detallado por mención (dinámico) -->
+        <div id="materias-cards-grid" style="margin-bottom:12px;"></div>
 
         <div id="c-detalle" class="curriculo-box show" style="display:none;">
         </div>
@@ -502,190 +521,263 @@
         </div>
     </div>
 
+    <!-- ═══ TAB 6: PLANTILLA ABP MINERD ══════════════════════════════════════ -->
+    <div id="panel-abp" class="panel">
+
+        <!-- Aviso: solo materias técnicas -->
+        <div style="background:rgba(96,184,240,.06);border:1px solid rgba(96,184,240,.2);
+                    border-radius:10px;padding:12px 16px;margin-bottom:20px;
+                    display:flex;gap:10px;align-items:flex-start;">
+            <i class="fas fa-circle-info" style="color:var(--blue);margin-top:2px;flex-shrink:0;"></i>
+            <div>
+                <div style="font-weight:700;font-size:12px;margin-bottom:2px;">Plantilla Oficial MINERD — Esquema ABP</div>
+                <div style="font-size:11px;color:var(--text-muted);line-height:1.6;">
+                    Esta sección genera el <strong style="color:var(--text)">documento Word (.docx) oficial</strong>
+                    del MINERD/DEMA para planificaciones ABP, exclusivo para materias técnicas de la Mención Artes.
+                    La IA completa automáticamente todos los bloques: Identificación, Elementos de la Unidad,
+                    Fases ABP (4 fases) e Instrumentos de Evaluación (lista de cotejo + rúbricas).
+                </div>
+            </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+
+            <!-- COLUMNA IZQUIERDA — Formulario -->
+            <div>
+                <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px;">
+                    <div style="font-family:var(--font-display);font-size:11px;font-weight:700;
+                                text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted);
+                                margin-bottom:16px;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-id-card" style="color:var(--accent);"></i>
+                        Bloque 1 — Identificación
+                    </div>
+
+                    <div style="display:flex;flex-direction:column;gap:12px;">
+
+                        <div>
+                            <label style="font-size:10px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Asignatura *</label>
+                            <select id="abp-asignatura" onchange="abpOnAsignatura()"
+                                style="width:100%;background:var(--surface2);border:1px solid var(--border);
+                                       color:var(--text);padding:8px 12px;border-radius:8px;font-size:13px;outline:none;">
+                                <option value="">— Selecciona tu asignatura —</option>
+                            </select>
+                        </div>
+
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                            <div>
+                                <label style="font-size:10px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Grado</label>
+                                <select id="abp-grado" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:8px;font-size:13px;outline:none;">
+                                    <option value="4to">4to</option>
+                                    <option value="5to">5to</option>
+                                    <option value="6to">6to</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="font-size:10px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Mención</label>
+                                <select id="abp-mencion" onchange="abpCargarAsignaturas()"
+                                    style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:8px;font-size:13px;outline:none;">
+                                    <option value="MULTIMEDIA">Multimedia</option>
+                                    <option value="ARTES VISUALES">Artes Visuales</option>
+                                    <option value="MÚSICA">Música</option>
+                                    <option value="TEATRO">Teatro</option>
+                                    <option value="DANZA">Danza</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label style="font-size:10px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Título del proyecto</label>
+                            <input type="text" id="abp-titulo" placeholder="Ej: Identidad Visual: Mi Marca Local (opcional — la IA sugiere)"
+                                style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:8px;font-size:13px;outline:none;">
+                        </div>
+
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                            <div>
+                                <label style="font-size:10px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Fecha de inicio</label>
+                                <input type="text" id="abp-fecha-ini" placeholder="Ej: 19 de marzo de 2026"
+                                    style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:8px;font-size:13px;outline:none;">
+                            </div>
+                            <div>
+                                <label style="font-size:10px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Fecha de cierre</label>
+                                <input type="text" id="abp-fecha-fin" placeholder="Ej: 26 de marzo de 2026"
+                                    style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:8px;font-size:13px;outline:none;">
+                            </div>
+                        </div>
+
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                            <div>
+                                <label style="font-size:10px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Duración</label>
+                                <input type="text" id="abp-duracion" placeholder="Ej: 2 semanas, P3 (Feb–Mar)"
+                                    style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:8px;font-size:13px;outline:none;">
+                            </div>
+                            <div>
+                                <label style="font-size:10px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">Producto final</label>
+                                <input type="text" id="abp-producto" placeholder="Ej: Portafolio fotográfico digital"
+                                    style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:8px;font-size:13px;outline:none;">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label style="font-size:10px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;">
+                                Contexto adicional para la IA
+                                <span style="font-weight:400;text-transform:none;"> — ¿algo específico del grupo, proyecto o metodología?</span>
+                            </label>
+                            <textarea id="abp-contexto" rows="3" placeholder="Ej: Grupo de 28 estudiantes, nivel intermedio. Este período trabajaremos en el patio para fotografía exterior..."
+                                style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:8px;font-size:13px;outline:none;resize:vertical;"></textarea>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Botón generar -->
+                <button id="btn-generar-abp" onclick="generarPlanABP()"
+                    style="width:100%;background:var(--accent);border:none;color:#000;
+                           font-weight:700;padding:12px 20px;border-radius:10px;font-size:13px;
+                           cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;
+                           transition:all .2s;">
+                    <i class="fas fa-robot"></i>
+                    Generar Planificación ABP con IA
+                </button>
+            </div>
+
+            <!-- COLUMNA DERECHA — Vista previa y acciones -->
+            <div>
+                <!-- Estado inicial -->
+                <div id="abp-estado-inicial" style="background:var(--surface);border:1px solid var(--border);
+                     border-radius:12px;padding:40px;text-align:center;color:var(--text-muted);">
+                    <div style="font-size:40px;margin-bottom:12px;">📄</div>
+                    <div style="font-size:13px;font-weight:600;margin-bottom:8px;">Tu planificación aparecerá aquí</div>
+                    <div style="font-size:11px;line-height:1.7;">
+                        Completa los datos de identificación y haz clic en<br>
+                        <strong style="color:var(--text)">Generar</strong> — la IA completará los 4 bloques MINERD.<br>
+                        Luego puedes editar cada campo y descargar el <strong style="color:var(--text)">.docx oficial</strong>.
+                    </div>
+                </div>
+
+                <!-- Vista previa del plan generado -->
+                <div id="abp-preview" style="display:none;">
+
+                    <!-- Header del preview -->
+                    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px 12px 0 0;
+                                padding:14px 18px;display:flex;align-items:center;gap:10px;">
+                        <div style="flex:1;">
+                            <div style="font-family:var(--font-display);font-size:13px;font-weight:700;" id="abp-prev-titulo">—</div>
+                            <div style="font-size:11px;color:var(--text-muted);" id="abp-prev-sub">—</div>
+                        </div>
+                        <button onclick="editarPlanABP()"
+                            style="background:transparent;border:1px solid var(--border);color:var(--text-muted);
+                                   padding:6px 12px;border-radius:7px;font-size:11px;cursor:pointer;">
+                            <i class="fas fa-pen"></i> Editar
+                        </button>
+                        <button id="btn-exportar-docx" onclick="exportarDocx()"
+                            style="background:#1F4E79;border:none;color:#fff;
+                                   padding:8px 16px;border-radius:8px;font-size:12px;
+                                   font-weight:700;cursor:pointer;display:flex;align-items:center;gap:7px;
+                                   transition:background .15s;">
+                            <i class="fas fa-file-word"></i> Descargar .docx
+                        </button>
+                    </div>
+
+                    <!-- Contenido del plan en tabs internos -->
+                    <div style="background:var(--surface2);border:1px solid var(--border);border-top:none;
+                                border-radius:0 0 12px 12px;overflow:hidden;">
+
+                        <div style="display:flex;border-bottom:1px solid var(--border);overflow-x:auto;">
+                            <button class="abp-inner-tab active" onclick="abpInnerTab('identificacion',this)">Identificación</button>
+                            <button class="abp-inner-tab" onclick="abpInnerTab('elementos',this)">Elementos</button>
+                            <button class="abp-inner-tab" onclick="abpInnerTab('fases',this)">Fases ABP</button>
+                            <button class="abp-inner-tab" onclick="abpInnerTab('instrumentos',this)">Instrumentos</button>
+                        </div>
+
+                        <div id="abp-inner-identificacion" class="abp-inner-panel" style="padding:16px;max-height:420px;overflow-y:auto;">
+                            <div id="abp-id-content"></div>
+                        </div>
+                        <div id="abp-inner-elementos" class="abp-inner-panel" style="padding:16px;max-height:420px;overflow-y:auto;display:none;">
+                            <div id="abp-el-content"></div>
+                        </div>
+                        <div id="abp-inner-fases" class="abp-inner-panel" style="padding:16px;max-height:420px;overflow-y:auto;display:none;">
+                            <div id="abp-fa-content"></div>
+                        </div>
+                        <div id="abp-inner-instrumentos" class="abp-inner-panel" style="padding:16px;max-height:420px;overflow-y:auto;display:none;">
+                            <div id="abp-inst-content"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Spinner -->
+                <div id="abp-loading" style="display:none;background:var(--surface);border:1px solid var(--border);
+                     border-radius:12px;padding:60px;text-align:center;">
+                    <div style="font-size:32px;margin-bottom:16px;">⚙️</div>
+                    <div style="font-size:13px;font-weight:600;margin-bottom:6px;">Generando planificación...</div>
+                    <div style="font-size:11px;color:var(--text-muted);margin-bottom:20px;">
+                        La IA está completando los 4 bloques MINERD.<br>Puede tardar 15–30 segundos.
+                    </div>
+                    <div style="width:200px;height:4px;background:var(--border);border-radius:2px;margin:0 auto;overflow:hidden;">
+                        <div id="abp-progress-bar" style="width:0%;height:100%;background:var(--accent);border-radius:2px;transition:width .5s;"></div>
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- /grid -->
+
+    </div><!-- /panel-abp -->
+
 </main>
+
+<style>
+.abp-inner-tab {
+    padding: 8px 16px;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-family: var(--font-body);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all .15s;
+    border-bottom: 2px solid transparent;
+}
+.abp-inner-tab.active {
+    color: var(--text);
+    border-bottom-color: var(--accent);
+    background: var(--surface);
+}
+.abp-field-row {
+    display: flex;
+    gap: 6px;
+    align-items: flex-start;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+}
+.abp-field-lbl {
+    font-weight: 700;
+    color: var(--text-muted);
+    min-width: 130px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    padding-top: 2px;
+}
+.abp-field-val { color: var(--text); line-height: 1.5; flex: 1; }
+.abp-fase-card {
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 10px;
+}
+.abp-fase-titulo {
+    font-family: var(--font-display);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 8px;
+}
+</style>
 
 <script>
     // ── TAB NAVIGATION ─────────────────────────────────────────────────────
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // CURRÍCULO COMPLETO C.E. BENITO JUÁREZ — Modalidad en Artes · MINERD RD
-    // ═══════════════════════════════════════════════════════════════════════
-    const MATERIAS_COMUNES = [
-        { value: "Lengua_Espanola",      label: "Lengua Española",                      horas: 5 },
-        { value: "Idioma_Ingles",        label: "Idioma Inglés",                        horas: 3 },
-        { value: "Matematica",           label: "Matemática",                           horas: 5 },
-        { value: "Ciencias_Sociales",    label: "Ciencias Sociales",                    horas: 4 },
-        { value: "Ciencias_Naturales",   label: "Ciencias de la Naturaleza",            horas: 4 },
-        { value: "Educacion_Fisica",     label: "Educación Física",                     horas: 2 },
-        { value: "FIHR",                 label: "Formación Integral Humana y Religiosa", horas: 2 },
-    ];
-
-    const MATERIAS_TECNICAS = {
-        "MULTIMEDIA": {
-            "4TO": [
-                { value: "Identidad_Cultura", label: "Identidad, Cultura y Emprendimiento", horas: 3 },
-                { value: "Historia_Arte",     label: "Historia del Arte Universal",          horas: 3 },
-                { value: "Lenguaje_Visual",   label: "Lenguaje Visual, Dibujo y Creación de Personajes", horas: 5 },
-                { value: "Diseno_Basico",     label: "Diseño Básico y Expresión Visual",     horas: 5 },
-                { value: "Fotografia",        label: "Fotografía",                           horas: 5 },
-                { value: "Lenguaje_Musical",  label: "Lenguaje Musical",                     horas: 2 },
-                { value: "Lenguaje_Danzario", label: "Lenguaje Danzario y Teatral",          horas: 2 },
-            ],
-            "5TO": [
-                { value: "Identidad_Cultura",       label: "Identidad, Cultura y Emprendimiento", horas: 3 },
-                { value: "Historia_Arte",           label: "Historia del Arte Universal",          horas: 3 },
-                { value: "Produccion_Audiovisual",  label: "Producción Audiovisual",               horas: 5 },
-                { value: "Diseno_Grafico_Digital",  label: "Diseño Gráfico y Digital",             horas: 5 },
-                { value: "Fotografia_Avanzada",     label: "Fotografía Avanzada",                  horas: 5 },
-                { value: "Animacion_Digital",       label: "Animación Digital",                    horas: 3 },
-            ],
-            "6TO": [
-                { value: "Identidad_Cultura",              label: "Identidad, Cultura y Emprendimiento", horas: 3 },
-                { value: "Historia_Arte",                  label: "Historia del Arte Universal",          horas: 3 },
-                { value: "Proyecto_Multimedia",            label: "Proyecto Multimedia Integrador",       horas: 6 },
-                { value: "Diseno_Web_UX",                  label: "Diseño Web y UX",                      horas: 5 },
-                { value: "Produccion_Audiovisual_Avanzada",label: "Producción Audiovisual Avanzada",      horas: 5 },
-                { value: "Pasantia_Multimedia",            label: "Pasantía en Industria Multimedia",     horas: 4 },
-            ],
-        },
-        "MÚSICA": {
-            "4TO": [
-                { value: "Identidad_Cultura",   label: "Identidad, Cultura y Emprendimiento", horas: 3 },
-                { value: "Historia_Arte",       label: "Historia del Arte Universal",          horas: 3 },
-                { value: "Teoria_Musical",      label: "Teoría Musical y Solfeo",              horas: 4 },
-                { value: "Instrumento_I",       label: "Instrumento Principal I",              horas: 5 },
-                { value: "Conjunto_Musical",    label: "Conjunto Musical / Ensamble",          horas: 3 },
-                { value: "Historia_Musica_RD",  label: "Historia de la Música Dominicana",     horas: 2 },
-                { value: "Lenguaje_Danzario",   label: "Lenguaje Danzario",                    horas: 2 },
-            ],
-            "5TO": [
-                { value: "Identidad_Cultura",    label: "Identidad, Cultura y Emprendimiento", horas: 3 },
-                { value: "Historia_Arte",        label: "Historia del Arte Universal",          horas: 3 },
-                { value: "Armonia_Contrapunto",  label: "Armonía y Contrapunto",               horas: 4 },
-                { value: "Instrumento_II",       label: "Instrumento Principal II",             horas: 5 },
-                { value: "Conjunto_Musical_II",  label: "Conjunto Musical / Ensamble II",       horas: 3 },
-                { value: "Composicion_Arreglos", label: "Composición y Arreglos",              horas: 3 },
-            ],
-            "6TO": [
-                { value: "Identidad_Cultura",  label: "Identidad, Cultura y Emprendimiento", horas: 3 },
-                { value: "Historia_Arte",      label: "Historia del Arte Universal",          horas: 3 },
-                { value: "Instrumento_III",    label: "Instrumento Principal III",            horas: 5 },
-                { value: "Proyecto_Musical",   label: "Proyecto Musical Integrador",          horas: 5 },
-                { value: "Gestion_Cultural",   label: "Gestión y Producción Cultural",        horas: 3 },
-                { value: "Pasantia_Musical",   label: "Pasantía Musical",                     horas: 4 },
-            ],
-        },
-        "TEATRO": {
-            "4TO": [
-                { value: "Identidad_Cultura",  label: "Identidad, Cultura y Emprendimiento", horas: 3 },
-                { value: "Historia_Arte",      label: "Historia del Arte Universal",          horas: 3 },
-                { value: "Tecnica_Vocal",      label: "Técnica Vocal y Dicción",              horas: 3 },
-                { value: "Expresion_Corporal", label: "Expresión Corporal y Movimiento",      horas: 3 },
-                { value: "Actuacion_I",        label: "Actuación I",                          horas: 5 },
-                { value: "Historia_Teatro",    label: "Historia del Teatro Universal",         horas: 3 },
-                { value: "Lenguaje_Danzario",  label: "Lenguaje Danzario y Teatral",          horas: 2 },
-            ],
-            "5TO": [
-                { value: "Identidad_Cultura",  label: "Identidad, Cultura y Emprendimiento", horas: 3 },
-                { value: "Historia_Arte",      label: "Historia del Arte Universal",          horas: 3 },
-                { value: "Actuacion_II",       label: "Actuación II",                         horas: 5 },
-                { value: "Dramaturgia",        label: "Dramaturgia y Escritura Escénica",     horas: 3 },
-                { value: "Direccion_Escena",   label: "Dirección Escénica",                   horas: 3 },
-                { value: "Caracterizacion",    label: "Caracterización y Maquillaje",         horas: 3 },
-            ],
-            "6TO": [
-                { value: "Identidad_Cultura",  label: "Identidad, Cultura y Emprendimiento", horas: 3 },
-                { value: "Historia_Arte",      label: "Historia del Arte Universal",          horas: 3 },
-                { value: "Produccion_Teatral", label: "Producción Teatral",                   horas: 5 },
-                { value: "Proyecto_Escena",    label: "Proyecto Escénico Integrador",         horas: 5 },
-                { value: "Gestion_Cultural",   label: "Gestión y Producción Cultural",        horas: 3 },
-                { value: "Pasantia_Teatro",    label: "Pasantía Teatral",                     horas: 4 },
-            ],
-        },
-        "ARTES VISUALES": {
-            "4TO": [
-                { value: "Identidad_Cultura",  label: "Identidad, Cultura y Emprendimiento", horas: 3 },
-                { value: "Historia_Arte",      label: "Historia del Arte Universal",          horas: 3 },
-                { value: "Dibujo_Artistico",   label: "Dibujo Artístico",                    horas: 5 },
-                { value: "Pintura_I",          label: "Pintura I",                            horas: 5 },
-                { value: "Lenguaje_Visual_AV", label: "Lenguaje Visual y Composición",        horas: 4 },
-                { value: "Escultura_Modelado", label: "Escultura y Modelado",                 horas: 3 },
-            ],
-            "5TO": [
-                { value: "Identidad_Cultura",  label: "Identidad, Cultura y Emprendimiento", horas: 3 },
-                { value: "Historia_Arte",      label: "Historia del Arte Universal",          horas: 3 },
-                { value: "Pintura_II",         label: "Pintura II",                           horas: 5 },
-                { value: "Grabado_Estampado",  label: "Grabado y Estampado",                  horas: 4 },
-                { value: "Arte_Digital",       label: "Arte Digital",                         horas: 4 },
-                { value: "Ceramica",           label: "Cerámica y Artesanía",                 horas: 3 },
-            ],
-            "6TO": [
-                { value: "Identidad_Cultura",  label: "Identidad, Cultura y Emprendimiento", horas: 3 },
-                { value: "Historia_Arte",      label: "Historia del Arte Universal",          horas: 3 },
-                { value: "Pintura_Mural",      label: "Pintura Mural y Técnicas Mixtas",      horas: 5 },
-                { value: "Proyecto_Visual",    label: "Proyecto Visual Integrador",           horas: 5 },
-                { value: "Gestion_Cultural",   label: "Gestión y Producción Cultural",        horas: 3 },
-                { value: "Pasantia_Visual",    label: "Pasantía en Artes Visuales",           horas: 4 },
-            ],
-        },
-        "DANZA": {
-            "4TO": [
-                { value: "Identidad_Cultura",       label: "Identidad, Cultura y Emprendimiento", horas: 3 },
-                { value: "Historia_Arte",           label: "Historia del Arte Universal",          horas: 3 },
-                { value: "Tecnica_Danza_Clasica",   label: "Técnica de Danza Clásica",            horas: 5 },
-                { value: "Danza_Folclorica_RD",     label: "Danza Folclórica Dominicana",         horas: 4 },
-                { value: "Expresion_Corporal_Danza",label: "Expresión Corporal",                  horas: 3 },
-                { value: "Musica_Danzante",         label: "Música para Danzantes",               horas: 2 },
-            ],
-            "5TO": [
-                { value: "Identidad_Cultura",           label: "Identidad, Cultura y Emprendimiento", horas: 3 },
-                { value: "Historia_Arte",               label: "Historia del Arte Universal",          horas: 3 },
-                { value: "Tecnica_Danza_Contemporanea", label: "Técnica de Danza Contemporánea",       horas: 5 },
-                { value: "Coreografia",                 label: "Coreografía y Composición",            horas: 4 },
-                { value: "Danza_Popular_Caribe",        label: "Danza Popular del Caribe",             horas: 3 },
-            ],
-            "6TO": [
-                { value: "Identidad_Cultura",  label: "Identidad, Cultura y Emprendimiento", horas: 3 },
-                { value: "Historia_Arte",      label: "Historia del Arte Universal",          horas: 3 },
-                { value: "Produccion_Danza",   label: "Producción en Danza",                  horas: 5 },
-                { value: "Proyecto_Danza",     label: "Proyecto Coreográfico Integrador",     horas: 5 },
-                { value: "Gestion_Cultural",   label: "Gestión y Producción Cultural",        horas: 3 },
-                { value: "Pasantia_Danza",     label: "Pasantía en Danza",                    horas: 4 },
-            ],
-        },
-    };
-
-    function actualizarSelectMaterias() {
-        const mencion = document.getElementById('p-mencion')?.value || 'MULTIMEDIA';
-        const grado   = document.getElementById('p-grado')?.value   || '4TO';
-        const select  = document.getElementById('p-materia');
-        if (!select) return;
-        const tecnicas = MATERIAS_TECNICAS[mencion]?.[grado] || [];
-        select.innerHTML = '<option value="">Selecciona una materia...</option>';
-        const grp1 = document.createElement('optgroup');
-        grp1.label = '📚 Componente Académico';
-        MATERIAS_COMUNES.forEach(m => {
-            const o = document.createElement('option');
-            o.value = m.value;
-            o.textContent = m.label + ' (' + m.horas + 'h)';
-            grp1.appendChild(o);
-        });
-        select.appendChild(grp1);
-        if (tecnicas.length > 0) {
-            const grp2 = document.createElement('optgroup');
-            grp2.label = '🎨 Componente Técnico — ' + mencion;
-            tecnicas.forEach(m => {
-                const o = document.createElement('option');
-                o.value = m.value;
-                o.textContent = m.label + ' (' + m.horas + 'h)';
-                grp2.appendChild(o);
-            });
-            select.appendChild(grp2);
-        }
-    }
-    // Poblar al cargar la página
-    document.addEventListener('DOMContentLoaded', actualizarSelectMaterias);
-
     function setTab(nombre, btn) {
         document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -719,6 +811,58 @@
             </div>
         `;
         box.classList.add('show');
+
+        // Guardar currículo en caché para que actualizarTemas() lo use
+        window._curriculoCache = c;
+    }
+
+    // ── SUGERIR TEMAS SEGÚN MATERIA SELECCIONADA ────────────────────────────
+    // Rellena el campo p-tema con sugerencias clickeables del currículo MINERD.
+    // Se llama desde onchange del selector de materia y desde actualizarMaterias.
+    // Definida como window.actualizarTemas para garantizar visibilidad global.
+    window.actualizarTemas = async function actualizarTemas() {
+        const materia   = document.getElementById('p-materia').value;
+        const temaInput = document.getElementById('p-tema');
+        if (!materia || !temaInput) return;
+
+        // Si ya tenemos el currículo en caché (cargarCurriculo se llamó antes), usarlo
+        let c = window._curriculoCache;
+        if (!c) {
+            try {
+                const res = await fetch(`/api/planificacion/curriculo/${materia}`);
+                c = await res.json();
+                window._curriculoCache = c;
+            } catch(e) { return; }
+        }
+
+        // Contenedor de sugerencias — lo creamos si no existe
+        let sugs = document.getElementById('p-tema-sugerencias');
+        if (!sugs) {
+            sugs = document.createElement('div');
+            sugs.id = 'p-tema-sugerencias';
+            sugs.style.cssText = 'margin-top:6px;display:flex;flex-wrap:wrap;gap:5px;';
+            temaInput.parentNode.insertBefore(sugs, temaInput.nextSibling);
+        }
+
+        // Mezclar saberes procedimentales + indicadores de logro como sugerencias
+        const items = [
+            ...(c.saberes_procedimentales || []).slice(0, 4),
+            ...(c.indicadores_logro       || []).slice(0, 3),
+        ];
+
+        sugs.innerHTML = '<span style="font-size:10px;color:var(--text-muted);align-self:center;white-space:nowrap;">Sugerencias:</span> ' +
+            items.map(t => `
+                <span onclick="document.getElementById('p-tema').value=this.dataset.t;
+                               document.getElementById('p-tema-sugerencias').querySelectorAll('span[onclick]').forEach(s=>s.style.background='');
+                               this.style.background='rgba(55,138,221,.15)';"
+                      data-t="${t.replace(/"/g,'&quot;')}"
+                      style="font-size:10px;padding:3px 9px;border-radius:12px;
+                             border:1px solid var(--border);cursor:pointer;
+                             color:var(--text-muted);transition:all .15s;"
+                      onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--text)'"
+                      onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'">
+                    ${t.length > 55 ? t.slice(0,52)+'…' : t}
+                </span>`).join('');
     }
 
     // ── CARGAR INDICADORES PARA RÚBRICA ────────────────────────────────────
@@ -763,6 +907,7 @@ function planBJsetMencion(m, btn) {
   document.querySelectorAll('#mencion-tabs-curriculo .chip').forEach(c => c.classList.remove('active'));
   if (btn) btn.classList.add('active');
   planBJrender();
+  renderMateriasCards();
 }
 
 function planBJrender() {
@@ -821,14 +966,67 @@ function _renderPlanGrado(grado, asigs) {
     '</div></div>';
 }
 
+function _getMencionKey(m) {
+  var map = {'VISUAL':'ARTES VISUALES','MUSICA':'MÚSICA','MULTIMEDIA':'MULTIMEDIA','TEATRO':'TEATRO','DANZA':'DANZA'};
+  return map[m] || m;
+}
+
+function renderMateriasCards() {
+  var grid = document.getElementById('materias-cards-grid');
+  if (!grid) return;
+
+  var filtroGrado = (document.getElementById('filtro-grado-plan') || {}).value || '';
+  var mencionKey  = _getMencionKey(_planBJ_mencion);
+  var mencionData = MATERIAS_POR_MENCION[mencionKey] || {};
+  var grados      = filtroGrado ? [filtroGrado] : ['4to','5to','6to'];
+  var gradoEmoji  = {'4to':'📗','5to':'📘','6to':'📙'};
+
+  var html = '';
+  grados.forEach(function(g) {
+    var lista = mencionData[g];
+    if (!lista || !lista.length) return;
+    html += '<div style="margin-bottom:20px;">';
+    html += '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted);font-weight:700;margin-bottom:10px;padding-bottom:5px;border-bottom:1px solid var(--border);">' +
+            (gradoEmoji[g] || '📅') + ' ' + g + ' Grado</div>';
+    html += '<div class="materias-grid">';
+    lista.forEach(function(m) {
+      var key   = m[0];
+      var label = m[1];
+      // Split emoji from name — first non-space sequence is the emoji
+      var match = label.match(/^(\S+)\s+(.+)$/);
+      var emoji = match ? match[1] : '📚';
+      var nombre = match ? match[2] : label;
+      html += '<div class="materia-card" data-mkey="' + key + '" onclick="verDetalleCurriculo(this.dataset.mkey, this)">';
+      html += '<div class="materia-emoji">' + emoji + '</div>';
+      html += '<div class="materia-nombre">' + nombre + '</div>';
+      html += '<div class="materia-grado" style="font-size:10px;color:var(--text-muted);margin-top:4px;">' + g + ' Grado</div>';
+      html += '</div>';
+    });
+    html += '</div></div>';
+  });
+
+  grid.innerHTML = html || '<div style="color:var(--text-muted);font-size:12px;padding:16px 0;">Sin materias disponibles para esta mención.</div>';
+  // Reset detail panel when switching
+  var det = document.getElementById('c-detalle');
+  if (det) det.style.display = 'none';
+}
+
 // Auto-render when curriculo tab is opened
 (function() {
   var _origCambiar = null;
   document.addEventListener('DOMContentLoaded', function() {
+    // Initialize all materia selectors based on default mención
+    ['p', 'r', 'e'].forEach(function(prefix) {
+        actualizarMaterias(prefix);
+    });
+    renderMateriasCards();
     _origCambiar = window.cambiarTab;
     window.cambiarTab = function(tab) {
       if (_origCambiar) _origCambiar(tab);
-      if (tab === 'curriculo') setTimeout(planBJrender, 150);
+      if (tab === 'curriculo') {
+        setTimeout(planBJrender, 150);
+        setTimeout(renderMateriasCards, 200);
+      }
     };
   });
 })();
@@ -837,7 +1035,7 @@ async function verDetalleCurriculo(materia, card) {
         document.querySelectorAll('.materia-card').forEach(c => c.classList.remove('selected'));
         card.classList.add('selected');
 
-        const res = await fetch(`/api/planificacion/curriculo/${materia}`);
+        const res = await fetch(`/api/planificacion/curriculo/${encodeURIComponent(materia)}?mencion=${_planBJ_mencion}`);
         const c = await res.json();
         const box = document.getElementById('c-detalle');
 
@@ -871,7 +1069,162 @@ async function verDetalleCurriculo(materia, card) {
     }
 
     // ── GENERAR PLANIFICACIÓN ───────────────────────────────────────────────
-    async function generarPlanificacion() {
+    
+// ══════════════════════════════════════════════════════════════════════════════
+//  MATERIAS POR MENCIÓN Y GRADO — Currículo MINERD Modalidad Artes
+// ══════════════════════════════════════════════════════════════════════════════
+var MATERIAS_POR_MENCION = {
+    "MULTIMEDIA": {
+        "4to": [
+            ["Fotografía", "📸 Fotografía"],
+            ["Lenguaje_Visual", "🎨 Lenguaje Visual, Dibujo y Creación de Personajes"],
+            ["Diseño", "🖥️ Diseño Básico y Expresión Visual"],
+            ["Identidad_Cultura_Emprendimiento", "🌍 Identidad, Cultura y Emprendimiento"],
+            ["Historia_Arte_Universal", "🏛️ Historia del Arte Universal y la Estética Digital"],
+        ],
+        "5to": [
+            ["Diseño_Web", "🌐 Diseño Web"],
+            ["Diseño_Grafico", "🖼️ Diseño Gráfico"],
+            ["Publicidad_Creatividad", "📢 Publicidad y Creatividad"],
+            ["Camara_Video", "🎥 Operación de Cámara de Video"],
+            ["Guion", "📝 Guión"],
+            ["Medios_Comunicacion", "📺 Medios de Comunicación"],
+        ],
+        "6to": [
+            ["Redes_Sociales", "📱 Redes Sociales"],
+            ["Produccion_Audiovisual", "🎬 Producción Audiovisual"],
+            ["Videoarte", "🎞️ Videoarte"],
+            ["Animacion", "✨ Animación"],
+            ["Edicion_Sonido", "🎵 Edición, Sonido y Musicalización"],
+        ],
+    },
+    "ARTES VISUALES": {
+        "4to": [
+            ["Identidad_Cultura_Emprendimiento", "🌍 Identidad, Cultura y Emprendimiento"],
+            ["Historia_Arte_Universal", "🏛️ Historia del Arte Universal"],
+            ["Lenguaje_Plastico_Visual", "🎨 Lenguaje Plástico y Visual"],
+            ["Dibujo_Tecnico_Artistico", "✏️ Dibujo Técnico y Artístico"],
+            ["Pintura_Tecnicas_Mixtas", "🖌️ Pintura y Técnicas Mixtas"],
+        ],
+        "5to": [
+            ["Escultura_Ceramica", "🏺 Escultura y Cerámica"],
+            ["Grabado_Serigrafia", "🖨️ Grabado y Serigrafía"],
+            ["Diseno_Comunicacion_Visual", "🎯 Diseño y Comunicación Visual"],
+            ["Fotografia_Artistica", "📸 Fotografía Artística"],
+            ["Apreciacion_Arte_Dominicano", "🇩🇴 Apreciación del Arte Dominicano y del Caribe"],
+        ],
+        "6to": [
+            ["Arte_Digital_Multimedia", "💻 Arte Digital y Multimedia"],
+            ["Gestion_Produccion_Artistica", "🏢 Gestión y Producción Artística"],
+            ["Proyecto_Artes_Visuales", "🎭 Proyecto de Producción en Artes Visuales"],
+            ["Taller_Restauracion", "🔧 Taller de Restauración y Patrimonio"],
+        ],
+    },
+    "MÚSICA": {
+        "4to": [
+            ["Identidad_Cultura_Emprendimiento", "🌍 Identidad, Cultura y Emprendimiento"],
+            ["Historia_Arte_Universal", "🏛️ Historia de la Música Universal"],
+            ["Teoria_Solfeo", "🎼 Teoría y Solfeo"],
+            ["Instrumento_Principal_I", "🎸 Instrumento Principal I"],
+            ["Coro_Conjunto_Musical_I", "🎤 Coro y Conjunto Musical I"],
+        ],
+        "5to": [
+            ["Instrumento_Principal_II", "🎸 Instrumento Principal II"],
+            ["Armonia_Contrapunto", "🎵 Armonía y Contrapunto"],
+            ["Coro_Conjunto_Musical_II", "🎤 Coro y Conjunto Musical II"],
+            ["Musica_Dominicana_Caribe", "🇩🇴 Música Dominicana y del Caribe"],
+            ["Composicion_Arreglos", "📝 Composición y Arreglos Básicos"],
+        ],
+        "6to": [
+            ["Instrumento_Principal_III", "🎸 Instrumento Principal III"],
+            ["Produccion_Musical_Digital", "🎧 Producción Musical Digital"],
+            ["Direccion_Coral", "🎼 Dirección Coral y Orquestal"],
+            ["Proyecto_Musical", "🎵 Proyecto Musical Emprendedor"],
+            ["Musica_Camara", "🎻 Música de Cámara"],
+        ],
+    },
+    "TEATRO": {
+        "4to": [
+            ["Identidad_Cultura_Emprendimiento", "🌍 Identidad, Cultura y Emprendimiento"],
+            ["Historia_Arte_Universal", "🏛️ Historia del Teatro Universal"],
+            ["Expresion_Corporal_Movimiento", "🕺 Expresión Corporal y Movimiento Escénico"],
+            ["Tecnica_Vocal_Diccion", "🎤 Técnica Vocal y Dicción"],
+            ["Actuacion_I", "🎭 Actuación I — Técnicas Básicas"],
+        ],
+        "5to": [
+            ["Actuacion_II", "🎭 Actuación II — Stanislavski y Métodos"],
+            ["Dramaturgia_Guion_Teatral", "📝 Dramaturgia y Guión Teatral"],
+            ["Escenografia_Iluminacion", "💡 Escenografía e Iluminación"],
+            ["Teatro_Dominicano", "🇩🇴 Teatro Dominicano y del Caribe"],
+            ["Montaje_Teatral_I", "🎬 Montaje Teatral I"],
+        ],
+        "6to": [
+            ["Actuacion_III", "🎭 Actuación III — Proyecto Escénico"],
+            ["Direccion_Teatral", "🎬 Dirección Teatral"],
+            ["Gestion_Produccion_Teatral", "🏢 Gestión Cultural y Producción Teatral"],
+            ["Montaje_Teatral_Final", "🎭 Montaje Teatral II — Obra Final"],
+        ],
+    },
+    "DANZA": {
+        "4to": [
+            ["Identidad_Cultura_Emprendimiento", "🌍 Identidad, Cultura y Emprendimiento"],
+            ["Historia_Arte_Universal", "🏛️ Historia de la Danza Universal"],
+            ["Tecnica_Danza_Clasica_I", "🩰 Técnica de Danza Clásica I"],
+            ["Tecnica_Danza_Folklorica_I", "💃 Técnica de Danza Folklórica Dominicana I"],
+            ["Expresion_Corporal_Danza", "🏃 Expresión Corporal y Acondicionamiento Físico"],
+        ],
+        "5to": [
+            ["Tecnica_Danza_Clasica_II", "🩰 Técnica de Danza Clásica II"],
+            ["Danza_Moderna_Contemporanea", "💃 Técnica de Danza Moderna y Contemporánea"],
+            ["Tecnica_Danza_Folklorica_II", "🇩🇴 Técnica de Danza Folklórica II"],
+            ["Composicion_Coreografica_I", "🎼 Composición Coreográfica I"],
+            ["Musica_Aplicada_Danza", "🎵 Música Aplicada a la Danza"],
+        ],
+        "6to": [
+            ["Tecnica_Danza_Clasica_III", "🩰 Técnica de Danza Clásica III"],
+            ["Composicion_Coreografica_II", "🎭 Composición Coreográfica II — Proyecto Final"],
+            ["Gestion_Danza", "🏢 Gestión y Producción en Danza"],
+            ["Danza_Urbana_Contemporanea", "🕺 Danza Urbana y Contemporánea"],
+            ["Montaje_Puesta_Escena", "🎬 Montaje y Puesta en Escena"],
+        ],
+    },
+};
+
+function actualizarMaterias(prefix) {
+    var mencionEl = document.getElementById(prefix + '-mencion');
+    var materiaEl = document.getElementById(prefix + '-materia');
+    var gradoEl   = document.getElementById(prefix + '-grado');
+    if (!mencionEl || !materiaEl) return;
+
+    var mencion = mencionEl.value;
+    var grado   = gradoEl ? gradoEl.value : '4to';
+    var lista   = (MATERIAS_POR_MENCION[mencion] || {})[grado] || 
+                  MATERIAS_POR_MENCION[mencion]['4to'] || [];
+
+    materiaEl.innerHTML = '<option value="">Selecciona una materia...</option>';
+    lista.forEach(function(m) {
+        var opt = document.createElement('option');
+        opt.value = m[0];
+        opt.textContent = m[1];
+        materiaEl.appendChild(opt);
+    });
+
+    // Trigger dependent updates
+    if (prefix === 'p') {
+        cargarCurriculo('p-materia', 'p-curriculo');
+        if (typeof window.actualizarTemas === 'function') actualizarTemas();
+    } else if (prefix === 'r') {
+        cargarIndicadores();
+    }
+}
+
+// Update materias when grado changes
+function onGradoChange(prefix) {
+    actualizarMaterias(prefix);
+}
+
+
+async function generarPlanificacion() {
         const materia  = document.getElementById('p-materia').value;
         const grado    = document.getElementById('p-grado').value;
         const tema     = document.getElementById('p-tema').value.trim();
@@ -889,10 +1242,12 @@ async function verDetalleCurriculo(materia, card) {
         try {
             const res = await fetch('/api/planificacion/generar', {
                 method:'POST', headers:{'Content-Type':'application/json'},
-                body: JSON.stringify({materia, grado, tema, duracion, nivel_grupo: nivel})
+                body: JSON.stringify({materia, grado, tema, duracion, nivel_grupo: nivel,
+                    mencion: (document.getElementById('p-mencion') || {}).value || 'MULTIMEDIA'})
             });
-            const data = await res.json();
             mostrarLoading('p', false);
+            if (!res.ok) { mostrarError('p', 'Error del servidor (' + res.status + '). Verifica que el servidor esté corriendo.'); return; }
+            const data = await res.json();
             if (data.error) { mostrarError('p', data.error); return; }
             mostrarResultado('p', data.resultado);
         } catch(ex) {
@@ -913,10 +1268,12 @@ async function verDetalleCurriculo(materia, card) {
         try {
             const res = await fetch('/api/planificacion/rubrica', {
                 method:'POST', headers:{'Content-Type':'application/json'},
-                body: JSON.stringify({materia, indicador: indicadorSeleccionado, nivel})
+                body: JSON.stringify({materia, indicador: indicadorSeleccionado, nivel,
+                    mencion: (document.getElementById('r-mencion') || {}).value || 'MULTIMEDIA'})
             });
-            const data = await res.json();
             mostrarLoading('r', false);
+            if (!res.ok) { mostrarError('r', 'Error del servidor (' + res.status + ').'); return; }
+            const data = await res.json();
             if (data.error) { mostrarError('r', data.error); return; }
             mostrarResultado('r', data.resultado);
         } catch(ex) {
@@ -938,10 +1295,12 @@ async function verDetalleCurriculo(materia, card) {
         try {
             const res = await fetch('/api/planificacion/estrategia', {
                 method:'POST', headers:{'Content-Type':'application/json'},
-                body: JSON.stringify({materia, problema, perfil_grupo: perfil})
+                body: JSON.stringify({materia, problema, perfil_grupo: perfil,
+                    mencion: (document.getElementById('e-mencion') || {}).value || 'MULTIMEDIA'})
             });
-            const data = await res.json();
             mostrarLoading('e', false);
+            if (!res.ok) { mostrarError('e', 'Error del servidor (' + res.status + ').'); return; }
+            const data = await res.json();
             if (data.error) { mostrarError('e', data.error); return; }
             mostrarResultado('e', data.resultado);
         } catch(ex) {
@@ -1209,6 +1568,546 @@ async function verDetalleCurriculo(materia, card) {
             cargarCurriculo('p-materia', 'p-curriculo');
         }
     }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // TAB ABP MINERD — Plantilla Oficial
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // Datos del plan técnico por mención (inyectado desde Flask)
+    // default({}) protege si el app.py aún no tiene plan_tecnicas
+    const _PLAN_FLASK = {{ plan_tecnicas | default({}) | tojson }};
+
+    // Fallback hardcodeado — funciona aunque Flask no pase el dato
+    const _PLAN_FALLBACK = {
+        "MULTIMEDIA": {
+            "4to": [
+                {nombre:"Identidad, Cultura y Emprendimiento", horas:2},
+                {nombre:"Historia del Arte Universal y la Estética Digital", horas:4},
+                {nombre:"Lenguaje Musical", horas:2},
+                {nombre:"Lenguaje Danzario y Teatral", horas:2},
+                {nombre:"Lenguaje Visual, Dibujo y Creación de Personajes", horas:5},
+                {nombre:"Diseño Básico y Expresión Visual", horas:4},
+                {nombre:"Fotografía", horas:4}
+            ],
+            "5to": [
+                {nombre:"Diseño Web", horas:6},
+                {nombre:"Diseño Gráfico", horas:4},
+                {nombre:"Publicidad y Creatividad", horas:3},
+                {nombre:"Operación de Cámara de Video", horas:4},
+                {nombre:"Guión", horas:4},
+                {nombre:"Medios de Comunicación", horas:2}
+            ],
+            "6to": [
+                {nombre:"Redes Sociales", horas:2},
+                {nombre:"Producción Audiovisual", horas:4},
+                {nombre:"Videoarte", horas:5},
+                {nombre:"Animación", horas:4},
+                {nombre:"Edición, Sonido y Musicalización", horas:4},
+                {nombre:"Producción de Proyecto Emprendedor", horas:4}
+            ]
+        },
+        "ARTES VISUALES": {
+            "4to": [
+                {nombre:"Identidad, Cultura y Emprendimiento", horas:2},
+                {nombre:"Historia del Arte Universal", horas:4},
+                {nombre:"Lenguaje Plástico y Visual", horas:6},
+                {nombre:"Dibujo Técnico y Artístico", horas:4},
+                {nombre:"Pintura y Técnicas Mixtas", horas:4}
+            ],
+            "5to": [
+                {nombre:"Escultura y Cerámica", horas:5},
+                {nombre:"Grabado y Serigrafía", horas:4},
+                {nombre:"Diseño y Comunicación Visual", horas:4},
+                {nombre:"Fotografía Artística", horas:3},
+                {nombre:"Apreciación del Arte Dominicano y del Caribe", horas:3}
+            ],
+            "6to": [
+                {nombre:"Arte Digital y Multimedia", horas:4},
+                {nombre:"Gestión y Producción Artística", horas:4},
+                {nombre:"Proyecto de Producción en Artes Visuales", horas:6},
+                {nombre:"Taller de Restauración y Patrimonio", horas:3}
+            ]
+        },
+        "MÚSICA": {
+            "4to": [
+                {nombre:"Identidad, Cultura y Emprendimiento", horas:2},
+                {nombre:"Historia de la Música Universal", horas:4},
+                {nombre:"Teoría y Solfeo", horas:4},
+                {nombre:"Instrumento Principal I", horas:6},
+                {nombre:"Coro y Conjunto Musical I", horas:3}
+            ],
+            "5to": [
+                {nombre:"Instrumento Principal II", horas:6},
+                {nombre:"Armonía y Contrapunto", horas:4},
+                {nombre:"Coro y Conjunto Musical II", horas:3},
+                {nombre:"Música Dominicana y del Caribe", horas:3},
+                {nombre:"Composición y Arreglos Básicos", horas:4}
+            ],
+            "6to": [
+                {nombre:"Instrumento Principal III", horas:6},
+                {nombre:"Producción Musical Digital", horas:5},
+                {nombre:"Dirección Coral y Orquestal", horas:3},
+                {nombre:"Proyecto Musical Emprendedor", horas:4}
+            ]
+        },
+        "TEATRO": {
+            "4to": [
+                {nombre:"Identidad, Cultura y Emprendimiento", horas:2},
+                {nombre:"Historia del Teatro Universal", horas:4},
+                {nombre:"Expresión Corporal y Movimiento Escénico", horas:4},
+                {nombre:"Técnica Vocal y Dicción", horas:3},
+                {nombre:"Actuación I — Técnicas Básicas", horas:6}
+            ],
+            "5to": [
+                {nombre:"Actuación II — Stanislavski y Métodos", horas:6},
+                {nombre:"Dramaturgia y Guión Teatral", horas:4},
+                {nombre:"Escenografía e Iluminación", horas:3},
+                {nombre:"Teatro Dominicano y del Caribe", horas:3},
+                {nombre:"Montaje Teatral I", horas:4}
+            ],
+            "6to": [
+                {nombre:"Actuación III — Proyecto Escénico", horas:6},
+                {nombre:"Dirección Teatral", horas:4},
+                {nombre:"Gestión Cultural y Producción Teatral", horas:3},
+                {nombre:"Montaje Teatral II — Obra Final", horas:5}
+            ]
+        },
+        "DANZA": {
+            "4to": [
+                {nombre:"Identidad, Cultura y Emprendimiento", horas:2},
+                {nombre:"Historia de la Danza Universal", horas:4},
+                {nombre:"Técnica de Danza Clásica I", horas:5},
+                {nombre:"Técnica de Danza Folklórica Dominicana I", horas:4},
+                {nombre:"Expresión Corporal y Acondicionamiento Físico", horas:3}
+            ],
+            "5to": [
+                {nombre:"Técnica de Danza Clásica II", horas:5},
+                {nombre:"Técnica de Danza Moderna y Contemporánea", horas:4},
+                {nombre:"Técnica de Danza Folklórica II", horas:3},
+                {nombre:"Composición Coreográfica I", horas:4},
+                {nombre:"Música Aplicada a la Danza", horas:2}
+            ],
+            "6to": [
+                {nombre:"Técnica de Danza Clásica III", horas:5},
+                {nombre:"Composición Coreográfica II — Proyecto Final", horas:5},
+                {nombre:"Gestión y Producción en Danza", horas:3},
+                {nombre:"Danza Urbana y Contemporánea", horas:3},
+                {nombre:"Montaje y Puesta en Escena", horas:4}
+            ]
+        }
+    };
+
+    // Usar Flask si tiene datos, si no usar fallback
+    const PLAN_TECNICAS = (Object.keys(_PLAN_FLASK).length > 0) ? _PLAN_FLASK : _PLAN_FALLBACK;
+
+    // Plan actual generado por la IA — se guarda aquí para exportar
+    let _planABP = null;
+
+    // ── Cargar asignaturas técnicas según mención ────────────────────────────
+    function abpCargarAsignaturas() {
+        const mencion  = document.getElementById('abp-mencion').value;
+        const grado    = document.getElementById('abp-grado').value;
+        const sel      = document.getElementById('abp-asignatura');
+        const materias = (PLAN_TECNICAS[mencion] || {})[grado] || [];
+
+        sel.innerHTML = '<option value="">— Selecciona tu asignatura —</option>';
+        materias.forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m.nombre;
+            opt.textContent = `${m.nombre} (${m.horas}h/sem)`;
+            sel.appendChild(opt);
+        });
+    }
+
+    // Auto-fill cuando cambia la asignatura
+    function abpOnAsignatura() {
+        const asig = document.getElementById('abp-asignatura').value;
+        // Si el título está vacío, no hacemos nada — la IA lo sugerirá
+        // Podríamos precargar el currículo para mostrarlo en el futuro
+    }
+
+    // Inicializar selector de asignaturas cuando el DOM esté listo
+    document.addEventListener('DOMContentLoaded', function() {
+        var mencionEl = document.getElementById('abp-mencion');
+        var gradoEl   = document.getElementById('abp-grado');
+        if (mencionEl) mencionEl.addEventListener('change', abpCargarAsignaturas);
+        if (gradoEl)   gradoEl.addEventListener('change',   abpCargarAsignaturas);
+        // Cargar Multimedia 4to por defecto
+        abpCargarAsignaturas();
+    });
+
+    // ── Generar planificación ABP con IA ────────────────────────────────────
+    async function generarPlanABP() {
+        const asignatura = document.getElementById('abp-asignatura').value;
+        if (!asignatura) {
+            alert('Selecciona una asignatura antes de generar.'); return;
+        }
+
+        // UI: mostrar spinner
+        document.getElementById('abp-estado-inicial').style.display = 'none';
+        document.getElementById('abp-preview').style.display = 'none';
+        document.getElementById('abp-loading').style.display = 'block';
+        document.getElementById('btn-generar-abp').disabled = true;
+
+        // Animar barra de progreso
+        let prog = 0;
+        const pbar = document.getElementById('abp-progress-bar');
+        const progInterval = setInterval(() => {
+            prog = Math.min(prog + 3, 85);
+            pbar.style.width = prog + '%';
+        }, 600);
+
+        try {
+            const payload = {
+                asignatura,
+                grado:           document.getElementById('abp-grado').value,
+                mencion:         document.getElementById('abp-mencion').value,
+                titulo_proyecto: document.getElementById('abp-titulo').value.trim(),
+                fecha_inicio:    document.getElementById('abp-fecha-ini').value.trim(),
+                fecha_cierre:    document.getElementById('abp-fecha-fin').value.trim(),
+                duracion:        document.getElementById('abp-duracion').value.trim(),
+                producto_final:  document.getElementById('abp-producto').value.trim(),
+                contexto_adicional: document.getElementById('abp-contexto').value.trim(),
+            };
+
+            const res  = await fetch('/api/planificacion/generar-abp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            const data = await res.json();
+
+            clearInterval(progInterval);
+            pbar.style.width = '100%';
+
+            if (!res.ok || data.error) {
+                throw new Error(data.error || 'Error del servidor');
+            }
+
+            _planABP = data.plan;
+            setTimeout(() => {
+                document.getElementById('abp-loading').style.display = 'none';
+                renderPlanABP(_planABP);
+            }, 400);
+
+        } catch (err) {
+            clearInterval(progInterval);
+            document.getElementById('abp-loading').style.display = 'none';
+            document.getElementById('abp-estado-inicial').style.display = 'block';
+            document.getElementById('abp-estado-inicial').innerHTML = `
+                <div style="font-size:32px;margin-bottom:12px;">⚠️</div>
+                <div style="font-size:13px;font-weight:600;color:#ff6b6b;margin-bottom:8px;">Error al generar</div>
+                <div style="font-size:11px;color:var(--text-muted);">${err.message}</div>
+                <button onclick="document.getElementById('abp-estado-inicial').innerHTML='<div style=font-size:40px>📄</div><div style=font-size:13px;font-weight:600>Tu planificación aparecerá aquí</div>'"
+                    style="margin-top:12px;background:transparent;border:1px solid var(--border);
+                           color:var(--text-muted);padding:6px 14px;border-radius:7px;font-size:11px;cursor:pointer;">
+                    Reintentar
+                </button>`;
+        } finally {
+            document.getElementById('btn-generar-abp').disabled = false;
+        }
+    }
+
+    // ── Renderizar el plan generado en la vista previa ───────────────────────
+    function renderPlanABP(plan) {
+        if (!plan) return;
+
+        const doc   = plan.docente   || {};
+        const proy  = plan.proyecto  || {};
+        const cur   = plan.curriculo || {};
+        const fases = plan.fases     || [];
+        const inst  = plan.instrumentos || {};
+
+        // Header
+        document.getElementById('abp-prev-titulo').textContent =
+            proy.titulo ? `"${proy.titulo}"` : doc.asignatura || '—';
+        document.getElementById('abp-prev-sub').textContent =
+            `${doc.asignatura || ''} · ${doc.grado || ''} · ABP`;
+
+        // ── Bloque IDENTIFICACIÓN ──
+        const idRows = [
+            ['Centro educativo', doc.centro || 'C.E. en Artes Benito Juárez'],
+            ['Mención', doc.mencion || ''],
+            ['Asignatura', doc.asignatura || ''],
+            ['Grado', doc.grado || ''],
+            ['Docente', doc.nombre_completo || ''],
+            ['Título del proyecto', proy.titulo ? `"${proy.titulo}"` : '—'],
+            ['Fecha inicio', proy.fecha_inicio || '—'],
+            ['Fecha cierre', proy.fecha_cierre || '—'],
+            ['Duración', proy.duracion || '—'],
+            ['Metodología', 'ABP'],
+            ['Producto final', proy.producto_final || '—'],
+        ];
+        document.getElementById('abp-id-content').innerHTML = idRows.map(([l,v]) => `
+            <div class="abp-field-row">
+                <div class="abp-field-lbl">${l}</div>
+                <div class="abp-field-val">${escABP(v)}</div>
+            </div>`).join('');
+
+        // ── Bloque ELEMENTOS ──
+        const comps = (cur.competencias_fundamentales || []).map(c => `<li>${escABP(c)}</li>`).join('');
+        const conc  = (cur.contenidos?.conceptuales    || []).map(c => `<li>${escABP(c)}</li>`).join('');
+        const proc  = (cur.contenidos?.procedimentales || []).map(c => `<li>${escABP(c)}</li>`).join('');
+        const acti  = (cur.contenidos?.actitudinales   || []).map(c => `<li>${escABP(c)}</li>`).join('');
+        const elems = (cur.elementos_competencia       || []).map(c => `<li>${escABP(c)}</li>`).join('');
+
+        document.getElementById('abp-el-content').innerHTML = `
+            <div class="abp-field-row"><div class="abp-field-lbl">Competencias Fund.</div>
+              <div class="abp-field-val"><ul style="padding-left:16px;margin:0;font-size:12px;">${comps || '<li>—</li>'}</ul></div></div>
+            <div class="abp-field-row"><div class="abp-field-lbl">RAE</div>
+              <div class="abp-field-val"><ul style="padding-left:16px;margin:0;font-size:12px;">${(Array.isArray(cur.rae)?cur.rae:[cur.rae_descripcion||cur.rae_nombre||'—']).map(r=>`<li>${escABP(r)}</li>`).join('')}</ul></div></div>
+            <div class="abp-field-row"><div class="abp-field-lbl">Contenidos Conc.</div>
+              <div class="abp-field-val"><ul style="padding-left:16px;margin:0;font-size:12px;">${conc||'<li>—</li>'}</ul></div></div>
+            <div class="abp-field-row"><div class="abp-field-lbl">Procedinmentales</div>
+              <div class="abp-field-val"><ul style="padding-left:16px;margin:0;font-size:12px;">${proc||'<li>—</li>'}</ul></div></div>
+            <div class="abp-field-row"><div class="abp-field-lbl">Actitudinales</div>
+              <div class="abp-field-val"><ul style="padding-left:16px;margin:0;font-size:12px;">${acti||'<li>—</li>'}</ul></div></div>
+            <div class="abp-field-row"><div class="abp-field-lbl">Elem. Competencia</div>
+              <div class="abp-field-val"><ul style="padding-left:16px;margin:0;font-size:12px;">${elems||'<li>—</li>'}</ul></div></div>
+            <div class="abp-field-row"><div class="abp-field-lbl">Problema</div>
+              <div class="abp-field-val" style="font-style:italic;">${escABP(cur.problema||'—')}</div></div>
+            <div class="abp-field-row" style="border:none"><div class="abp-field-lbl">Pregunta desafiante</div>
+              <div class="abp-field-val" style="font-style:italic;color:var(--blue);">${escABP(cur.pregunta||'—')}</div></div>`;
+
+        // ── Bloque FASES ABP ──
+        const FASE_ICONS = ['🔍','📐','🛠️','🎤'];
+        const FASE_COLORS = ['var(--blue)','var(--accent)','#f97316','#ec4899'];
+        // Helper: combina actividades nuevas (inicio/desarrollo/cierre) con formato legacy
+        function combinarActividades(f) {
+            const partes = [];
+            if (f.actividades_inicio && f.actividades_inicio.length) {
+                partes.push('<li style="color:#bf8f00;font-weight:700;margin-top:4px">Inicio:</li>');
+                f.actividades_inicio.forEach(a => partes.push(`<li style="margin-left:8px;margin-bottom:2px">${escABP(a)}</li>`));
+            }
+            if (f.actividades_desarrollo && f.actividades_desarrollo.length) {
+                partes.push('<li style="color:#bf8f00;font-weight:700;margin-top:4px">Desarrollo:</li>');
+                f.actividades_desarrollo.forEach(a => partes.push(`<li style="margin-left:8px;margin-bottom:2px">${escABP(a)}</li>`));
+            }
+            if (f.actividades_cierre && f.actividades_cierre.length) {
+                partes.push('<li style="color:#bf8f00;font-weight:700;margin-top:4px">Cierre:</li>');
+                f.actividades_cierre.forEach(a => partes.push(`<li style="margin-left:8px;margin-bottom:2px">${escABP(a)}</li>`));
+            }
+            // Fallback formato legacy
+            if (!partes.length && f.actividades) {
+                f.actividades.forEach(a => partes.push(`<li style="margin-bottom:2px">${escABP(a)}</li>`));
+            }
+            return partes.join('') || '<li>—</li>';
+        }
+
+        // Helper: formatea STEAM (objeto nuevo o array legacy)
+        function formatearSTEAM(f) {
+            if (f.steam && typeof f.steam === 'object' && !Array.isArray(f.steam)) {
+                const labels = {ciencia:'Ciencia',tecnologia:'Tecnología',ingenieria:'Ingeniería',arte:'Arte',matematica:'Matemática'};
+                return Object.entries(f.steam).filter(([k,v])=>v).map(([k,v]) =>
+                    `<li style="margin-bottom:3px"><strong style="color:var(--blue)">${labels[k]||k}:</strong> ${escABP(v)}</li>`
+                ).join('') || '<li>—</li>';
+            }
+            return (f.steam||[]).map(s=>`<li style="margin-bottom:2px">${escABP(s)}</li>`).join('') || '<li>—</li>';
+        }
+
+        document.getElementById('abp-fa-content').innerHTML = fases.map((f,i) => `
+            <div class="abp-fase-card" style="border-left-color:${FASE_COLORS[i]||'var(--border)'}">
+                <div class="abp-fase-titulo" style="color:${FASE_COLORS[i]||'var(--text)'}">
+                    ${FASE_ICONS[i]||'•'} Fase ${f.numero||i+1}: ${escABP(f.nombre||'')}
+                    <span style="font-size:10px;font-weight:400;color:var(--text-muted);margin-left:8px;">⏱ ${escABP(f.tiempo||'')}</span>
+                </div>
+                ${(f.competencias_especificas && f.competencias_especificas.length) ? `
+                <div style="font-size:10px;color:var(--text-muted);margin-bottom:6px;">
+                    <strong style="color:var(--blue)">Competencias específicas:</strong>
+                    ${f.competencias_especificas.map(c=>escABP(c)).join(' · ')}
+                </div>` : ''}
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11px;">
+                    <div>
+                        <div style="font-weight:700;color:var(--text-muted);font-size:10px;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">Actividades</div>
+                        <ul style="padding-left:14px;margin:0;color:var(--text);">
+                            ${combinarActividades(f)}
+                        </ul>
+                    </div>
+                    <div>
+                        <div style="font-weight:700;color:var(--text-muted);font-size:10px;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">STEAM</div>
+                        <ul style="padding-left:14px;margin:0;color:var(--text);">
+                            ${formatearSTEAM(f)}
+                        </ul>
+                    </div>
+                    <div>
+                        <div style="font-weight:700;color:var(--text-muted);font-size:10px;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">Rol Docente</div>
+                        <ul style="padding-left:14px;margin:0;color:var(--text);">
+                            ${(f.rol_docente||[]).map(r=>`<li style="margin-bottom:2px">${escABP(r)}</li>`).join('')||'<li>—</li>'}
+                        </ul>
+                    </div>
+                    <div>
+                        <div style="font-weight:700;color:var(--text-muted);font-size:10px;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">Rol Estudiante</div>
+                        <ul style="padding-left:14px;margin:0;color:var(--text);">
+                            ${(f.rol_estudiante||[]).map(r=>`<li style="margin-bottom:2px">${escABP(r)}</li>`).join('')||'<li>—</li>'}
+                        </ul>
+                    </div>
+                    <div>
+                        <div style="font-weight:700;color:var(--text-muted);font-size:10px;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">Recursos</div>
+                        <ul style="padding-left:14px;margin:0;color:var(--text);">
+                            ${(f.recursos||[]).map(r=>`<li style="margin-bottom:2px">${escABP(r)}</li>`).join('')||'<li>—</li>'}
+                        </ul>
+                    </div>
+                    <div>
+                        <div style="font-weight:700;color:var(--text-muted);font-size:10px;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">Evaluación</div>
+                        <ul style="padding-left:14px;margin:0;color:var(--text);">
+                            ${(f.instrumentos_evaluacion||f.evaluacion||[]).map(e=>`<li style="margin-bottom:2px">${escABP(e)}</li>`).join('')||'<li>—</li>'}
+                        </ul>
+                    </div>
+                </div>
+            </div>`).join('') || '<div style="color:var(--text-muted);font-size:12px;">Sin fases generadas.</div>';
+
+        // ── Bloque INSTRUMENTOS ──
+        const cotejo = (inst.lista_cotejo || []);
+        const rProc  = (inst.rubrica_proceso || []);
+        const rFinal = (inst.rubrica_final  || []);
+
+        document.getElementById('abp-inst-content').innerHTML = `
+            <div style="font-family:var(--font-display);font-size:11px;font-weight:700;
+                        text-transform:uppercase;letter-spacing:.6px;color:var(--blue);
+                        margin-bottom:10px;">📋 Lista de Cotejo — Fase 1</div>
+            <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:18px;">
+                <thead><tr style="background:#1F4E79;color:#fff;">
+                    <th style="padding:6px 10px;text-align:left;border:1px solid #333;">Criterio / Indicador</th>
+                    <th style="padding:6px 10px;width:50px;border:1px solid #333;">Sí</th>
+                    <th style="padding:6px 10px;width:50px;border:1px solid #333;">No</th>
+                </tr></thead>
+                <tbody>${cotejo.map((c,i)=>`<tr style="background:${i%2?'var(--surface2)':'var(--surface)'}">
+                    <td style="padding:5px 10px;border:1px solid var(--border)">${escABP(c)}</td>
+                    <td style="text-align:center;border:1px solid var(--border)">□</td>
+                    <td style="text-align:center;border:1px solid var(--border)">□</td>
+                </tr>`).join('')||'<tr><td colspan="3" style="padding:8px;color:var(--text-muted)">—</td></tr>'}</tbody>
+            </table>
+
+            <div style="font-family:var(--font-display);font-size:11px;font-weight:700;
+                        text-transform:uppercase;letter-spacing:.6px;color:var(--blue);
+                        margin-bottom:10px;">📊 Rúbrica de Proceso — Fase 2</div>
+            <table style="width:100%;border-collapse:collapse;font-size:10px;margin-bottom:18px;">
+                <thead><tr style="background:#1F4E79;color:#fff;">
+                    <th style="padding:5px 8px;text-align:left;border:1px solid #333;min-width:80px">Criterio</th>
+                    <th style="padding:5px 8px;border:1px solid #333">Destacado</th>
+                    <th style="padding:5px 8px;border:1px solid #333">Satisfactorio</th>
+                    <th style="padding:5px 8px;border:1px solid #333">Básico</th>
+                    <th style="padding:5px 8px;border:1px solid #333">En proceso</th>
+                </tr></thead>
+                <tbody>${rProc.map((r,i)=>`<tr style="background:${i%2?'var(--surface2)':'var(--surface)'}">
+                    <td style="padding:5px 8px;font-weight:600;border:1px solid var(--border)">${escABP(r.criterio||r.nivel||'')}</td>
+                    <td style="padding:5px 8px;border:1px solid var(--border)">${escABP(r.destacado||r.excelente||'')}</td>
+                    <td style="padding:5px 8px;border:1px solid var(--border)">${escABP(r.satisfactorio||r.bueno||'')}</td>
+                    <td style="padding:5px 8px;border:1px solid var(--border)">${escABP(r.basico||r['básico']||'')}</td>
+                    <td style="padding:5px 8px;border:1px solid var(--border)">${escABP(r.en_proceso||r.bajo||'')}</td>
+                </tr>`).join('')||'<tr><td colspan="5" style="padding:8px;color:var(--text-muted)">—</td></tr>'}</tbody>
+            </table>
+
+            <div style="font-family:var(--font-display);font-size:11px;font-weight:700;
+                        text-transform:uppercase;letter-spacing:.6px;color:var(--blue);
+                        margin-bottom:10px;">🏆 Rúbrica Final — Fase 4 (20/15/10/5%)</div>
+            <table style="width:100%;border-collapse:collapse;font-size:10px;">
+                <thead><tr style="background:#1F4E79;color:#fff;">
+                    <th style="padding:5px 8px;text-align:left;border:1px solid #333;min-width:80px">Criterio</th>
+                    <th style="padding:5px 8px;border:1px solid #333">Excelente 20%</th>
+                    <th style="padding:5px 8px;border:1px solid #333">Bueno 15%</th>
+                    <th style="padding:5px 8px;border:1px solid #333">Básico 10%</th>
+                    <th style="padding:5px 8px;border:1px solid #333">Bajo 5%</th>
+                </tr></thead>
+                <tbody>${rFinal.map((r,i)=>`<tr style="background:${i%2?'var(--surface2)':'var(--surface)'}">
+                    <td style="padding:5px 8px;font-weight:600;border:1px solid var(--border)">${escABP(r.criterio||'')}</td>
+                    <td style="padding:5px 8px;border:1px solid var(--border)">${escABP(r.excelente_20||r.excelente||'')}</td>
+                    <td style="padding:5px 8px;border:1px solid var(--border)">${escABP(r.bueno_15||r.bueno||'')}</td>
+                    <td style="padding:5px 8px;border:1px solid var(--border)">${escABP(r.basico_10||r.basico||r['básico']||'')}</td>
+                    <td style="padding:5px 8px;border:1px solid var(--border)">${escABP(r.bajo_5||r.bajo||'')}</td>
+                </tr>`).join('')||'<tr><td colspan="5" style="padding:8px;color:var(--text-muted)">—</td></tr>'}</tbody>
+            </table>`;
+
+        // Mostrar panel
+        document.getElementById('abp-preview').style.display = 'block';
+    }
+
+    // ── Tabs internos del preview ───────────────────────────────────────────
+    function abpInnerTab(nombre, btn) {
+        document.querySelectorAll('.abp-inner-panel').forEach(p => p.style.display = 'none');
+        document.querySelectorAll('.abp-inner-tab').forEach(b => b.classList.remove('active'));
+        document.getElementById('abp-inner-' + nombre).style.display = 'block';
+        btn.classList.add('active');
+    }
+
+    // ── Exportar a .docx ───────────────────────────────────────────────────
+    async function exportarDocx() {
+        if (!_planABP) return;
+        const btn = document.getElementById('btn-exportar-docx');
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando...';
+        btn.disabled = true;
+
+        try {
+            const res = await fetch('/api/planificacion/exportar-docx', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ plan: _planABP }),
+            });
+
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || 'Error generando el documento');
+            }
+
+            // Descargar el blob
+            const blob = await res.blob();
+            const url  = URL.createObjectURL(blob);
+            const a    = document.createElement('a');
+            const asig = (_planABP.docente?.asignatura || 'Plan').replace(/\s+/g,'_');
+            const tit  = (_planABP.proyecto?.titulo    || 'ABP' ).substring(0,30).replace(/\s+/g,'_');
+            a.href     = url;
+            a.download = `Plan_ABP_${asig}_${tit}.docx`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+        } catch(err) {
+            alert('Error al generar el .docx: ' + err.message);
+        } finally {
+            btn.innerHTML = '<i class="fas fa-file-word"></i> Descargar .docx';
+            btn.disabled  = false;
+        }
+    }
+
+    // ── Botón editar — permite volver al formulario con datos precargados ──
+    function editarPlanABP() {
+        if (!_planABP) return;
+        const doc  = _planABP.docente  || {};
+        const proy = _planABP.proyecto || {};
+        // Precargar formulario con los datos actuales
+        if (doc.asignatura) document.getElementById('abp-asignatura').value = doc.asignatura;
+        if (proy.titulo)     document.getElementById('abp-titulo').value    = proy.titulo.replace(/"/g,'');
+        if (proy.fecha_inicio) document.getElementById('abp-fecha-ini').value = proy.fecha_inicio;
+        if (proy.fecha_cierre) document.getElementById('abp-fecha-fin').value = proy.fecha_cierre;
+        if (proy.duracion)   document.getElementById('abp-duracion').value  = proy.duracion;
+        if (proy.producto_final) document.getElementById('abp-producto').value = proy.producto_final;
+        // Hacer scroll al formulario
+        document.getElementById('abp-asignatura').scrollIntoView({ behavior:'smooth' });
+    }
+
+    // ── Helper: escapar HTML ────────────────────────────────────────────────
+    function escABP(s) {
+        if (!s) return '';
+        return String(s)
+            .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+            .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+
+function _actualizarBadge(badgeId, modelo, tipo) {
+  var el = document.getElementById(badgeId);
+  if (!el) return;
+  var nombre = modelo && modelo.includes('gemini') ? 'gemini-1.5-pro' : 'llama-3.3-70b';
+  var icono = modelo && modelo.includes('gemini') ? '✦✦' : '✦';
+  el.textContent = icono + ' ' + nombre + ' · ' + tipo;
+  el.style.background = modelo && modelo.includes('gemini') 
+    ? 'rgba(66,133,244,.15)' : 'rgba(55,138,221,.1)';
+  el.style.borderColor = modelo && modelo.includes('gemini') 
+    ? 'rgba(66,133,244,.3)' : 'rgba(55,138,221,.2)';
+  el.style.color = modelo && modelo.includes('gemini') ? '#4285f4' : 'var(--accent)';
+}
+
 </script>
 </body>
 </html>
