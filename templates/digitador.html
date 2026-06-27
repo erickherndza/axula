@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Digitación — Axula</title>
+<link rel="stylesheet" href="/static/theme.css">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-height:100vh}
+.top{display:flex;align-items:center;justify-content:space-between;padding:14px 28px;background:var(--surface);border-bottom:1px solid var(--border)}
+.top h1{font-family:var(--font-display);font-size:1.3rem;font-weight:800}.top .r{display:flex;gap:12px;font-size:.85rem;color:var(--muted)}.top a{color:var(--accent);text-decoration:none;font-weight:600;font-size:.85rem}
+.c{max-width:1400px;margin:0 auto;padding:24px}
+.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:28px}
+.s{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;text-align:center}
+.s .n{font-size:2rem;font-weight:800;color:var(--accent);line-height:1}.s .l{font-size:.78rem;color:var(--muted);margin-top:6px;text-transform:uppercase}
+.tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:2px solid var(--border)}.tb{padding:10px 20px;border:none;background:none;color:var(--muted);font-family:var(--font-body);font-size:.88rem;font-weight:600;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px}.tb.a{color:var(--accent);border-bottom-color:var(--accent)}
+.p{display:none}.p.a{display:block}
+.tl{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.tl input,.tl select{padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:.85rem}
+.b{padding:8px 18px;border-radius:8px;border:none;font-weight:600;cursor:pointer;font-size:.85rem;display:inline-flex;align-items:center;gap:6px}.bp{background:var(--accent);color:#000}.bs{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:.85rem}th{text-align:left;padding:10px 14px;font-weight:600;color:var(--muted);border-bottom:2px solid var(--border);font-size:.78rem;text-transform:uppercase}td{padding:10px 14px;border-bottom:1px solid var(--border)}tr:hover{background:var(--hover)}
+.nota-input{width:60px;padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);text-align:center;font-size:.9rem;font-weight:600}
+.nota-input:focus{border-color:var(--accent);outline:none}
+.alert-box{padding:16px 20px;border-radius:10px;margin-bottom:16px;border:1px solid var(--border);display:flex;align-items:center;gap:12px}
+.alert-box i{font-size:1.2rem}.alert-warn{background:rgba(255,196,77,.08);border-color:var(--warn);color:var(--warn)}.alert-ok{background:rgba(77,255,180,.08);border-color:var(--success);color:var(--success)}
+.em{text-align:center;padding:48px;color:var(--muted)}.em i{font-size:2.5rem;margin-bottom:12px;display:block;opacity:.4}
+</style>
+<script src="/static/theme.js"></script>
+</head>
+<body>
+<div class="top"><h1><i class="fas fa-keyboard" style="color:var(--accent);margin-right:8px"></i>Digitación</h1><div class="r"><span>{{ current_user.nombre }}</span><div class="mt-theme-toggle" style="margin-left:auto;margin-right:12px"><button class="mt-tbtn" data-theme="dark" onclick="setTheme('dark')">🌙</button><button class="mt-tbtn" data-theme="light" onclick="setTheme('light')">☀️</button></div><a href="/digitador"><i class="fas fa-home"></i> Inicio</a><a href="/logout"><i class="fas fa-sign-out-alt"></i> Salir</a></div></div>
+<div class="c">
+<div class="g"><div class="s"><div class="n" id="st-t">—</div><div class="l">Estudiantes</div></div><div class="s"><div class="n" id="st-c">—</div><div class="l">Con notas</div></div><div class="s"><div class="n" id="st-s">—</div><div class="l">Sin notas</div></div><div class="s"><div class="n" id="st-n">—</div><div class="l">Calificaciones</div></div></div>
+<div class="tabs"><button class="tb a" onclick="T('dig',this)"><i class="fas fa-pen"></i> Digitar notas</button><button class="tb" onclick="T('ver',this)"><i class="fas fa-search"></i> Verificar datos</button><button class="tb" onclick="T('insc',this)"><i class="fas fa-user-plus"></i> Inscribir estudiante</button><button class="tb" onclick="T('edit',this)"><i class="fas fa-edit"></i> Editar estudiante</button><button class="tb" onclick="T('exp',this)"><i class="fas fa-archive"></i> Expediente Histórico</button><button class="tb" onclick="T('excel',this)" style="color:#22c55e"><i class="fas fa-file-excel"></i> Cargar Excel</button><button class="tb" onclick="window.location.href='/escaner'" style="color:#10b981"><i class="fas fa-camera-retro"></i> Escáner</button></div>
+<div class="p a" id="p-dig">
+  <div class="tl">
+    <select id="f-grado" onchange="LE()"><option value="">— Grado —</option><option>1ro</option><option>2do</option><option>3ro</option><option>4to</option><option>5to</option><option>6to</option></select>
+    <select id="f-mencion" onchange="LE()"><option value="">— Mención —</option><option>MULTIMEDIA</option><option>TEATRO</option><option>MÚSICA</option><option>ARTES VISUALES</option><option>DANZA</option></select>
+    <select id="f-periodo"><option value="P1">Período 1</option><option value="P2">Período 2</option><option value="P3">Período 3</option><option value="P4">Período 4</option></select>
+    <input id="f-materia" placeholder="Materia..." style="min-width:200px">
+    <button class="b bp" onclick="GL()"><i class="fas fa-save"></i> Guardar todo</button>
+  </div>
+  <table>
+    <thead><tr><th>#</th><th>Estudiante</th><th>Grado</th><th>Nota</th><th>Estado</th></tr></thead>
+    <tbody id="tb-est"></tbody>
+  </table>
+  <div class="em" id="e-est" style="display:none"><i class="fas fa-users"></i>Selecciona grado y mención</div>
+</div>
+<div class="p" id="p-ver">
+  <div class="alert-box alert-warn" id="alerta-ver" style="display:none"><i class="fas fa-exclamation-triangle"></i><div id="alerta-msg"></div></div>
+  <div id="verificacion"></div>
+</div>
+</div>
+
+<div class="p" id="p-insc">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;max-width:700px">
+    <h3 style="margin-bottom:16px;font-size:1rem"><i class="fas fa-user-plus" style="color:var(--accent)"></i> Registrar Nuevo Estudiante</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="f"><label>Nombre *</label><input id="reg-nombre" placeholder="Nombre(s)"></div>
+      <div class="f"><label>Apellido *</label><input id="reg-apellido" placeholder="Apellido(s)"></div>
+      <div class="f"><label>Cédula</label><input id="reg-cedula" placeholder="000-0000000-0"></div>
+      <div class="f"><label>Edad</label><input id="reg-edad" type="number" min="10" max="25" placeholder="15"></div>
+      <div class="f"><label>Grado</label><select id="reg-grado"><option>1ro</option><option>2do</option><option>3ro</option><option>4to</option><option>5to</option><option>6to</option></select></div>
+      <div class="f"><label>Mención</label><select id="reg-mencion"><option value="">— Seleccionar —</option><option>MULTIMEDIA</option><option>TEATRO</option><option>MÚSICA</option><option>ARTES VISUALES</option><option>DANZA</option></select></div>
+      <div class="f"><label>Sección</label><select id="reg-seccion"><option>A</option><option>B</option><option>C</option></select></div>
+      <div class="f"><label>Sexo</label><select id="reg-sexo"><option value="">—</option><option value="M">Masculino</option><option value="F">Femenino</option></select></div>
+    </div>
+    <div style="margin-top:16px;text-align:right"><button class="b bp" onclick="registrarEst()"><i class="fas fa-save"></i> Registrar estudiante</button></div>
+    <div id="reg-result" style="margin-top:12px"></div>
+  </div>
+</div>
+
+<div class="p" id="p-edit">
+  <div style="max-width:700px">
+    <div class="tl" style="margin-bottom:16px">
+      <input type="text" id="edit-buscar" placeholder="Buscar estudiante por nombre o cédula..." style="min-width:300px" oninput="buscarEstEdit()">
+    </div>
+    <div id="edit-results" style="max-height:150px;overflow-y:auto;margin-bottom:16px"></div>
+    <div id="edit-form" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px">
+      <h3 style="margin-bottom:16px;font-size:1rem" id="edit-titulo">Editar estudiante</h3>
+      <input type="hidden" id="edit-id">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="f"><label>Nombre</label><input id="edit-nombre"></div>
+        <div class="f"><label>Apellido</label><input id="edit-apellido"></div>
+        <div class="f"><label>Cédula</label><input id="edit-cedula"></div>
+        <div class="f"><label>Edad</label><input id="edit-edad" type="number"></div>
+        <div class="f"><label>Grado</label><select id="edit-grado"><option>1ro</option><option>2do</option><option>3ro</option><option>4to</option><option>5to</option><option>6to</option></select></div>
+        <div class="f"><label>Mención</label><select id="edit-mencion"><option value="">—</option><option>MULTIMEDIA</option><option>TEATRO</option><option>MÚSICA</option><option>ARTES VISUALES</option><option>DANZA</option></select></div>
+        <div class="f"><label>Sección</label><select id="edit-seccion"><option>A</option><option>B</option><option>C</option></select></div>
+        <div class="f"><label>Condición</label><select id="edit-condicion"><option>ACTIVO</option><option>RETIRADO</option><option>TRANSFERIDO</option></select></div>
+      </div>
+      <div style="margin-top:16px;text-align:right"><button class="b bp" onclick="guardarEditEst()"><i class="fas fa-save"></i> Guardar cambios</button></div>
+    </div>
+  </div>
+</div>
+
+<div class="p" id="p-exp">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start">
+    <!-- Buscar expedientes -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px">
+      <h3 style="margin-bottom:14px;font-size:.95rem"><i class="fas fa-search" style="color:var(--accent)"></i> Buscar Expediente</h3>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <input id="exp-ced" placeholder="Cédula..." style="flex:1;padding:7px 12px;border-radius:7px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:.85rem">
+        <input id="exp-nom" placeholder="Nombre..." style="flex:1;padding:7px 12px;border-radius:7px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:.85rem">
+        <input id="exp-ape" placeholder="Apellido..." style="flex:1;padding:7px 12px;border-radius:7px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:.85rem">
+        <button class="b bp" onclick="BEX()"><i class="fas fa-search"></i></button>
+      </div>
+      <div id="exp-res"></div>
+    </div>
+    <!-- Acciones masivas -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px">
+      <h3 style="margin-bottom:14px;font-size:.95rem"><i class="fas fa-file-excel" style="color:var(--success)"></i> Importación Masiva</h3>
+      <p style="font-size:.82rem;color:var(--muted);margin-bottom:12px">Importa expedientes de múltiples años desde Excel. Una fila por materia por estudiante por año.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a href="/api/expediente/plantilla-excel" class="b bs"><i class="fas fa-download"></i> Descargar plantilla</a>
+        <label class="b bp" style="cursor:pointer"><i class="fas fa-upload"></i> Importar Excel<input type="file" id="exp-file" accept=".xlsx,.xls" style="display:none" onchange="ImpExp()"></label>
+      </div>
+      <div id="exp-imp-res" style="margin-top:10px;font-size:.84rem"></div>
+    </div>
+  </div>
+  <!-- Nuevo registro manual -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-top:16px">
+    <h3 style="margin-bottom:14px;font-size:.95rem"><i class="fas fa-plus-circle" style="color:var(--accent)"></i> Registrar Expediente Manual</h3>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
+      <div class="f"><label>Nombre *</label><input id="exn-nom" placeholder="Nombre(s)"></div>
+      <div class="f"><label>Apellido *</label><input id="exn-ape" placeholder="Apellido(s)"></div>
+      <div class="f"><label>Cédula</label><input id="exn-ced" placeholder="Opcional"></div>
+      <div class="f"><label>Año Escolar *</label><input id="exn-anio" placeholder="ej: 2015-2016" oninput="AEX()"></div>
+      <div class="f"><label>Grado *</label><select id="exn-grado"><option value="">— Seleccionar —</option></select></div>
+      <div class="f"><label>Sección</label><input id="exn-sec" placeholder="A, B..."></div>
+      <div class="f"><label>Mención</label><input id="exn-men" placeholder="Multimedia..."></div>
+      <div class="f"><label>Condición</label><select id="exn-cond"><option value="">—</option><option>Aprobado</option><option>Reprobado</option><option>Promovido</option></select></div>
+    </div>
+    <div id="exn-sis" style="margin:8px 0;font-size:.82rem;color:var(--muted)"></div>
+    <div style="margin-top:10px">
+      <label style="font-size:.85rem;font-weight:600">Materias (una por línea: <code>Materia,P1,P2,P3,P4</code>)</label>
+      <textarea id="exn-mats" placeholder="Lengua Española,85,78,90,82&#10;Matemáticas,72,68,75,80" style="width:100%;min-height:100px;margin-top:6px;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:.83rem;font-family:var(--font-mono,monospace);resize:vertical"></textarea>
+    </div>
+    <div style="margin-top:12px;text-align:right"><button class="b bp" onclick="SEX()"><i class="fas fa-save"></i> Guardar expediente</button></div>
+    <div id="exn-res" style="margin-top:8px;font-size:.84rem"></div>
+  </div>
+</div>
+
+<!-- PANEL: CARGAR NOTAS EXCEL -->
+<div class="p" id="p-excel">
+  <div style="max-width:900px">
+    <div style="background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.3);border-radius:10px;padding:14px 18px;margin-bottom:18px;display:flex;align-items:flex-start;gap:12px;">
+      <i class="fas fa-file-excel" style="color:#22c55e;font-size:18px;margin-top:2px;"></i>
+      <div>
+        <div style="font-size:13px;font-weight:700;color:#22c55e;margin-bottom:3px;">Importar Calificaciones desde Excel</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.5;">
+          Sube el <strong style="color:var(--text)">Boletín oficial</strong> del C.E. Benito Juárez para importar automáticamente
+          las calificaciones de todos los estudiantes (P1–P4). También acepta el
+          <strong style="color:var(--text)">Registro del Maestro</strong> en formato estándar.
+        </div>
+      </div>
+    </div>
+
+    <!-- Fila 1: Boletín Oficial + Registro del Maestro -->
+    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;">
+
+      <!-- Boletín Oficial -->
+      <div style="flex:1;min-width:220px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;">
+        <h3 style="font-size:.92rem;margin-bottom:6px;"><i class="fas fa-file-excel" style="color:#22c55e;margin-right:6px;"></i>Boletín Oficial</h3>
+        <p style="font-size:.8rem;color:var(--muted);margin-bottom:12px;line-height:1.5;">
+          Boletín oficial del C.E. Benito Juárez. Importa calificaciones académicas y técnicas de 1er y 2do ciclo.
+        </p>
+        <label style="display:block;border:2px dashed var(--border);border-radius:8px;padding:20px;text-align:center;cursor:pointer;transition:border-color .15s;"
+               onmouseover="this.style.borderColor='#22c55e'" onmouseout="this.style.borderColor='var(--border)'">
+          <input type="file" id="dig-file-boletin" accept=".xlsx,.xls,.xlsm" style="display:none" onchange="digCargarBoletin(this)">
+          <div style="font-size:22px;margin-bottom:6px;">📝</div>
+          <div style="font-size:.85rem;font-weight:600;">Haz clic o arrastra aquí</div>
+          <div style="font-size:.76rem;color:var(--muted);margin-top:3px;">Boletin_calificaciones_*.xlsx</div>
+        </label>
+        <div id="dig-status-boletin" style="margin-top:8px;font-size:.8rem;padding:6px 10px;border-radius:6px;display:none;"></div>
+      </div>
+
+      <!-- Registro del Maestro -->
+      <div style="flex:1;min-width:220px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;">
+        <h3 style="font-size:.92rem;margin-bottom:6px;"><i class="fas fa-table" style="color:#60b8f0;margin-right:6px;"></i>Registro del Maestro</h3>
+        <p style="font-size:.8rem;color:var(--muted);margin-bottom:12px;line-height:1.5;">
+          Registro de Calificaciones en formato estándar BJ. Detecta automáticamente materia, grado, mención y períodos.
+        </p>
+        <label style="display:block;border:2px dashed var(--border);border-radius:8px;padding:20px;text-align:center;cursor:pointer;transition:border-color .15s;"
+               onmouseover="this.style.borderColor='#60b8f0'" onmouseout="this.style.borderColor='var(--border)'">
+          <input type="file" id="dig-file-registro" accept=".xlsx,.xls,.xlsm" style="display:none" onchange="digCargarRegistro(this)">
+          <div style="font-size:22px;margin-bottom:6px;">🗂</div>
+          <div style="font-size:.85rem;font-weight:600;">Haz clic o arrastra aquí</div>
+          <div style="font-size:.76rem;color:var(--muted);margin-top:3px;">Registro Calificaciones *.xlsx</div>
+        </label>
+        <div id="dig-status-registro" style="margin-top:8px;font-size:.8rem;padding:6px 10px;border-radius:6px;display:none;"></div>
+      </div>
+
+    </div>
+
+    <!-- Fila 2: Registro del Coordinador — sección propia con header destacado -->
+    <div style="background:rgba(167,139,250,.07);border:2px solid rgba(167,139,250,.4);border-radius:12px;padding:18px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <i class="fas fa-chalkboard-teacher" style="color:#a78bfa;font-size:18px;"></i>
+        <div>
+          <div style="font-size:.93rem;font-weight:700;color:#a78bfa;">Registro del Coordinador</div>
+          <div style="font-size:.78rem;color:var(--muted);">Para archivos <strong style="color:var(--text)">«XGRADO. GRADO - MATERIA 25-26.xlsm»</strong> que entrega el coordinador — <em>no es el Boletín Oficial</em></div>
+        </div>
+      </div>
+      <label style="display:block;border:2px dashed rgba(167,139,250,.5);border-radius:8px;padding:22px;text-align:center;cursor:pointer;transition:border-color .15s;background:var(--surface);"
+             onmouseover="this.style.borderColor='#a78bfa';this.style.background='rgba(167,139,250,.06)'" onmouseout="this.style.borderColor='rgba(167,139,250,.5)';this.style.background='var(--surface)'">
+        <input type="file" id="dig-file-coord" accept=".xlsx,.xls,.xlsm" style="display:none" onchange="digCargarCoord(this)">
+        <div style="font-size:28px;margin-bottom:6px;">📋</div>
+        <div style="font-size:.88rem;font-weight:700;color:#a78bfa;">Haz clic aquí para subir el Registro del Coordinador</div>
+        <div style="font-size:.76rem;color:var(--muted);margin-top:4px;">4TO. GRADO - IDIOMA INGLÉS 25-26.xlsm · 4TO. GRADO-PRINCIPIOS DE DIBUJO (VISUALES) 25-26.xlsm</div>
+      </label>
+      <div id="dig-status-coord" style="margin-top:10px;font-size:.82rem;padding:8px 12px;border-radius:6px;display:none;"></div>
+      <div id="dig-detail-coord" style="margin-top:6px;font-size:.76rem;color:var(--muted);display:none;"></div>
+    </div>
+
+
+  </div>
+</div>
+
+<script>
+const CS='{{ csrf_token }}',H={'Content-Type':'application/json','X-CSRF-Token':CS};
+function T(id,b){document.querySelectorAll('.p').forEach(p=>p.classList.remove('a'));document.querySelectorAll('.tb').forEach(t=>t.classList.remove('a'));document.getElementById('p-'+id).classList.add('a');b.classList.add('a');if(id=='ver')LV()}
+async function LR(){try{const r=await(await fetch('/api/digitador/resumen')).json();document.getElementById('st-t').textContent=r.total_estudiantes||0;document.getElementById('st-c').textContent=r.con_notas||0;document.getElementById('st-s').textContent=r.sin_notas||0;document.getElementById('st-n').textContent=r.total_calificaciones||0}catch(e){}}
+async function LE(){const g=document.getElementById('f-grado').value,m=document.getElementById('f-mencion').value;if(!g){document.getElementById('tb-est').innerHTML='';document.getElementById('e-est').style.display='block';return}
+const r=await(await fetch('/api/digitador/estudiantes?grado='+g+'&mencion='+encodeURIComponent(m))).json();const tb=document.getElementById('tb-est'),em=document.getElementById('e-est');if(!r.length){tb.innerHTML='';em.style.display='block';return}em.style.display='none';
+tb.innerHTML=r.map((e,i)=>'<tr><td>'+(i+1)+'</td><td>'+e.apellido+', '+e.nombre+'</td><td>'+e.grado+'</td><td><input class="nota-input" data-id="'+e.id+'" type="number" min="0" max="100" step="1" placeholder="—"></td><td id="est-'+e.id+'">—</td></tr>').join('')}
+async function GL(){const materia=document.getElementById('f-materia').value.trim(),periodo=document.getElementById('f-periodo').value;if(!materia){alert('Escribe la materia');return}
+const inputs=document.querySelectorAll('.nota-input');const notas=[];inputs.forEach(inp=>{if(inp.value){notas.push({estudiante_id:parseInt(inp.dataset.id),materia:materia,periodo:periodo,nota:parseFloat(inp.value)})}});
+if(!notas.length){alert('No hay notas para guardar');return}
+const r=await(await fetch('/api/digitador/calificacion-lote',{method:'POST',headers:H,body:JSON.stringify({notas:notas})})).json();
+if(r.ok){alert('Guardadas: '+r.guardadas+(r.errores.length?' | Errores: '+r.errores.length:''));LR()}else alert(r.error||'Error')}
+async function LV(){const r=await(await fetch('/api/digitador/verificar-datos')).json();const el=document.getElementById('verificacion'),al=document.getElementById('alerta-ver'),am=document.getElementById('alerta-msg');
+let html='';let problemas=0;
+if(r.sin_cedula.length){problemas+=r.sin_cedula.length;html+='<h3 style="margin:16px 0 8px;color:var(--warn)"><i class="fas fa-id-card"></i> Sin cédula ('+r.sin_cedula.length+')</h3><table><thead><tr><th>Nombre</th><th>Grado</th></tr></thead><tbody>'+r.sin_cedula.map(e=>'<tr><td>'+e.nombre+' '+e.apellido+'</td><td>'+e.grado+'</td></tr>').join('')+'</tbody></table>'}
+if(r.duplicados.length){problemas+=r.duplicados.length;html+='<h3 style="margin:16px 0 8px;color:var(--danger)"><i class="fas fa-clone"></i> Posibles duplicados ('+r.duplicados.length+')</h3><table><thead><tr><th>Nombre</th><th>Cantidad</th></tr></thead><tbody>'+r.duplicados.map(e=>'<tr><td>'+e.nombre+' '+e.apellido+'</td><td style="color:var(--danger);font-weight:700">'+e.total+'</td></tr>').join('')+'</tbody></table>'}
+if(r.sin_notas.length){html+='<h3 style="margin:16px 0 8px;color:var(--muted)"><i class="fas fa-file-excel"></i> Sin notas registradas ('+r.sin_notas.length+')</h3><table><thead><tr><th>Nombre</th><th>Grado</th></tr></thead><tbody>'+r.sin_notas.slice(0,30).map(e=>'<tr><td>'+e.nombre+' '+e.apellido+'</td><td>'+e.grado+'</td></tr>').join('')+'</tbody></table>'}
+if(problemas){al.style.display='flex';am.textContent=problemas+' estudiantes con datos incompletos'}else{al.style.display='none'}
+el.innerHTML=html||'<div class="em"><i class="fas fa-check-circle" style="color:var(--success)"></i>Todos los datos están completos</div>'}
+(function(){var t=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',t);document.querySelectorAll('.mt-tbtn').forEach(function(b){b.classList.toggle('theme-btn-active',b.dataset.theme===t)})})();
+
+async function registrarEst(){
+  var b={nombre:document.getElementById('reg-nombre').value.trim(),apellido:document.getElementById('reg-apellido').value.trim(),cedula:document.getElementById('reg-cedula').value.trim(),edad:parseInt(document.getElementById('reg-edad').value)||0,grado:document.getElementById('reg-grado').value,mencion:document.getElementById('reg-mencion').value,seccion:document.getElementById('reg-seccion').value,sexo:document.getElementById('reg-sexo').value};
+  if(!b.nombre||!b.apellido){alert('Nombre y apellido requeridos');return}
+  var r=await(await fetch('/api/digitador/registrar-estudiante',{method:'POST',headers:H,body:JSON.stringify(b)})).json();
+  if(r.ok){document.getElementById('reg-result').innerHTML='<div style="padding:10px;background:rgba(var(--accent-rgb),.1);border-radius:8px;color:var(--accent);font-weight:600"><i class="fas fa-check-circle"></i> '+r.mensaje+' (ID: '+r.id+')</div>';document.getElementById('reg-nombre').value='';document.getElementById('reg-apellido').value='';document.getElementById('reg-cedula').value='';LR()}
+  else{alert(r.error||'Error')}
+}
+async function buscarEstEdit(){
+  var q=document.getElementById('edit-buscar').value;
+  if(q.length<2){document.getElementById('edit-results').innerHTML='';return}
+  var r=await(await fetch('/api/digitador/buscar-estudiante?q='+encodeURIComponent(q))).json();
+  document.getElementById('edit-results').innerHTML=r.map(function(e){return '<div style="padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:.85rem" onmouseover="this.style.background=\'var(--hover)\'" onmouseout="this.style.background=\'\'" onclick="cargarEstEdit('+e.id+',\''+e.nombre+'\',\''+e.apellido+'\',\''+e.cedula+'\',\''+e.grado+'\',\''+e.curso+'\',\''+e.seccion+'\',\''+e.condicion+'\')"><b>'+e.apellido+', '+e.nombre+'</b> — '+e.grado+' '+(e.curso||'')+' <span style="color:var(--muted)">'+e.condicion+'</span></div>'}).join('')}
+function cargarEstEdit(id,nom,ape,ced,gra,cur,sec,cond){
+  document.getElementById('edit-form').style.display='block';
+  document.getElementById('edit-id').value=id;
+  document.getElementById('edit-nombre').value=nom;
+  document.getElementById('edit-apellido').value=ape;
+  document.getElementById('edit-cedula').value=ced||'';
+  document.getElementById('edit-grado').value=gra||'4to';
+  document.getElementById('edit-seccion').value=sec||'A';
+  document.getElementById('edit-condicion').value=cond||'ACTIVO';
+  document.getElementById('edit-titulo').textContent='Editar: '+nom+' '+ape;
+  var men='';if(cur){var p=cur.split(' ');if(p.length>1)men=p.slice(1).join(' ')}
+  document.getElementById('edit-mencion').value=men;
+}
+async function guardarEditEst(){
+  var id=document.getElementById('edit-id').value;
+  var b={nombre:document.getElementById('edit-nombre').value,apellido:document.getElementById('edit-apellido').value,cedula:document.getElementById('edit-cedula').value,grado:document.getElementById('edit-grado').value,mencion:document.getElementById('edit-mencion').value,seccion:document.getElementById('edit-seccion').value,condicion:document.getElementById('edit-condicion').value};
+  var r=await(await fetch('/api/digitador/editar-estudiante/'+id,{method:'PATCH',headers:H,body:JSON.stringify(b)})).json();
+  if(r.ok){alert('Guardado');LR()}else{alert(r.error||'Error')}
+}
+
+// ── Expediente Histórico ──────────────────────────────────────────────────
+async function BEX(){
+  var ced=document.getElementById('exp-ced').value.trim();
+  var nom=document.getElementById('exp-nom').value.trim();
+  var ape=document.getElementById('exp-ape').value.trim();
+  if(!ced&&!nom&&!ape){alert('Ingresa cédula o nombre/apellido');return}
+  var url='/api/expediente/buscar?cedula='+encodeURIComponent(ced)+'&nombre='+encodeURIComponent(nom)+'&apellido='+encodeURIComponent(ape);
+  var r=await(await fetch(url)).json();
+  var el=document.getElementById('exp-res');
+  if(!r.length){el.innerHTML='<div class="em" style="padding:20px"><i class="fas fa-folder-open"></i> Sin registros</div>';return}
+  var grouped={};r.forEach(function(x){var k=x.cedula||x.nombre+'_'+x.apellido;if(!grouped[k])grouped[k]={nombre:x.nombre,apellido:x.apellido,cedula:x.cedula,anios:[]};grouped[k].anios.push({anio:x.anio_escolar,grado:x.grado,sistema:x.sistema_educativo,prom:x.promedio_general,cond:x.condicion,id:x.id,mats:x.materias||[]})});
+  var html='';Object.values(grouped).forEach(function(g){html+='<div style="margin-bottom:14px;border:1px solid var(--border);border-radius:8px;overflow:hidden"><div style="padding:10px 14px;background:var(--surface2);font-weight:700;font-size:.88rem">'+g.apellido+', '+g.nombre+(g.cedula?' <span style="color:var(--muted);font-weight:400">'+g.cedula+'</span>':'')+'</div>';g.anios.forEach(function(a){html+='<div style="padding:8px 14px;border-top:1px solid var(--border);font-size:.83rem;display:flex;justify-content:space-between;align-items:center"><span><b>'+a.anio+'</b> — '+a.grado+' ('+a.sistema+')'+(a.cond?' · '+a.cond:'')+'</span><span style="color:var(--muted)">'+a.mats.length+' materias'+(a.prom?' · Prom: '+a.prom:'')+'</span></div>'});html+='</div>'});
+  el.innerHTML=html}
+async function AEX(){
+  var anio=document.getElementById('exn-anio').value.trim();
+  if(!anio)return;
+  var r=await(await fetch('/api/expediente/grados?anio='+encodeURIComponent(anio))).json();
+  var sel=document.getElementById('exn-grado');
+  sel.innerHTML='<option value="">— Seleccionar —</option>'+r.grados.map(function(g){return '<option>'+g+'</option>'}).join('');
+  document.getElementById('exn-sis').textContent='Sistema detectado: '+(r.sistema=='bachillerato'?'Bachillerato (pre-2016)':'Secundaria (2016+)')}
+async function SEX(){
+  var nom=document.getElementById('exn-nom').value.trim(),ape=document.getElementById('exn-ape').value.trim();
+  var anio=document.getElementById('exn-anio').value.trim(),grado=document.getElementById('exn-grado').value;
+  if(!nom||!ape||!anio||!grado){alert('Nombre, apellido, año y grado son requeridos');return}
+  var mats_txt=document.getElementById('exn-mats').value.trim();
+  var materias=[];
+  mats_txt.split('\n').forEach(function(line){
+    var p=line.split(',');if(p.length<2)return;
+    var m={materia:p[0].trim()};
+    if(p[1])m.p1=parseFloat(p[1])||null;if(p[2])m.p2=parseFloat(p[2])||null;
+    if(p[3])m.p3=parseFloat(p[3])||null;if(p[4])m.p4=parseFloat(p[4])||null;
+    var ns=[m.p1,m.p2,m.p3,m.p4].filter(function(x){return x!=null});
+    if(ns.length)m.promedio=Math.round((ns.reduce(function(a,b){return a+b},0)/ns.length)*100)/100;
+    materias.push(m)});
+  var body={nombre:nom,apellido:ape,cedula:document.getElementById('exn-ced').value.trim()||null,anio_escolar:anio,grado:grado,seccion:document.getElementById('exn-sec').value.trim(),mencion:document.getElementById('exn-men').value.trim(),condicion:document.getElementById('exn-cond').value,materias:materias};
+  var r=await(await fetch('/api/expediente',{method:'POST',headers:H,body:JSON.stringify(body)})).json();
+  var el=document.getElementById('exn-res');
+  if(r.ok){el.innerHTML='<div style="color:var(--success);font-weight:600"><i class="fas fa-check-circle"></i> Guardado (ID: '+r.id+')'+(r.vinculado?' — Vinculado al estudiante':' — Sin vincular (sin cédula o nombre no encontrado)')+'</div>'}else{el.innerHTML='<div style="color:var(--danger)">'+r.error+'</div>'}}
+async function ImpExp(){
+  var file=document.getElementById('exp-file').files[0];if(!file)return;
+  var fd=new FormData();fd.append('archivo',file);
+  var el=document.getElementById('exp-imp-res');
+  el.innerHTML='<i class="fas fa-spinner fa-spin"></i> Importando...';
+  var r=await(await fetch('/api/expediente/importar-excel',{method:'POST',headers:{'X-CSRF-Token':CS},body:fd})).json();
+  if(r.ok){el.innerHTML='<span style="color:var(--success);font-weight:600"><i class="fas fa-check-circle"></i> '+r.importados+' expedientes importados</span>'+(r.errores&&r.errores.length?'<br><span style="color:var(--warn);font-size:.8rem">'+r.errores.slice(0,5).join('<br>')+'</span>':'')}
+  else{el.innerHTML='<span style="color:var(--danger)">'+r.error+'</span>'}
+  document.getElementById('exp-file').value=''}
+
+LR();
+
+// ── Auto-llenado desde Escáner OCR ────────────────────────────────────────
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("from") !== "ocr") return;
+  try {
+    const d = JSON.parse(sessionStorage.getItem("ocr_inscripcion") || "{}");
+    if (!d.nombre && !d.apellido) return;
+    if (d.nombre)    document.getElementById("reg-nombre").value  = d.nombre;
+    if (d.apellido)  document.getElementById("reg-apellido").value = d.apellido;
+    if (d.cedula)    document.getElementById("reg-cedula").value   = d.cedula;
+    if (d.sexo) {
+      const selSexo = document.getElementById("reg-sexo");
+      if (selSexo) selSexo.value = d.sexo;
+    }
+    sessionStorage.removeItem("ocr_inscripcion");
+    // Desplazar al formulario de registro
+    const secReg = document.querySelector(".sec") || document.getElementById("reg-nombre");
+    if (secReg) secReg.scrollIntoView({behavior:"smooth", block:"center"});
+    // Avisar al usuario
+    const banner = document.createElement("div");
+    banner.style.cssText = "position:fixed;top:16px;right:16px;z-index:9999;background:#107c10;color:#fff;" +
+      "padding:12px 18px;border-radius:8px;font-size:.88rem;box-shadow:0 4px 12px rgba(0,0,0,.2);" +
+      "display:flex;align-items:center;gap:8px";
+    banner.innerHTML = '<i class="fas fa-magic"></i> Datos del escáner cargados en el formulario';
+    document.body.appendChild(banner);
+    setTimeout(() => banner.remove(), 4000);
+  } catch(e) { /* silencioso */ }
+})();
+
+// ── CARGAR NOTAS EXCEL ───────────────────────────────────────────────────
+function digSetStatus(elId, msg, isErr) {
+  var el = document.getElementById(elId);
+  if (!el) return;
+  el.textContent = msg;
+  el.style.display = 'block';
+  el.style.background = isErr ? 'rgba(255,107,107,.08)' : 'rgba(34,197,94,.08)';
+  el.style.color = isErr ? '#ff6b6b' : '#22c55e';
+}
+
+function digCargarBoletin(input) {
+  if (!input.files[0]) return;
+  var fd = new FormData();
+  fd.append('file', input.files[0]);
+  digSetStatus('dig-status-boletin', '⏳ Procesando boletín...', false);
+  fetch('/api/cargar-boletin', { method: 'POST', headers: { 'X-CSRF-Token': CS }, body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.ok) {
+        digSetStatus('dig-status-boletin',
+          '✓ ' + (d.mensaje || (d.estudiantes_procesados + ' estudiantes, ' + d.materias_guardadas + ' calificaciones.')), false);
+        LR();
+      } else {
+        digSetStatus('dig-status-boletin', '✗ ' + (d.error || 'Error al cargar el boletín'), true);
+      }
+      input.value = '';
+    })
+    .catch(function(e) { digSetStatus('dig-status-boletin', '✗ Error: ' + e.message, true); });
+}
+
+function digCargarCoord(input) {
+  if (!input.files[0]) return;
+  var fd = new FormData();
+  fd.append('file', input.files[0]);
+  digSetStatus('dig-status-coord', '⏳ Procesando registro del coordinador...', false);
+  document.getElementById('dig-detail-coord').style.display = 'none';
+  fetch('/api/digitador/cargar-notas-coordinador', { method: 'POST', headers: { 'X-CSRF-Token': CS }, body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.ok) {
+        digSetStatus('dig-status-coord', '✓ ' + (d.mensaje || 'Registro cargado'), false);
+        var det = document.getElementById('dig-detail-coord');
+        var lines = [];
+        if (d.sin_match && d.sin_match.length) lines.push('⚠ Sin match (' + d.sin_match.length + '): ' + d.sin_match.slice(0,5).join(', ') + (d.sin_match.length > 5 ? '...' : ''));
+        if (d.advertencias && d.advertencias.length) lines.push('ℹ ' + d.advertencias[0]);
+        if (lines.length) { det.textContent = lines.join(' | '); det.style.display = 'block'; }
+        LR();
+      } else {
+        digSetStatus('dig-status-coord', '✗ ' + (d.error || 'Error al cargar'), true);
+      }
+      input.value = '';
+    })
+    .catch(function(e) { digSetStatus('dig-status-coord', '✗ Error: ' + e.message, true); });
+}
+
+function digCargarRegistro(input) {
+  if (!input.files[0]) return;
+  var fd = new FormData();
+  fd.append('file', input.files[0]);
+  digSetStatus('dig-status-registro', '⏳ Detectando formato...', false);
+  fetch('/api/cargar-plantilla-bj', { method: 'POST', headers: { 'X-CSRF-Token': CS }, body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.ok) {
+        digSetStatus('dig-status-registro', '✓ ' + (d.mensaje || 'Registro cargado'), false);
+        LR();
+      } else {
+        var fd2 = new FormData();
+        fd2.append('file', input.files[0]);
+        fetch('/api/cargar-registro', { method: 'POST', headers: { 'X-CSRF-Token': CS }, body: fd2 })
+          .then(function(r2) { return r2.json(); })
+          .then(function(d2) {
+            if (d2.ok || d2.status === 'success') {
+              digSetStatus('dig-status-registro', '✓ ' + (d2.mensaje || 'Registro cargado'), false);
+              LR();
+            } else {
+              digSetStatus('dig-status-registro', '✗ ' + (d2.error || d.error || 'Formato no reconocido'), true);
+            }
+          });
+      }
+      input.value = '';
+    })
+    .catch(function(e) { digSetStatus('dig-status-registro', '✗ Error: ' + e.message, true); });
+}
+</script></body></html>

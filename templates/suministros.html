@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Suministros — Axula</title>
+<link rel="stylesheet" href="/static/theme.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+  .sumi-header {
+    display: flex; align-items: center; gap: 1rem;
+    padding: 1rem 1.5rem;
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .sumi-header h1 { font-size: 1.2rem; font-weight: 600; margin: 0; flex: 1; }
+
+  .sumi-nav {
+    display: flex; gap: 0; background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+  }
+  .sumi-nav button {
+    padding: .7rem 1.25rem; border: none; background: none; cursor: pointer;
+    font-size: .875rem; color: var(--text-muted); border-bottom: 2px solid transparent;
+    white-space: nowrap; transition: color .15s, border-color .15s;
+  }
+  .sumi-nav button.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+  .sumi-nav button:hover:not(.active) { color: var(--text); }
+
+  .sumi-body { padding: 1.25rem; max-width: 1100px; margin: 0 auto; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* KPI cards */
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .75rem; margin-bottom: 1.5rem; }
+  .kpi-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 1rem; text-align: center;
+  }
+  .kpi-card .kpi-num { font-size: 1.8rem; font-weight: 700; color: var(--accent); line-height: 1; }
+  .kpi-card .kpi-label { font-size: .78rem; color: var(--text-muted); margin-top: .35rem; }
+  .kpi-card.alerta .kpi-num { color: #dc2626; }
+  .kpi-card.ok .kpi-num { color: #16a34a; }
+
+  /* Tabla */
+  .tabla-sumi { width: 100%; border-collapse: collapse; font-size: .875rem; }
+  .tabla-sumi th {
+    background: var(--surface); padding: .6rem .8rem; text-align: left;
+    font-size: .78rem; font-weight: 600; color: var(--text-muted);
+    border-bottom: 2px solid var(--border); white-space: nowrap;
+  }
+  .tabla-sumi td {
+    padding: .6rem .8rem; border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+  .tabla-sumi tr:hover td { background: color-mix(in srgb, var(--accent) 4%, var(--surface)); }
+
+  .badge-alerta {
+    display: inline-block; padding: .2rem .5rem; border-radius: 3px;
+    font-size: .72rem; font-weight: 600;
+  }
+  .badge-agotado { background: #fee2e2; color: #b91c1c; }
+  .badge-bajo    { background: #fef3c7; color: #92400e; }
+  .badge-ok      { background: #dcfce7; color: #166534; }
+
+  /* Modal */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.45); z-index: 1000;
+    align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface); border-radius: 10px;
+    padding: 1.5rem; width: 100%; max-width: 480px;
+    box-shadow: 0 8px 32px rgba(0,0,0,.2);
+  }
+  .modal h3 { margin: 0 0 1rem; font-size: 1rem; }
+  .form-group { margin-bottom: .75rem; }
+  .form-group label { display: block; font-size: .8rem; font-weight: 600; color: var(--text-muted); margin-bottom: .3rem; }
+  .form-group input, .form-group select, .form-group textarea {
+    width: 100%; padding: .45rem .6rem; border: 1px solid var(--border);
+    border-radius: 5px; background: var(--bg); color: var(--text);
+    font-size: .875rem; box-sizing: border-box;
+  }
+  .form-group textarea { resize: vertical; min-height: 60px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+  .modal-actions { display: flex; gap: .5rem; justify-content: flex-end; margin-top: 1rem; }
+
+  .btn-icono {
+    background: none; border: none; cursor: pointer;
+    padding: .3rem .4rem; border-radius: 4px; color: var(--text-muted);
+    transition: color .15s, background .15s;
+  }
+  .btn-icono:hover { color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+  .btn-icono.danger:hover { color: #dc2626; background: #fee2e2; }
+
+  /* Raciones */
+  .racion-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 1.25rem; display: flex;
+    align-items: center; gap: 1.25rem; flex-wrap: wrap;
+  }
+  .racion-tipo {
+    font-size: 1.5rem; width: 48px; height: 48px;
+    border-radius: 8px; display: flex; align-items: center;
+    justify-content: center;
+  }
+  .racion-tipo.desayuno { background: #fef9c3; }
+  .racion-tipo.almuerzo { background: #dcfce7; }
+  .racion-info h3 { margin: 0 0 .25rem; font-size: .95rem; }
+  .racion-info p  { margin: 0; font-size: .82rem; color: var(--text-muted); }
+  .racion-total   { margin-left: auto; text-align: right; }
+  .racion-total .num { font-size: 2rem; font-weight: 700; color: var(--accent); line-height: 1; }
+  .racion-total .sub { font-size: .75rem; color: var(--text-muted); }
+
+  .seccion-titulo { font-size: .85rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; margin: 1.25rem 0 .75rem; }
+
+  .empty-state { text-align: center; padding: 3rem 1rem; color: var(--text-muted); }
+  .empty-state i { font-size: 2.5rem; display: block; margin-bottom: .75rem; opacity: .4; }
+
+  .toolbar { display: flex; gap: .6rem; margin-bottom: 1rem; align-items: center; flex-wrap: wrap; }
+  .toolbar input[type="text"] {
+    flex: 1; min-width: 160px; padding: .42rem .7rem;
+    border: 1px solid var(--border); border-radius: 5px;
+    background: var(--surface); color: var(--text); font-size: .85rem;
+  }
+
+  #msgGlobal {
+    position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 2000;
+    max-width: 360px;
+  }
+  .toast {
+    padding: .75rem 1rem; border-radius: 7px; font-size: .875rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,.15); margin-top: .4rem;
+    animation: slideIn .25s ease;
+  }
+  @keyframes slideIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+  .toast-ok    { background: #dcfce7; color: #166534; }
+  .toast-error { background: #fee2e2; color: #b91c1c; }
+
+  /* Checkbox vincular */
+  .check-row { display: flex; align-items: center; gap: .5rem; font-size: .85rem; cursor: pointer; }
+  .financiero-extra { margin-top: .6rem; padding: .75rem; background: var(--bg); border-radius: 6px; border: 1px solid var(--border); }
+</style>
+</head>
+<body>
+<div id="msgGlobal"></div>
+
+<!-- Header -->
+<div class="sumi-header">
+  <a href="/" style="color:var(--text-muted);text-decoration:none;">
+    <i class="fa fa-arrow-left"></i>
+  </a>
+  <i class="fa fa-boxes-stacked" style="color:var(--accent);font-size:1.2rem;"></i>
+  <h1>Suministros</h1>
+  <span style="font-size:.8rem;color:var(--text-muted);">{{ current_user.nombre }}</span>
+  <button onclick="window.location='/logout'" class="btn-icono" title="Salir">
+    <i class="fa fa-sign-out-alt"></i>
+  </button>
+</div>
+
+<!-- Tabs -->
+<nav class="sumi-nav">
+  <button class="active" onclick="switchTab('dashboard', this)"><i class="fa fa-gauge-high"></i> Resumen</button>
+  <button onclick="switchTab('inventario', this)"><i class="fa fa-list"></i> Inventario</button>
+  <button onclick="switchTab('movimientos', this)"><i class="fa fa-right-left"></i> Movimientos</button>
+  <button onclick="switchTab('raciones', this)"><i class="fa fa-utensils"></i> Raciones Diarias</button>
+</nav>
+
+<div class="sumi-body">
+
+  <!-- ── TAB: DASHBOARD ─────────────────────────────────────── -->
+  <div class="tab-panel active" id="tab-dashboard">
+    <div class="kpi-grid" id="kpiGrid">
+      <div class="kpi-card"><div class="kpi-num">—</div><div class="kpi-label">Items en inventario</div></div>
+      <div class="kpi-card alerta"><div class="kpi-num">—</div><div class="kpi-label">Stock bajo</div></div>
+      <div class="kpi-card alerta"><div class="kpi-num">—</div><div class="kpi-label">Agotados</div></div>
+      <div class="kpi-card ok"><div class="kpi-num">—</div><div class="kpi-label">Raciones hoy</div></div>
+      <div class="kpi-card"><div class="kpi-num">—</div><div class="kpi-label">Movimientos hoy</div></div>
+    </div>
+
+    <p class="seccion-titulo">Raciones de hoy</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;" id="racionesHoyCards">
+      <div class="empty-state" style="grid-column:span 2;padding:1.5rem;">
+        <i class="fa fa-spinner fa-spin"></i><p>Cargando...</p>
+      </div>
+    </div>
+
+    <p class="seccion-titulo" style="margin-top:1.5rem;">Alertas de inventario</p>
+    <div id="alertasInventario">
+      <div class="empty-state"><i class="fa fa-spinner fa-spin"></i><p>Cargando...</p></div>
+    </div>
+  </div>
+
+  <!-- ── TAB: INVENTARIO ───────────────────────────────────── -->
+  <div class="tab-panel" id="tab-inventario">
+    <div class="toolbar">
+      <input type="text" id="busqInv" placeholder="Buscar suministro..." oninput="filtrarInventario()">
+      <select id="filtroCategoria" onchange="filtrarInventario()">
+        <option value="">Todas las categorías</option>
+        {% for key, label in categorias.items() %}
+        <option value="{{ key }}">{{ label }}</option>
+        {% endfor %}
+      </select>
+      <button class="btn btn-primary" onclick="abrirModalNuevo()">
+        <i class="fa fa-plus"></i> Nuevo item
+      </button>
+    </div>
+
+    <div id="tablaInventarioWrap">
+      <div class="empty-state"><i class="fa fa-spinner fa-spin"></i><p>Cargando...</p></div>
+    </div>
+  </div>
+
+  <!-- ── TAB: MOVIMIENTOS ──────────────────────────────────── -->
+  <div class="tab-panel" id="tab-movimientos">
+    <div class="toolbar">
+      <button class="btn btn-primary" onclick="abrirModalMovimiento()">
+        <i class="fa fa-plus"></i> Registrar movimiento
+      </button>
+      <button class="btn btn-secondary" onclick="cargarMovimientos()">
+        <i class="fa fa-sync-alt"></i> Actualizar
+      </button>
+    </div>
+
+    <div id="tablaMovimientosWrap">
+      <div class="empty-state"><i class="fa fa-spinner fa-spin"></i><p>Cargando...</p></div>
+    </div>
+  </div>
+
+  <!-- ── TAB: RACIONES ─────────────────────────────────────── -->
+  <div class="tab-panel" id="tab-raciones">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;max-width:600px;margin-bottom:1.5rem;">
+      <div class="racion-card" style="flex-direction:column;align-items:flex-start;">
+        <div style="display:flex;align-items:center;gap:.75rem;width:100%;">
+          <div class="racion-tipo desayuno">☀️</div>
+          <div class="racion-info">
+            <h3>Desayuno</h3>
+            <p id="infoDesayuno">—</p>
+          </div>
+        </div>
+        <input type="date" id="fechaDesayuno" style="margin-top:.75rem;width:100%;padding:.4rem .6rem;border:1px solid var(--border);border-radius:5px;background:var(--bg);color:var(--text);font-size:.85rem;">
+        <textarea id="notasDesayuno" placeholder="Notas opcionales..." style="margin-top:.5rem;width:100%;min-height:48px;resize:vertical;padding:.4rem .6rem;border:1px solid var(--border);border-radius:5px;background:var(--bg);color:var(--text);font-size:.83rem;box-sizing:border-box;"></textarea>
+        <button class="btn btn-primary" style="margin-top:.5rem;width:100%;" onclick="registrarRacion('desayuno')">
+          <i class="fa fa-check"></i> Registrar desayuno
+        </button>
+      </div>
+
+      <div class="racion-card" style="flex-direction:column;align-items:flex-start;">
+        <div style="display:flex;align-items:center;gap:.75rem;width:100%;">
+          <div class="racion-tipo almuerzo">🍽️</div>
+          <div class="racion-info">
+            <h3>Almuerzo</h3>
+            <p id="infoAlmuerzo">—</p>
+          </div>
+        </div>
+        <input type="date" id="fechaAlmuerzo" style="margin-top:.75rem;width:100%;padding:.4rem .6rem;border:1px solid var(--border);border-radius:5px;background:var(--bg);color:var(--text);font-size:.85rem;">
+        <textarea id="notasAlmuerzo" placeholder="Notas opcionales..." style="margin-top:.5rem;width:100%;min-height:48px;resize:vertical;padding:.4rem .6rem;border:1px solid var(--border);border-radius:5px;background:var(--bg);color:var(--text);font-size:.83rem;box-sizing:border-box;"></textarea>
+        <button class="btn btn-primary" style="margin-top:.5rem;width:100%;" onclick="registrarRacion('almuerzo')">
+          <i class="fa fa-check"></i> Registrar almuerzo
+        </button>
+      </div>
+    </div>
+
+    <p class="seccion-titulo">Historial de raciones</p>
+    <div class="toolbar">
+      <input type="month" id="filtroMes" onchange="cargarRaciones()" style="padding:.4rem .6rem;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text);font-size:.85rem;">
+    </div>
+    <div id="tablaRacionesWrap">
+      <div class="empty-state"><i class="fa fa-spinner fa-spin"></i><p>Cargando...</p></div>
+    </div>
+  </div>
+
+</div><!-- /sumi-body -->
+
+<!-- ── Modal: Nuevo/Editar suministro ───────────────────────────────────── -->
+<div class="modal-overlay" id="modalItem">
+  <div class="modal">
+    <h3 id="modalItemTitulo">Nuevo Suministro</h3>
+    <input type="hidden" id="editId" value="">
+    <div class="form-group">
+      <label>Nombre *</label>
+      <input type="text" id="iNombre" maxlength="200" placeholder="Ej: Arroz, Papel bond...">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Categoría</label>
+        <select id="iCategoria">
+          {% for key, label in categorias.items() %}
+          <option value="{{ key }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Unidad</label>
+        <select id="iUnidad">
+          {% for u in unidades %}
+          <option value="{{ u }}">{{ u }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Stock inicial</label>
+        <input type="number" id="iStockInicial" min="0" step="0.01" value="0">
+      </div>
+      <div class="form-group">
+        <label>Stock mínimo (alerta)</label>
+        <input type="number" id="iStockMinimo" min="0" step="0.01" value="0">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Ubicación</label>
+      <input type="text" id="iUbicacion" maxlength="200" placeholder="Ej: Almacén principal">
+    </div>
+    <div class="form-group">
+      <label>Descripción</label>
+      <textarea id="iDescripcion" maxlength="500" placeholder="Opcional..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="cerrarModal('modalItem')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarItem()">
+        <i class="fa fa-save"></i> Guardar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: Registrar movimiento ──────────────────────────────────────── -->
+<div class="modal-overlay" id="modalMovimiento">
+  <div class="modal" style="max-width:520px;">
+    <h3>Registrar Movimiento</h3>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Suministro *</label>
+        <select id="mSuministro" style="width:100%;padding:.45rem .6rem;border:1px solid var(--border);border-radius:5px;background:var(--bg);color:var(--text);font-size:.875rem;"></select>
+      </div>
+      <div class="form-group">
+        <label>Tipo *</label>
+        <select id="mTipo" onchange="onTipoMovChange()">
+          <option value="entrada">Entrada (compra/recepción)</option>
+          <option value="salida">Salida (consumo/entrega)</option>
+          <option value="ajuste">Ajuste de inventario</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label id="mCantidadLabel">Cantidad *</label>
+        <input type="number" id="mCantidad" min="0.01" step="0.01" placeholder="0">
+      </div>
+      <div class="form-group">
+        <label>Fecha</label>
+        <input type="date" id="mFecha">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Motivo / Descripción</label>
+      <input type="text" id="mMotivo" maxlength="300" placeholder="Ej: Compra semanal, consumo diario...">
+    </div>
+
+    <!-- Vínculo financiero (solo entradas/compras) -->
+    <div id="financieroSection">
+      <label class="check-row">
+        <input type="checkbox" id="mVincularFinanzas" onchange="toggleFinanciero()">
+        Registrar también en finanzas (gasto)
+      </label>
+      <div class="financiero-extra" id="financieroExtra" style="display:none;">
+        <div class="form-row">
+          <div class="form-group" style="margin-bottom:0;">
+            <label>Monto (RD$) *</label>
+            <input type="number" id="mMonto" min="0.01" step="0.01" placeholder="0.00">
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label>Concepto en finanzas</label>
+            <input type="text" id="mConcepto" maxlength="200" placeholder="Opcional">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="cerrarModal('modalMovimiento')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarMovimiento()">
+        <i class="fa fa-save"></i> Registrar
+      </button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/theme.js"></script>
+<script>
+const CSRF = '{{ csrf_token }}';
+const HOY = new Date().toISOString().slice(0, 10);
+
+// Inicializar fechas
+document.getElementById('fechaDesayuno').value = HOY;
+document.getElementById('fechaAlmuerzo').value = HOY;
+document.getElementById('mFecha').value = HOY;
+document.getElementById('filtroMes').value = HOY.slice(0, 7);
+
+let _inventario = [];  // cache para el modal de movimiento
+
+// ── Tabs ──────────────────────────────────────────────────────────────────
+function switchTab(nombre, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.sumi-nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + nombre).classList.add('active');
+  btn.classList.add('active');
+
+  if (nombre === 'dashboard')   cargarResumen();
+  if (nombre === 'inventario')  cargarInventario();
+  if (nombre === 'movimientos') cargarMovimientos();
+  if (nombre === 'raciones')    cargarRaciones();
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────
+function toast(msg, tipo = 'ok') {
+  const div = document.createElement('div');
+  div.className = `toast toast-${tipo}`;
+  div.innerHTML = (tipo === 'ok' ? '✅ ' : '❌ ') + msg;
+  document.getElementById('msgGlobal').appendChild(div);
+  setTimeout(() => div.remove(), 4000);
+}
+
+// ── Modal helpers ─────────────────────────────────────────────────────────
+function cerrarModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+// ── RESUMEN ───────────────────────────────────────────────────────────────
+async function cargarResumen() {
+  const [rRes, raciones, inv] = await Promise.all([
+    fetch('/api/suministros/resumen').then(r => r.json()),
+    fetch('/api/suministros/raciones?mes=' + HOY.slice(0,7)).then(r => r.json()),
+    fetch('/api/suministros/inventario').then(r => r.json()),
+  ]);
+
+  // KPIs
+  const nums = document.querySelectorAll('.kpi-card .kpi-num');
+  nums[0].textContent = rRes.total_items;
+  nums[1].textContent = rRes.bajos;
+  nums[2].textContent = rRes.agotados;
+  nums[3].textContent = rRes.raciones_hoy;
+  nums[4].textContent = rRes.movimientos_hoy;
+
+  // Raciones de hoy
+  const hoyRaciones = (raciones.raciones || []).filter(r => r.fecha === HOY);
+  const cardsCont = document.getElementById('racionesHoyCards');
+  if (!hoyRaciones.length) {
+    cardsCont.innerHTML = `<div class="empty-state" style="grid-column:span 2;padding:1rem;">
+      <i class="fa fa-circle-info"></i><p>No hay raciones registradas hoy. Ve a "Raciones Diarias" para registrar.</p></div>`;
+  } else {
+    cardsCont.innerHTML = hoyRaciones.map(r => `
+      <div class="racion-card">
+        <div class="racion-tipo ${r.tipo_racion}">${r.tipo_racion === 'desayuno' ? '☀️' : '🍽️'}</div>
+        <div class="racion-info">
+          <h3>${r.tipo_racion.charAt(0).toUpperCase() + r.tipo_racion.slice(1)}</h3>
+          <p>${r.raciones_estudiantes} est. + ${r.raciones_personal} personal</p>
+        </div>
+        <div class="racion-total">
+          <div class="num">${r.total_raciones}</div>
+          <div class="sub">raciones</div>
+        </div>
+      </div>`).join('');
+  }
+
+  // Alertas inventario
+  const alertas = (inv.inventario || []).filter(i => i.alerta);
+  const alertaCont = document.getElementById('alertasInventario');
+  if (!alertas.length) {
+    alertaCont.innerHTML = `<div style="padding:.75rem 1rem;background:#dcfce7;border-radius:6px;font-size:.875rem;color:#166534;">
+      <i class="fa fa-check-circle"></i> Todo el inventario está en niveles normales.</div>`;
+  } else {
+    alertaCont.innerHTML = `<table class="tabla-sumi"><thead><tr>
+      <th>Suministro</th><th>Stock actual</th><th>Mínimo</th><th>Estado</th>
+    </tr></thead><tbody>
+    ${alertas.map(i => `<tr>
+      <td>${_esc(i.nombre)}</td>
+      <td>${i.stock_actual} ${i.unidad}</td>
+      <td>${i.stock_minimo} ${i.unidad}</td>
+      <td><span class="badge-alerta badge-${i.alerta}">${i.alerta === 'agotado' ? 'AGOTADO' : 'STOCK BAJO'}</span></td>
+    </tr>`).join('')}
+    </tbody></table>`;
+  }
+}
+
+// ── INVENTARIO ────────────────────────────────────────────────────────────
+async function cargarInventario() {
+  const r = await fetch('/api/suministros/inventario');
+  const data = await r.json();
+  _inventario = data.inventario || [];
+  renderInventario(_inventario);
+}
+
+function filtrarInventario() {
+  const q = document.getElementById('busqInv').value.toLowerCase();
+  const cat = document.getElementById('filtroCategoria').value;
+  const filtrado = _inventario.filter(i =>
+    (!cat || i.categoria === cat) &&
+    (!q || i.nombre.toLowerCase().includes(q) || i.descripcion.toLowerCase().includes(q))
+  );
+  renderInventario(filtrado);
+}
+
+function renderInventario(lista) {
+  if (!lista.length) {
+    document.getElementById('tablaInventarioWrap').innerHTML = `
+      <div class="empty-state"><i class="fa fa-boxes-stacked"></i>
+      <p>Sin suministros registrados. Agrega el primero.</p></div>`;
+    return;
+  }
+  document.getElementById('tablaInventarioWrap').innerHTML = `
+    <div style="overflow-x:auto;">
+    <table class="tabla-sumi">
+      <thead><tr>
+        <th>Nombre</th><th>Categoría</th><th>Stock actual</th>
+        <th>Mínimo</th><th>Unidad</th><th>Ubicación</th><th>Estado</th><th></th>
+      </tr></thead>
+      <tbody>
+      ${lista.map(i => `<tr>
+        <td><strong>${_esc(i.nombre)}</strong>
+          ${i.descripcion ? `<div style="font-size:.78rem;color:var(--text-muted);">${_esc(i.descripcion)}</div>` : ''}
+        </td>
+        <td>${i.categoria_label}</td>
+        <td style="font-weight:600;">${i.stock_actual}</td>
+        <td>${i.stock_minimo}</td>
+        <td>${i.unidad}</td>
+        <td style="font-size:.82rem;color:var(--text-muted);">${_esc(i.ubicacion)}</td>
+        <td>${i.alerta
+          ? `<span class="badge-alerta badge-${i.alerta}">${i.alerta === 'agotado' ? 'AGOTADO' : 'BAJO'}</span>`
+          : `<span class="badge-alerta badge-ok">OK</span>`}</td>
+        <td style="white-space:nowrap;">
+          <button class="btn-icono" onclick="abrirModalEditar(${JSON.stringify(i).replace(/"/g,'&quot;')})" title="Editar">
+            <i class="fa fa-pencil"></i>
+          </button>
+          <button class="btn-icono" onclick="abrirModalMovimientoItem(${i.id})" title="Movimiento">
+            <i class="fa fa-right-left"></i>
+          </button>
+        </td>
+      </tr>`).join('')}
+      </tbody>
+    </table></div>`;
+}
+
+function abrirModalNuevo() {
+  document.getElementById('editId').value = '';
+  document.getElementById('modalItemTitulo').textContent = 'Nuevo Suministro';
+  ['iNombre','iUbicacion','iDescripcion'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('iStockInicial').value = '0';
+  document.getElementById('iStockMinimo').value = '0';
+  document.getElementById('iStockInicial').disabled = false;
+  document.getElementById('modalItem').classList.add('open');
+}
+
+function abrirModalEditar(item) {
+  document.getElementById('editId').value = item.id;
+  document.getElementById('modalItemTitulo').textContent = 'Editar Suministro';
+  document.getElementById('iNombre').value = item.nombre;
+  document.getElementById('iCategoria').value = item.categoria;
+  document.getElementById('iUnidad').value = item.unidad;
+  document.getElementById('iStockMinimo').value = item.stock_minimo;
+  document.getElementById('iUbicacion').value = item.ubicacion;
+  document.getElementById('iDescripcion').value = item.descripcion;
+  document.getElementById('iStockInicial').value = item.stock_actual;
+  document.getElementById('iStockInicial').disabled = true; // stock se modifica por movimientos
+  document.getElementById('modalItem').classList.add('open');
+}
+
+async function guardarItem() {
+  const nombre = document.getElementById('iNombre').value.trim();
+  if (!nombre) { toast('Nombre requerido', 'error'); return; }
+
+  const id = document.getElementById('editId').value;
+  const body = {
+    nombre,
+    categoria:   document.getElementById('iCategoria').value,
+    unidad:      document.getElementById('iUnidad').value,
+    stock_actual: parseFloat(document.getElementById('iStockInicial').value) || 0,
+    stock_minimo: parseFloat(document.getElementById('iStockMinimo').value) || 0,
+    ubicacion:   document.getElementById('iUbicacion').value.trim(),
+    descripcion: document.getElementById('iDescripcion').value.trim(),
+  };
+
+  const url    = id ? `/api/suministros/inventario/${id}` : '/api/suministros/inventario';
+  const method = id ? 'PUT' : 'POST';
+
+  const r = await fetch(url, {
+    method,
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF },
+    body: JSON.stringify(body),
+  });
+  const data = await r.json();
+  if (data.ok) {
+    toast(id ? 'Suministro actualizado' : 'Suministro creado');
+    cerrarModal('modalItem');
+    cargarInventario();
+  } else {
+    toast(data.error || 'Error al guardar', 'error');
+  }
+}
+
+// ── MOVIMIENTOS ───────────────────────────────────────────────────────────
+async function cargarMovimientos() {
+  const r = await fetch('/api/suministros/movimientos?limit=100');
+  const data = await r.json();
+  renderMovimientos(data.movimientos || []);
+}
+
+function renderMovimientos(lista) {
+  if (!lista.length) {
+    document.getElementById('tablaMovimientosWrap').innerHTML = `
+      <div class="empty-state"><i class="fa fa-right-left"></i><p>Sin movimientos registrados.</p></div>`;
+    return;
+  }
+  const iconos = { entrada: '📥', salida: '📤', ajuste: '🔧' };
+  const colores = { entrada: '#166534', salida: '#b91c1c', ajuste: '#92400e' };
+  document.getElementById('tablaMovimientosWrap').innerHTML = `
+    <div style="overflow-x:auto;">
+    <table class="tabla-sumi">
+      <thead><tr>
+        <th>Fecha</th><th>Suministro</th><th>Tipo</th><th>Cantidad</th>
+        <th>Motivo</th><th>Registrado por</th><th>Finanzas</th>
+      </tr></thead>
+      <tbody>
+      ${lista.map(m => `<tr>
+        <td style="font-size:.82rem;color:var(--text-muted);">${m.fecha}</td>
+        <td><strong>${_esc(m.suministro_nombre)}</strong></td>
+        <td style="color:${colores[m.tipo] || 'inherit'};font-weight:600;">
+          ${iconos[m.tipo] || ''} ${m.tipo.charAt(0).toUpperCase() + m.tipo.slice(1)}
+        </td>
+        <td style="font-weight:600;">${m.cantidad}</td>
+        <td style="font-size:.83rem;color:var(--text-muted);">${_esc(m.motivo || '—')}</td>
+        <td style="font-size:.82rem;color:var(--text-muted);">${_esc(m.registrado_por_nombre || '—')}</td>
+        <td>${m.referencia_mov_financiero
+          ? `<span style="font-size:.75rem;color:#0369a1;">💰 #${m.referencia_mov_financiero}</span>`
+          : '—'}</td>
+      </tr>`).join('')}
+      </tbody>
+    </table></div>`;
+}
+
+function abrirModalMovimiento() {
+  // Poblar select de suministros
+  const sel = document.getElementById('mSuministro');
+  sel.innerHTML = _inventario.length
+    ? _inventario.map(i => `<option value="${i.id}">${_esc(i.nombre)} (${i.stock_actual} ${i.unidad})</option>`).join('')
+    : '<option value="">— Sin suministros —</option>';
+  document.getElementById('mCantidad').value = '';
+  document.getElementById('mMotivo').value = '';
+  document.getElementById('mFecha').value = HOY;
+  document.getElementById('mVincularFinanzas').checked = false;
+  document.getElementById('financieroExtra').style.display = 'none';
+  document.getElementById('modalMovimiento').classList.add('open');
+}
+
+function abrirModalMovimientoItem(id) {
+  abrirModalMovimiento();
+  document.getElementById('mSuministro').value = id;
+}
+
+function onTipoMovChange() {
+  const tipo = document.getElementById('mTipo').value;
+  document.getElementById('financieroSection').style.display = tipo === 'entrada' ? 'block' : 'none';
+  const lbl = document.getElementById('mCantidadLabel');
+  lbl.textContent = tipo === 'ajuste' ? 'Nuevo stock total *' : 'Cantidad *';
+}
+
+function toggleFinanciero() {
+  const vis = document.getElementById('mVincularFinanzas').checked;
+  document.getElementById('financieroExtra').style.display = vis ? 'block' : 'none';
+}
+
+async function guardarMovimiento() {
+  const sid = parseInt(document.getElementById('mSuministro').value);
+  const tipo = document.getElementById('mTipo').value;
+  const cantidad = parseFloat(document.getElementById('mCantidad').value);
+  if (!sid || !cantidad || cantidad <= 0) { toast('Completa todos los campos requeridos', 'error'); return; }
+
+  const vincular = document.getElementById('mVincularFinanzas').checked;
+  const body = {
+    suministro_id: sid, tipo, cantidad,
+    motivo: document.getElementById('mMotivo').value.trim(),
+    fecha:  document.getElementById('mFecha').value,
+    vincular_finanzas: vincular,
+    monto_financiero:  vincular ? parseFloat(document.getElementById('mMonto').value) : null,
+    concepto_financiero: vincular ? document.getElementById('mConcepto').value.trim() : '',
+  };
+
+  const r = await fetch('/api/suministros/movimientos', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF },
+    body: JSON.stringify(body),
+  });
+  const data = await r.json();
+  if (data.ok) {
+    let msg = `Movimiento registrado. Nuevo stock: ${data.nuevo_stock}`;
+    if (data.referencia_financiero) msg += ` | Finanzas #${data.referencia_financiero}`;
+    toast(msg);
+    cerrarModal('modalMovimiento');
+    cargarInventario();
+    cargarMovimientos();
+  } else {
+    toast(data.error || 'Error al registrar', 'error');
+  }
+}
+
+// ── RACIONES DIARIAS ──────────────────────────────────────────────────────
+async function registrarRacion(tipo) {
+  const fecha = document.getElementById(`fecha${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`).value;
+  const notas = document.getElementById(`notas${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`).value.trim();
+  if (!fecha) { toast('Selecciona una fecha', 'error'); return; }
+
+  const r = await fetch('/api/suministros/raciones', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF },
+    body: JSON.stringify({ tipo_racion: tipo, fecha, notas }),
+  });
+  const data = await r.json();
+  if (data.ok) {
+    toast(`${tipo.charAt(0).toUpperCase() + tipo.slice(1)}: ${data.total_raciones} raciones registradas`);
+    cargarRaciones();
+    actualizarInfoRaciones(tipo, data);
+  } else {
+    toast(data.error || 'Error al registrar', 'error');
+  }
+}
+
+function actualizarInfoRaciones(tipo, data) {
+  const el = document.getElementById(`info${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`);
+  el.textContent = `${data.raciones_estudiantes} est. + ${data.raciones_personal} personal = ${data.total_raciones}`;
+}
+
+async function cargarRaciones() {
+  const mes = document.getElementById('filtroMes').value;
+  const r = await fetch(`/api/suministros/raciones?mes=${mes}`);
+  const data = await r.json();
+  renderRaciones(data.raciones || []);
+}
+
+function renderRaciones(lista) {
+  if (!lista.length) {
+    document.getElementById('tablaRacionesWrap').innerHTML = `
+      <div class="empty-state"><i class="fa fa-utensils"></i><p>Sin raciones en este período.</p></div>`;
+    return;
+  }
+  // Agrupar por fecha
+  const grupos = {};
+  lista.forEach(r => {
+    if (!grupos[r.fecha]) grupos[r.fecha] = [];
+    grupos[r.fecha].push(r);
+  });
+
+  let html = `<div style="overflow-x:auto;"><table class="tabla-sumi">
+    <thead><tr><th>Fecha</th><th>Tipo</th><th>Estudiantes</th><th>Personal</th><th>Total</th><th>Notas</th></tr></thead>
+    <tbody>`;
+  Object.entries(grupos).forEach(([fecha, raciones]) => {
+    const total = raciones.reduce((s,r) => s + r.total_raciones, 0);
+    raciones.forEach((r, i) => {
+      html += `<tr>
+        ${i === 0 ? `<td rowspan="${raciones.length}" style="font-weight:600;vertical-align:middle;">${fecha}</td>` : ''}
+        <td>${r.tipo_racion === 'desayuno' ? '☀️ Desayuno' : '🍽️ Almuerzo'}</td>
+        <td>${r.raciones_estudiantes}</td>
+        <td>${r.raciones_personal}</td>
+        <td style="font-weight:600;">${r.total_raciones}</td>
+        <td style="font-size:.8rem;color:var(--text-muted);">${_esc(r.notas || '—')}</td>
+      </tr>`;
+    });
+    if (raciones.length > 1) {
+      html += `<tr style="background:color-mix(in srgb, var(--accent) 5%, var(--surface));">
+        <td></td><td colspan="3" style="font-weight:700;text-align:right;">Total del día:</td>
+        <td style="font-weight:700;">${total}</td><td></td></tr>`;
+    }
+  });
+  html += '</tbody></table></div>';
+  document.getElementById('tablaRacionesWrap').innerHTML = html;
+}
+
+function _esc(s) {
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Inicializar
+onTipoMovChange();
+cargarResumen();
+</script>
+</body>
+</html>

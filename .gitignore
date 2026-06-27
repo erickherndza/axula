@@ -1,0 +1,75 @@
+# ── Entornos Python ───────────────────────────────────────
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# ── Variables de entorno (NUNCA al repo) ──────────────────
+.env
+.env.*
+!.env.example
+
+# ── Base de datos (datos reales de estudiantes) ───────────
+*.db
+*.db-shm
+*.db-wal
+backups/
+
+# ── Archivos subidos por usuarios ─────────────────────────
+uploads/
+static/fotos/
+static/backup/
+static/corregido/
+
+# ── Logs ──────────────────────────────────────────────────
+logs/
+*.log
+
+# ── Node / Ponytail ───────────────────────────────────────
+node_modules/
+package-lock.json
+
+# ── IDEs ──────────────────────────────────────────────────
+.vscode/
+.idea/
+*.code-workspace
+
+# ── macOS ─────────────────────────────────────────────────
+.DS_Store
+
+# ── Archivos temporales / desarrollo local ────────────────
+.claude/
+*.bak
+*.tmp
+boletin_jorlenny.html
+expediente_endpoints.py
+generar_planificacion_abp.js
+qa_suite.py
+qa_runner.py
+seed_menciones.py
+seed_plantilla_mat.py
+
+# ── Variables de entorno alternativas ────────────────────
+env
+
+# ── PDFs con datos de estudiantes ────────────────────────
+notas/
+
+# ── Documentos que no son código ─────────────────────────
+TecnoAuladom_*.docx
+AXULA_IDENTIDAD_VISUAL_v3.md
+PLANIFICACION_SECUENCIAL_CONTEXT.md
+Bachillerato-arte-multimediapdf.pdf
+tecnoauladom_modular.zip
+LEEME_MAC.md
+usuarios_validacion_roles.xlsx
+Screen Shot*
+templates/Untitled-1.css
+templates/Untitled-2.ini
+templates/Plan_ABP_*
+static/logo-benito.jpg
+static/profesor.html
+static/perfil.css

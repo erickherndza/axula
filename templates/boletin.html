@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Boletín — {{ nombre_completo }}</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --az:#00B0F0; --azh:#1F4E79; --azt:#1F3864;
+  --vd:#375623; --nr:#7F3F00; --nrbg:#FAC9A5;
+  --gh:#D9D9D9; --gf:#F2F2F2; --bd:#BFBFBF;
+  --f:'Noto Sans',sans-serif;
+}
+body{font-family:var(--f);font-size:7.5pt;color:#000;background:#dde0e8;padding:14px}
+
+/* ── CONTROLES ─────────────────────────────────────────── */
+.ctrl{max-width:297mm;margin:0 auto 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ctrl-tit{font-size:13px;font-weight:600;color:#333;flex:1}
+.btn{background:var(--azh);color:#fff;border:none;padding:8px 20px;border-radius:7px;
+     font-size:11px;font-weight:600;cursor:pointer;font-family:var(--f);
+     display:inline-flex;align-items:center;gap:6px;transition:background .15s}
+.btn:hover{background:var(--az)}
+.btn-sec{background:#fff;color:#555;border:1px solid #ccc}
+.btn-sec:hover{border-color:var(--azh);color:var(--azh);background:#fff}
+.logo-lbl{font-size:10px;color:#666;background:#fff;border:1px dashed #aaa;
+          border-radius:5px;padding:5px 12px;cursor:pointer;transition:border-color .15s}
+.logo-lbl:hover{border-color:var(--azh);color:var(--azh)}
+#f-logo{display:none}
+
+/* ── HOJA LANDSCAPE ────────────────────────────────────── */
+.hoja{width:279mm;min-height:216mm;background:#fff;margin:0 auto;
+      padding:5mm 6mm;box-shadow:0 4px 20px rgba(0,0,0,.18);
+      border:0.5px solid #bbb;position:relative}
+
+/* ── ENCABEZADO ─────────────────────────────────────────── */
+.enc{display:grid;grid-template-columns:22mm 1fr 30mm;align-items:center;
+     gap:6px;border:1.5px solid var(--az);border-radius:4px;
+     padding:4px 6px;margin-bottom:3px}
+.enc-logo{width:20mm;height:20mm;border:1px dashed #ccc;border-radius:3px;
+          display:flex;flex-direction:column;align-items:center;justify-content:center;
+          cursor:pointer;color:#bbb;font-size:6pt;text-align:center;
+          overflow:hidden;transition:border-color .15s}
+.enc-logo:hover{border-color:var(--az)}
+.enc-logo img{width:100%;height:100%;object-fit:contain;display:none}
+.enc-logo.cl .ph{display:none}
+.enc-logo.cl img{display:block}
+.enc-cnt{text-align:center}
+.enc-nom{font-size:9.5pt;font-weight:700;color:var(--azh);line-height:1.2;
+         text-transform:uppercase;letter-spacing:.3px;margin-bottom:2px}
+.enc-sub{font-size:7.5pt;font-weight:600;color:var(--azt);margin-bottom:2px}
+.enc-dat{font-size:6.5pt;color:#555;line-height:1.5}
+.enc-anio{display:inline-block;margin-top:3px;background:var(--azh);color:#fff;
+          padding:1px 10px;border-radius:10px;font-size:6.5pt;font-weight:700;letter-spacing:.4px}
+.enc-r{text-align:right;font-size:6pt;color:#888;line-height:1.7}
+.enc-r strong{display:block;font-size:7.5pt;color:var(--azh);font-weight:700}
+
+/* ── DATOS ESTUDIANTE ───────────────────────────────────── */
+.dr{display:grid;grid-template-columns:auto 1fr auto 1fr auto 1fr auto 1fr auto auto;
+    align-items:center;gap:2px 6px;border:1px solid var(--bd);padding:3px 6px;
+    border-radius:3px;margin-bottom:3px;background:#f8f9fb}
+.dl{font-size:6.5pt;font-weight:700;color:var(--azt);text-transform:uppercase;white-space:nowrap}
+.dv{font-size:7.5pt;font-weight:600;color:#000}
+.dv.big{font-size:8pt;color:var(--azh)}
+.ba{background:#E2EFDA;color:#375623;border:0.5px solid #A9D18E;
+    padding:1px 7px;border-radius:8px;font-size:6.5pt;font-weight:700}
+
+/* ── BANDA COMPETENCIAS ─────────────────────────────────── */
+.cb{background:var(--az);color:#fff;font-size:7pt;font-weight:700;
+    text-transform:uppercase;letter-spacing:.5px;padding:3px 6px;
+    display:flex;align-items:center;gap:5px}
+.cg{display:grid;grid-template-columns:repeat(4,1fr);
+    border:1px solid var(--az);border-top:none;margin-bottom:4px}
+.ci{padding:3px 5px;font-size:6pt;line-height:1.4;color:#333;
+    border-right:1px solid #c8d8e8}
+.ci:last-child{border-right:none}
+.ci strong{display:block;font-size:6.5pt;color:var(--azt);margin-bottom:1px}
+
+/* ── SECCIÓN HEADER ─────────────────────────────────────── */
+.sh{padding:3px 6px;font-size:7pt;font-weight:700;text-transform:uppercase;
+    letter-spacing:.5px;display:flex;align-items:center;gap:5px;border-radius:3px 3px 0 0}
+.sh-a{background:var(--vd);color:#fff}
+.sh-t{background:var(--nr);color:#fff}
+
+/* ── TABLA NOTAS ────────────────────────────────────────── */
+.tn{width:100%;border-collapse:collapse;font-size:6.5pt;
+    border:1px solid var(--bd);margin-bottom:4px}
+.tn th,.tn td{border:0.5px solid var(--bd);padding:2px 2px;
+              text-align:center;vertical-align:middle;white-space:nowrap}
+.tm{text-align:left!important;padding-left:5px!important;
+    font-size:6.5pt;font-weight:600;white-space:normal;min-width:85px;max-width:85px}
+
+/* Colores de grupo de competencias */
+.gc{background:#BDD7EE;color:#1F3864}
+.gp{background:#FCE4D6;color:#833C00}
+.ge{background:#E2EFDA;color:#375623}
+.gs{background:#FFF2CC;color:#7F6000}
+.tp{background:var(--gh);font-size:5.5pt;font-weight:700;color:#333}
+.ts{background:#D6E4F0;color:var(--azt);font-size:6pt;font-weight:700}
+.ts2{background:#FCE4D6;color:#833C00;font-size:6pt;font-weight:700}
+.ta{background:#E2EFDA;color:var(--vd);font-size:6pt;font-weight:700}
+.fp td{background:var(--gf)} .fi td{background:#fff}
+
+/* Nota colores */
+.na{color:#375623;font-weight:700}  /* ≥70 aprobado */
+.nb{color:#843C0C;font-weight:700}  /* 50-69 completiva */
+.nc{color:#C00000;font-weight:700}  /* <50 reprobado */
+.nd{color:#BFBFBF}                  /* vacío */
+
+/* ── CONDICIÓN FINAL ────────────────────────────────────── */
+.cr{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-bottom:4px}
+.cb2{border:1px solid var(--bd);border-radius:3px;overflow:hidden}
+.ch{padding:3px 6px;font-size:6.5pt;font-weight:700;text-transform:uppercase}
+.ch-ap{background:var(--vd);color:#fff}
+.ch-rp{background:#C00000;color:#fff}
+.ch-ley{background:var(--azh);color:#fff}
+.cbody{padding:4px 6px;font-size:6.5pt;line-height:1.6;color:#333}
+.cbody .fel{color:var(--vd);font-weight:700}
+.cbody .mal{color:#C00000;font-weight:700}
+.li{display:flex;gap:4px}
+.lk{font-weight:700;color:var(--azt);min-width:52px}
+
+/* ── FIRMAS ─────────────────────────────────────────────── */
+.firmas{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:6px}
+.fbox{text-align:center}
+.flin{border-top:1px solid #555;padding-top:3px;margin-top:14px}
+.fnom{font-size:7pt;font-weight:700}
+.fcar{font-size:6pt;color:#666;font-style:italic}
+
+/* ── PRINT ──────────────────────────────────────────────── */
+@media print{
+  body{background:#fff;padding:0}
+  .ctrl{display:none!important}
+  .hoja{width:100%;min-height:auto;box-shadow:none;border:none;
+        padding:3mm 5mm;margin:0}
+  @page{size:Letter landscape;margin:4mm}
+  .gc,.gp,.ge,.gs,.tp,.ts,.ts2,.ta,
+  .sh-a,.sh-t,.cb,.enc,.ch-ap,.ch-rp,.ch-ley
+  {-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+
+<!-- CONTROLES PANTALLA -->
+<div class="ctrl">
+  <span class="ctrl-tit">📋 Boletín Oficial — {{ nombre_completo }}</span>
+  <label class="logo-lbl" for="f-logo">📎 Logo institución</label>
+  <input type="file" id="f-logo" accept="image/*" onchange="subirLogo(this)">
+  <button class="btn btn-sec" onclick="history.back()">← Volver al perfil</button>
+  <button class="btn" onclick="window.print()">🖨 Imprimir / PDF</button>
+</div>
+
+<!-- ══ HOJA ═══════════════════════════════════════════════ -->
+<div class="hoja">
+
+  <!-- ENCABEZADO -->
+  <div class="enc">
+    <div class="enc-logo" id="logo-box" onclick="document.getElementById('f-logo').click()">
+      <div class="ph">
+        <svg width="20" height="20" fill="none" stroke="#ccc" stroke-width="1.5" viewBox="0 0 24 24">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <circle cx="8.5" cy="8.5" r="1.5"/>
+          <polyline points="21 15 16 10 5 21"/>
+        </svg>
+        <div style="margin-top:2px">Logo</div>
+      </div>
+      <img id="logo-img" src="" alt="">
+    </div>
+    <div class="enc-cnt">
+      <div class="enc-nom">Centro Educativo en Artes Benito Juárez</div>
+      <div class="enc-sub">Boletín de Calificaciones — {{ grado }} Grado — Modalidad en Artes</div>
+      <div class="enc-dat">
+        Av. Independencia &bull; Santo Domingo, República Dominicana &bull; Tel: (809) 000-0000
+      </div>
+      <span class="enc-anio">Año Escolar {{ anio_escolar }}</span>
+    </div>
+    <div class="enc-r">
+      <strong>Mención {{ mencion }}</strong>
+      Segundo Ciclo<br>
+      {% if e.curso %}Sección: {{ e.curso.split()[-1] if e.curso else 'A' }}{% endif %}<br>
+      Período actual: <strong style="color:var(--azh)">{{ periodo_actual }}</strong>
+    </div>
+  </div>
+
+  <!-- DATOS ESTUDIANTE -->
+  <div class="dr">
+    <span class="dl">Alumno/a:</span>
+    <span class="dv big">{{ nombre_completo }}</span>
+    <span class="dl">Maestro/a:</span>
+    <span class="dv">{{ maestro or '—' }}</span>
+    <span class="dl">Grado:</span>
+    <span class="dv">{{ grado }}</span>
+    <span class="dl">Mención:</span>
+    <span class="dv">{{ mencion }}</span>
+    <span class="dl">Estado:</span>
+    <span class="dv"><span class="ba">● {{ e.condicion or 'ACTIVO' }}</span></span>
+    <span class="dl">Índice Acad.:</span>
+    <span class="dv" style="color:{% if (e.p_acad or 0) >= 80 %}#375623{% elif (e.p_acad or 0) >= 70 %}#7F6000{% else %}#C00000{% endif %}">
+      {{ '%.1f'|format(e.p_acad or 0) }}
+    </span>
+  </div>
+
+  <!-- COMPETENCIAS FUNDAMENTALES -->
+  <div class="cb">◆ Competencias Fundamentales</div>
+  <div class="cg">
+    <div class="ci"><strong>Comunicativa</strong>Comprensión y producción oral y escrita en lengua materna y extranjera</div>
+    <div class="ci"><strong>Pensamiento Lógico, Creativo y Crítico</strong>Resolución de problemas, creatividad e innovación</div>
+    <div class="ci"><strong>Ética y Ciudadana · Desarrollo Personal</strong>Valores, convivencia pacífica, identidad y bienestar</div>
+    <div class="ci"><strong>Científica y Tecnológica · Ambiental</strong>Investigación, uso de TIC y sostenibilidad ambiental</div>
+  </div>
+
+  <!-- ══ COMPONENTE ACADÉMICO ════════════════════════════ -->
+  <div class="sh sh-a">📚 Componente Académico</div>
+  <table class="tn">
+    <thead>
+      <tr>
+        <th class="tm" rowspan="2" style="background:#EEF3F8">Área Curricular</th>
+        <th class="gc" colspan="8" style="font-size:6pt;font-weight:700;padding:2px">Comunicativa</th>
+        <th class="gp" colspan="8" style="font-size:6pt;font-weight:700;padding:2px">Pensamiento Lógico</th>
+        <th class="ge" colspan="8" style="font-size:6pt;font-weight:700;padding:2px">Ética y Ciudadana</th>
+        <th class="gs" colspan="8" style="font-size:6pt;font-weight:700;padding:2px">Científica y Tecnol.</th>
+        <th class="ts" colspan="4" style="font-size:6pt">Prom. Comp.</th>
+        <th class="ts2" colspan="2" style="font-size:6pt">Cal. Final</th>
+        <th class="ta" colspan="3" style="font-size:6pt">Asistencia %</th>
+        <th class="ts" colspan="2" style="font-size:6pt">Sit.</th>
+      </tr>
+      <tr>
+        {%- for cls in ['gc','gc','gc','gc','gc','gc','gc','gc',
+                        'gp','gp','gp','gp','gp','gp','gp','gp',
+                        'ge','ge','ge','ge','ge','ge','ge','ge',
+                        'gs','gs','gs','gs','gs','gs','gs','gs'] %}
+        {%- set labels = ['P1','RP1','P2','RP2','P3','RP3','P4','RP4'] %}
+        {%- set i = loop.index0 % 8 %}
+        <th class="tp {{ cls }}" style="font-size:5pt;{% if i >= 2 %}color:#bbb{% endif %}">{{ labels[i] }}</th>
+        {%- endfor %}
+        <th class="tp ts" style="font-size:5pt">PC1</th><th class="tp ts" style="font-size:5pt">PC2</th>
+        <th class="tp ts" style="font-size:5pt;color:#bbb">PC3</th><th class="tp ts" style="font-size:5pt;color:#bbb">PC4</th>
+        <th class="tp ts2" style="font-size:5pt">C.F.</th><th class="tp ts2" style="font-size:5pt">50%CF</th>
+        <th class="tp ta" style="font-size:5pt">P1%</th><th class="tp ta" style="font-size:5pt">P2%</th>
+        <th class="tp ta" style="font-size:5pt;color:#aaa">Anual</th>
+        <th class="tp ts" style="font-size:5pt;color:#375623;font-weight:800">A</th>
+        <th class="tp ts" style="font-size:5pt;color:#C00000;font-weight:800">R</th>
+      </tr>
+    </thead>
+    <tbody>
+    {%- for m in acad_data %}
+    {%- set cls_row = 'fp' if loop.index0 % 2 == 0 else 'fi' %}
+    {%- set bg_mat = '#EEF3F8' if loop.index0 % 2 == 0 else '#F8FBFF' %}
+    {%- set p1 = m.p1 %}{%- set p2 = m.p2 %}{%- set p3 = m.p3 %}{%- set p4 = m.p4 %}
+    {%- macro cn(v) %}{% if v is none %}nd{% elif v >= 70 %}na{% elif v >= 50 %}nb{% else %}nc{% endif %}{% endmacro %}
+    {%- macro fn(v) %}<span class="{{cn(v)}}">{% if v is not none %}{{ '%.1f'|format(v)|replace('.0','') }}{% else %}—{% endif %}</span>{% endmacro %}
+    {%- set pc1 = ((p1 or 0) + (p2 or 0)) / ([p1,p2]|select()|list|length) if [p1,p2]|select()|list else none %}
+    {%- set cf_vals = [p1,p2,p3,p4]|select()|list %}
+    {%- set cf = (cf_vals|sum / cf_vals|length)|round(1) if cf_vals else none %}
+    <tr class="{{ cls_row }}">
+      <td class="tm" style="background:{{ bg_mat }}">{{ m.nombre }}</td>
+      <!-- G1 Comunicativa -->
+      <td>{{ fn(p1) }}</td><td><span class="nd">—</span></td>
+      <td>{{ fn(p2) }}</td><td><span class="nd">—</span></td>
+      <td><span class="nd">{% if p3 %}{{ fn(p3) }}{% else %}—{% endif %}</span></td><td><span class="nd">—</span></td>
+      <td><span class="nd">{% if p4 %}{{ fn(p4) }}{% else %}—{% endif %}</span></td><td><span class="nd">—</span></td>
+      <!-- G2 Pensamiento -->
+      <td>{{ fn(p1) }}</td><td><span class="nd">—</span></td>
+      <td>{{ fn(p2) }}</td><td><span class="nd">—</span></td>
+      <td><span class="nd">—</span></td><td><span class="nd">—</span></td>
+      <td><span class="nd">—</span></td><td><span class="nd">—</span></td>
+      <!-- G3 Ética -->
+      <td>{{ fn(p1) }}</td><td><span class="nd">—</span></td>
+      <td>{{ fn(p2) }}</td><td><span class="nd">—</span></td>
+      <td><span class="nd">—</span></td><td><span class="nd">—</span></td>
+      <td><span class="nd">—</span></td><td><span class="nd">—</span></td>
+      <!-- G4 Científica -->
+      <td>{{ fn(p1) }}</td><td><span class="nd">—</span></td>
+      <td>{{ fn(p2) }}</td><td><span class="nd">—</span></td>
+      <td><span class="nd">—</span></td><td><span class="nd">—</span></td>
+      <td><span class="nd">—</span></td><td><span class="nd">—</span></td>
+      <!-- PC1-PC4 -->
+      <td>{{ fn(p1) }}</td><td>{{ fn(p2) }}</td>
+      <td><span class="nd">—</span></td><td><span class="nd">—</span></td>
+      <!-- CF  50%CF -->
+      <td style="font-weight:700">{{ fn(cf) }}</td>
+      <td>{% if cf is not none %}<span class="{{ cn(cf) }}">{{ '%.1f'|format(cf * 0.5) }}</span>{% else %}<span class="nd">—</span>{% endif %}</td>
+      <!-- Asistencia -->
+      <td>{{ fn(m.asist_p1) }}</td><td>{{ fn(m.asist_p2) }}</td>
+      <td><span class="nd">—</span></td>
+      <!-- Situación -->
+      <td>{% if cf is not none %}{% if cf >= 70 %}<span class="na" style="font-weight:800">A</span>{% else %}<span class="nc" style="font-weight:800">R</span>{% endif %}{% else %}<span class="nd">—</span>{% endif %}</td>
+      <td><span class="nd">—</span></td>
+    </tr>
+    {%- endfor %}
+    </tbody>
+  </table>
+
+  <!-- ══ COMPONENTE TÉCNICO ══════════════════════════════ -->
+  <div class="sh sh-t">🎨 Componente Técnico — Mención {{ mencion }} ({{ grado }} Grado)</div>
+  <table class="tn">
+    <thead>
+      <tr>
+        <th class="tm" rowspan="2" style="background:#FFF3E8;min-width:100px;max-width:100px">Asignatura Técnica</th>
+        <th style="background:#FCDABD;color:#7F3F00;font-size:6pt;font-weight:700" colspan="4">1er Semestre</th>
+        <th style="background:#F8C09A;color:#7F3F00;font-size:6pt;font-weight:700" colspan="4">2do Semestre</th>
+        <th style="background:#E8935A;color:#fff;font-size:6pt;font-weight:700" colspan="2">Promedio</th>
+        <th class="ta" colspan="2" style="font-size:6pt">Asistencia %</th>
+        <th class="ts" style="font-size:5pt;color:#375623;font-weight:800">A</th>
+        <th class="ts" style="font-size:5pt;color:#C00000;font-weight:800">R</th>
+      </tr>
+      <tr>
+        <th class="tp" style="background:#FCDABD;font-size:5pt">P1</th>
+        <th class="tp" style="background:#FCDABD;font-size:5pt;color:#888">RP1</th>
+        <th class="tp" style="background:#FCDABD;font-size:5pt">P2</th>
+        <th class="tp" style="background:#FCDABD;font-size:5pt;color:#888">RP2</th>
+        <th class="tp" style="background:#F8C09A;font-size:5pt;color:#bbb">P3</th>
+        <th class="tp" style="background:#F8C09A;font-size:5pt;color:#bbb">RP3</th>
+        <th class="tp" style="background:#F8C09A;font-size:5pt;color:#bbb">P4</th>
+        <th class="tp" style="background:#F8C09A;font-size:5pt;color:#bbb">RP4</th>
+        <th class="tp" style="background:#E8935A;color:#fff;font-size:5pt">C.F.</th>
+        <th class="tp" style="background:#E8935A;color:#fff;font-size:5pt">Est.</th>
+        <th class="tp ta" style="font-size:5pt">P1%</th>
+        <th class="tp ta" style="font-size:5pt">P2%</th>
+        <th></th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+    {%- for m in tec_data %}
+    {%- set cls_row = 'fp' if loop.index0 % 2 == 0 else 'fi' %}
+    {%- set bg_mat = '#FFF8F0' if loop.index0 % 2 == 0 else '#FFF3E8' %}
+    {%- set p1 = m.p1 %}{%- set p2 = m.p2 %}{%- set p3 = m.p3 %}{%- set p4 = m.p4 %}{%- set cf = m.cf %}
+    {%- macro cn2(v) %}{% if v is none %}nd{% elif v >= 70 %}na{% elif v >= 50 %}nb{% else %}nc{% endif %}{% endmacro %}
+    {%- macro fn2(v) %}<span class="{{cn2(v)}}">{% if v is not none %}{{ '%.1f'|format(v)|replace('.0','') }}{% else %}—{% endif %}</span>{% endmacro %}
+    <tr class="{{ cls_row }}">
+      <td class="tm" style="background:{{ bg_mat }};white-space:normal;max-width:100px">{{ m.nombre }}</td>
+      <td>{{ fn2(p1) }}</td><td><span class="nd">—</span></td>
+      <td>{{ fn2(p2) }}</td><td><span class="nd">—</span></td>
+      <td>{{ fn2(p3) }}</td><td><span class="nd">—</span></td>
+      <td>{{ fn2(p4) }}</td><td><span class="nd">—</span></td>
+      <td style="font-weight:700">{{ fn2(cf) }}</td>
+      <td>{% if cf is not none %}{% if cf >= 70 %}<span class="na" style="font-weight:800">A</span>{% else %}<span class="nc" style="font-weight:800">R</span>{% endif %}{% else %}<span class="nd">—</span>{% endif %}</td>
+      <td>{{ fn2(m.asist_p1) }}</td><td>{{ fn2(m.asist_p2) }}</td>
+      <td>{% if cf is not none %}{% if cf >= 70 %}<span class="na" style="font-weight:800">A</span>{% else %}<span class="nc" style="font-weight:800">R</span>{% endif %}{% else %}<span class="nd">—</span>{% endif %}</td>
+      <td><span class="nd">—</span></td>
+    </tr>
+    {%- endfor %}
+    </tbody>
+  </table>
+
+
+  <!-- ══ CONDICIÓN FINAL + LEYENDA ════════════════════════ -->
+  <div class="cr">
+    <div class="cb2">
+      <div class="ch {{ 'ch-ap' if cond_acad.aprobado else 'ch-rp' }}">Condición — Componente Académico</div>
+      <div class="cbody">
+        {% if cond_acad.aprobado %}
+        <span class="fel">¡FELICIDADES!</span> El estudiante pasa al siguiente período. <strong>{{ periodo_actual }}</strong>
+        {% else %}
+        <span class="mal">⚠ Atención:</span> {{ cond_acad.reprobadas }} materia(s) reprobada(s). Requiere seguimiento.
+        {% endif %}
+      </div>
+    </div>
+    <div class="cb2">
+      <div class="ch {{ 'ch-ap' if cond_tec.aprobado else 'ch-rp' }}">Condición — Componente Técnico</div>
+      <div class="cbody">
+        {% if cond_tec.aprobado %}
+        <span class="fel">¡FELICIDADES!</span> El estudiante pasa al siguiente período. <strong>{{ periodo_actual }}</strong>
+        {% else %}
+        <span class="mal">⚠ Atención:</span> {{ cond_tec.reprobadas }} materia(s) técnica(s) reprobada(s).
+        {% endif %}
+      </div>
+    </div>
+    <div class="cb2">
+      <div class="ch ch-ley">Leyenda</div>
+      <div class="cbody" style="display:grid;grid-template-columns:1fr 1fr;gap:1px 6px">
+        <div class="li"><span class="lk">(P1–P4)</span><span>Períodos</span></div>
+        <div class="li"><span class="lk">(C.F.)</span><span>Cal. Final</span></div>
+        <div class="li"><span class="lk">(RP)</span><span>Recuperación</span></div>
+        <div class="li"><span class="lk">(C.E.C.)</span><span>Eval. Completiva</span></div>
+        <div class="li"><span class="lk">(PC)</span><span>Prom. Competencias</span></div>
+        <div class="li"><span class="lk">(C.C.F.)</span><span>Completiva Final</span></div>
+        <div class="li"><span class="lk" style="color:#375623">(A)</span><span>Aprobado ≥ 70</span></div>
+        <div class="li"><span class="lk" style="color:#C00000">(R)</span><span>Reprobado &lt; 70</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FIRMAS -->
+  <div class="firmas">
+    <div class="fbox">
+      <div class="flin">
+        <div class="fnom">{{ nombre_completo }}</div>
+        <div class="fcar">Estudiante</div>
+      </div>
+    </div>
+    <div class="fbox">
+      <div class="flin">
+        <div class="fnom">{{ maestro or 'Maestro/a Encargado/a' }}</div>
+        <div class="fcar">Maestro/a Encargado/a</div>
+      </div>
+    </div>
+    <div class="fbox">
+      <div class="flin">
+        <div class="fnom">Yordania Simón Morales, M.A.</div>
+        <div class="fcar">Directora</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /hoja -->
+
+<script>
+function subirLogo(inp) {
+  if (!inp.files || !inp.files[0]) return;
+  var r = new FileReader();
+  r.onload = function(e) {
+    document.getElementById('logo-img').src = e.target.result;
+    document.getElementById('logo-box').classList.add('cl');
+    try { localStorage.setItem('bj_logo', e.target.result); } catch(x) {}
+  };
+  r.readAsDataURL(inp.files[0]);
+}
+// Restaurar logo guardado
+document.addEventListener('DOMContentLoaded', function() {
+  try {
+    var lg = localStorage.getItem('bj_logo');
+    if (lg) {
+      document.getElementById('logo-img').src = lg;
+      document.getElementById('logo-box').classList.add('cl');
+    }
+  } catch(x) {}
+});
+</script>
+</body>
+</html>

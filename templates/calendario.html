@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calendario Escolar — Axula</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="/static/theme.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;}
+
+nav{display:flex;align-items:center;justify-content:space-between;padding:14px 28px;
+    border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:0;z-index:50;}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit;}
+.logo-icon{width:32px;height:32px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;}
+.logo-text{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;}
+.nav-links{display:flex;gap:8px;}
+.nbtn{padding:7px 14px;border-radius:8px;font-size:12px;font-family:'Syne',sans-serif;font-weight:700;
+      cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);
+      text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:all .2s;}
+.nbtn:hover{border-color:var(--accent);color:var(--accent);}
+.nbtn.pri{background:var(--accent);color:#000;border-color:var(--accent);}
+
+main{max-width:1100px;margin:0 auto;padding:28px 20px;}
+
+/* ─── Cabecera ─── */
+.cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;}
+.cal-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;}
+.cal-nav{display:flex;align-items:center;gap:10px;}
+.nav-btn{padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:transparent;
+         color:var(--muted);cursor:pointer;font-size:13px;transition:all .2s;}
+.nav-btn:hover{border-color:var(--accent);color:var(--accent);}
+.mes-label{font-family:'Syne',sans-serif;font-weight:800;font-size:16px;min-width:160px;text-align:center;}
+.anio-sel{background:var(--surface);border:1px solid var(--border);color:var(--text);
+          padding:7px 12px;border-radius:8px;font-size:12px;outline:none;}
+
+/* ─── Leyenda ─── */
+.leyenda{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;}
+.ley-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);}
+.ley-dot{width:10px;height:10px;border-radius:3px;}
+.ley-feriado{background:#ef4444;}
+.ley-dia_especial{background:#C8880A;}
+.ley-no_laborable{background:#5B8AF7;}
+.ley-reunion{background:#2661F6;}
+.ley-hoy{background:var(--accent);opacity:.5;}
+
+/* ─── Grilla ─── */
+.cal-grid-wrap{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+.cal-days-header{display:grid;grid-template-columns:repeat(7,1fr);background:var(--surface2);}
+.cal-day-name{padding:10px 4px;text-align:center;font-size:10px;font-weight:700;
+              font-family:'Syne',sans-serif;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);}
+.cal-cell{min-height:90px;padding:6px;border-right:1px solid #1a1a1a;border-bottom:1px solid #1a1a1a;
+          position:relative;transition:background .15s;}
+.cal-cell:nth-child(7n){border-right:none;}
+.cal-cell.vacio{background:transparent;}
+.cal-cell.hoy{background:rgba(38,97,246,.06);}
+.cal-cell.hoy .day-num{background:var(--accent);color:#fff;border-radius:50%;
+                        width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-weight:700;}
+.cal-cell.fin-semana .day-num{color:#555;}
+.cal-cell.con-evento{cursor:pointer;}
+.cal-cell.con-evento:hover{background:rgba(255,255,255,.03);}
+.day-num{font-family:'DM Mono',monospace;font-size:12px;font-weight:600;margin-bottom:4px;
+         display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;}
+.ev-chip{font-size:9px;padding:2px 6px;border-radius:4px;margin-top:2px;
+         white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;
+         display:block;font-weight:600;}
+.ev-feriado{background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3);}
+.ev-dia_especial{background:rgba(200,136,10,.12);color:#C8880A;border:1px solid rgba(200,136,10,.3);}
+.ev-no_laborable{background:rgba(91,138,247,.15);color:#5B8AF7;border:1px solid rgba(91,138,247,.3);}
+.ev-reunion{background:rgba(38,97,246,.15);color:#2661F6;border:1px solid rgba(38,97,246,.3);}
+.add-btn{position:absolute;bottom:4px;right:4px;width:18px;height:18px;border-radius:50%;
+         background:rgba(255,255,255,.05);border:1px solid #333;color:#555;font-size:10px;
+         display:none;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;}
+.cal-cell:hover .add-btn{display:flex;}
+.add-btn:hover{background:var(--accent);color:#000;border-color:var(--accent);}
+
+/* ─── Stats ─── */
+.stats-bar{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;
+           padding:12px 16px;flex:1;min-width:120px;}
+.stat-n{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;}
+.stat-l{font-size:10px;color:var(--muted);margin-top:2px;}
+
+/* ─── Modal ─── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;
+               align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;
+       padding:28px;width:100%;max-width:420px;}
+.modal h3{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;margin-bottom:18px;}
+.form-group{margin-bottom:14px;}
+.form-group label{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px;}
+.form-group input,.form-group select,.form-group textarea{
+  width:100%;background:#111;border:1px solid #333;color:var(--text);
+  padding:9px 12px;border-radius:8px;font-size:13px;outline:none;font-family:'DM Sans',sans-serif;}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent);}
+.modal-btns{display:flex;gap:8px;margin-top:18px;justify-content:flex-end;}
+.btn{padding:8px 18px;border-radius:8px;font-size:12px;font-family:'Syne',sans-serif;
+     font-weight:700;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);}
+.btn.pri{background:var(--accent);color:#000;border-color:var(--accent);}
+.btn.dan{background:rgba(239,68,68,.1);color:#ef4444;border-color:rgba(239,68,68,.3);}
+.btn:hover{opacity:.85;}
+
+/* ─── Toast ─── */
+.toast{position:fixed;bottom:28px;right:28px;padding:12px 20px;border-radius:10px;
+       font-size:13px;font-weight:600;z-index:999;opacity:0;transform:translateY(10px);
+       transition:all .3s;pointer-events:none;}
+.toast.show{opacity:1;transform:translateY(0);}
+</style>
+</head>
+<body>
+<nav>
+  <a class="logo" href="/">
+    <div class="logo-icon">📅</div>
+    <div class="logo-text">Axula</div>
+  </a>
+  <div class="nav-links">
+    <a class="nbtn" href="/"><i class="fas fa-home"></i> Inicio</a>
+    <a class="nbtn" href="/api/calendario/exportar-ics" target="_blank"><i class="fas fa-download"></i> Exportar .ics</a>
+    {% if puede_editar %}
+    <label class="nbtn" style="cursor:pointer;"><i class="fas fa-upload"></i> Importar .ics
+      <input type="file" accept=".ics" style="display:none;" onchange="importarIcs(this)">
+    </label>
+    <button class="nbtn" onclick="abrirImportarURL()"><i class="fab fa-google"></i> Importar desde URL</button>
+    {% endif %}
+  </div>
+</nav>
+
+<main>
+  <!-- Stats -->
+  <div class="stats-bar">
+    <div class="stat-card">
+      <div class="stat-n" id="st-habiles">—</div>
+      <div class="stat-l">Días hábiles este mes</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-n" id="st-feriados">—</div>
+      <div class="stat-l">Feriados este mes</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-n" id="st-eventos">—</div>
+      <div class="stat-l">Eventos especiales</div>
+    </div>
+    <div class="stat-card" style="flex:2;">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">AÑO ESCOLAR</div>
+      <select class="anio-sel" id="anio-sel" onchange="cambiarAnio()">
+        <option value="2025-2026">2025-2026</option>
+        <option value="2026-2027">2026-2027</option>
+        <option value="2024-2025">2024-2025</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Cabecera del mes -->
+  <div class="cal-header">
+    <div class="cal-title" id="cal-title">Calendario Escolar</div>
+    <div class="cal-nav">
+      <button class="nav-btn" onclick="navMes(-1)"><i class="fas fa-chevron-left"></i></button>
+      <div class="mes-label" id="mes-label">—</div>
+      <button class="nav-btn" onclick="navMes(1)"><i class="fas fa-chevron-right"></i></button>
+      <button class="nav-btn" onclick="irHoy()">Hoy</button>
+    </div>
+  </div>
+
+  <!-- Leyenda -->
+  <div class="leyenda">
+    <div class="ley-item"><div class="ley-dot ley-feriado"></div>Feriado</div>
+    <div class="ley-item"><div class="ley-dot ley-dia_especial"></div>Día especial</div>
+    <div class="ley-item"><div class="ley-dot ley-no_laborable"></div>No laborable</div>
+    <div class="ley-item"><div class="ley-dot ley-reunion"></div>Reunión/Actividad</div>
+  </div>
+
+  <!-- Grilla -->
+  <div class="cal-grid-wrap">
+    <div class="cal-days-header">
+      <div class="cal-day-name">Dom</div>
+      <div class="cal-day-name">Lun</div>
+      <div class="cal-day-name">Mar</div>
+      <div class="cal-day-name">Mié</div>
+      <div class="cal-day-name">Jue</div>
+      <div class="cal-day-name">Vie</div>
+      <div class="cal-day-name">Sáb</div>
+    </div>
+    <div class="cal-grid" id="cal-grid"></div>
+  </div>
+</main>
+
+<!-- Modal agregar evento -->
+<div class="modal-overlay" id="modal-add">
+  <div class="modal">
+    <h3 id="modal-title">📅 Agregar evento</h3>
+    <div class="form-group">
+      <label>Fecha</label>
+      <input type="date" id="ev-fecha" readonly style="color:var(--accent);">
+    </div>
+    <div class="form-group">
+      <label>Tipo</label>
+      <select id="ev-tipo">
+        <option value="feriado">🔴 Feriado nacional</option>
+        <option value="dia_especial">🟡 Día especial</option>
+        <option value="no_laborable">🔵 No laborable</option>
+        <option value="reunion">🟢 Reunión / Actividad</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Descripción</label>
+      <input type="text" id="ev-desc" placeholder="Ej: Día de la Independencia, Reunión de padres..." maxlength="120">
+    </div>
+    <div class="modal-btns">
+      <button class="btn dan" id="btn-eliminar" style="display:none;" onclick="eliminarEvento()">🗑 Eliminar</button>
+      <button class="btn" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn pri" onclick="guardarEvento()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal importar URL Google Calendar -->
+<div class="modal-overlay" id="modal-gcal-url" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center;">
+  <div class="modal" style="max-width:520px;">
+    <h3><i class="fab fa-google" style="color:#4285f4;margin-right:8px;"></i>Importar desde Google Calendar</h3>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6;">
+      En Google Calendar: abre el calendario → ⋮ <b>Configuración</b> → <b>Integraciones</b> →
+      copia la <b>Dirección en formato iCal</b> (URL larga que termina en <code>.ics</code>)
+    </p>
+    <div class="form-group">
+      <label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;">URL iCal pública</label>
+      <input type="url" id="gcal-url-input" placeholder="https://calendar.google.com/calendar/ical/..."
+             style="width:100%;background:#111;border:1px solid #333;color:var(--text);padding:9px 12px;border-radius:8px;font-size:12px;outline:none;margin-top:5px;">
+    </div>
+    <div id="gcal-url-result" style="font-size:12px;min-height:20px;margin-bottom:8px;"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn" onclick="cerrarImportarURL()">Cancelar</button>
+      <button class="btn pri" onclick="importarDesdeURL()"><i class="fas fa-cloud-download-alt"></i> Importar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var T = "{{ csrf_token }}";
+var PUEDE_EDITAR = {{ 'true' if puede_editar else 'false' }};
+var hoy = new Date();
+var añoActual = hoy.getFullYear();
+var mesActual = hoy.getMonth(); // 0-based
+var verAño = añoActual;
+var verMes = mesActual;
+var anioEscolar = '2025-2026';
+var EVENTOS = {};  // "YYYY-MM-DD" → {tipo, descripcion}
+var fechaModal = null;
+
+var MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+             'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+function mesStr(a, m) {
+  return a + '-' + String(m+1).padStart(2,'0');
+}
+
+function fmtFecha(a, m, d) {
+  return a + '-' + String(m+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+}
+
+function toast(msg, color) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.background = color || 'var(--accent)';
+  el.style.color = '#fff';
+  el.classList.add('show');
+  setTimeout(function(){ el.classList.remove('show'); }, 3000);
+}
+
+async function cargarEventos() {
+  var ms = mesStr(verAño, verMes);
+  var res = await fetch('/api/calendario?anio_escolar=' + encodeURIComponent(anioEscolar) + '&mes=' + ms);
+  var data = await res.json();
+  EVENTOS = {};
+  data.forEach(function(e){ EVENTOS[e.fecha] = e; });
+  renderCalendario();
+  cargarStats();
+}
+
+async function cargarStats() {
+  var ms = mesStr(verAño, verMes);
+  // Días hábiles
+  var r1 = await fetch('/api/calendario/dias-habiles?anio_escolar=' + encodeURIComponent(anioEscolar));
+  var d1 = await r1.json();
+  var habiles = (d1.meses || []).find(function(m){ return m.mes === ms; });
+  document.getElementById('st-habiles').textContent = habiles ? habiles.dias_habiles : '—';
+  // Feriados y eventos del mes
+  var feriados = Object.values(EVENTOS).filter(function(e){ return e.tipo === 'feriado'; }).length;
+  var especiales = Object.values(EVENTOS).filter(function(e){ return e.tipo !== 'feriado'; }).length;
+  document.getElementById('st-feriados').textContent = feriados;
+  document.getElementById('st-eventos').textContent = especiales;
+}
+
+function renderCalendario() {
+  var label = MESES[verMes] + ' ' + verAño;
+  document.getElementById('mes-label').textContent = label;
+  document.getElementById('cal-title').textContent = 'Calendario — ' + label;
+
+  var grid = document.getElementById('cal-grid');
+  grid.innerHTML = '';
+
+  // Primer día del mes (0=Dom)
+  var primerDia = new Date(verAño, verMes, 1).getDay();
+  var diasMes   = new Date(verAño, verMes + 1, 0).getDate();
+  var todayStr  = fmtFecha(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+
+  // Celdas vacías iniciales
+  for (var i = 0; i < primerDia; i++) {
+    var blank = document.createElement('div');
+    blank.className = 'cal-cell vacio';
+    grid.appendChild(blank);
+  }
+
+  // Días del mes
+  for (var d = 1; d <= diasMes; d++) {
+    var fechaStr = fmtFecha(verAño, verMes, d);
+    var diaSem   = new Date(verAño, verMes, d).getDay();
+    var esHoy    = fechaStr === todayStr;
+    var esFin    = diaSem === 0 || diaSem === 6;
+    var ev       = EVENTOS[fechaStr];
+
+    var cell = document.createElement('div');
+    cell.className = 'cal-cell' + (esHoy ? ' hoy' : '') + (esFin ? ' fin-semana' : '') + (PUEDE_EDITAR ? ' con-evento' : '');
+    cell.dataset.fecha = fechaStr;
+
+    var numDiv = document.createElement('div');
+    numDiv.className = 'day-num';
+    numDiv.textContent = d;
+    cell.appendChild(numDiv);
+
+    if (ev) {
+      var chip = document.createElement('span');
+      chip.className = 'ev-chip ev-' + ev.tipo;
+      chip.textContent = ev.descripcion || ev.tipo;
+      chip.title = ev.descripcion || '';
+      cell.appendChild(chip);
+    }
+
+    if (PUEDE_EDITAR) {
+      var addBtn = document.createElement('button');
+      addBtn.className = 'add-btn';
+      addBtn.innerHTML = ev ? '<i class="fas fa-pencil" style="font-size:8px;"></i>' : '+';
+      addBtn.title = ev ? 'Editar evento' : 'Agregar evento';
+      addBtn.onclick = function(f, e){ return function(evt){ evt.stopPropagation(); abrirModal(f, e); }; }(fechaStr, ev);
+      cell.appendChild(addBtn);
+      cell.onclick = function(f, e){ return function(){ abrirModal(f, e); }; }(fechaStr, ev);
+    }
+
+    grid.appendChild(cell);
+  }
+}
+
+function abrirModal(fecha, ev) {
+  if (!PUEDE_EDITAR) return;
+  fechaModal = fecha;
+  document.getElementById('ev-fecha').value = fecha;
+  document.getElementById('ev-tipo').value  = ev ? ev.tipo : 'feriado';
+  document.getElementById('ev-desc').value  = ev ? (ev.descripcion || '') : '';
+  document.getElementById('btn-eliminar').style.display = ev ? 'inline-flex' : 'none';
+  document.getElementById('modal-title').textContent = ev ? '✏️ Editar evento' : '📅 Agregar evento';
+  document.getElementById('modal-add').classList.add('open');
+  setTimeout(function(){ document.getElementById('ev-desc').focus(); }, 100);
+}
+
+function cerrarModal() {
+  document.getElementById('modal-add').classList.remove('open');
+  fechaModal = null;
+}
+
+async function guardarEvento() {
+  var tipo = document.getElementById('ev-tipo').value;
+  var desc = document.getElementById('ev-desc').value.trim();
+  var fecha = fechaModal;
+  if (!fecha) return;
+
+  var res = await fetch('/api/calendario', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json','X-CSRF-Token': T},
+    body: JSON.stringify({ fecha: fecha, tipo: tipo, descripcion: desc, anio_escolar: anioEscolar })
+  });
+  var d = await res.json();
+  if (d.ok || d.id) {
+    toast('✓ Evento guardado', '#2661F6');
+    cerrarModal();
+    cargarEventos();
+  } else {
+    alert('Error: ' + (d.error || 'desconocido'));
+  }
+}
+
+async function eliminarEvento() {
+  if (!fechaModal || !confirm('¿Eliminar este evento?')) return;
+  var res = await fetch('/api/calendario/' + fechaModal, {
+    method: 'DELETE',
+    headers: {'X-CSRF-Token': T}
+  });
+  var d = await res.json();
+  if (d.ok) {
+    toast('Evento eliminado', '#ef4444');
+    cerrarModal();
+    cargarEventos();
+  }
+}
+
+function navMes(delta) {
+  verMes += delta;
+  if (verMes > 11) { verMes = 0;  verAño++; }
+  if (verMes < 0)  { verMes = 11; verAño--; }
+  cargarEventos();
+}
+
+function irHoy() {
+  verAño = hoy.getFullYear();
+  verMes = hoy.getMonth();
+  cargarEventos();
+}
+
+function cambiarAnio() {
+  anioEscolar = document.getElementById('anio-sel').value;
+  cargarEventos();
+}
+
+async function importarIcs(input) {
+  if (!input.files.length) return;
+  var fd = new FormData();
+  fd.append('file', input.files[0]);
+  var res = await fetch('/api/calendario/importar-ics?anio_escolar=' + encodeURIComponent(anioEscolar), {
+    method: 'POST',
+    headers: {'X-CSRF-Token': T},
+    body: fd
+  });
+  var d = await res.json();
+  if (d.ok) {
+    toast('✓ ' + (d.insertados || 0) + ' nuevos, ' + (d.actualizados || 0) + ' actualizados', '#2661F6');
+    cargarEventos();
+  } else {
+    var msg = d.error || 'desconocido';
+    if (typeof d.total_parseados !== 'undefined') msg += '\n(eventos en el archivo: ' + d.total_parseados + ')';
+    alert(msg);
+  }
+  input.value = '';
+}
+
+function abrirImportarURL() {
+  var m = document.getElementById('modal-gcal-url');
+  document.getElementById('gcal-url-result').textContent = '';
+  document.getElementById('gcal-url-input').value = '';
+  m.style.display = 'flex';
+}
+function cerrarImportarURL() {
+  document.getElementById('modal-gcal-url').style.display = 'none';
+}
+async function importarDesdeURL() {
+  var url = document.getElementById('gcal-url-input').value.trim();
+  var res = document.getElementById('gcal-url-result');
+  if (!url) { res.innerHTML = '<span style="color:#f87171">Ingresa una URL</span>'; return; }
+  res.innerHTML = '<span style="color:var(--muted)">Descargando calendario...</span>';
+  try {
+    var r = await fetch('/api/calendario/importar-ics?anio_escolar=' + encodeURIComponent(anioEscolar), {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-CSRF-Token': T},
+      body: JSON.stringify({url: url})
+    });
+    var d = await r.json();
+    if (d.ok) {
+      res.innerHTML = '<span style="color:#4ade80">✓ ' + (d.insertados||0) + ' nuevos, ' + (d.actualizados||0) + ' actualizados</span>';
+      cargarEventos();
+      setTimeout(cerrarImportarURL, 1500);
+    } else {
+      var msg = d.error || 'Error desconocido';
+      if (typeof d.total_parseados !== 'undefined') msg += ' (parseados: ' + d.total_parseados + ')';
+      res.innerHTML = '<span style="color:#f87171">' + msg + '</span>';
+    }
+  } catch(e) { res.innerHTML = '<span style="color:#f87171">Error de conexión</span>'; }
+}
+
+// Cerrar modal con Escape
+document.addEventListener('keydown', function(e){ if (e.key === 'Escape') { cerrarModal(); cerrarImportarURL(); } });
+document.getElementById('modal-add').addEventListener('click', function(e){
+  if (e.target === this) cerrarModal();
+});
+
+// Inicializar
+cargarEventos();
+</script>
+<script src="/static/theme.js"></script>
+</body>
+</html>

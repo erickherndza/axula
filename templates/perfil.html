@@ -489,6 +489,40 @@
             body { background: white; color: black; }
             .card, .perfil-hero { border: 1px solid #ccc; }
         }
+
+        /* ── Header dropdown Acciones ── */
+        .hdr-dd { position: relative; }
+        .hdr-dd-btn {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 7px 12px; border-radius: 8px; font-size: 12px; cursor: pointer;
+            background: var(--surface); border: 1px solid var(--border);
+            color: var(--text); transition: border-color .15s, background .15s;
+            white-space: nowrap;
+        }
+        .hdr-dd-btn:hover { border-color: var(--accent); background: rgba(55,138,221,.06); }
+        .hdr-dd-menu {
+            display: none; position: absolute; right: 0; top: calc(100% + 6px);
+            min-width: 210px; background: var(--surface);
+            border: 1px solid var(--border); border-radius: 10px;
+            box-shadow: 0 8px 24px rgba(0,0,0,.12); padding: 6px;
+            z-index: 200;
+        }
+        .hdr-dd--open .hdr-dd-menu { display: block; }
+        .hdr-dd-label {
+            font-size: 10px; font-weight: 600; letter-spacing: .6px;
+            text-transform: uppercase; color: var(--muted); padding: 4px 8px 2px;
+        }
+        .hdr-dd-item {
+            display: flex; align-items: center; gap: 8px; width: 100%;
+            padding: 8px 10px; border-radius: 7px; font-size: 13px;
+            color: var(--text); background: none; border: none; cursor: pointer;
+            text-decoration: none; transition: background .12s;
+        }
+        .hdr-dd-item:hover { background: rgba(55,138,221,.08); color: var(--text); }
+        .hdr-dd-item--danger { color: #ef4444; }
+        .hdr-dd-item--danger:hover { background: rgba(239,68,68,.08); color: #ef4444; }
+        /* theme toggle compacto */
+        .mt-theme-toggle .mt-tbtn { min-width: 32px; padding: 5px 7px; font-size: 14px; }
     </style>
 <link rel="stylesheet" href="/static/theme.css">
 <script>
@@ -561,25 +595,22 @@
             <div style="font-size:8px;font-family:'DM Mono',monospace;color:#333;letter-spacing:.4px;text-transform:uppercase;margin-top:1px;">C.E. Benito Juárez</div>
         </div>
     </a>
-    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-    <!-- ── THEME TOGGLE ── -->
-    <div class="mt-theme-toggle" title="Cambiar tema">
-      <button class="mt-tbtn" data-mt="light"  onclick="setTheme('light')">&#9728; Claro</button>
-      <button class="mt-tbtn" data-mt="auto"   onclick="setTheme('auto')">&#8635; Auto</button>
-      <button class="mt-tbtn" data-mt="dark"   onclick="setTheme('dark')">&#9790; Oscuro</button>
-    </div>
+    <div style="display:flex; gap:8px; align-items:center; flex-shrink:0;">
 
+        <!-- ── THEME TOGGLE compacto (solo iconos) ── -->
+        <div class="mt-theme-toggle" title="Cambiar tema" style="gap:0;">
+          <button class="mt-tbtn" data-mt="light" onclick="setTheme('light')" title="Claro">&#9728;</button>
+          <button class="mt-tbtn" data-mt="auto"  onclick="setTheme('auto')"  title="Auto">&#8635;</button>
+          <button class="mt-tbtn" data-mt="dark"  onclick="setTheme('dark')"  title="Oscuro">&#9790;</button>
+        </div>
 
         <!-- Volver — todos -->
         <a href="javascript:void(0)" onclick="history.length>1?history.back():window.location='/'" class="back-btn">
             <i class="fas fa-arrow-left"></i> Volver
         </a>
 
-        <!-- Imprimir perfil — coordinador y directora -->
+        <!-- Boletín PDF — acceso rápido (coord/directora) -->
         {% if current_user and (current_user.es_coord or current_user.es_directora) %}
-        <button class="export-btn" onclick="window.print()">
-            <i class="fas fa-print"></i> Imprimir
-        </button>
         <a id="btn-pdf-boletin" href="/api/calificaciones/boletin/{{ e.id }}/pdf"
            class="export-btn" target="_blank"
            style="display:inline-flex;align-items:center;gap:6px;text-decoration:none;"
@@ -588,82 +619,71 @@
         </a>
         {% endif %}
 
-        <!-- Acuerdo-Compromiso — directora, coordinador y psicóloga -->
-        {% if current_user and (current_user.es_coord or current_user.es_directora or current_user.es_psicologa) %}
-        <a href="/acuerdo/{{ e.id }}"
-            style="display:flex;align-items:center;gap:6px;padding:9px 14px;
-            border-radius:8px;border:1px solid rgba(55,138,221,.3);background:rgba(55,138,221,.08);
-            color:#378ADD;font-size:12px;text-decoration:none;transition:border-color .15s;"
-            onmouseover="this.style.borderColor='#378ADD'"
-            onmouseout="this.style.borderColor='rgba(55,138,221,.3)'"
-            title="Generar Acuerdo-Compromiso MINERD">
-            <i class="fas fa-file-contract"></i> Acuerdo-Compromiso
-        </a>
-        {% endif %}
-
-        <!-- Gestión de Casos — psicóloga, coordinador, directora -->
-        {% if current_user and (current_user.es_coord or current_user.es_directora or current_user.es_psicologa) %}
-        <a href="/casos" style="display:flex;align-items:center;gap:6px;padding:9px 14px;
-           border-radius:8px;border:1px solid rgba(255,77,77,.3);background:rgba(255,77,77,.08);
-           color:#ff6b6b;font-size:12px;text-decoration:none;transition:all .15s;"
-           onmouseover="this.style.borderColor='#ff6b6b'" onmouseout="this.style.borderColor='rgba(255,77,77,.3)'"
-           title="Gestión de Casos">
-            <i class="fas fa-briefcase-medical"></i> Casos
-        </a>
-        {% endif %}
-
-        <!-- Auditoría — solo directora -->
-        {% if current_user and current_user.es_directora %}
-        <a href="/auditoria" style="display:flex;align-items:center;gap:6px;padding:9px 14px;
-           border-radius:8px;border:1px solid rgba(55,138,221,.3);background:rgba(55,138,221,.06);
-           color:var(--accent);font-size:12px;text-decoration:none;transition:all .15s;"
-           onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='rgba(55,138,221,.3)'"
-           title="Panel de Auditoría">
-            <i class="fas fa-chart-mixed"></i> Auditoría
-        </a>
-        {% endif %}
-
-        <!-- Botones de gestión — solo coordinador y directora -->
-        {% if current_user and (current_user.es_coord or current_user.es_directora) %}
-        <div style="display:flex;gap:8px;">
-            <button onclick="window.open('/reportes','_blank')" title="Ver reportes del estudiante"
-                    style="background:rgba(255,196,77,.1);border:1px solid rgba(255,196,77,.3);
-                           color:#ffc44d;padding:9px 14px;border-radius:8px;font-size:12px;cursor:pointer;">
-                <i class="fas fa-flag"></i> Reportes
-            </button>
-            <button onclick="abrirEditar()" title="Editar datos manuales"
-                    style="background:rgba(55,138,221,.1);border:1px solid rgba(55,138,221,.3);
-                           color:#378ADD;padding:9px 14px;border-radius:8px;font-size:12px;cursor:pointer;">
-                <i class="fas fa-edit"></i> Editar
-            </button>
-            <button onclick="cambiarCondicion()" id="btn-condicion" title="Cambiar estado"
-                    style="background:rgba(96,184,240,.1);border:1px solid rgba(96,184,240,.3);
-                           color:#60b8f0;padding:9px 14px;border-radius:8px;font-size:12px;cursor:pointer;">
-                <i class="fas fa-user-tag"></i> {{ e.condicion or 'ACTIVO' }}
-            </button>
-            <!-- Eliminar — solo directora -->
-            {% if current_user.es_directora %}
-            <button onclick="confirmarEliminar()" title="Eliminar perfil"
-                    style="background:rgba(255,77,77,.08);border:1px solid rgba(255,77,77,.25);
-                           color:#ff6b6b;padding:9px 14px;border-radius:8px;font-size:12px;cursor:pointer;">
-                <i class="fas fa-trash"></i>
-            </button>
-            {% endif %}
-        </div>
-        {% endif %}
-
         <!-- Planificar — solo profesor -->
         {% if current_user and not current_user.es_coord and not current_user.es_directora and not current_user.es_psicologa %}
         <a id="btn-planificar" href="/planificacion"
-           style="display:inline-flex; align-items:center; gap:8px;
-                  background:rgba(232,184,75,.12); border:1px solid rgba(232,184,75,.35);
-                  color:var(--accent); padding:10px 16px; border-radius:10px;
-                  font-family:var(--font-display); font-weight:600; font-size:12px;
-                  text-decoration:none; transition:all .2s;"
+           style="display:inline-flex;align-items:center;gap:6px;
+                  background:rgba(232,184,75,.12);border:1px solid rgba(232,184,75,.35);
+                  color:var(--accent);padding:7px 12px;border-radius:8px;
+                  font-size:12px;text-decoration:none;transition:all .2s;"
            onmouseover="this.style.background='rgba(232,184,75,.2)'"
            onmouseout="this.style.background='rgba(232,184,75,.12)'">
-            &#129489;&#8205;&#127979; Planificar
+            &#129489; Planificar
         </a>
+        {% endif %}
+
+        <!-- ── DROPDOWN ACCIONES (coord / directora / psicóloga) ── -->
+        {% if current_user and (current_user.es_coord or current_user.es_directora or current_user.es_psicologa) %}
+        <div class="hdr-dd" id="hdr-dd">
+            <button class="hdr-dd-btn" onclick="document.getElementById('hdr-dd').classList.toggle('hdr-dd--open')">
+                <i class="fas fa-ellipsis-h"></i> Acciones <i class="fas fa-chevron-down" style="font-size:10px;opacity:.7;"></i>
+            </button>
+            <div class="hdr-dd-menu">
+                <!-- Documentos -->
+                {% if current_user.es_coord or current_user.es_directora %}
+                <div class="hdr-dd-label">Documentos</div>
+                <button class="hdr-dd-item" onclick="window.print();document.getElementById('hdr-dd').classList.remove('hdr-dd--open')">
+                    <i class="fas fa-print" style="color:#60b8f0;width:16px;"></i> Imprimir perfil
+                </button>
+                <a class="hdr-dd-item" href="/acuerdo/{{ e.id }}">
+                    <i class="fas fa-file-contract" style="color:#378ADD;width:16px;"></i> Acuerdo-Compromiso
+                </a>
+                {% elif current_user.es_psicologa %}
+                <div class="hdr-dd-label">Documentos</div>
+                <a class="hdr-dd-item" href="/acuerdo/{{ e.id }}">
+                    <i class="fas fa-file-contract" style="color:#378ADD;width:16px;"></i> Acuerdo-Compromiso
+                </a>
+                {% endif %}
+
+                <!-- Gestión -->
+                <div class="hdr-dd-label" style="margin-top:6px;">Gestión</div>
+                <a class="hdr-dd-item" href="/casos">
+                    <i class="fas fa-briefcase-medical" style="color:#ff6b6b;width:16px;"></i> Casos
+                </a>
+                {% if current_user.es_coord or current_user.es_directora %}
+                <button class="hdr-dd-item" onclick="window.open('/reportes','_blank');document.getElementById('hdr-dd').classList.remove('hdr-dd--open')">
+                    <i class="fas fa-flag" style="color:#ffc44d;width:16px;"></i> Reportes
+                </button>
+                <button class="hdr-dd-item" onclick="abrirEditar();document.getElementById('hdr-dd').classList.remove('hdr-dd--open')">
+                    <i class="fas fa-edit" style="color:#378ADD;width:16px;"></i> Editar datos
+                </button>
+                <button class="hdr-dd-item" id="btn-condicion" onclick="cambiarCondicion();document.getElementById('hdr-dd').classList.remove('hdr-dd--open')">
+                    <i class="fas fa-user-tag" style="color:#60b8f0;width:16px;"></i> Estado: {{ e.condicion or 'ACTIVO' }}
+                </button>
+                {% endif %}
+
+                <!-- Admin — solo directora -->
+                {% if current_user.es_directora %}
+                <div class="hdr-dd-label" style="margin-top:6px;">Administración</div>
+                <a class="hdr-dd-item" href="/auditoria">
+                    <i class="fas fa-chart-mixed" style="color:var(--accent);width:16px;"></i> Auditoría
+                </a>
+                <button class="hdr-dd-item hdr-dd-item--danger" onclick="confirmarEliminar();document.getElementById('hdr-dd').classList.remove('hdr-dd--open')">
+                    <i class="fas fa-trash" style="width:16px;"></i> Eliminar perfil
+                </button>
+                {% endif %}
+            </div>
+        </div>
         {% endif %}
 
     </div>
@@ -3683,6 +3703,9 @@ document.addEventListener('click', function(ev) {
     if (btn) {
         abrirModalEscalar(parseInt(btn.dataset.id), btn.dataset.tipo);
     }
+    // Cerrar dropdown Acciones al clic fuera
+    var dd = document.getElementById('hdr-dd');
+    if (dd && !dd.contains(ev.target)) dd.classList.remove('hdr-dd--open');
 });
 
 function cargarCuadernoPerfil() {

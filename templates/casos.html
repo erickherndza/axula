@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestión de Casos — Axula</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script>
+(function(){
+  var K='axula_theme',S=6,E=19;
+  function auto(){var h=new Date().getHours();return h>=S&&h<E?'light':'dark';}
+  function get(){try{return localStorage.getItem(K)||'auto';}catch(e){return 'auto';}}
+  function apply(p){document.documentElement.setAttribute('data-theme',p==='auto'?auto():p);}
+  apply(get());
+})();
+</script>
+<link rel="stylesheet" href="/static/theme.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;min-height:100vh}
+
+/* NAV */
+nav{display:flex;align-items:center;gap:10px;padding:0 24px;height:50px;
+    background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+.logo{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:var(--accent);
+      letter-spacing:-.5px;text-decoration:none}
+.logo span{color:var(--muted)}
+.nav-r{margin-left:auto;display:flex;align-items:center;gap:8px}
+.nav-link{font-size:12px;color:var(--muted);text-decoration:none;
+          display:flex;align-items:center;gap:5px;padding:5px 10px;
+          border-radius:7px;transition:all .15s}
+.nav-link:hover{color:var(--text);background:var(--surface2)}
+.nav-link.danger{color:#ef4444}
+
+main{max-width:1300px;margin:0 auto;padding:20px 24px}
+
+/* LAYOUT */
+.casos-grid{display:grid;grid-template-columns:320px 1fr;gap:20px;min-height:80vh}
+
+/* LISTA LATERAL */
+.casos-sidebar{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;display:flex;flex-direction:column}
+.sidebar-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.sidebar-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;flex:1}
+.btn-nuevo{background:var(--accent);border:none;color:#fff;font-weight:700;
+           padding:6px 12px;border-radius:7px;font-size:11px;cursor:pointer;
+           display:flex;align-items:center;gap:5px;font-family:'DM Sans',sans-serif}
+.btn-nuevo:hover{background:#1648B0}
+
+.casos-filtros{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;gap:6px;flex-wrap:wrap}
+.filtro-btn{padding:4px 10px;border-radius:20px;font-size:10px;font-weight:700;
+            border:1px solid var(--border);background:transparent;color:var(--muted);
+            cursor:pointer;transition:all .15s;font-family:'DM Sans',sans-serif}
+.filtro-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+.casos-lista{flex:1;overflow-y:auto}
+.caso-item{padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s}
+.caso-item:hover{background:var(--surface2)}
+.caso-item.active{background:rgba(38,97,246,.08);border-left:3px solid var(--accent)}
+.ci-header{display:flex;align-items:center;gap:6px;margin-bottom:5px}
+.ci-nombre{font-size:12px;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ci-fecha{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace}
+.ci-titulo{font-size:11px;color:var(--muted);margin-bottom:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ci-footer{display:flex;gap:5px;align-items:center}
+
+/* BADGE DE ESTADO */
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;
+       font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px}
+.b-abierto{background:rgba(38,97,246,.1);color:var(--blue)}
+.b-seguimiento{background:rgba(200,136,10,.1);color:var(--warn)}
+.b-escalado{background:rgba(var(--danger-rgb,185,28,28),.1);color:var(--danger)}
+.b-resuelto{background:rgba(38,97,246,.1);color:var(--success)}
+.b-asistencia{background:rgba(200,136,10,.1);color:var(--warn)}
+.b-conducta{background:rgba(var(--danger-rgb,185,28,28),.1);color:var(--danger)}
+.b-academico{background:rgba(38,97,246,.1);color:var(--blue)}
+.b-familiar{background:rgba(var(--warn-rgb,180,83,9),.1);color:var(--warn)}
+
+/* PANEL PRINCIPAL */
+.caso-main{display:flex;flex-direction:column;gap:16px}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px}
+.card-title{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;
+            text-transform:uppercase;letter-spacing:.6px;color:var(--muted);
+            margin-bottom:14px;display:flex;align-items:center;gap:7px}
+.card-title i{color:var(--accent)}
+
+/* ESTADO VACÍO */
+.empty-state{text-align:center;padding:60px 20px;color:var(--muted)}
+.empty-state .icon{font-size:48px;margin-bottom:14px;opacity:.4}
+.empty-state h3{font-family:'Syne',sans-serif;font-size:16px;margin-bottom:6px;color:var(--text)}
+.empty-state p{font-size:12px;line-height:1.7}
+
+/* ESCALERA DE ACCIONES */
+.escala-steps{display:flex;gap:0;margin-bottom:16px;overflow-x:auto}
+.step{display:flex;align-items:center;gap:0;flex-shrink:0}
+.step-dot{width:28px;height:28px;border-radius:50%;border:2px solid var(--border);
+          background:var(--surface2);display:flex;align-items:center;justify-content:center;
+          font-size:11px;font-weight:700;color:var(--muted);transition:all .2s;flex-shrink:0}
+.step-dot.done{background:var(--accent);border-color:var(--accent);color:#000}
+.step-dot.current{background:rgba(55,138,221,.15);border-color:var(--accent);color:var(--accent)}
+.step-line{width:40px;height:2px;background:var(--border);flex-shrink:0}
+.step-line.done{background:var(--accent)}
+.step-label{font-size:9px;color:var(--muted);text-align:center;margin-top:3px;white-space:nowrap}
+
+/* TIMELINE */
+.timeline{position:relative;padding-left:20px}
+.timeline::before{content:'';position:absolute;left:6px;top:4px;bottom:4px;
+                  width:2px;background:var(--border);border-radius:1px}
+.tl-item{position:relative;margin-bottom:16px;padding-left:18px}
+.tl-dot{position:absolute;left:-14px;top:3px;width:12px;height:12px;border-radius:50%;
+        border:2px solid var(--border);background:var(--surface);flex-shrink:0}
+.tl-dot.nota{border-color:var(--blue);background:rgba(38,97,246,.15)}
+.tl-dot.cita{border-color:var(--warn);background:rgba(200,136,10,.1)}
+.tl-dot.reunion{border-color:#BDD1FA;background:rgba(189,209,250,.15)}
+.tl-dot.escalar{border-color:#ef4444;background:rgba(239,68,68,.12)}
+.tl-dot.acuerdo{border-color:var(--accent);background:rgba(38,97,246,.12)}
+.tl-dot.resolucion{border-color:var(--success);background:rgba(38,97,246,.1)}
+.tl-dot.alerta{border-color:var(--warn);background:rgba(200,136,10,.1)}
+.tl-meta{font-size:10px;color:var(--muted);margin-bottom:3px;display:flex;gap:8px}
+.tl-desc{font-size:12px;color:var(--text);line-height:1.5}
+.tl-extra{font-size:11px;color:var(--muted);margin-top:4px;font-style:italic}
+
+/* ACCIONES DISPONIBLES */
+.acciones-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.accion-btn{padding:10px 8px;border-radius:9px;border:1px solid var(--border);
+            background:var(--surface2);color:var(--text);font-size:11px;
+            cursor:pointer;text-align:center;transition:all .15s;font-family:'DM Sans',sans-serif}
+.accion-btn:hover{border-color:var(--accent);color:var(--accent)}
+.accion-btn i{display:block;font-size:18px;margin-bottom:5px;color:var(--muted)}
+.accion-btn:hover i{color:var(--accent)}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);
+               z-index:200;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;
+       padding:24px;width:90%;max-width:520px;max-height:90vh;overflow-y:auto}
+.modal-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:4px}
+.modal-sub{font-size:11px;color:var(--muted);margin-bottom:18px}
+.form-group{margin-bottom:14px}
+.form-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;
+            color:var(--muted);display:block;margin-bottom:5px}
+.form-input,.form-select,.form-textarea{width:100%;background:var(--surface2);
+    border:1px solid var(--border);color:var(--text);padding:9px 12px;
+    border-radius:8px;font-size:13px;outline:none;font-family:'DM Sans',sans-serif;
+    transition:border-color .15s}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--accent)}
+.form-textarea{resize:vertical;min-height:80px;line-height:1.6}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+.btn-cancel{background:transparent;border:1px solid var(--border);color:var(--muted);
+            padding:8px 16px;border-radius:8px;cursor:pointer;font-family:'DM Sans',sans-serif}
+.btn-save{background:var(--accent);border:none;color:#000;font-weight:700;
+          padding:8px 18px;border-radius:8px;cursor:pointer;font-family:'DM Sans',sans-serif}
+.btn-danger{background:var(--danger);border:none;color:#fff;font-weight:700;
+            padding:8px 16px;border-radius:8px;cursor:pointer;font-family:'DM Sans',sans-serif}
+
+/* ACUERDO */
+.acuerdo-preview{background:var(--surface2);border:1px solid var(--border);border-radius:8px;
+                 padding:14px;font-size:12px;line-height:1.8;max-height:300px;overflow-y:auto;
+                 white-space:pre-wrap;font-family:'DM Mono',monospace;color:var(--text)}
+
+/* NOTIF COUNT */
+.notif-badge{background:#ff4444;color:#fff;border-radius:20px;padding:1px 6px;
+             font-size:9px;font-weight:700;margin-left:4px}
+
+/* RESOLUCION BOX */
+.res-box{background:rgba(38,97,246,.05);border:1px solid rgba(38,97,246,.18);
+         border-radius:10px;padding:14px 16px}
+.res-box.rojo{background:rgba(239,68,68,.05);border-color:rgba(239,68,68,.2)}
+
+/* Toast */
+#toast-casos{position:fixed;top:66px;right:22px;padding:10px 17px;border-radius:8px;
+             font-size:12px;z-index:999;background:#222;border:1px solid #333;
+             opacity:0;transform:translateY(-8px);transition:all .25s;pointer-events:none}
+#toast-casos.show{opacity:1;transform:translateY(0)}
+.dd-item{padding:8px 12px;border-radius:7px;font-size:13px;color:var(--text);
+  cursor:pointer;display:flex;align-items:center;gap:8px;transition:background .15s;}
+.dd-item:hover{background:var(--hover,rgba(255,255,255,.05));}
+</style>
+<script src="/static/theme.js"></script>
+
+<!-- CSRF Token — auto-incluido en todos los fetch() POST/PATCH/DELETE -->
+<script>
+(function() {
+  var CSRF_TOKEN = "{{ csrf_token }}";
+  var _originalFetch = window.fetch;
+  window.fetch = function(url, opts) {
+    opts = opts || {};
+    var method = (opts.method || "GET").toUpperCase();
+    if (method !== "GET" && method !== "HEAD" && method !== "OPTIONS") {
+      opts.headers = opts.headers || {};
+      // Soporta tanto Headers object como plain object
+      if (opts.headers instanceof Headers) {
+        opts.headers.set("X-CSRF-Token", CSRF_TOKEN);
+      } else {
+        opts.headers["X-CSRF-Token"] = CSRF_TOKEN;
+      }
+    }
+    return _originalFetch.apply(this, [url, opts]);
+  };
+})();
+</script>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="logo">Axula</a>
+  <span style="font-size:11px;color:var(--muted);padding:3px 10px;background:var(--surface2);border-radius:7px;border:1px solid var(--border)">
+    <i class="fas fa-briefcase-medical" style="margin-right:5px;color:var(--accent)"></i>Gestión de Casos
+  </span>
+  <div class="nav-r">
+    <a href="/auditoria" class="nav-link" title="Solo directora y coordinador general">
+      <i class="fas fa-chart-mixed"></i> Auditoría
+    </a>
+    <a href="/" class="nav-link"><i class="fas fa-table-columns"></i> Dashboard</a>
+<div class="mt-theme-toggle" style="margin-right:6px;" title="Cambiar tema">
+      <button class="mt-tbtn" data-mt="light"  onclick="setTheme('light')">&#9728; Claro</button>
+      <button class="mt-tbtn" data-mt="auto"   onclick="setTheme('auto')">&#8635; Auto</button>
+      <button class="mt-tbtn" data-mt="dark"   onclick="setTheme('dark')">&#9790; Oscuro</button>
+    </div>
+        <!-- Avatar dropdown -->
+    <div style="position:relative" id="avatar-menu-wrap">
+      <div style="display:flex;align-items:center;gap:8px;padding:5px 10px 5px 5px;
+                  border:1px solid var(--border);border-radius:99px;background:var(--surface);
+                  cursor:pointer;user-select:none;transition:border-color .15s;"
+           onclick="toggleAvatarMenu()"
+           onmouseover="this.style.borderColor='var(--accent)'"
+           onmouseout="this.style.borderColor='var(--border)'">
+        <div style="width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;
+                    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;">
+          {{ current_user.nombre[:1].upper() if current_user and current_user.nombre else 'U' }}
+        </div>
+        <div style="max-width:80px;overflow:hidden;">
+          <div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)">{{ current_user.nombre if current_user else 'Usuario' }}</div>
+          <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;font-weight:700;">{{ current_user.rol | replace('_',' ') | title if current_user else '' }}</div>
+        </div>
+        <i class="fas fa-chevron-down" style="font-size:9px;color:var(--muted)"></i>
+      </div>
+      <div id="avatar-dropdown" style="display:none;position:absolute;top:calc(100% + 6px);right:0;
+            width:200px;background:var(--surface);border:1px solid var(--border);
+            border-radius:11px;box-shadow:0 8px 24px rgba(0,0,0,.3);z-index:500;padding:6px;">
+        <div style="padding:10px 12px;border-bottom:1px solid var(--border);margin-bottom:4px">
+          <div style="font-weight:700;font-size:13px;color:var(--text)">{{ current_user.nombre if current_user else '' }}</div>
+          <div style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace">@{{ current_user.username if current_user else '' }}</div>
+        </div>
+        <a href="/mi-perfil" style="text-decoration:none"><div class="dd-item"><i class="fas fa-id-card" style="color:var(--accent);width:16px"></i> Mi perfil</div></a>
+        <a href="/" style="text-decoration:none"><div class="dd-item"><i class="fas fa-table-columns" style="color:var(--muted);width:16px"></i> Dashboard</div></a>
+        <div style="border-top:1px solid var(--border);margin-top:4px;padding-top:4px">
+          <a href="/logout" style="text-decoration:none"><div class="dd-item" style="color:#ef4444"><i class="fas fa-right-from-bracket" style="width:16px"></i> Cerrar sesión</div></a>
+        </div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div id="toast-casos"></div>
+
+<main>
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
+    <div>
+      <h1 style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;margin-bottom:3px">
+        <i class="fas fa-briefcase-medical" style="color:var(--accent);margin-right:8px"></i>Gestión de Casos
+      </h1>
+      <p style="font-size:12px;color:var(--muted)">
+        Seguimiento de situaciones estudiantiles — Orientación Psicológica · Coordinación · Dirección
+      </p>
+    </div>
+    <div style="margin-left:auto;display:flex;gap:8px">
+      <a href="/notificaciones" style="text-decoration:none">
+        <button style="background:var(--surface);border:1px solid var(--border);color:var(--text);
+                       padding:8px 14px;border-radius:8px;cursor:pointer;font-size:12px;
+                       display:flex;align-items:center;gap:6px;font-family:'DM Sans',sans-serif">
+          <i class="fas fa-bell" style="color:var(--warn)"></i> Notificaciones
+          <span class="notif-badge" id="nav-notif-count" style="display:none">0</span>
+        </button>
+      </a>
+    </div>
+  </div>
+
+  <div class="casos-grid">
+
+    <!-- ═══ SIDEBAR — Lista de casos ═══ -->
+    <div class="casos-sidebar">
+      <div class="sidebar-header">
+        <span class="sidebar-title">Casos Activos</span>
+        <button class="btn-nuevo" onclick="abrirModalNuevoCaso()">
+          <i class="fas fa-plus"></i> Nuevo caso
+        </button>
+      </div>
+      <div class="casos-filtros">
+        <button class="filtro-btn active" onclick="filtrarCasos('todos',this)">Todos</button>
+        <button class="filtro-btn" onclick="filtrarCasos('Abierto',this)">Abiertos</button>
+        <button class="filtro-btn" onclick="filtrarCasos('En seguimiento',this)">Seguimiento</button>
+        <button class="filtro-btn" onclick="filtrarCasos('Escalado',this)">Escalados</button>
+        <button class="filtro-btn" onclick="filtrarCasos('Resuelto',this)">Resueltos</button>
+      </div>
+      <div class="casos-lista" id="casos-lista">
+        <div style="padding:30px;text-align:center;color:var(--muted);font-size:12px">
+          <i class="fas fa-spinner fa-spin" style="font-size:20px;margin-bottom:8px;display:block"></i>
+          Cargando casos...
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PANEL PRINCIPAL ═══ -->
+    <div class="caso-main" id="caso-main">
+      <div class="card">
+        <div class="empty-state">
+          <div class="icon">📋</div>
+          <h3>Selecciona un caso</h3>
+          <p>Haz clic en un caso de la lista para ver el detalle,<br>
+          el historial de acciones y las opciones disponibles.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<!-- ═══ MODAL: NUEVO CASO ═══ -->
+<div class="modal-overlay" id="modal-nuevo-caso">
+  <div class="modal">
+    <div class="modal-title">Abrir Nuevo Caso</div>
+    <div class="modal-sub">El caso quedará vinculado al expediente del estudiante</div>
+    <div class="form-group">
+      <label class="form-label">Estudiante *</label>
+      <input class="form-input" id="nc-buscar" placeholder="Buscar por nombre..." oninput="buscarEstudiante(this.value)">
+      <div id="nc-resultados" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;margin-top:4px;display:none;max-height:150px;overflow-y:auto"></div>
+      <input type="hidden" id="nc-est-id">
+      <div id="nc-est-nombre" style="font-size:11px;color:var(--accent);margin-top:4px"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Tipo de caso *</label>
+      <select class="form-select" id="nc-tipo">
+        <option value="asistencia">📅 Asistencia — Faltas/tardanzas</option>
+        <option value="conducta" selected>⚠️ Conducta — Disciplina/comportamiento</option>
+        <option value="academico">📚 Académico — Bajo rendimiento</option>
+        <option value="familiar">🏠 Familiar — Situación del hogar</option>
+        <option value="emocional">💛 Emocional — Bienestar psicológico</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Título del caso *</label>
+      <input class="form-input" id="nc-titulo" placeholder="Ej: Reincidencia en conducta disruptiva en clase">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Descripción inicial</label>
+      <textarea class="form-textarea" id="nc-desc" placeholder="Describe la situación observada..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="cerrarModal('modal-nuevo-caso')">Cancelar</button>
+      <button class="btn-save" onclick="crearCaso()">Abrir Caso</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: REGISTRAR ACCIÓN ═══ -->
+<div class="modal-overlay" id="modal-accion">
+  <div class="modal">
+    <div class="modal-title" id="accion-titulo">Registrar Acción</div>
+    <div class="modal-sub" id="accion-sub">Caso en seguimiento</div>
+    <input type="hidden" id="accion-caso-id">
+    <input type="hidden" id="accion-tipo-val">
+    <div class="form-group">
+      <label class="form-label">Descripción de la acción *</label>
+      <textarea class="form-textarea" id="accion-desc" placeholder="Describe detalladamente lo realizado..."></textarea>
+    </div>
+    <div class="form-group" id="accion-fecha-group">
+      <label class="form-label">Fecha programada <span style="font-weight:400;text-transform:none">(si aplica)</span></label>
+      <input type="date" class="form-input" id="accion-fecha">
+    </div>
+    <div class="form-group" id="accion-participantes-group">
+      <label class="form-label">Participantes</label>
+      <input class="form-input" id="accion-partic" placeholder="Ej: Estudiante, Madre de familia, Prof. García">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Resultado / Acuerdos</label>
+      <textarea class="form-textarea" id="accion-resultado" placeholder="¿Qué se acordó o qué resultado tuvo?"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="cerrarModal('modal-accion')">Cancelar</button>
+      <button class="btn-save" onclick="guardarAccion()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: ACUERDO-COMPROMISO ═══ -->
+<div class="modal-overlay" id="modal-acuerdo">
+  <div class="modal" style="max-width:680px">
+    <div class="modal-title">📄 Generar Acuerdo-Compromiso</div>
+    <div class="modal-sub" id="acuerdo-sub">Documento formal MINERD — Ley 66-97 / Ley 136-03</div>
+    <input type="hidden" id="acuerdo-caso-id">
+    <input type="hidden" id="acuerdo-est-id">
+    <div class="form-group">
+      <label class="form-label">Contexto adicional para la IA</label>
+      <textarea class="form-textarea" id="acuerdo-ctx" placeholder="Agrega cualquier detalle relevante que la IA debe considerar al redactar el acuerdo..."></textarea>
+    </div>
+    <div id="acuerdo-generando" style="display:none;text-align:center;padding:20px">
+      <i class="fas fa-spinner fa-spin" style="font-size:24px;color:var(--accent)"></i>
+      <div style="font-size:12px;color:var(--muted);margin-top:8px">Generando acuerdo con IA...</div>
+    </div>
+    <div id="acuerdo-resultado" style="display:none">
+      <div class="form-label" style="margin-bottom:8px">Vista previa del acuerdo generado:</div>
+      <div class="acuerdo-preview" id="acuerdo-texto"></div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button onclick="copiarAcuerdo()" style="flex:1;background:var(--surface2);border:1px solid var(--border);
+                color:var(--text);padding:8px;border-radius:8px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:12px">
+          <i class="fas fa-copy"></i> Copiar texto
+        </button>
+        <button onclick="guardarAcuerdo()" style="flex:1;background:var(--accent);border:none;
+                color:#000;padding:8px;border-radius:8px;cursor:pointer;font-family:'DM Sans',sans-serif;
+                font-size:12px;font-weight:700">
+          <i class="fas fa-save"></i> Guardar en expediente
+        </button>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="cerrarModal('modal-acuerdo')">Cerrar</button>
+      <button class="btn-save" id="btn-generar-acuerdo" onclick="generarAcuerdo()">
+        <i class="fas fa-robot"></i> Generar con IA
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-cerrar">
+  <div class="modal">
+    <div class="modal-title">Cerrar Caso</div>
+    <div class="modal-sub" id="cerrar-nivel-info">Registra la resolución final antes de cerrar</div>
+    <input type="hidden" id="cerrar-caso-id">
+
+    <div class="form-group">
+      <label class="form-label">Resolución final *</label>
+      <textarea class="form-textarea" id="cerrar-desc"
+        placeholder="Describe cómo se resolvió la situación y el estado final del estudiante..."></textarea>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">
+        Medida disciplinaria aplicada
+        <span style="font-weight:400;text-transform:none;font-size:10px;">
+          — Nivel: <strong id="cerrar-nivel-label" style="color:var(--accent)"></strong>
+        </span>
+      </label>
+      {% if es_psicologa %}
+      <div style="font-size:11px;color:var(--warn);padding:8px;background:rgba(200,136,10,.06);
+                  border-radius:7px;border:1px solid rgba(200,136,10,.2);margin-bottom:8px;">
+        <i class="fas fa-info-circle"></i>
+        Las medidas disciplinarias formales las aplica el Coordinador o la Directora.
+        Tu rol es orientar y escalar si es necesario.
+      </div>
+      {% endif %}
+      <select class="form-select" id="cerrar-sancion">
+        {% for val, label in sanciones %}
+        <option value="{{ val }}">{{ label }}</option>
+        {% endfor %}
+      </select>
+      {% if es_coord %}
+      <div style="font-size:10px;color:var(--muted);margin-top:5px;">
+        <i class="fas fa-lock" style="font-size:9px"></i>
+        Para suspensiones mayores a 3 días o proceso formal ante el Distrito, debes escalar a la Directora.
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Seguimiento requerido</label>
+      <select class="form-select" id="cerrar-seguimiento">
+        <option value="ninguno">Ninguno — Caso cerrado definitivamente</option>
+        <option value="monitoreo_mensual">Monitoreo mensual de asistencia</option>
+        <option value="cita_seguimiento">Cita de seguimiento en 30 días</option>
+        <option value="reunion_padres">Reunión periódica con familia</option>
+        <option value="plan_activo">Plan de mejora activo</option>
+      </select>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="cerrarModal('modal-cerrar')">Cancelar</button>
+      <button class="btn-danger" onclick="cerrarCaso()">
+        <i class="fas fa-check-circle"></i> Cerrar y registrar en expediente
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════════════════
+// ESTADO GLOBAL
+// ══════════════════════════════════════════════════════════════════════════════
+var _casos = [];
+var _filtroActual = 'todos';
+var _casoActual = null;
+var _acuerdoActual = null;
+
+// ══════════════════════════════════════════════════════════════════════════════
+// UTILIDADES
+// ══════════════════════════════════════════════════════════════════════════════
+function tk(msg, tipo) {
+    var t = document.getElementById('toast-casos');
+    t.textContent = msg;
+    var colors = {ok:'#8BAEF8', err:'#ef4444', warn:'#C8880A'};
+    t.style.color = colors[tipo] || '#e0e0e0';
+    t.style.borderColor = (colors[tipo] || '#333') + '55';
+    t.classList.add('show');
+    clearTimeout(t._t);
+    t._t = setTimeout(function(){ t.classList.remove('show'); }, 3000);
+}
+
+function esc(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function fmtFecha(s) {
+    if (!s) return '--';
+    return s.split('T')[0];
+}
+
+function cerrarModal(id) {
+    document.getElementById(id).classList.remove('open');
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// CARGAR CASOS
+// ══════════════════════════════════════════════════════════════════════════════
+async function cargarCasos() {
+    try {
+        var r = await fetch('/api/casos');
+        _casos = await r.json();
+        renderLista();
+        cargarNotifCount();
+    } catch(e) {
+        document.getElementById('casos-lista').innerHTML =
+            '<div style="padding:20px;color:#ef4444;font-size:12px">Error cargando casos</div>';
+    }
+}
+
+function renderLista() {
+    var lista = _casos.filter(function(c) {
+        if (_filtroActual === 'todos') return true;
+        return c.estado === _filtroActual;
+    });
+
+    if (!lista.length) {
+        document.getElementById('casos-lista').innerHTML =
+            '<div style="padding:30px;text-align:center;color:var(--muted);font-size:12px">' +
+            '<i class="fas fa-check-circle" style="font-size:24px;margin-bottom:8px;display:block;color:var(--success)"></i>' +
+            'Sin casos en esta categoría</div>';
+        return;
+    }
+
+    var TIPO_EMOJI = {asistencia:'📅',conducta:'⚠️',academico:'📚',familiar:'🏠',emocional:'💛'};
+    var html = lista.map(function(c) {
+        var activo = _casoActual && _casoActual.id === c.id ? ' active' : '';
+        return '<div class="caso-item' + activo + '" onclick="verCaso(' + c.id + ')">' +
+            '<div class="ci-header">' +
+            '<span>' + (TIPO_EMOJI[c.tipo] || '📋') + '</span>' +
+            '<span class="ci-nombre">' + esc(c.nombre_estudiante || '--') + '</span>' +
+            '<span class="ci-fecha">' + fmtFecha(c.creado_en) + '</span>' +
+            '</div>' +
+            '<div class="ci-titulo">' + esc(c.titulo) + '</div>' +
+            '<div class="ci-footer">' +
+            '<span class="badge b-' + (c.estado||'').toLowerCase().replace(' ','-') + '">' + (c.estado||'--') + '</span>' +
+            '<span class="badge b-' + c.tipo + '">' + (c.tipo||'') + '</span>' +
+            (c.nivel_escala > 1 ? '<span class="badge" style="background:rgba(239,68,68,.1);color:#ef4444">Nivel ' + c.nivel_escala + '</span>' : '') +
+            '</div></div>';
+    }).join('');
+    document.getElementById('casos-lista').innerHTML = html;
+}
+
+function filtrarCasos(estado, btn) {
+    _filtroActual = estado;
+    document.querySelectorAll('.filtro-btn').forEach(function(b){ b.classList.remove('active'); });
+    btn.classList.add('active');
+    renderLista();
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// VER CASO
+// ══════════════════════════════════════════════════════════════════════════════
+async function verCaso(id) {
+    try {
+        var r = await fetch('/api/casos/' + id);
+        var data = await r.json();
+        _casoActual = data;
+        renderCasoDetalle(data);
+        renderLista(); // refrescar highlight
+    } catch(e) { tk('Error cargando caso', 'err'); }
+}
+
+function renderCasoDetalle(data) {
+    var caso     = data.caso;
+    var acciones = data.acciones || [];
+    var est      = data.estudiante || {};
+    var acuerdos = data.acuerdos  || [];
+
+    var NIVEL_LABELS = ['','Psicóloga','Coordinación','Dirección'];
+    var nivelActual  = caso.nivel_escala || 1;
+
+    var TIPO_COLOR = {asistencia:'var(--warn)',conducta:'#ef4444',academico:'var(--blue)',familiar:'#5B8AF7',emocional:'#8BAEF8'};
+    var tc = TIPO_COLOR[caso.tipo] || 'var(--accent)';
+
+    var html =
+        // Header del caso
+        '<div class="card" style="border-left:3px solid ' + tc + '">' +
+        '<div style="display:flex;align-items:flex-start;gap:12px">' +
+        '<div style="flex:1">' +
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">' +
+        '<span class="badge b-' + caso.tipo + '">' + caso.tipo + '</span>' +
+        '<span class="badge b-' + (caso.estado||'').toLowerCase().replace(' ','-') + '">' + (caso.estado||'') + '</span>' +
+        (nivelActual > 1 ? '<span class="badge" style="background:rgba(239,68,68,.1);color:#ef4444">Escala ' + NIVEL_LABELS[nivelActual] + '</span>' : '') +
+        '</div>' +
+        '<div style="font-family:\'Syne\',sans-serif;font-size:16px;font-weight:700;margin-bottom:4px">' + esc(caso.titulo) + '</div>' +
+        '<div style="font-size:12px;color:var(--muted)">Estudiante: <a href="/perfil/' + est.id + '" style="color:var(--accent);text-decoration:none">' + esc(est.nombre + ' ' + est.apellido) + '</a> · ' +
+        (est.grado||'') + ' ' + (est.curso||'') + '</div>' +
+        '<div style="font-size:11px;color:var(--muted);margin-top:3px">Abierto: ' + fmtFecha(caso.creado_en) + ' · Por: ' + esc(caso.abierto_por_nombre||'sistema') + '</div>' +
+        (caso.descripcion ? '<div style="font-size:12px;margin-top:8px;padding:10px;background:var(--surface2);border-radius:7px;line-height:1.6">' + esc(caso.descripcion) + '</div>' : '') +
+        '</div>' +
+        (caso.estado !== 'Resuelto' && caso.estado !== 'Cerrado' ?
+        '<div style="display:flex;flex-direction:column;gap:6px">' +
+        '<button class="btn-caso-accion" data-id="' + caso.id + '" data-tipo="escalar" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#ef4444;padding:7px 12px;border-radius:8px;cursor:pointer;font-size:11px;font-weight:700;white-space:nowrap;"><i class="fas fa-level-up-alt"></i> Escalar</button>' +
+        '<button onclick="cerrarModal2(' + caso.id + ')" style="background:rgba(38,97,246,.1);border:1px solid rgba(38,97,246,.3);color:var(--success);padding:7px 12px;border-radius:8px;cursor:pointer;font-size:11px;font-weight:700;white-space:nowrap;font-family:\'DM Sans\',sans-serif"><i class="fas fa-check"></i> Cerrar</button>' +
+        '</div>' : '') +
+        '</div></div>';
+
+    // Escalera visual
+    var pasos = [
+        {label:'Psicóloga', icon:'🧠'},
+        {label:'Coordinación', icon:'👤'},
+        {label:'Dirección', icon:'🏛'}
+    ];
+    html += '<div class="card"><div class="card-title"><i class="fas fa-layer-group"></i>Nivel de Escalada</div>' +
+        '<div style="display:flex;align-items:flex-start;gap:0">';
+    pasos.forEach(function(p, i) {
+        var n = i + 1;
+        var cls = n < nivelActual ? 'done' : n === nivelActual ? 'current' : '';
+        html += '<div style="text-align:center;flex:1">' +
+            '<div class="step-dot ' + cls + '" style="margin:0 auto">' + p.icon + '</div>' +
+            '<div class="step-label" style="color:' + (n===nivelActual?'var(--accent)':n<nivelActual?'var(--success)':'var(--muted)') + '">' + p.label + '</div>' +
+            '</div>';
+        if (i < pasos.length - 1) {
+            html += '<div class="step-line' + (n < nivelActual ? ' done' : '') + '" style="margin-top:13px;flex-shrink:0;width:60px"></div>';
+        }
+    });
+    html += '</div></div>';
+
+    // Acciones disponibles
+    if (caso.estado !== 'Resuelto' && caso.estado !== 'Cerrado') {
+        html += '<div class="card"><div class="card-title"><i class="fas fa-bolt"></i>Acciones</div>' +
+            '<div class="acciones-grid">' +
+            _accionBtn(caso.id, 'nota',                  'fas fa-sticky-note',      'Nota / Observación') +
+            _accionBtn(caso.id, 'cita',                  'fas fa-calendar-check',   'Cita con Estudiante') +
+            _accionBtn(caso.id, 'reunion_profesor',       'fas fa-chalkboard-teacher','Reunión con Profesor') +
+            _accionBtn(caso.id, 'reunion_coordinador',    'fas fa-user-tie',         'Reunión Coordinación') +
+            _accionBtn(caso.id, 'reunion_padres',         'fas fa-people-roof',      'Reunión con Padres') +
+            '<div class="accion-btn" onclick="abrirModalAcuerdo(' + caso.id + ',' + est.id + ')">' +
+            '<i class="fas fa-file-signature"></i>Acuerdo-Compromiso</div>' +
+            '</div></div>';
+    }
+
+    // Acuerdos existentes
+    if (acuerdos.length) {
+        html += '<div class="card"><div class="card-title"><i class="fas fa-file-signature"></i>Acuerdos-Compromiso</div>';
+        acuerdos.forEach(function(ac) {
+            html += '<div style="border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px">' +
+                '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">' +
+                '<span style="font-family:\'DM Mono\',monospace;font-size:11px;color:var(--accent)">' + esc(ac.numero_acuerdo||'') + '</span>' +
+                '<span style="font-size:10px;color:var(--muted)">Generado: ' + fmtFecha(ac.fecha_acuerdo) + '</span>' +
+                (ac.firmado ? '<span class="badge" style="background:rgba(38,97,246,.1);color:var(--success)">✓ Firmado</span>' : '<span class="badge" style="background:rgba(200,136,10,.1);color:var(--warn)">Pendiente firma</span>') +
+                '</div>' +
+                '<div style="font-size:11px;color:var(--muted);max-height:80px;overflow:hidden;line-height:1.6">' +
+                esc((ac.contenido_completo||'').substring(0,200)) + '...</div>' +
+                '<button onclick="verAcuerdo(' + ac.id + ')" style="margin-top:6px;background:transparent;border:1px solid var(--border);color:var(--muted);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:11px;font-family:\'DM Sans\',sans-serif">Ver completo</button>' +
+                '</div>';
+        });
+        html += '</div>';
+    }
+
+    // Timeline de acciones
+    html += '<div class="card"><div class="card-title"><i class="fas fa-timeline"></i>Línea de Tiempo</div>';
+    if (!acciones.length) {
+        html += '<div style="color:var(--muted);font-size:12px;text-align:center;padding:16px">Sin acciones registradas aún.</div>';
+    } else {
+        html += '<div class="timeline">';
+        acciones.forEach(function(a) {
+            html += '<div class="tl-item">' +
+                '<div class="tl-dot ' + (a.tipo_accion||'nota') + '"></div>' +
+                '<div class="tl-meta">' +
+                '<span>' + esc(a.actor_nombre||'') + '</span>' +
+                '<span>·</span><span>' + fmtFecha(a.fecha_accion) + '</span>' +
+                '<span class="badge b-' + (a.tipo_accion==='escalar'?'escalado':'abierto') + '" style="font-size:8px">' + esc(a.tipo_accion||'') + '</span>' +
+                '</div>' +
+                '<div class="tl-desc">' + esc(a.descripcion||'') + '</div>' +
+                (a.resultado ? '<div class="tl-extra">Resultado: ' + esc(a.resultado) + '</div>' : '') +
+                (a.fecha_programada ? '<div class="tl-extra">📅 Programado: ' + fmtFecha(a.fecha_programada) + '</div>' : '') +
+                '</div>';
+        });
+        html += '</div>';
+    }
+    html += '</div>';
+
+    document.getElementById('caso-main').innerHTML = html;
+}
+
+function _accionBtn(casoId, tipo, icon, label) {
+    return '<div class="accion-btn btn-caso-accion" data-id="' + casoId + '" data-tipo="' + tipo + '">' +
+        '<i class="' + icon + '"></i>' + label + '</div>';
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// NUEVO CASO
+// ══════════════════════════════════════════════════════════════════════════════
+function abrirModalNuevoCaso() {
+    document.getElementById('nc-buscar').value   = '';
+    document.getElementById('nc-est-id').value   = '';
+    document.getElementById('nc-est-nombre').textContent = '';
+    document.getElementById('nc-titulo').value   = '';
+    document.getElementById('nc-desc').value     = '';
+    document.getElementById('nc-resultados').style.display = 'none';
+    document.getElementById('modal-nuevo-caso').classList.add('open');
+}
+
+var _buscarTimer = null;
+function buscarEstudiante(q) {
+    clearTimeout(_buscarTimer);
+    if (q.length < 2) { document.getElementById('nc-resultados').style.display = 'none'; return; }
+    _buscarTimer = setTimeout(async function() {
+        var r = await fetch('/api/datos?q=' + encodeURIComponent(q));
+        var data = await r.json();
+        var box = document.getElementById('nc-resultados');
+        if (!data.length) { box.style.display='none'; return; }
+        box.innerHTML = data.slice(0,8).map(function(e) {
+            return '<div class="est-search-item" data-id="' + e.id + '" data-nombre="' + esc(e.nombre+' '+e.apellido).replace(/"/g,'&quot;') + '" ' +
+                'style="padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:12px">' +
+                '<strong>' + esc(e.apellido + ', ' + e.nombre) + '</strong> ' +
+                '<span style="color:var(--muted)">' + esc(e.grado||'') + ' ' + esc(e.curso||'') + '</span></div>';
+        }).join('');
+        box.style.display = 'block';
+    }, 300);
+}
+
+// Event delegation -- handles dynamically generated buttons
+document.addEventListener('click', function(ev) {
+    // Caso action buttons (escalar, etc.)
+    var accionBtn = ev.target.closest('.btn-caso-accion');
+    if (accionBtn) {
+        abrirModalAccion(parseInt(accionBtn.dataset.id), accionBtn.dataset.tipo);
+        return;
+    }
+    // Student search results
+    var estItem = ev.target.closest('.est-search-item');
+    if (estItem) {
+        selEstudiante(parseInt(estItem.dataset.id), estItem.dataset.nombre);
+        return;
+    }
+});
+
+function selEstudiante(id, nombre) {
+    document.getElementById('nc-est-id').value = id;
+    document.getElementById('nc-est-nombre').textContent = '✓ ' + nombre;
+    document.getElementById('nc-buscar').value = nombre;
+    document.getElementById('nc-resultados').style.display = 'none';
+}
+
+async function crearCaso() {
+    var estId   = document.getElementById('nc-est-id').value;
+    var titulo  = document.getElementById('nc-titulo').value.trim();
+    var tipo    = document.getElementById('nc-tipo').value;
+    var desc    = document.getElementById('nc-desc').value.trim();
+    if (!estId) { tk('Selecciona un estudiante', 'err'); return; }
+    if (!titulo){ tk('Escribe el título del caso', 'err'); return; }
+    try {
+        var r = await fetch('/api/casos', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({estudiante_id:parseInt(estId), tipo, titulo, descripcion:desc})
+        });
+        var d = await r.json();
+        if (d.ok) {
+            cerrarModal('modal-nuevo-caso');
+            tk('Caso abierto correctamente', 'ok');
+            await cargarCasos();
+            verCaso(d.id);
+        } else { tk(d.error||'Error', 'err'); }
+    } catch(e) { tk('Error de conexión', 'err'); }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// REGISTRAR ACCIÓN
+// ══════════════════════════════════════════════════════════════════════════════
+var ACCION_LABELS = {
+    nota:               'Nota / Observación',
+    cita:               'Cita con Estudiante',
+    reunion_profesor:   'Reunión con Profesor',
+    reunion_coordinador:'Reunión con Coordinación',
+    reunion_padres:     'Reunión con Padres',
+    escalar:            '⬆ Escalar Caso',
+    resolucion:         'Resolución Final'
+};
+
+function abrirModalAccion(casoId, tipo) {
+    document.getElementById('accion-caso-id').value = casoId;
+    document.getElementById('accion-tipo-val').value = tipo;
+    document.getElementById('accion-titulo').textContent = ACCION_LABELS[tipo] || tipo;
+    document.getElementById('accion-sub').textContent =
+        tipo === 'escalar' ? 'El caso subirá al siguiente nivel de atención' :
+        tipo === 'cita'    ? 'Registra la cita y sus resultados' : 'Documenta la acción realizada';
+    document.getElementById('accion-desc').value = '';
+    document.getElementById('accion-fecha').value = '';
+    document.getElementById('accion-partic').value = '';
+    document.getElementById('accion-resultado').value = '';
+    document.getElementById('modal-accion').classList.add('open');
+}
+
+async function guardarAccion() {
+    var casoId = document.getElementById('accion-caso-id').value;
+    var tipo   = document.getElementById('accion-tipo-val').value;
+    var desc   = document.getElementById('accion-desc').value.trim();
+    if (!desc) { tk('Escribe la descripción', 'err'); return; }
+    try {
+        var r = await fetch('/api/casos/' + casoId + '/accion', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({
+                tipo_accion:      tipo,
+                descripcion:      desc,
+                fecha_programada: document.getElementById('accion-fecha').value || null,
+                participantes:    document.getElementById('accion-partic').value.trim(),
+                resultado:        document.getElementById('accion-resultado').value.trim()
+            })
+        });
+        var d = await r.json();
+        if (d.ok) {
+            cerrarModal('modal-accion');
+            tk('Acción registrada', 'ok');
+            await cargarCasos();
+            if (_casoActual) verCaso(_casoActual.id);
+        } else { tk(d.error||'Error', 'err'); }
+    } catch(e) { tk('Error de conexión', 'err'); }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ACUERDO-COMPROMISO
+// ══════════════════════════════════════════════════════════════════════════════
+function abrirModalAcuerdo(casoId, estId) {
+    document.getElementById('acuerdo-caso-id').value = casoId;
+    document.getElementById('acuerdo-est-id').value  = estId;
+    document.getElementById('acuerdo-ctx').value     = '';
+    document.getElementById('acuerdo-resultado').style.display  = 'none';
+    document.getElementById('acuerdo-generando').style.display  = 'none';
+    document.getElementById('btn-generar-acuerdo').style.display = 'inline-flex';
+    _acuerdoActual = null;
+    document.getElementById('modal-acuerdo').classList.add('open');
+}
+
+async function generarAcuerdo() {
+    var casoId = document.getElementById('acuerdo-caso-id').value;
+    var estId  = document.getElementById('acuerdo-est-id').value;
+    var ctx    = document.getElementById('acuerdo-ctx').value.trim();
+    document.getElementById('acuerdo-generando').style.display  = 'block';
+    document.getElementById('btn-generar-acuerdo').style.display = 'none';
+    document.getElementById('acuerdo-resultado').style.display  = 'none';
+    try {
+        var r = await fetch('/api/acuerdo-compromiso/generar', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({caso_id:parseInt(casoId), estudiante_id:parseInt(estId), contexto_adicional:ctx})
+        });
+        var d = await r.json();
+        if (d.ok) {
+            _acuerdoActual = d;
+            document.getElementById('acuerdo-texto').textContent = d.contenido;
+            document.getElementById('acuerdo-resultado').style.display = 'block';
+            tk('Acuerdo generado: ' + d.numero, 'ok');
+        } else { tk(d.error||'Error generando', 'err'); }
+    } catch(e) { tk('Error: '+e.message, 'err'); }
+    finally {
+        document.getElementById('acuerdo-generando').style.display = 'none';
+        document.getElementById('btn-generar-acuerdo').style.display = 'inline-flex';
+    }
+}
+
+function copiarAcuerdo() {
+    var txt = document.getElementById('acuerdo-texto').textContent;
+    navigator.clipboard.writeText(txt).then(function(){ tk('Copiado al portapapeles', 'ok'); });
+}
+
+function guardarAcuerdo() {
+    cerrarModal('modal-acuerdo');
+    if (_casoActual) { cargarCasos(); verCaso(_casoActual.id); }
+    tk('Acuerdo guardado en el expediente', 'ok');
+}
+
+async function verAcuerdo(acid) {
+    var r    = await fetch('/api/acuerdo-compromiso/' + acid);
+    var data = await r.json();
+    document.getElementById('acuerdo-texto').textContent = data.contenido_completo || '';
+    document.getElementById('acuerdo-resultado').style.display = 'block';
+    document.getElementById('btn-generar-acuerdo').style.display = 'none';
+    document.getElementById('modal-acuerdo').classList.add('open');
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// CERRAR CASO
+// ══════════════════════════════════════════════════════════════════════════════
+function cerrarModal2(casoId) {
+    document.getElementById('cerrar-caso-id').value = casoId;
+    document.getElementById('cerrar-desc').value    = '';
+    document.getElementById('cerrar-sancion').value = '';
+    document.getElementById('cerrar-seguimiento').value = 'ninguno';
+    // Mostrar nivel del usuario que cierra
+    var niveles = {1:'Orientación Psicológica', 2:'Coordinación', 3:'Dirección'};
+    var nivelUsuario = {{ nivel_usuario }};
+    document.getElementById('cerrar-nivel-label').textContent = niveles[nivelUsuario] || 'Usuario';
+    document.getElementById('modal-cerrar').classList.add('open');
+}
+
+async function cerrarCaso() {
+    var casoId     = document.getElementById('cerrar-caso-id').value;
+    var desc       = document.getElementById('cerrar-desc').value.trim();
+    var sancion    = document.getElementById('cerrar-sancion').value;
+    var seguimiento= document.getElementById('cerrar-seguimiento').value;
+    if (!desc) { tk('Escribe la resolución final', 'err'); return; }
+    try {
+        var r = await fetch('/api/casos/' + casoId + '/cerrar', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({
+                descripcion:  desc,
+                sancion:      sancion,
+                seguimiento:  seguimiento
+            })
+        });
+        var d = await r.json();
+        if (d.ok) {
+            cerrarModal('modal-cerrar');
+            tk('Caso cerrado y registrado en expediente', 'ok');
+            await cargarCasos();
+            if (_casoActual) verCaso(_casoActual.id);
+        } else { tk(d.error || 'Error al cerrar', 'err'); }
+    } catch(e) { tk('Error de conexión', 'err'); }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// NOTIFICACIONES COUNT EN NAV
+// ══════════════════════════════════════════════════════════════════════════════
+async function cargarNotifCount() {
+    try {
+        var r = await fetch('/api/notificaciones/count');
+        var d = await r.json();
+        var badge = document.getElementById('nav-notif-count');
+        if (d.total > 0) {
+            badge.textContent = d.total;
+            badge.style.display = 'inline';
+        }
+    } catch(e) {}
+}
+
+// Cerrar modales al click fuera
+document.addEventListener('click', function(e) {
+    ['modal-nuevo-caso','modal-accion','modal-acuerdo','modal-cerrar'].forEach(function(id) {
+        var m = document.getElementById(id);
+        if (e.target === m) m.classList.remove('open');
+    });
+});
+
+// Init
+document.addEventListener('DOMContentLoaded', function() {
+    cargarCasos();
+});
+</script>
+</body>
+</html>

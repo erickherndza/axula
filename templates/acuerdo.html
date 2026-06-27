@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Acuerdo-Compromiso &mdash; {{ e.nombre }} {{ e.apellido }}</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script>
+(function(){
+  var T="{{ csrf_token }}";
+  var orig=window.fetch;
+  window.fetch=function(u,o){
+    o=o||{};
+    if(!/^(GET|HEAD|OPTIONS)$/.test((o.method||"GET").toUpperCase())){
+      o.headers=o.headers||{};
+      if(o.headers instanceof Headers) o.headers.set("X-CSRF-Token",T);
+      else o.headers["X-CSRF-Token"]=T;
+    }
+    return orig.apply(this,[u,o]);
+  };
+})();
+</script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+/* Acuerdo-Compromiso — Paleta Axula Royal Blue */
+body{background:#050E1F;color:#C8DAFB;font-family:'DM Sans',system-ui,sans-serif;font-size:14px;min-height:100vh}
+a{color:inherit;text-decoration:none}
+nav{background:#081C36;border-bottom:1px solid rgba(38,97,246,.2);padding:0 20px;height:52px;
+    display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.nav-logo{font-weight:800;font-size:15px;color:#2661F6;font-family:'Syne',sans-serif}
+.nav-back{display:flex;align-items:center;gap:7px;padding:7px 14px;border-radius:8px;
+          border:1px solid rgba(38,97,246,.25);color:#8BAEF8;font-size:12px;cursor:pointer;
+          background:transparent;transition:all .15s;text-decoration:none}
+.nav-back:hover{color:#C8DAFB;border-color:rgba(38,97,246,.5)}
+main{max-width:960px;margin:0 auto;padding:28px 20px;display:grid;grid-template-columns:280px 1fr;gap:22px;align-items:start}
+@media(max-width:720px){main{grid-template-columns:1fr}}
+.sidebar{display:flex;flex-direction:column;gap:14px;position:sticky;top:66px}
+.card{background:#081C36;border:1px solid rgba(38,97,246,.25);border-radius:12px;overflow:hidden}
+.card-head{padding:11px 15px;border-bottom:1px solid rgba(38,97,246,.15);font-size:12px;font-weight:700;display:flex;align-items:center;gap:7px;color:#8BAEF8}
+.card-body{padding:14px 15px}
+.avatar{width:42px;height:42px;border-radius:50%;background:rgba(38,97,246,.15);color:#5B8AF7;
+        display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;flex-shrink:0}
+.badge{display:inline-flex;padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700;margin-top:5px}
+.badge-rojo  {background:rgba(209,52,56,.15);color:#F08080;border:1px solid rgba(209,52,56,.3)}
+.badge-verde {background:rgba(38,97,246,.15);color:#8BAEF8;border:1px solid rgba(38,97,246,.3)}
+.badge-naranja{background:rgba(38,97,246,.1);color:#BDD1FA;border:1px solid rgba(38,97,246,.25)}
+.panel{background:#081C36;border:1px solid rgba(38,97,246,.25);border-radius:12px;padding:22px}
+.panel-title{font-size:17px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:8px;font-family:'Syne',sans-serif;color:#C8DAFB}
+.panel-sub{font-size:12px;color:#6080C0;margin-bottom:20px;line-height:1.6}
+.field{margin-bottom:15px}
+.field label{display:block;font-size:10px;color:#6080C0;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;font-weight:700}
+.field select,.field textarea{width:100%;background:#0D2B50;border:1px solid rgba(38,97,246,.3);
+  color:#C8DAFB;padding:10px 12px;border-radius:8px;font-size:13px;font-family:inherit;
+  outline:none;transition:border-color .15s}
+.field select:focus,.field textarea:focus{border-color:rgba(38,97,246,.6)}
+.field textarea{resize:vertical;min-height:90px}
+.btn-main{width:100%;background:#2661F6;border:none;color:#fff;padding:13px;border-radius:10px;
+          font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;
+          justify-content:center;gap:8px;transition:background .15s;font-family:'Syne',sans-serif}
+.btn-main:hover{background:#1648B0}
+.btn-main:disabled{opacity:.45;cursor:not-allowed}
+.btn-outline{background:transparent;border:1px solid rgba(38,97,246,.3);color:#8BAEF8;
+             padding:9px 16px;border-radius:8px;font-size:12px;cursor:pointer;
+             display:inline-flex;align-items:center;gap:6px;transition:all .15s;text-decoration:none}
+.btn-outline:hover{color:#C8DAFB;border-color:rgba(38,97,246,.6)}
+.btn-print{background:rgba(38,97,246,.1);border:1px solid rgba(38,97,246,.3);color:#5B8AF7;
+           padding:10px 18px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;
+           display:inline-flex;align-items:center;gap:7px;transition:all .15s}
+.btn-print:hover{background:rgba(38,97,246,.2)}
+.loading{display:none;text-align:center;padding:52px 24px}
+.spin{font-size:36px;animation:rot .8s linear infinite;display:inline-block;margin-bottom:12px}
+@keyframes rot{to{transform:rotate(360deg)}}
+.result{display:none}
+.result-bar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px}
+.num-badge{background:rgba(38,97,246,.12);border:1px solid rgba(38,97,246,.3);color:#5B8AF7;
+           padding:5px 14px;border-radius:20px;font-size:12px;font-weight:700;font-family:monospace}
+.doc{background:#050E1F;border:1px solid rgba(38,97,246,.2);border-radius:10px;
+     padding:24px;font-size:13px;line-height:1.9;color:#C8DAFB;white-space:pre-wrap;
+     font-family:Georgia,serif;max-height:62vh;overflow-y:auto}
+.err{background:rgba(209,52,56,.08);border:1px solid rgba(209,52,56,.25);color:#F08080;
+     padding:12px 15px;border-radius:8px;font-size:12px;display:none;margin-bottom:14px;line-height:1.5}
+.hist-row{padding:9px 0;border-bottom:1px solid rgba(38,97,246,.12);
+          display:flex;align-items:center;justify-content:space-between;gap:8px}
+.hist-row:last-child{border-bottom:none}
+.hist-n{font-size:11px;font-weight:700;color:#5B8AF7;font-family:monospace}
+.hist-d{font-size:10px;color:#6080C0}
+.hist-f{font-size:9px;padding:2px 6px;border-radius:10px;font-weight:700}
+.f-si{background:rgba(38,97,246,.15);color:#8BAEF8}
+.f-no{background:rgba(255,255,255,.04);color:#6080C0}
+.btn-ver{font-size:10px;color:#5B8AF7;cursor:pointer;padding:3px 7px;border-radius:5px;
+         border:1px solid rgba(38,97,246,.3);background:rgba(38,97,246,.08)}
+.btn-ver:hover{background:rgba(38,97,246,.18)}
+.print-hdr{display:none;margin-bottom:16px;padding-bottom:14px;border-bottom:2px solid #04407F}
+@media print{
+  nav,.sidebar,.btn-main,.btn-outline,.result-bar .btn-print,.err,.panel-title,.panel-sub,.field{display:none!important}
+  main{display:block!important;padding:0!important;max-width:100%!important}
+  .panel{border:none!important;padding:0!important;background:none!important}
+  .result{display:block!important}
+  .result-bar{margin-bottom:16px}
+  .num-badge{background:none!important;color:#000!important;border-color:#000!important}
+  .doc{background:#fff!important;color:#000!important;border:none!important;max-height:none!important;overflow:visible!important;padding:0!important;font-size:12pt!important;line-height:1.8!important}
+  .print-hdr{display:block!important}
+  body{background:#fff!important;color:#000!important}
+  @page{margin:2cm}
+}
+</style>
+
+  <link rel="stylesheet" href="/static/theme.css">
+  <script src="/static/theme.js"></script>
+</head>
+<body>
+
+<nav>
+  <span class="nav-logo">Axula</span>
+  <span style="font-size:12px;color:#666">
+    <i class="fas fa-file-contract" style="margin-right:5px"></i>
+    Acuerdo-Compromiso &mdash; <strong style="color:#f0f0f0">{{ e.nombre }} {{ e.apellido }}</strong>
+  </span>
+  <a href="/perfil/{{ e.id }}" class="nav-back">
+    <i class="fas fa-arrow-left"></i> Perfil
+  </a>
+</nav>
+
+<main>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+
+    <div class="card">
+      <div class="card-head"><i class="fas fa-user" style="color:#378ADD"></i> Estudiante</div>
+      <div class="card-body">
+        <div style="display:flex;align-items:center;gap:11px">
+          <div class="avatar">{{ (e.nombre or '?')[0] }}{{ (e.apellido or '?')[0] }}</div>
+          <div>
+            <div style="font-size:14px;font-weight:700">{{ e.nombre }} {{ e.apellido }}</div>
+            <div style="font-size:11px;color:#777;margin-top:2px">
+              {{ e.grado or '' }}{% if e.curso %} &middot; {{ e.curso }}{% endif %}{% if e.seccion %} &middot; Sec.{{ e.seccion }}{% endif %}
+            </div>
+            {% set p = e.p_acad or 0 %}
+            {% if p > 0 %}
+              {% if p < 70 %}<span class="badge badge-rojo">🚨 Prom. {{ p }}</span>
+              {% elif p < 80 %}<span class="badge badge-naranja">⚠ Prom. {{ p }}</span>
+              {% else %}<span class="badge badge-verde">✓ Prom. {{ p }}</span>{% endif %}
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><i class="fas fa-clock-rotate-left" style="color:#666"></i> Acuerdos previos</div>
+      <div class="card-body">
+        {% if anteriores %}
+          {% for a in anteriores %}
+          <div class="hist-row">
+            <div>
+              <div class="hist-n">{{ a.numero_acuerdo or 'S/N' }}</div>
+              <div class="hist-d">{{ a.fecha_acuerdo or '' }}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px">
+              <span class="hist-f {{ 'f-si' if a.firmado else 'f-no' }}">{{ '✓ Firmado' if a.firmado else 'Pendiente' }}</span>
+              <button class="btn-ver" onclick="verAcuerdo({{ a.id }})">Ver</button>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div style="text-align:center;padding:16px;color:#444;font-size:12px">Sin acuerdos previos</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><i class="fas fa-scale-balanced" style="color:#6366f1"></i> Base legal</div>
+      <div class="card-body" style="font-size:11px;color:#555;line-height:1.8">
+        Ley 66-97 &mdash; Ley General de Educación<br>
+        Ley 136-03 Art. 50 &mdash; Código del Menor<br>
+        Normas de Convivencia Armoniosa MINERD<br>
+        <span style="color:#444;margin-top:8px;display:block">Generado con IA · Revisión docente requerida</span>
+      </div>
+    </div>
+
+
+    <div class="card" id="config-card">
+      <div class="card-head" style="cursor:pointer" onclick="toggleConfigPanel()">
+        <i class="fas fa-building" style="color:#6366f1"></i> Membrete del centro
+        <i class="fas fa-chevron-down" id="config-chevron" style="margin-left:auto;font-size:10px;transition:transform .2s"></i>
+      </div>
+      <div class="card-body" id="config-panel" style="display:none">
+
+        <!-- Preview logo -->
+        <div style="text-align:center;margin-bottom:12px;">
+          <img id="logo-preview" src="" alt="Logo"
+               style="width:70px;height:70px;object-fit:contain;border-radius:8px;
+                      border:1px solid rgba(255,255,255,.1);display:none;margin-bottom:6px;">
+          <div>
+            <label style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;
+                          background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.3);
+                          border-radius:8px;cursor:pointer;font-size:11px;color:#818cf8;">
+              <i class="fas fa-image"></i> Subir logo
+              <input type="file" id="logo-input" accept="image/*" style="display:none"
+                     onchange="previsualizarLogo(this)">
+            </label>
+          </div>
+        </div>
+
+        <!-- Campos -->
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div>
+            <div style="font-size:9px;color:#555;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;">Nombre del centro</div>
+            <input id="cfg-nombre" type="text" value=""
+              style="width:100%;background:#0d0d0d;border:1px solid rgba(255,255,255,.1);
+                     color:#f0f0f0;padding:7px 9px;border-radius:7px;font-size:11px;
+                     font-family:inherit;outline:none;box-sizing:border-box;">
+          </div>
+          <div>
+            <div style="font-size:9px;color:#555;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;">Modalidad</div>
+            <input id="cfg-modalidad" type="text" value=""
+              style="width:100%;background:#0d0d0d;border:1px solid rgba(255,255,255,.1);
+                     color:#f0f0f0;padding:7px 9px;border-radius:7px;font-size:11px;
+                     font-family:inherit;outline:none;box-sizing:border-box;">
+          </div>
+          <div>
+            <div style="font-size:9px;color:#555;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;">Dirección</div>
+            <input id="cfg-direccion" type="text" value=""
+              style="width:100%;background:#0d0d0d;border:1px solid rgba(255,255,255,.1);
+                     color:#f0f0f0;padding:7px 9px;border-radius:7px;font-size:11px;
+                     font-family:inherit;outline:none;box-sizing:border-box;">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+            <div>
+              <div style="font-size:9px;color:#555;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;">Teléfono</div>
+              <input id="cfg-telefono" type="tel" value=""
+                style="width:100%;background:#0d0d0d;border:1px solid rgba(255,255,255,.1);
+                       color:#f0f0f0;padding:7px 9px;border-radius:7px;font-size:11px;
+                       font-family:inherit;outline:none;box-sizing:border-box;">
+            </div>
+            <div>
+              <div style="font-size:9px;color:#555;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;">País</div>
+              <input id="cfg-pais" type="text" value=""
+                style="width:100%;background:#0d0d0d;border:1px solid rgba(255,255,255,.1);
+                       color:#f0f0f0;padding:7px 9px;border-radius:7px;font-size:11px;
+                       font-family:inherit;outline:none;box-sizing:border-box;">
+            </div>
+          </div>
+          <div>
+            <div style="font-size:9px;color:#555;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;">Email</div>
+            <input id="cfg-email" type="email" value=""
+              style="width:100%;background:#0d0d0d;border:1px solid rgba(255,255,255,.1);
+                     color:#f0f0f0;padding:7px 9px;border-radius:7px;font-size:11px;
+                     font-family:inherit;outline:none;box-sizing:border-box;">
+          </div>
+        </div>
+
+        <button onclick="guardarConfigCentro()"
+          style="width:100%;margin-top:10px;background:rgba(99,102,241,.15);
+                 border:1px solid rgba(99,102,241,.4);color:#818cf8;padding:8px;
+                 border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">
+          <i class="fas fa-floppy-disk"></i> Guardar membrete
+        </button>
+        <div id="cfg-status" style="font-size:10px;min-height:14px;margin-top:6px;text-align:center;"></div>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <div>
+
+    <div class="err" id="err-box"></div>
+
+    <!-- FORMULARIO -->
+    <div class="panel" id="form-panel">
+      <div class="panel-title"><i class="fas fa-file-contract" style="color:#378ADD;font-size:16px"></i> Nuevo Acuerdo-Compromiso</div>
+      <p class="panel-sub">La IA genera el documento oficial MINERD con base en el expediente del estudiante.<br>Puedes vincular un caso activo y agregar contexto para personalizar los compromisos.</p>
+
+      <div class="field">
+        <label>Caso vinculado (opcional)</label>
+        <select id="sel-caso">
+          <option value="">— Sin caso vinculado —</option>
+          {% for c in casos %}
+          <option value="{{ c.id }}">[{{ c.tipo|upper }}] {{ c.titulo }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Contexto adicional</label>
+        <textarea id="txt-ctx" rows="4" placeholder="Ej: Los padres asistieron a reunión el 20 de marzo. Se identificaron dificultades en matemática y asistencia irregular. El estudiante se compromete a mejorar..."></textarea>
+      </div>
+
+      <button class="btn-main" id="btn-gen" onclick="generarAcuerdo()">
+        <i class="fas fa-wand-magic-sparkles"></i> Generar Acuerdo con IA
+      </button>
+    </div>
+
+    <!-- LOADING -->
+    <div class="panel loading" id="loading-panel">
+      <div class="spin">⚙️</div>
+      <div style="font-size:14px;color:#666;line-height:1.8">
+        Generando acuerdo con IA&hellip;<br>
+        <span style="font-size:12px">Esto puede tomar 15–20 segundos</span>
+      </div>
+    </div>
+
+    <!-- RESULTADO -->
+    <div class="panel result" id="result-panel">
+
+      <div class="print-hdr" id="print-hdr">
+        <!-- Generado dinámicamente por renderPrintHeader() -->
+      </div>
+
+      <div class="result-bar">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span class="num-badge" id="res-num"></span>
+          <span style="font-size:11px;color:#555" id="res-fecha"></span>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn-print" onclick="window.print()"><i class="fas fa-print"></i> Imprimir / PDF</button>
+          <button class="btn-outline" id="btn-edit-toggle" onclick="toggleEdicion()"><i class="fas fa-pen"></i> Editar</button>
+          <button class="btn-outline" onclick="volverForm()"><i class="fas fa-rotate-left"></i> Nuevo</button>
+          <a href="/perfil/{{ e.id }}" class="btn-outline"><i class="fas fa-arrow-left"></i> Perfil</a>
+        </div>
+      </div>
+
+      <div class="doc" id="res-doc"></div>
+      <textarea id="res-editor"
+        style="display:none;width:100%;background:#0a0a0a;border:1px solid rgba(55,138,221,.3);
+               border-radius:10px;padding:24px;font-size:13px;line-height:1.9;color:#ddd;
+               font-family:Georgia,serif;min-height:400px;resize:vertical;outline:none;
+               box-sizing:border-box;"
+        placeholder="Edita el contenido del acuerdo aquí..."></textarea>
+      <div id="edit-toolbar" style="display:none;margin-top:10px;display:none;gap:10px;flex-wrap:wrap">
+        <button class="btn-main" style="width:auto;padding:9px 20px" onclick="guardarEdicion()">
+          <i class="fas fa-check"></i> Guardar cambios
+        </button>
+        <button class="btn-outline" onclick="cancelarEdicion()">
+          <i class="fas fa-xmark"></i> Cancelar
+        </button>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+var EST_ID = {{ e.id }};
+
+function generarAcuerdo() {
+  var casoId  = document.getElementById('sel-caso').value;
+  var ctx     = document.getElementById('txt-ctx').value.trim();
+  var btn     = document.getElementById('btn-gen');
+
+  btn.disabled = true;
+  document.getElementById('form-panel').style.display    = 'none';
+  document.getElementById('loading-panel').style.display = 'block';
+  document.getElementById('err-box').style.display       = 'none';
+
+  fetch('/api/acuerdo-compromiso/generar', {
+    method:  'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      estudiante_id:      EST_ID,
+      caso_id:            casoId || null,
+      contexto_adicional: ctx
+    })
+  })
+  .then(function(r) {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  })
+  .then(function(d) {
+    btn.disabled = false;
+    document.getElementById('loading-panel').style.display = 'none';
+    if (d.error) { mostrarError(d.error); return; }
+    mostrarResultado(d.numero, d.contenido);
+  })
+  .catch(function(e) {
+    btn.disabled = false;
+    document.getElementById('loading-panel').style.display = 'none';
+    mostrarError('Error de red: ' + e.message);
+  });
+}
+
+function mostrarResultado(num, contenido) {
+  document.getElementById('res-num').textContent   = num || '';
+  document.getElementById('res-fecha').textContent = 'Generado: ' + new Date().toLocaleDateString('es-DO', {day:'2-digit',month:'long',year:'numeric'});
+  document.getElementById('res-doc').textContent   = contenido || '';
+  document.getElementById('result-panel').style.display = 'block';
+  window.scrollTo({top: 0, behavior: 'smooth'});
+}
+
+function mostrarError(msg) {
+  var b = document.getElementById('err-box');
+  b.textContent = '⚠ ' + msg;
+  b.style.display = 'block';
+  document.getElementById('form-panel').style.display = 'block';
+}
+
+function volverForm() {
+  document.getElementById('result-panel').style.display = 'none';
+  document.getElementById('err-box').style.display      = 'none';
+  document.getElementById('form-panel').style.display   = 'block';
+}
+
+function verAcuerdo(id) {
+  fetch('/api/acuerdo-compromiso/' + id)
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.error) { alert(d.error); return; }
+      var ac = d.acuerdo || d;
+      document.getElementById('form-panel').style.display    = 'none';
+      document.getElementById('loading-panel').style.display = 'none';
+      mostrarResultado(ac.numero_acuerdo || '', ac.contenido_completo || ac.contenido || '');
+      document.getElementById('res-fecha').textContent = 'Fecha: ' + (ac.fecha_acuerdo || '');
+    })
+    .catch(function() { alert('Error cargando acuerdo'); });
+}
+
+// ── EDICIÓN MANUAL ──────────────────────────────────────────────────────────
+var _editando = false;
+
+function toggleEdicion() {
+  _editando = !_editando;
+  var doc      = document.getElementById('res-doc');
+  var editor   = document.getElementById('res-editor');
+  var toolbar  = document.getElementById('edit-toolbar');
+  var btn      = document.getElementById('btn-edit-toggle');
+
+  if (_editando) {
+    // Pasar al modo edición
+    editor.value = doc.textContent;
+    doc.style.display     = 'none';
+    editor.style.display  = 'block';
+    toolbar.style.display = 'flex';
+    btn.innerHTML = '<i class="fas fa-eye"></i> Ver';
+    editor.focus();
+  } else {
+    // Volver al modo lectura sin guardar
+    doc.style.display     = 'block';
+    editor.style.display  = 'none';
+    toolbar.style.display = 'none';
+    btn.innerHTML = '<i class="fas fa-pen"></i> Editar';
+  }
+}
+
+function guardarEdicion() {
+  var editor = document.getElementById('res-editor');
+  var doc    = document.getElementById('res-doc');
+  var nuevo  = editor.value.trim();
+  if (!nuevo) return;
+
+  doc.textContent = nuevo;
+  // Volver a vista lectura
+  _editando = false;
+  doc.style.display     = 'block';
+  editor.style.display  = 'none';
+  document.getElementById('edit-toolbar').style.display = 'none';
+  document.getElementById('btn-edit-toggle').innerHTML = '<i class="fas fa-pen"></i> Editar';
+
+  // Mostrar confirmación
+  var conf = document.createElement('div');
+  conf.textContent = '✓ Cambios guardados en esta vista';
+  conf.style.cssText = 'background:rgba(77,255,180,.1);border:1px solid rgba(77,255,180,.2);' +
+    'color:#4dffb4;padding:8px 14px;border-radius:8px;font-size:12px;margin-top:10px;';
+  document.getElementById('res-doc').insertAdjacentElement('afterend', conf);
+  setTimeout(function() { conf.remove(); }, 3000);
+}
+
+function cancelarEdicion() {
+  _editando = false;
+  document.getElementById('res-doc').style.display     = 'block';
+  document.getElementById('res-editor').style.display  = 'none';
+  document.getElementById('edit-toolbar').style.display = 'none';
+  document.getElementById('btn-edit-toggle').innerHTML = '<i class="fas fa-pen"></i> Editar';
+}
+// ── Configuración del centro ────────────────────────────────────────────────
+var _cfgCentro = {};
+var _logoPendiente = null;  // base64 del logo a subir
+
+// Cargar config desde datos inyectados por el template (más rápido, sin fetch extra)
+(function() {
+  var cfg = {{ cfg_centro | tojson | safe }};
+  _cfgCentro = cfg;
+  document.getElementById('cfg-nombre').value    = cfg.nombre    || '';
+  document.getElementById('cfg-modalidad').value = cfg.modalidad || '';
+  document.getElementById('cfg-direccion').value = cfg.direccion || '';
+  document.getElementById('cfg-telefono').value  = cfg.telefono  || '';
+  document.getElementById('cfg-email').value     = cfg.email     || '';
+  document.getElementById('cfg-pais').value      = cfg.pais      || '';
+  if (cfg.logo_base64) {
+    var img = document.getElementById('logo-preview');
+    img.src = cfg.logo_base64;
+    img.style.display = 'block';
+    _cfgCentro.logo_preview = cfg.logo_base64;
+  }
+  renderPrintHeader(cfg);
+})();
+
+function toggleConfigPanel() {
+  var panel   = document.getElementById('config-panel');
+  var chevron = document.getElementById('config-chevron');
+  var open    = panel.style.display === 'none' || panel.style.display === '';
+  panel.style.display   = open ? 'block' : 'none';
+  chevron.style.transform = open ? 'rotate(180deg)' : 'rotate(0)';
+}
+
+function previsualizarLogo(input) {
+  if (!input.files.length) return;
+  var file = input.files[0];
+  if (file.size > 500000) {
+    alert('El logo no puede superar 500 KB');
+    input.value = '';
+    return;
+  }
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    _logoPendiente = e.target.result;
+    var img = document.getElementById('logo-preview');
+    img.src = _logoPendiente;
+    img.style.display = 'block';
+    renderPrintHeader();
+  };
+  reader.readAsDataURL(file);
+}
+
+async function guardarConfigCentro() {
+  var stEl = document.getElementById('cfg-status');
+  stEl.innerHTML = '<span style="color:#aaa">Guardando…</span>';
+
+  var form = new FormData();
+  form.append('nombre',    document.getElementById('cfg-nombre').value.trim());
+  form.append('modalidad', document.getElementById('cfg-modalidad').value.trim());
+  form.append('direccion', document.getElementById('cfg-direccion').value.trim());
+  form.append('telefono',  document.getElementById('cfg-telefono').value.trim());
+  form.append('email',     document.getElementById('cfg-email').value.trim());
+  form.append('pais',      document.getElementById('cfg-pais').value.trim());
+
+  // Logo si hay uno nuevo
+  var logoInput = document.getElementById('logo-input');
+  if (logoInput.files.length) {
+    form.append('logo', logoInput.files[0]);
+  }
+
+  try {
+    var r = await fetch('/api/config-centro', { method: 'POST', body: form });
+    var d = await r.json();
+    if (d.ok) {
+      stEl.innerHTML = '<span style="color:#4dffb4">✓ Membrete guardado</span>';
+      // Actualizar config local y print header
+      _cfgCentro.nombre    = document.getElementById('cfg-nombre').value.trim();
+      _cfgCentro.modalidad = document.getElementById('cfg-modalidad').value.trim();
+      _cfgCentro.direccion = document.getElementById('cfg-direccion').value.trim();
+      _cfgCentro.telefono  = document.getElementById('cfg-telefono').value.trim();
+      _cfgCentro.email     = document.getElementById('cfg-email').value.trim();
+      _cfgCentro.pais      = document.getElementById('cfg-pais').value.trim();
+      if (_logoPendiente) _cfgCentro.logo_preview = _logoPendiente;
+      renderPrintHeader(_cfgCentro);
+      setTimeout(function(){ stEl.innerHTML = ''; }, 3000);
+    } else {
+      stEl.innerHTML = '<span style="color:#ff6b6b">' + (d.error || 'Error') + '</span>';
+    }
+  } catch(e) {
+    stEl.innerHTML = '<span style="color:#ff6b6b">Error de conexión</span>';
+  }
+}
+
+function renderPrintHeader(cfg) {
+  cfg = cfg || _cfgCentro;
+  var logo    = _logoPendiente || cfg.logo_preview || '';
+  var nombre  = cfg.nombre    || 'Centro Educativo en Artes Benito Juárez';
+  var modal   = cfg.modalidad || 'Modalidad en Artes · Nivel Secundario';
+  var dir     = cfg.direccion || '';
+  var pais    = cfg.pais      || 'República Dominicana';
+  var tel     = cfg.telefono  || '';
+  var email   = cfg.email     || '';
+
+  var logoHtml = logo
+    ? '<img src="' + logo + '" style="width:68px;height:68px;object-fit:contain;flex-shrink:0;">'
+    : '';
+
+  document.getElementById('print-hdr').innerHTML =
+    '<div style="display:flex;align-items:center;gap:14px;padding-bottom:14px;border-bottom:2.5px solid #042C53;margin-bottom:16px;">'
+    + logoHtml
+    + '<div style="flex:1;">'
+    +   '<div style="font-size:8px;color:#666;letter-spacing:.05em;text-transform:uppercase;margin-bottom:2px;">República Dominicana · Ministerio de Educación</div>'
+    +   '<div style="font-size:16px;font-weight:700;color:#042C53;line-height:1.2;margin-bottom:2px;">' + nombre + '</div>'
+    +   '<div style="font-size:10px;color:#555;margin-bottom:4px;">' + modal + '</div>'
+    +   '<div style="font-size:9px;color:#444;line-height:1.7;">'
+    +     (dir ? '📍 ' + dir + (pais ? ' · ' + pais : '') + '<br>' : '')
+    +     (tel ? '📞 ' + tel + '&nbsp;&nbsp;' : '')
+    +     (email ? '✉ ' + email : '')
+    +   '</div>'
+    + '</div>'
+    + '<div style="text-align:right;flex-shrink:0;">'
+    +   '<div style="font-size:12px;font-weight:700;color:#042C53;line-height:1.3;">ACUERDO-COMPROMISO<br>PEDAGÓGICO</div>'
+    + '</div>'
+    + '</div>';
+}
+
+</script>
+</body>
+</html>

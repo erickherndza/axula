@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Firma Digital — Acuerdo-Compromiso</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+    :root {
+      --accent: #037F8C;
+      --text:   #1a1a2e;
+      --muted:  #6b7280;
+      --bg:     #f4f5f7;
+      --surface:#ffffff;
+      --border: rgba(0,0,0,.1);
+      --success:#15803d;
+      --danger: #b91c1c;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      min-height: 100vh;
+    }
+
+    .header {
+      background: var(--accent);
+      color: #fff;
+      padding: 16px 20px;
+      text-align: center;
+    }
+    .header h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: 17px;
+      font-weight: 800;
+      margin-bottom: 2px;
+    }
+    .header p { font-size: 12px; opacity: .85; }
+
+    main { max-width: 480px; margin: 0 auto; padding: 20px 16px 40px; }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    }
+    .card-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .info-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 6px;
+      font-size: 12px;
+    }
+    .info-label { color: var(--muted); min-width: 80px; }
+    .info-val   { font-weight: 600; }
+
+    /* Firma canvas */
+    .canvas-wrap {
+      position: relative;
+      border: 2px dashed var(--accent);
+      border-radius: 10px;
+      overflow: hidden;
+      background: #fff;
+      margin-bottom: 10px;
+      touch-action: none;
+    }
+    .canvas-wrap canvas {
+      display: block;
+      width: 100%;
+      cursor: crosshair;
+    }
+    .canvas-placeholder {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%,-50%);
+      font-size: 12px;
+      color: #ccc;
+      pointer-events: none;
+      text-align: center;
+      line-height: 1.5;
+    }
+    .canvas-placeholder i { font-size: 28px; display: block; margin-bottom: 4px; }
+
+    .btn-row { display: flex; gap: 8px; margin-bottom: 10px; }
+    .btn {
+      flex: 1;
+      padding: 11px;
+      border-radius: 9px;
+      border: none;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: #042C53; }
+    .btn-primary:active { transform: scale(.97); }
+    .btn-secondary {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+    .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+    .compromisos-list {
+      list-style: none;
+      font-size: 12px;
+      line-height: 1.7;
+    }
+    .compromisos-list li::before {
+      content: "✓ ";
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    /* Estado firmado */
+    .estado-firmado {
+      display: none;
+      text-align: center;
+      padding: 40px 20px;
+    }
+    .estado-firmado .icon {
+      font-size: 56px;
+      margin-bottom: 12px;
+    }
+    .estado-firmado h2 {
+      font-family: 'Syne', sans-serif;
+      font-size: 20px;
+      color: var(--success);
+      margin-bottom: 8px;
+    }
+    .estado-firmado p { color: var(--muted); font-size: 13px; line-height: 1.6; }
+
+    .alert {
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      line-height: 1.5;
+      margin-bottom: 12px;
+    }
+    .alert-warn { background: #fef3c7; border: 1px solid #fcd34d; color: #92400e; }
+    .alert-err  { background: #fee2e2; border: 1px solid #fca5a5; color: #991b1b; }
+    .alert-ok   { background: #dcfce7; border: 1px solid #86efac; color: #15803d; }
+
+    #resultado { min-height: 18px; font-size: 12px; margin-top: 6px; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>✍ Firma Digital</h1>
+  <p>Acuerdo-Compromiso Pedagógico · C.E. Benito Juárez</p>
+</div>
+
+<main>
+
+  <!-- Info del acuerdo -->
+  <div class="card">
+    <div class="card-title">📋 Datos del Acuerdo</div>
+    <div class="info-row">
+      <span class="info-label">Acuerdo</span>
+      <span class="info-val">{{ ac.numero_acuerdo or 'S/N' }}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Estudiante</span>
+      <span class="info-val">{{ ac.est_nombre }} {{ ac.est_apellido }}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Grado</span>
+      <span class="info-val">{{ ac.grado }} · {{ ac.curso }}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Fecha</span>
+      <span class="info-val">{{ ac.fecha_acuerdo }}</span>
+    </div>
+  </div>
+
+  <!-- Compromisos -->
+  {% if ac.compromisos_familia %}
+  <div class="card">
+    <div class="card-title">📌 Sus compromisos como familia</div>
+    <ul class="compromisos-list" id="lista-compromisos">
+      <!-- populated by JS -->
+    </ul>
+  </div>
+  {% endif %}
+
+  <!-- Aviso legal -->
+  <div class="alert alert-warn">
+    <strong>⚠ Antes de firmar:</strong> Al dibujar su firma confirma que ha leído y acepta todos los compromisos del acuerdo. Esta firma tiene validez legal según el Reglamento MINERD.
+  </div>
+
+  <!-- Panel de firma -->
+  <div class="card" id="panel-firma">
+    <div class="card-title">✍ Su firma</div>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:10px;">
+      Dibuje su firma en el recuadro con el dedo (o con el ratón en computadora).
+    </p>
+    <div class="canvas-wrap" id="canvas-wrap">
+      <canvas id="firma-canvas"></canvas>
+      <div class="canvas-placeholder" id="canvas-hint">
+        <span style="font-size:28px;display:block;margin-bottom:4px;">✍</span>
+        Dibuje aquí su firma
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="limpiarFirma()">Borrar</button>
+      <button class="btn btn-primary" onclick="enviarFirma()" id="btn-firmar">
+        Confirmar firma →
+      </button>
+    </div>
+    <div id="resultado"></div>
+  </div>
+
+  <!-- Estado: ya firmado -->
+  <div class="estado-firmado" id="estado-firmado">
+    <div class="icon">✅</div>
+    <h2>¡Firmado con éxito!</h2>
+    <p>Su firma digital ha sido registrada correctamente.<br>
+       El acuerdo queda guardado en el sistema de Axula.<br><br>
+       <strong>Puede cerrar esta página.</strong></p>
+  </div>
+
+</main>
+
+<script>
+// ── Compromisos ─────────────────────────────────────────────────────────────
+try {
+  var compromisos = {{ ac.compromisos_familia | tojson | safe }};
+  if (typeof compromisos === 'string') compromisos = JSON.parse(compromisos);
+  if (Array.isArray(compromisos)) {
+    var ul = document.getElementById('lista-compromisos');
+    if (ul) ul.innerHTML = compromisos.map(function(c) {
+      return '<li>' + String(c).replace(/</g,'&lt;') + '</li>';
+    }).join('');
+  }
+} catch(e) {}
+
+// ── Canvas de firma ──────────────────────────────────────────────────────────
+var canvas  = document.getElementById('firma-canvas');
+var ctx     = canvas.getContext('2d');
+var dibujando = false;
+var hayFirma  = false;
+
+function resizeCanvas() {
+  var wrap = document.getElementById('canvas-wrap');
+  var W = wrap.clientWidth;
+  var H = Math.round(W * 0.38);
+  canvas.width  = W;
+  canvas.height = H;
+  canvas.style.height = H + 'px';
+  ctx.strokeStyle = '#1a1a2e';
+  ctx.lineWidth   = 2.5;
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+function getPos(e) {
+  var rect = canvas.getBoundingClientRect();
+  var src  = e.touches ? e.touches[0] : e;
+  return {
+    x: (src.clientX - rect.left) * (canvas.width  / rect.width),
+    y: (src.clientY - rect.top)  * (canvas.height / rect.height),
+  };
+}
+
+function startDraw(e) {
+  e.preventDefault();
+  dibujando = true;
+  var p = getPos(e);
+  ctx.beginPath();
+  ctx.moveTo(p.x, p.y);
+  document.getElementById('canvas-hint').style.display = 'none';
+}
+
+function draw(e) {
+  if (!dibujando) return;
+  e.preventDefault();
+  var p = getPos(e);
+  ctx.lineTo(p.x, p.y);
+  ctx.stroke();
+  hayFirma = true;
+}
+
+function endDraw(e) {
+  e.preventDefault();
+  dibujando = false;
+}
+
+canvas.addEventListener('mousedown',  startDraw, { passive: false });
+canvas.addEventListener('mousemove',  draw,      { passive: false });
+canvas.addEventListener('mouseup',    endDraw,   { passive: false });
+canvas.addEventListener('touchstart', startDraw, { passive: false });
+canvas.addEventListener('touchmove',  draw,      { passive: false });
+canvas.addEventListener('touchend',   endDraw,   { passive: false });
+
+function limpiarFirma() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  hayFirma = false;
+  document.getElementById('canvas-hint').style.display = 'block';
+  document.getElementById('resultado').innerHTML = '';
+}
+
+// ── Enviar firma ─────────────────────────────────────────────────────────────
+async function enviarFirma() {
+  if (!hayFirma) {
+    document.getElementById('resultado').innerHTML =
+      '<div class="alert alert-warn">Por favor dibuje su firma antes de confirmar.</div>';
+    return;
+  }
+
+  var btn = document.getElementById('btn-firmar');
+  btn.disabled = true;
+  btn.textContent = 'Guardando…';
+  document.getElementById('resultado').innerHTML = '';
+
+  var firmaData = canvas.toDataURL('image/png');
+  var token     = {{ token | tojson }};
+  var acid      = {{ ac.id }};
+
+  try {
+    var r = await fetch('/api/acuerdo-compromiso/' + acid + '/guardar-firma', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        token:        token,
+        rol_firmante: 'tutor',
+        firma_data:   firmaData,
+      })
+    });
+    var d = await r.json();
+
+    if (d.ok) {
+      document.getElementById('panel-firma').style.display = 'none';
+      document.getElementById('estado-firmado').style.display = 'block';
+      document.getElementById('estado-firmado').scrollIntoView({ behavior: 'smooth' });
+    } else {
+      document.getElementById('resultado').innerHTML =
+        '<div class="alert alert-err">Error: ' + (d.error || 'No se pudo guardar la firma') + '</div>';
+      btn.disabled = false;
+      btn.textContent = 'Confirmar firma →';
+    }
+  } catch(e) {
+    document.getElementById('resultado').innerHTML =
+      '<div class="alert alert-err">Error de conexión. Verifica tu internet e intenta de nuevo.</div>';
+    btn.disabled = false;
+    btn.textContent = 'Confirmar firma →';
+  }
+}
+</script>
+</body>
+</html>

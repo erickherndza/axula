@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Normativa MINERD — Axula</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;700&family=Syne:wght@700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="/static/theme.css">
+<script src="/static/theme.js"></script>
+<script>
+(function(){
+  var T="{{csrf_token}}";
+  var o=window.fetch;
+  window.fetch=function(u,op){
+    op=op||{};var m=(op.method||"GET").toUpperCase();
+    if(m!=="GET"&&m!=="HEAD"){op.headers=op.headers||{};op.headers["X-CSRF-Token"]=T;}
+    return o.apply(this,[u,op]);
+  };
+})();
+</script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;}
+
+/* NAV */
+nav{display:flex;align-items:center;gap:10px;padding:0 28px;height:54px;
+    background:var(--surface);border-bottom:1px solid var(--border);
+    position:sticky;top:0;z-index:100;}
+[data-theme="light"] nav{background:#fff;box-shadow:0 1px 6px rgba(4,44,83,.07);}
+.logo{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:var(--accent);
+      letter-spacing:-.5px;text-decoration:none;}
+.nav-badge{font-size:9px;padding:3px 10px;border-radius:20px;
+           background:rgba(24,95,165,.1);color:var(--accent);
+           font-weight:700;text-transform:uppercase;letter-spacing:.5px;}
+[data-theme="light"] .nav-badge{background:#EDF4FF;color:#185FA5;}
+.nav-r{margin-left:auto;display:flex;align-items:center;gap:8px;}
+.nav-link{font-size:12px;color:var(--muted);text-decoration:none;
+          display:flex;align-items:center;gap:5px;
+          padding:6px 12px;border-radius:8px;border:1px solid var(--border);
+          transition:all .15s;font-weight:500;}
+.nav-link:hover{color:var(--text);border-color:var(--accent);}
+.nav-link.danger:hover{color:#d13438;border-color:#d13438;}
+.mt-theme-toggle{display:flex;align-items:center;gap:2px;background:var(--hover);
+                 border:1px solid var(--border);border-radius:99px;padding:3px;}
+.mt-tbtn{padding:4px 10px;border-radius:99px;border:none;cursor:pointer;
+         font-family:inherit;font-size:11px;font-weight:700;color:var(--muted);
+         background:transparent;transition:all .2s;}
+.mt-tbtn.theme-btn-active{background:rgba(24,95,165,.1);color:var(--accent);}
+
+/* MAIN */
+main{max-width:1100px;margin:0 auto;padding:28px 24px;}
+
+/* PAGE HEADER */
+.page-header{margin-bottom:28px;}
+.page-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;
+            letter-spacing:-.02em;margin-bottom:6px;}
+.page-sub{font-size:12px;color:var(--muted);line-height:1.6;}
+.page-actions{display:flex;gap:8px;margin-top:14px;}
+
+/* BOTONES */
+.btn-primary{background:var(--accent);border:none;color:#fff;font-weight:700;
+             padding:9px 20px;border-radius:9px;font-size:12px;cursor:pointer;
+             font-family:'DM Sans',sans-serif;display:inline-flex;align-items:center;gap:7px;
+             transition:all .15s;}
+.btn-primary:hover{background:var(--accent-hover,#042C53);}
+[data-theme="light"] .btn-primary{background:#185FA5;}
+[data-theme="light"] .btn-primary:hover{background:#042C53;}
+.btn-sec{background:transparent;border:1px solid var(--border);color:var(--muted);
+         padding:8px 16px;border-radius:9px;font-size:12px;cursor:pointer;
+         font-family:'DM Sans',sans-serif;display:inline-flex;align-items:center;gap:6px;
+         transition:all .15s;}
+.btn-sec:hover{border-color:var(--accent);color:var(--accent);}
+
+/* STATS STRIP */
+.stats-strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:24px;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+           padding:16px;text-align:center;}
+[data-theme="light"] .stat-card{background:#fff;box-shadow:0 1px 3px rgba(4,44,83,.06);}
+.stat-val{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;letter-spacing:-.02em;}
+.stat-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:4px;}
+.stat-val.ok{color:#1A6B3C;}
+.stat-val.warn{color:#B45309;}
+.stat-val.err{color:#C02B2B;}
+
+/* TABLA */
+.table-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+[data-theme="light"] .table-card{background:#fff;box-shadow:0 2px 8px rgba(4,44,83,.06);}
+.table-header{display:flex;align-items:center;justify-content:space-between;
+              padding:16px 20px;border-bottom:1px solid var(--border);}
+.table-title{font-family:'Syne',sans-serif;font-size:11px;font-weight:800;
+             text-transform:uppercase;letter-spacing:.7px;color:var(--muted);}
+table{width:100%;border-collapse:collapse;}
+th{text-align:left;padding:10px 16px;font-size:9px;color:var(--muted);
+   text-transform:uppercase;letter-spacing:.5px;background:var(--hover);
+   border-bottom:1px solid var(--border);font-family:'DM Mono',monospace;}
+[data-theme="light"] th{background:#F3F2F1;}
+td{padding:12px 16px;border-bottom:1px solid var(--border);font-size:12px;vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:var(--hover);}
+[data-theme="light"] tr:hover td{background:#F9F8F7;}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;
+       border-radius:20px;font-size:10px;font-weight:700;}
+.badge-ok{background:rgba(26,107,60,.1);color:#1A6B3C;border:1px solid rgba(26,107,60,.2);}
+[data-theme="light"] .badge-ok{background:#E8F5EE;border-color:#A8DFBC;}
+.badge-warn{background:rgba(180,83,9,.1);color:#B45309;border:1px solid rgba(180,83,9,.2);}
+[data-theme="light"] .badge-warn{background:#FFF7ED;border-color:#FED7AA;}
+.badge-err{background:rgba(192,43,43,.1);color:#C02B2B;border:1px solid rgba(192,43,43,.2);}
+[data-theme="light"] .badge-err{background:#FFF1F1;border-color:#FECACA;}
+.badge-blue{background:rgba(24,95,165,.1);color:var(--accent);border:1px solid rgba(24,95,165,.2);}
+[data-theme="light"] .badge-blue{background:#EDF4FF;border-color:#BDD9FF;color:#185FA5;}
+.badge-purple{background:rgba(107,63,160,.1);color:#6B3FA0;border:1px solid rgba(107,63,160,.2);}
+[data-theme="light"] .badge-purple{background:#F3EEFF;border-color:#D8BCFF;}
+
+/* TIPO ICONOS */
+.tipo-icon{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;
+           justify-content:center;font-size:14px;flex-shrink:0;}
+.ti-pdf  {background:#FFF1F1;color:#C02B2B;}
+.ti-docx {background:#EDF4FF;color:#185FA5;}
+[data-theme="dark"] .ti-pdf {background:rgba(192,43,43,.18);color:#fca5a5;}
+[data-theme="dark"] .ti-docx{background:rgba(24,95,165,.18);color:#60b8f0;}
+
+/* EMPTY STATE */
+.empty{text-align:center;padding:60px 20px;color:var(--muted);}
+.empty i{font-size:36px;margin-bottom:14px;opacity:.3;}
+.empty p{font-size:13px;}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;
+               align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:18px;
+       width:100%;max-width:520px;padding:28px;position:relative;box-shadow:0 20px 60px rgba(0,0,0,.3);}
+[data-theme="light"] .modal{background:#fff;}
+.modal-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;
+             margin-bottom:20px;display:flex;align-items:center;gap:10px;}
+.modal-close{position:absolute;top:18px;right:18px;background:transparent;
+             border:none;color:var(--muted);font-size:16px;cursor:pointer;}
+.fld{display:flex;flex-direction:column;gap:5px;margin-bottom:14px;}
+.fld label{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.4px;}
+.fld input,.fld select,.fld textarea{
+  background:var(--hover);border:1px solid var(--border);color:var(--text);
+  padding:9px 12px;border-radius:9px;font-size:12px;font-family:'DM Sans',sans-serif;
+  outline:none;transition:border-color .15s;}
+.fld input:focus,.fld select:focus,.fld textarea:focus{border-color:var(--accent);}
+[data-theme="light"] .fld input,[data-theme="light"] .fld select,[data-theme="light"] .fld textarea{background:#fff;border-color:#D4D2CC;}
+.fld textarea{resize:vertical;min-height:72px;}
+.drop-zone{border:2px dashed var(--border);border-radius:12px;padding:28px;text-align:center;
+           cursor:pointer;transition:border-color .15s;margin-bottom:14px;}
+.drop-zone:hover,.drop-zone.drag-over{border-color:var(--accent);background:rgba(24,95,165,.04);}
+.drop-zone i{font-size:24px;color:var(--muted);margin-bottom:8px;}
+.drop-zone p{font-size:12px;color:var(--muted);line-height:1.6;}
+.drop-zone .file-name{font-weight:700;color:var(--accent);font-size:12px;margin-top:8px;}
+.modal-footer{display:flex;justify-content:flex-end;gap:8px;margin-top:6px;}
+
+/* TOOLTIP chunk count */
+.chunk-count{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;}
+
+/* TOAST */
+#toast{position:fixed;top:66px;right:22px;padding:11px 18px;border-radius:10px;font-size:12px;
+       z-index:9999;background:var(--surface);border:1px solid var(--border);
+       box-shadow:0 8px 24px rgba(0,0,0,.2);opacity:0;transform:translateY(-8px);
+       transition:all .25s;pointer-events:none;font-weight:600;}
+#toast.show{opacity:1;transform:translateY(0);}
+#toast.ok{border-left:3px solid #1A6B3C;color:#1A6B3C;}
+#toast.err{border-left:3px solid #C02B2B;color:#C02B2B;}
+[data-theme="light"] #toast{background:#fff;}
+
+/* RAG INFO BANNER */
+.rag-banner{display:flex;gap:12px;align-items:flex-start;padding:14px 18px;
+            background:rgba(24,95,165,.06);border:1px solid rgba(24,95,165,.2);
+            border-radius:12px;margin-bottom:24px;}
+[data-theme="light"] .rag-banner{background:#EDF4FF;border-color:#BDD9FF;}
+.rag-banner i{color:var(--accent);font-size:16px;flex-shrink:0;margin-top:1px;}
+.rag-banner-txt{font-size:12px;line-height:1.7;color:var(--muted);}
+[data-theme="light"] .rag-banner-txt{color:#185FA5;}
+.rag-banner-txt strong{color:var(--text);}
+[data-theme="light"] .rag-banner-txt strong{color:#042C53;}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="logo">Axula</a>
+  <span class="nav-badge"><i class="fas fa-scale-balanced" style="margin-right:4px;"></i>Normativa MINERD</span>
+  <div class="nav-r">
+    <a href="/" class="nav-link"><i class="fas fa-table-columns"></i> Dashboard</a>
+    <div class="mt-theme-toggle">
+      <button class="mt-tbtn" data-theme="dark" onclick="setTheme('dark')"><i class="fas fa-moon"></i></button>
+      <button class="mt-tbtn" data-theme="light" onclick="setTheme('light')"><i class="fas fa-sun"></i></button>
+    </div>
+    <a href="/logout" class="nav-link danger"><i class="fas fa-right-from-bracket"></i></a>
+  </div>
+</nav>
+
+<div id="toast"></div>
+
+<main>
+
+  <!-- Header -->
+  <div class="page-header">
+    <div class="page-title"><i class="fas fa-scale-balanced" style="color:var(--accent);margin-right:10px;font-size:18px;"></i>Normativa MINERD</div>
+    <div class="page-sub">
+      Documentos oficiales que el sistema usa como contexto al generar planificaciones y evaluaciones.<br>
+      Cada documento subido es procesado automáticamente y enriquece las respuestas de la IA.
+    </div>
+    <div class="page-actions">
+      <button class="btn-primary" onclick="abrirModal()">
+        <i class="fas fa-cloud-arrow-up"></i> Subir documento
+      </button>
+      <a href="/" class="btn-sec"><i class="fas fa-arrow-left"></i> Volver</a>
+    </div>
+  </div>
+
+  <!-- Cómo funciona -->
+  <div class="rag-banner">
+    <i class="fas fa-lightbulb"></i>
+    <div class="rag-banner-txt">
+      <strong>¿Cómo aprende el sistema?</strong> Al subir una Ordenanza o Adendo, Axula extrae el texto,
+      lo divide en fragmentos y los indexa. Cuando un profesor solicita una planificación, el sistema
+      busca los fragmentos más relevantes y los inyecta como contexto oficial en el prompt de la IA —
+      así las respuestas siempre reflejan <strong>la normativa vigente de tu centro</strong>, no solo el entrenamiento general del modelo.
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-strip" id="stats-strip">
+    {% set total = docs|length %}
+    {% set procesados = docs|selectattr("procesado", "equalto", 1)|list|length %}
+    {% set errores = docs|selectattr("procesado", "equalto", 2)|list|length %}
+    {% set chunks_total = docs|sum(attribute="total_chunks") %}
+    <div class="stat-card">
+      <div class="stat-val">{{ total }}</div>
+      <div class="stat-lbl">Documentos</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val ok">{{ procesados }}</div>
+      <div class="stat-lbl">Indexados</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val">{{ chunks_total }}</div>
+      <div class="stat-lbl">Fragmentos RAG</div>
+    </div>
+    {% if errores > 0 %}
+    <div class="stat-card">
+      <div class="stat-val err">{{ errores }}</div>
+      <div class="stat-lbl">Con error</div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Tabla de documentos -->
+  <div class="table-card">
+    <div class="table-header">
+      <span class="table-title"><i class="fas fa-folder-open" style="margin-right:6px;"></i>Documentos cargados</span>
+    </div>
+    {% if docs %}
+    <table>
+      <thead>
+        <tr>
+          <th>Documento</th>
+          <th>Tipo</th>
+          <th>Año Escolar</th>
+          <th>Estado RAG</th>
+          <th>Fragmentos</th>
+          <th>Subido por</th>
+          <th>Fecha</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="tabla-body">
+        {% for doc in docs %}
+        <tr id="row-{{ doc.id }}">
+          <td>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div class="tipo-icon ti-{{ doc.tipo_archivo }}">
+                <i class="fas fa-file-{{ 'pdf' if doc.tipo_archivo == 'pdf' else 'word' }}"></i>
+              </div>
+              <div>
+                <div style="font-weight:600;">{{ doc.titulo }}</div>
+                {% if doc.descripcion %}
+                <div style="font-size:10px;color:var(--muted);">{{ doc.descripcion }}</div>
+                {% endif %}
+              </div>
+            </div>
+          </td>
+          <td>
+            <span class="badge badge-blue">{{ tipos_doc.get(doc.tipo, doc.tipo) }}</span>
+          </td>
+          <td style="font-family:'DM Mono',monospace;font-size:11px;">
+            {{ doc.anio_escolar or '—' }}
+          </td>
+          <td>
+            {% if doc.procesado == 1 %}
+            <span class="badge badge-ok"><i class="fas fa-circle-check"></i> Indexado</span>
+            {% elif doc.procesado == 2 %}
+            <span class="badge badge-err"><i class="fas fa-triangle-exclamation"></i> Error</span>
+            {% else %}
+            <span class="badge badge-warn"><i class="fas fa-hourglass-half"></i> Pendiente</span>
+            {% endif %}
+          </td>
+          <td class="chunk-count">{{ doc.total_chunks }} fragmentos</td>
+          <td style="font-size:11px;color:var(--muted);">{{ doc.subido_por_nombre }}</td>
+          <td style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;">
+            {{ doc.fecha_subida[:10] if doc.fecha_subida else '—' }}
+          </td>
+          <td>
+            <div style="display:flex;gap:5px;">
+              <a href="/normativa/descargar/{{ doc.id }}" class="btn-sec" style="padding:5px 10px;font-size:11px;" title="Descargar">
+                <i class="fas fa-download"></i>
+              </a>
+              {% if doc.procesado == 2 %}
+              <button class="btn-sec" style="padding:5px 10px;font-size:11px;" title="Re-procesar"
+                      onclick="reprocesar({{ doc.id }})">
+                <i class="fas fa-arrows-rotate"></i>
+              </button>
+              {% endif %}
+              {% if rol in ['directora','superusuario'] %}
+              <button class="btn-sec" style="padding:5px 10px;font-size:11px;color:#C02B2B;border-color:rgba(192,43,43,.25);"
+                      title="Eliminar" onclick="eliminar({{ doc.id }}, '{{ doc.titulo|e }}')">
+                <i class="fas fa-trash-can"></i>
+              </button>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty">
+      <i class="fas fa-scale-balanced"></i>
+      <p>No hay documentos normativos cargados aún.<br>
+         Sube la Ordenanza 04-2023 u otros documentos MINERD para comenzar.</p>
+    </div>
+    {% endif %}
+  </div>
+
+</main>
+
+<!-- Modal subir documento -->
+<div class="modal-overlay" id="modal-subir">
+  <div class="modal">
+    <button class="modal-close" onclick="cerrarModal()"><i class="fas fa-xmark"></i></button>
+    <div class="modal-title">
+      <div style="width:36px;height:36px;border-radius:10px;background:#EDF4FF;color:#185FA5;
+                  display:flex;align-items:center;justify-content:center;">
+        <i class="fas fa-cloud-arrow-up"></i>
+      </div>
+      Subir Documento Normativo
+    </div>
+
+    <div class="fld">
+      <label>Título *</label>
+      <input type="text" id="f-titulo" placeholder="Ej: Ordenanza 04-2023 Educación Básica">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div class="fld">
+        <label>Tipo de documento *</label>
+        <select id="f-tipo">
+          {% for k, v in tipos_doc.items() %}
+          <option value="{{ k }}">{{ v }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="fld">
+        <label>Año Escolar</label>
+        <input type="text" id="f-anio" placeholder="2025-2026">
+      </div>
+    </div>
+    <div class="fld">
+      <label>Versión / Número</label>
+      <input type="text" id="f-version" placeholder="Ej: v1.0 o Núm. 04">
+    </div>
+    <div class="fld">
+      <label>Descripción</label>
+      <textarea id="f-desc" placeholder="Breve descripción del contenido..."></textarea>
+    </div>
+
+    <div class="drop-zone" id="drop-zone" onclick="document.getElementById('f-archivo').click()">
+      <input type="file" id="f-archivo" accept=".pdf,.docx,.doc" style="display:none"
+             onchange="onFileSelect(this)">
+      <i class="fas fa-file-arrow-up"></i>
+      <p>Haz clic o arrastra un PDF o DOCX<br><span style="font-size:10px;">Máximo 20 MB</span></p>
+      <div class="file-name" id="file-name-label" style="display:none;"></div>
+    </div>
+
+    <div id="upload-status" style="display:none;padding:10px 13px;border-radius:9px;font-size:12px;margin-bottom:12px;"></div>
+
+    <div class="modal-footer">
+      <button class="btn-sec" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn-primary" id="btn-subir" onclick="subirDoc()">
+        <i class="fas fa-cloud-arrow-up"></i> Subir y procesar
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Theme init ──
+document.addEventListener('DOMContentLoaded', function() {
+  var t = localStorage.getItem('theme') || 'dark';
+  document.querySelectorAll('.mt-tbtn').forEach(function(b) {
+    b.classList.toggle('theme-btn-active', b.dataset.theme === t);
+  });
+});
+
+// ── Toast ──
+function toast(msg, tipo) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show ' + (tipo || '');
+  setTimeout(function() { el.className = ''; }, 3200);
+}
+
+// ── Modal ──
+function abrirModal() {
+  document.getElementById('modal-subir').classList.add('open');
+}
+function cerrarModal() {
+  document.getElementById('modal-subir').classList.remove('open');
+  limpiarModal();
+}
+function limpiarModal() {
+  ['f-titulo','f-version','f-anio','f-desc'].forEach(function(id){
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('f-tipo').selectedIndex = 0;
+  document.getElementById('f-archivo').value = '';
+  document.getElementById('file-name-label').style.display = 'none';
+  var st = document.getElementById('upload-status');
+  st.style.display = 'none';
+}
+document.getElementById('modal-subir').addEventListener('click', function(e) {
+  if (e.target === this) cerrarModal();
+});
+
+// ── Drag & Drop ──
+var dropZone = document.getElementById('drop-zone');
+dropZone.addEventListener('dragover', function(e) { e.preventDefault(); this.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', function() { this.classList.remove('drag-over'); });
+dropZone.addEventListener('drop', function(e) {
+  e.preventDefault();
+  this.classList.remove('drag-over');
+  var f = e.dataTransfer.files[0];
+  if (f) setFile(f);
+});
+
+function onFileSelect(input) {
+  if (input.files[0]) setFile(input.files[0]);
+}
+function setFile(f) {
+  var lbl = document.getElementById('file-name-label');
+  lbl.textContent = f.name;
+  lbl.style.display = 'block';
+  // Transferir al input real
+  var dt = new DataTransfer();
+  dt.items.add(f);
+  document.getElementById('f-archivo').files = dt.files;
+}
+
+// ── Subir documento ──
+function subirDoc() {
+  var titulo = document.getElementById('f-titulo').value.trim();
+  var archivo = document.getElementById('f-archivo').files[0];
+  if (!titulo) { toast('El título es obligatorio', 'err'); return; }
+  if (!archivo) { toast('Selecciona un archivo', 'err'); return; }
+
+  var fd = new FormData();
+  fd.append('titulo', titulo);
+  fd.append('tipo', document.getElementById('f-tipo').value);
+  fd.append('anio_escolar', document.getElementById('f-anio').value.trim());
+  fd.append('version', document.getElementById('f-version').value.trim());
+  fd.append('descripcion', document.getElementById('f-desc').value.trim());
+  fd.append('archivo', archivo);
+
+  var btn = document.getElementById('btn-subir');
+  var st  = document.getElementById('upload-status');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+  st.style.display = 'none';
+
+  fetch('/api/normativa/subir', { method: 'POST', body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-cloud-arrow-up"></i> Subir y procesar';
+      if (data.ok) {
+        st.style.cssText = 'display:block;padding:10px 13px;border-radius:9px;font-size:12px;margin-bottom:12px;background:rgba(26,107,60,.1);color:#1A6B3C;border:1px solid rgba(26,107,60,.2);';
+        st.textContent = '✓ ' + data.msg;
+        toast(data.msg, 'ok');
+        setTimeout(function() { cerrarModal(); location.reload(); }, 1800);
+      } else {
+        st.style.cssText = 'display:block;padding:10px 13px;border-radius:9px;font-size:12px;margin-bottom:12px;background:rgba(192,43,43,.1);color:#C02B2B;border:1px solid rgba(192,43,43,.2);';
+        st.textContent = '✗ ' + data.msg;
+        toast(data.msg, 'err');
+      }
+    })
+    .catch(function() {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-cloud-arrow-up"></i> Subir y procesar';
+      toast('Error de conexión', 'err');
+    });
+}
+
+// ── Re-procesar ──
+function reprocesar(id) {
+  fetch('/api/normativa/' + id + '/reprocesar', { method: 'POST' })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      toast(data.msg, data.ok ? 'ok' : 'err');
+      if (data.ok) setTimeout(function() { location.reload(); }, 1200);
+    });
+}
+
+// ── Eliminar ──
+function eliminar(id, titulo) {
+  if (!confirm('¿Eliminar "' + titulo + '"?\nSe eliminarán también sus fragmentos indexados.')) return;
+  fetch('/api/normativa/' + id, { method: 'DELETE' })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.ok) {
+        var row = document.getElementById('row-' + id);
+        if (row) row.remove();
+        toast('Documento eliminado', 'ok');
+      } else {
+        toast(data.msg || 'Error al eliminar', 'err');
+      }
+    });
+}
+</script>
+</body>
+</html>

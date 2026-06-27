@@ -1,0 +1,1272 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel del Coordinador — Axula</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+:root{
+  --bg:#050E1F;--surface:#081C36;--surface2:#0D2B50;--border:rgba(38,97,246,.2);
+  --text:#C8DAFB;--muted:#6080C0;--accent:#2661F6;--accent-rgb:38,97,246;
+  --red:#ef4444;--orange:#5B8AF7;--green:#8BAEF8;--blue:#2661F6;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;font-size:14px;min-height:100vh}
+a{color:inherit;text-decoration:none}
+
+/* NAV */
+nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;height:52px;
+    display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.nav-left{display:flex;align-items:center;gap:12px}
+.nav-logo{font-weight:800;font-size:15px;color:var(--accent);letter-spacing:-.02em}
+.nav-sep{color:var(--border);font-size:18px}
+.nav-title{font-size:13px;color:var(--muted)}
+.nav-right{display:flex;align-items:center;gap:10px}
+.nav-btn{background:var(--surface2);border:1px solid var(--border);color:var(--muted);
+          padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px}
+.nav-btn:hover{color:var(--text);border-color:rgba(255,255,255,.15)}
+.nav-user{font-size:11px;color:var(--muted)}
+.dd-item{padding:8px 12px;border-radius:7px;font-size:13px;color:var(--text);
+  cursor:pointer;display:flex;align-items:center;gap:8px;transition:background .15s;}
+.dd-item:hover{background:var(--hover,rgba(255,255,255,.05));}
+
+/* LAYOUT */
+main{max-width:1200px;margin:0 auto;padding:24px 20px}
+.page-header{margin-bottom:24px}
+.page-title{font-size:22px;font-weight:700}
+.page-sub{font-size:13px;color:var(--muted);margin-top:4px}
+
+/* CICLO BADGE */
+.ciclo-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;
+             font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.ciclo-primero{background:rgba(38,97,246,.15);color:#8BAEF8;border:1px solid rgba(38,97,246,.3)}
+.ciclo-segundo{background:rgba(4,64,127,.2);color:#BDD1FA;border:1px solid rgba(38,97,246,.25)}
+.ciclo-todos{background:rgba(38,97,246,.12);color:var(--accent);border:1px solid rgba(38,97,246,.3)}
+
+/* KPI GRID */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:24px}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
+.kpi-icon{font-size:18px;margin-bottom:6px}
+.kpi-val{font-size:26px;font-weight:800;font-family:'DM Mono',monospace;line-height:1}
+.kpi-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:5px}
+
+/* SECTION GRID */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+@media(max-width:720px){.grid-2{grid-template-columns:1fr}}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px}
+@media(max-width:900px){.grid-3{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){.grid-3{grid-template-columns:1fr}}
+
+/* PANEL */
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.panel-head{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.panel-title{font-size:13px;font-weight:700}
+.panel-body{padding:0}
+
+/* RIESGO TABLE */
+.risk-row{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border);
+           cursor:pointer;transition:background .15s}
+.risk-row:last-child{border-bottom:none}
+.risk-row:hover{background:var(--surface2)}
+.risk-avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+             font-size:11px;font-weight:800;flex-shrink:0}
+.risk-info{flex:1;min-width:0}
+.risk-name{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.risk-grado{font-size:10px;color:var(--muted)}
+.risk-pct{font-size:14px;font-weight:800;font-family:'DM Mono',monospace;flex-shrink:0}
+.risk-bar-wrap{width:60px;flex-shrink:0}
+.risk-bar{height:4px;border-radius:2px;background:var(--surface2)}
+.risk-bar-fill{height:100%;border-radius:2px}
+
+/* CASOS TABLE */
+.caso-row{padding:10px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s}
+.caso-row:last-child{border-bottom:none}
+.caso-row:hover{background:var(--surface2)}
+.caso-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.caso-titulo{font-size:12px;font-weight:600;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.caso-badge{font-size:9px;padding:2px 7px;border-radius:20px;font-weight:700;flex-shrink:0}
+.caso-sub{font-size:10px;color:var(--muted);margin-top:2px}
+
+/* GRADO BARS */
+.grado-row{padding:10px 16px;border-bottom:1px solid var(--border)}
+.grado-row:last-child{border-bottom:none}
+.grado-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px}
+.grado-name{font-size:12px;font-weight:600}
+.grado-stats{display:flex;gap:10px;font-size:10px;color:var(--muted)}
+.grado-bar-bg{background:var(--surface2);border-radius:4px;height:6px;overflow:hidden}
+.grado-bar-fill{height:100%;border-radius:4px;transition:width .5s}
+
+/* EMPTY */
+.empty{text-align:center;padding:32px;color:var(--muted);font-size:12px}
+.empty-icon{font-size:28px;margin-bottom:8px}
+
+/* ALERT STRIP */
+.alert-strip{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);
+             border-radius:10px;padding:10px 14px;margin-bottom:16px;
+             display:flex;align-items:center;gap:10px;font-size:12px}
+
+/* REFRESH BTN */
+.refresh-btn{background:var(--accent);border:none;color:#fff;padding:7px 14px;border-radius:8px;
+             font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px}
+.refresh-btn:hover{opacity:.9}
+
+/* SPINNER */
+.spin{animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Lock panel */
+.periodo-card{background:var(--surface2);border:1px solid var(--border);border-radius:12px;
+  padding:18px 14px;text-align:center;transition:all .2s}
+.periodo-card.bloqueado{background:rgba(185,28,28,.06);border-color:rgba(185,28,28,.3);border-top:3px solid #B91C1C}
+.periodo-card.abierto{background:rgba(38,97,246,.06);border-color:rgba(38,97,246,.25);border-top:3px solid var(--accent)}
+.periodo-label{font-size:20px;font-weight:800;font-family:'DM Mono',monospace;margin-bottom:4px;color:var(--text)}
+.periodo-sublabel{font-size:11px;color:var(--muted);margin-bottom:10px}
+.periodo-icon{font-size:22px;margin-bottom:8px}
+.periodo-status{font-size:12px;font-weight:700;margin-bottom:12px;padding:3px 10px;
+  border-radius:20px;display:inline-block}
+.periodo-status.lock{color:#B91C1C;background:rgba(185,28,28,.08);border:1px solid rgba(185,28,28,.2)}
+.periodo-status.open{color:var(--accent);background:rgba(38,97,246,.1);border:1px solid rgba(38,97,246,.25)}
+.btn-periodo{width:100%;padding:9px;border-radius:8px;border:none;font-size:12px;
+  font-weight:700;cursor:pointer;transition:all .15s;letter-spacing:.02em}
+.btn-bloquear{background:rgba(185,28,28,.1);color:#B91C1C;border:1px solid rgba(185,28,28,.3)}
+.btn-bloquear:hover{background:rgba(185,28,28,.2)}
+.btn-desbloquear{background:rgba(38,97,246,.1);color:var(--accent);border:1px solid rgba(38,97,246,.3)}
+.btn-desbloquear:hover{background:rgba(38,97,246,.2)}
+.lock-info{font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:16px;
+  padding:12px 14px;background:var(--surface2);border-radius:8px;border-left:3px solid var(--accent)}
+
+</style>
+
+  <link rel="stylesheet" href="/static/theme.css">
+<script>
+/* Axula — theme inline (siempre disponible) */
+(function(){
+  var K='axula_theme', S=6, E=19;
+  function auto(){ var h=new Date().getHours(); return h>=S&&h<E?'light':'dark'; }
+  function get(){ try{return localStorage.getItem(K)||'auto';}catch(e){return 'auto';} }
+  function set(v){ try{localStorage.setItem(K,v);}catch(e){} }
+  function apply(p){ document.documentElement.setAttribute('data-theme',p==='auto'?auto():p); sync(p); }
+  function sync(p){ document.querySelectorAll('[data-mt]').forEach(function(b){ b.classList.toggle('theme-btn-active',b.getAttribute('data-mt')===p); }); }
+  window.setTheme=function(p){ set(p); apply(p); };
+  window.getTheme=function(){ return get(); };
+  apply(get());
+  document.addEventListener('DOMContentLoaded',function(){ sync(get()); setInterval(function(){if(get()==='auto')apply('auto');},60000); });
+})();
+</script>
+
+  <script>
+  (function(){
+    var T="{{ csrf_token }}";
+    var orig=window.fetch;
+    window.fetch=function(u,o){
+      o=o||{};
+      if(!/^(GET|HEAD|OPTIONS)$/.test((o.method||"GET").toUpperCase())){
+        o.headers=o.headers||{};
+        if(o.headers instanceof Headers) o.headers.set("X-CSRF-Token",T);
+        else o.headers["X-CSRF-Token"]=T;
+      }
+      return orig.apply(this,[u,o]);
+    };
+  })();
+  </script>
+</head>
+<body>
+
+<nav>
+  <div class="nav-left">
+    <a href="/" style="text-decoration:none">
+      <span class="nav-logo">Axula</span>
+    </a>
+    <span class="nav-sep">/</span>
+    <span class="nav-title">Panel del Coordinador</span>
+  </div>
+  <div class="nav-right">
+
+    <!-- ── CAMPANA DE NOTIFICACIONES ── -->
+    <div style="position:relative;" id="notif-wrap">
+      <button onclick="toggleNotifPanel()" id="notif-btn"
+        style="position:relative;background:transparent;border:1px solid var(--border);
+               border-radius:99px;width:34px;height:34px;cursor:pointer;
+               display:flex;align-items:center;justify-content:center;
+               color:var(--muted);transition:all .2s;font-size:15px;"
+        title="Notificaciones">
+        🔔
+        <span id="notif-badge"
+          style="display:none;position:absolute;top:-4px;right:-4px;
+                 background:#ef4444;color:#fff;font-size:9px;font-weight:800;
+                 min-width:16px;height:16px;border-radius:99px;
+                 padding:0 4px;line-height:16px;text-align:center;
+                 font-family:'DM Mono',monospace;">0</span>
+      </button>
+      <!-- Panel dropdown -->
+      <div id="notif-panel"
+        style="display:none;position:absolute;right:0;top:42px;width:320px;
+               background:var(--surface);border:1px solid var(--border);
+               border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.35);
+               z-index:999;overflow:hidden;">
+        <div style="display:flex;align-items:center;justify-content:space-between;
+                    padding:12px 14px;border-bottom:1px solid var(--border);">
+          <span style="font-weight:700;font-size:13px;">Notificaciones</span>
+          <button onclick="marcarTodasLeidas()"
+            style="font-size:10px;background:transparent;border:none;
+                   color:var(--accent);cursor:pointer;font-family:inherit;font-weight:600;">
+            Marcar todas leídas
+          </button>
+        </div>
+        <div id="notif-lista" style="max-height:360px;overflow-y:auto;">
+          <div style="text-align:center;padding:24px;color:var(--muted);font-size:12px;">
+            <i class="fas fa-spinner fa-spin"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── THEME TOGGLE ── -->
+    <div class="mt-theme-toggle" title="Cambiar tema">
+      <button class="mt-tbtn" data-mt="light"  onclick="setTheme('light')">&#9728; Claro</button>
+      <button class="mt-tbtn" data-mt="auto"   onclick="setTheme('auto')">&#8635; Auto</button>
+      <button class="mt-tbtn" data-mt="dark"   onclick="setTheme('dark')">&#9790; Oscuro</button>
+    </div>
+    <a href="/" class="nav-btn"><i class="fas fa-home"></i> Dashboard</a>
+    <a href="/casos" class="nav-btn"><i class="fas fa-folder-open"></i> Casos</a>
+    <a href="/usuarios" class="nav-btn"><i class="fas fa-users"></i> Usuarios</a>
+    <a href="/escaner" class="nav-btn" style="color:#10b981"><i class="fas fa-camera-retro"></i> Escáner</a>
+
+    <!-- Avatar dropdown -->
+    <div style="position:relative;margin-left:6px" id="avatar-menu-wrap">
+      <div style="display:flex;align-items:center;gap:8px;padding:5px 10px 5px 5px;
+                  border:1px solid var(--border);border-radius:99px;background:var(--surface);
+                  cursor:pointer;transition:border-color .15s;user-select:none"
+           onclick="toggleAvatarMenu()"
+           onmouseover="this.style.borderColor='var(--accent)'"
+           onmouseout="this.style.borderColor='var(--border)'">
+        <div id="nav-avatar" style="width:28px;height:28px;border-radius:50%;
+              background:var(--accent);color:#fff;display:flex;align-items:center;
+              justify-content:center;font-weight:800;font-size:13px;">
+          {{ current_user.nombre[:1].upper() if current_user and current_user.nombre else 'U' }}
+        </div>
+        <div style="max-width:80px;overflow:hidden;">
+          <div style="font-size:12px;font-weight:600;white-space:nowrap;
+                      overflow:hidden;text-overflow:ellipsis;color:var(--text)">
+            {{ current_user.nombre if current_user else 'Usuario' }}
+          </div>
+          <div style="font-size:9px;color:var(--muted);text-transform:uppercase;
+                      letter-spacing:.4px;font-weight:700;">
+            {{ current_user.rol | replace('_',' ') | title if current_user else '' }}
+          </div>
+        </div>
+        <i class="fas fa-chevron-down" style="font-size:9px;color:var(--muted)"></i>
+      </div>
+
+      <div id="avatar-dropdown" style="display:none;position:absolute;top:calc(100% + 6px);
+            right:0;width:200px;background:var(--surface);border:1px solid var(--border);
+            border-radius:11px;box-shadow:0 8px 24px rgba(0,0,0,.3);z-index:500;padding:6px;">
+        <div style="padding:10px 12px;border-bottom:1px solid var(--border);margin-bottom:4px">
+          <div style="font-weight:700;font-size:13px;color:var(--text)">
+            {{ current_user.nombre if current_user else '' }}
+          </div>
+          <div style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace">
+            @{{ current_user.username if current_user else '' }}
+          </div>
+        </div>
+        <a href="/mi-perfil" style="text-decoration:none">
+          <div class="dd-item"><i class="fas fa-id-card" style="color:var(--accent);width:16px"></i> Mi perfil</div>
+        </a>
+        <a href="/usuarios" style="text-decoration:none">
+          <div class="dd-item"><i class="fas fa-users-cog" style="color:#5B8AF7;width:16px"></i> Gestión de usuarios</div>
+        </a>
+        {% if current_user and current_user.es_directora %}
+        <a href="/auditoria" style="text-decoration:none">
+          <div class="dd-item"><i class="fas fa-chart-mixed" style="color:var(--accent);width:16px"></i> Auditoría</div>
+        </a>
+        {% endif %}
+        <div style="border-top:1px solid var(--border);margin-top:4px;padding-top:4px">
+          <a href="/logout" style="text-decoration:none">
+            <div class="dd-item" style="color:#ef4444">
+              <i class="fas fa-right-from-bracket" style="width:16px"></i> Cerrar sesión
+            </div>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<main>
+  <!-- HEADER -->
+  <div class="page-header">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+          <h1 class="page-title" id="page-title">Panel del Coordinador</h1>
+          <span class="ciclo-badge ciclo-todos" id="ciclo-badge">Cargando…</span>
+        </div>
+        <p class="page-sub" id="page-sub">Vista consolidada de tu ciclo — C.E. Benito Juárez</p>
+      </div>
+      <button class="refresh-btn" onclick="cargarTodo()">
+        <i class="fas fa-sync" id="refresh-icon"></i> Actualizar
+      </button>
+    </div>
+  </div>
+
+  <!-- ALERT (solo si hay críticos) -->
+  <div class="alert-strip" id="alert-strip" style="display:none">
+    <i class="fas fa-triangle-exclamation" style="color:var(--red);font-size:16px"></i>
+    <span id="alert-txt"></span>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-grid" id="kpi-grid">
+    <div class="kpi"><div class="kpi-icon">⏳</div><div class="kpi-val" style="color:var(--muted)">—</div><div class="kpi-lbl">Cargando</div></div>
+  </div>
+
+  <!-- ROW 1: Riesgo + Casos -->
+  <div class="grid-2">
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-title"><i class="fas fa-triangle-exclamation" style="color:var(--orange);margin-right:6px"></i>Estudiantes en riesgo</span>
+        <span style="font-size:10px;color:var(--muted)">Menor promedio primero</span>
+      </div>
+      <div id="riesgo-list" class="panel-body"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-title"><i class="fas fa-folder-open" style="color:var(--blue);margin-right:6px"></i>Casos activos</span>
+        <a href="/casos" style="font-size:10px;color:var(--accent)">Ver todos →</a>
+      </div>
+      <div id="casos-list" class="panel-body"></div>
+    </div>
+  </div>
+
+  <!-- ROW 2: Distribución por grado + Stats semana -->
+  <div class="grid-2">
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-title"><i class="fas fa-chart-bar" style="color:var(--accent);margin-right:6px"></i>Rendimiento por grado</span>
+      </div>
+      <div id="grado-list" class="panel-body"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-title"><i class="fas fa-calendar-week" style="color:var(--green);margin-right:6px"></i>Esta semana</span>
+      </div>
+      <div id="semana-panel" class="panel-body"></div>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <!-- ROW 3: Métricas avanzadas -->
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <div class="grid-2" style="margin-top:16px;">
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-title"><i class="fas fa-layer-group" style="color:#2661F6;margin-right:6px"></i>Distribución niveles Ord.04-2023</span>
+      </div>
+      <div id="niveles-panel" class="panel-body">
+        <div class="empty"><div class="empty-icon">⏳</div>Cargando…</div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-title"><i class="fas fa-chart-line" style="color:#5B8AF7;margin-right:6px"></i>Tendencia P1 → P4</span>
+      </div>
+      <div id="tendencia-panel" class="panel-body">
+        <div class="empty"><div class="empty-icon">⏳</div>Cargando…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROW 4: Por mención + Asistencia -->
+  <div class="grid-2" style="margin-top:16px;">
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-title"><i class="fas fa-graduation-cap" style="color:#BDD1FA;margin-right:6px"></i>Rendimiento por mención</span>
+      </div>
+      <div id="mencion-panel" class="panel-body">
+        <div class="empty"><div class="empty-icon">⏳</div>Cargando…</div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-title"><i class="fas fa-user-check" style="color:#8BAEF8;margin-right:6px"></i>Asistencia por grado</span>
+      </div>
+      <div id="asist-grado-panel" class="panel-body">
+        <div class="empty"><div class="empty-icon">⏳</div>Cargando…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <!-- PANEL: CONTROL DE PERÍODOS -->
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <div class="panel" id="periodos" style="margin-top:16px;scroll-margin-top:80px">
+    <div class="panel-head">
+      <span class="panel-title">
+        <i class="fas fa-lock" style="color:var(--accent);margin-right:7px"></i>
+        Control de períodos — Calificaciones
+      </span>
+      <span style="font-size:11px;color:var(--muted)">
+        Año escolar <strong id="lock-anio" style="color:var(--text)"></strong>
+      </span>
+    </div>
+    <div style="padding:20px">
+      <div class="lock-info">
+        <strong>🔒 Bloquear</strong> un período impide que los profesores ingresen o modifiquen calificaciones de ese período.<br>
+        <strong>🔓 Desbloquear</strong> restaura el acceso para que los profesores puedan editar.<br>
+        <span style="color:var(--text)">Coordinadores y directora siempre pueden editar, independientemente del estado.</span>
+      </div>
+      <div id="periodos-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px"></div>
+      <div id="lock-msg" style="margin-top:14px;font-size:13px;padding:10px 14px;border-radius:8px;display:none"></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <!-- PANEL: CARGAR NOTAS EXCEL -->
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <div class="panel" id="cargar-excel" style="margin-top:16px">
+    <div class="panel-head">
+      <span class="panel-title">
+        <i class="fas fa-file-excel" style="color:#22c55e;margin-right:7px"></i>
+        Cargar Notas desde Excel
+      </span>
+      <span style="font-size:11px;color:var(--muted)">Boletín oficial y registro del maestro</span>
+    </div>
+    <div style="padding:20px">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.6;">
+        Importa calificaciones masivamente desde el <strong style="color:var(--text)">Boletín oficial</strong>
+        del C.E. Benito Juárez o desde el <strong style="color:var(--text)">Registro del Maestro</strong>
+        en formato estándar. El sistema detecta automáticamente el formato del archivo.
+      </div>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;">
+
+        <!-- Boletín Oficial -->
+        <div style="flex:1;min-width:220px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px;">
+          <div style="font-size:13px;font-weight:700;margin-bottom:4px;"><i class="fas fa-file-excel" style="color:#22c55e;margin-right:6px;"></i>Boletín Oficial</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.5;">Carga el boletín oficial BJ con calificaciones de 1er y 2do ciclo (P1–P4).</div>
+          <label style="display:block;border:2px dashed var(--border);border-radius:8px;padding:18px;text-align:center;cursor:pointer;transition:border-color .15s;"
+                 onmouseover="this.style.borderColor='#22c55e'" onmouseout="this.style.borderColor='var(--border)'">
+            <input type="file" id="coord-file-boletin" accept=".xlsx,.xls,.xlsm" style="display:none" onchange="coordCargarBoletin(this)">
+            <div style="font-size:20px;margin-bottom:6px;">📝</div>
+            <div style="font-size:12px;font-weight:600;">Haz clic o arrastra aquí</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:3px;">Boletin_calificaciones_*.xlsx</div>
+          </label>
+          <div id="coord-status-boletin" style="margin-top:8px;font-size:11px;min-height:16px;padding:6px 10px;border-radius:6px;display:none;"></div>
+        </div>
+
+        <!-- Registro del Maestro -->
+        <div style="flex:1;min-width:220px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px;">
+          <div style="font-size:13px;font-weight:700;margin-bottom:4px;"><i class="fas fa-table" style="color:#5B8AF7;margin-right:6px;"></i>Registro del Maestro</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.5;">Carga el registro de calificaciones del maestro. Detecta materia, grado y períodos automáticamente.</div>
+          <label style="display:block;border:2px dashed var(--border);border-radius:8px;padding:18px;text-align:center;cursor:pointer;transition:border-color .15s;"
+                 onmouseover="this.style.borderColor='#2661F6'" onmouseout="this.style.borderColor='var(--border)'">
+            <input type="file" id="coord-file-registro" accept=".xlsx,.xls,.xlsm" style="display:none" onchange="coordCargarRegistro(this)">
+            <div style="font-size:20px;margin-bottom:6px;">🗂</div>
+            <div style="font-size:12px;font-weight:600;">Haz clic o arrastra aquí</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:3px;">Registro Calificaciones *.xlsx</div>
+          </label>
+          <div id="coord-status-registro" style="margin-top:8px;font-size:11px;min-height:16px;padding:6px 10px;border-radius:6px;display:none;"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+<!-- ── PANEL DE PROMOCION ─────────────────────────────────────────────── -->
+<div class="panel" id="promocion" style="margin-top:16px;scroll-margin-top:80px">
+  <div class="panel-head">
+    <span class="panel-title">
+      <i class="fas fa-graduation-cap" style="color:#22c55e;margin-right:7px"></i>
+      Promocion de Estudiantes
+    </span>
+    <span style="font-size:11px;color:var(--muted)">Segun Ordenanza 04-2023 MINERD</span>
+  </div>
+  <div style="padding:20px">
+
+    <!-- Reglas -->
+    <div style="display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap">
+      <div style="flex:1;min-width:140px;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.3);border-radius:8px;padding:10px 14px;text-align:center">
+        <div style="font-size:18px;font-weight:800;color:#22c55e">0</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px">materias reprobadas</div>
+        <div style="font-size:11px;font-weight:700;color:#22c55e;margin-top:4px">PROMOVIDO</div>
+      </div>
+      <div style="flex:1;min-width:140px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);border-radius:8px;padding:10px 14px;text-align:center">
+        <div style="font-size:18px;font-weight:800;color:#fbbf24">1-2</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px">materias reprobadas</div>
+        <div style="font-size:11px;font-weight:700;color:#fbbf24;margin-top:4px">CONDICIONADO</div>
+      </div>
+      <div style="flex:1;min-width:140px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:10px 14px;text-align:center">
+        <div style="font-size:18px;font-weight:800;color:#ef4444">3+</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px">materias reprobadas</div>
+        <div style="font-size:11px;font-weight:700;color:#ef4444;margin-top:4px">NO PROMOVIDO</div>
+      </div>
+    </div>
+
+    <!-- Selector de grado -->
+    <div style="display:flex;gap:10px;align-items:flex-end;margin-bottom:16px;flex-wrap:wrap">
+      <div>
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Grado</label>
+        <select id="prom-grado" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px">
+          <option value="">- Seleccionar -</option>
+          <option>1ERO</option><option>2DO</option><option>3ERO</option>
+          <option>4TO</option><option>5TO</option><option>6TO</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Ano escolar</label>
+        <input id="prom-anio" type="text" value="2025-2026"
+               style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;width:110px">
+      </div>
+      <button onclick="promCargar()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer">
+        <i class="fas fa-search"></i> Calcular
+      </button>
+    </div>
+
+    <!-- Resumen KPIs -->
+    <div id="prom-kpis" style="display:none;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+      <div style="flex:1;min-width:100px;background:var(--surface2);border-radius:8px;padding:10px;text-align:center">
+        <div id="pk-total" style="font-size:20px;font-weight:800">-</div>
+        <div style="font-size:10px;color:var(--muted)">Total</div>
+      </div>
+      <div style="flex:1;min-width:100px;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:8px;padding:10px;text-align:center">
+        <div id="pk-prom" style="font-size:20px;font-weight:800;color:#22c55e">-</div>
+        <div style="font-size:10px;color:var(--muted)">Promovidos</div>
+      </div>
+      <div style="flex:1;min-width:100px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);border-radius:8px;padding:10px;text-align:center">
+        <div id="pk-cond" style="font-size:20px;font-weight:800;color:#fbbf24">-</div>
+        <div style="font-size:10px;color:var(--muted)">Condicionados</div>
+      </div>
+      <div style="flex:1;min-width:100px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:10px;text-align:center">
+        <div id="pk-noprom" style="font-size:20px;font-weight:800;color:#ef4444">-</div>
+        <div style="font-size:10px;color:var(--muted)">No promovidos</div>
+      </div>
+    </div>
+
+    <!-- Controles de tabla -->
+    <div id="prom-controles" style="display:none;margin-bottom:10px;gap:8px;align-items:center;flex-wrap:wrap">
+      <button onclick="promSelAll(true)" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer">
+        Seleccionar promovidos
+      </button>
+      <button onclick="promSelAll(false)" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer">
+        Limpiar seleccion
+      </button>
+      <span style="font-size:11px;color:var(--muted);margin-left:4px">
+        Solo PROMOVIDO y CONDICIONADO pueden ejecutarse
+      </span>
+    </div>
+
+    <!-- Tabla de resultados -->
+    <div id="prom-tabla-wrap" style="display:none;overflow-x:auto;max-height:460px;overflow-y:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead>
+          <tr style="position:sticky;top:0;background:var(--surface2);z-index:1">
+            <th style="padding:8px;text-align:left;font-weight:600;color:var(--muted);width:32px"></th>
+            <th style="padding:8px;text-align:left;font-weight:600;color:var(--muted)">Estudiante</th>
+            <th style="padding:8px;text-align:center;font-weight:600;color:var(--muted)">Secc.</th>
+            <th style="padding:8px;text-align:center;font-weight:600;color:var(--muted)">Mencion</th>
+            <th style="padding:8px;text-align:center;font-weight:600;color:var(--muted)">Aprobadas</th>
+            <th style="padding:8px;text-align:center;font-weight:600;color:var(--muted)">Reprobadas</th>
+            <th style="padding:8px;text-align:left;font-weight:600;color:var(--muted)">Materias reprobadas</th>
+            <th style="padding:8px;text-align:center;font-weight:600;color:var(--muted)">Estado</th>
+          </tr>
+        </thead>
+        <tbody id="prom-tbody"></tbody>
+      </table>
+    </div>
+
+    <!-- Mensaje vacio -->
+    <div id="prom-empty" style="padding:30px;text-align:center;color:var(--muted);font-size:13px">
+      <i class="fas fa-folder-open" style="font-size:24px;margin-bottom:8px;display:block"></i>
+      Selecciona un grado y haz clic en Calcular
+    </div>
+
+    <!-- Boton ejecutar -->
+    <div id="prom-footer" style="display:none;margin-top:16px;padding-top:14px;border-top:1px solid var(--border);align-items:center;gap:12px;flex-wrap:wrap">
+      <div>
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Observacion (opcional)</label>
+        <input id="prom-obs" type="text" placeholder="Ej: Promocion fin de ano 2025-2026"
+               style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;width:280px">
+      </div>
+      <button onclick="promEjecutar()" style="background:#22c55e;color:#000;border:none;border-radius:8px;padding:9px 22px;font-size:13px;font-weight:700;cursor:pointer;margin-top:18px">
+        <i class="fas fa-graduation-cap"></i> Ejecutar Promocion
+      </button>
+      <span id="prom-exec-status" style="font-size:12px;color:var(--muted)"></span>
+    </div>
+
+  </div>
+</div>
+
+</main>
+
+<script>
+var CICLO = '{{ ciclo }}';
+var USER  = {{ current_user | tojson }};
+
+// Avatar dropdown
+function toggleAvatarMenu() {
+  var dd = document.getElementById('avatar-dropdown');
+  if (!dd) return;
+  dd.style.display = dd.style.display === 'block' ? 'none' : 'block';
+}
+document.addEventListener('click', function(e) {
+  var wrap = document.getElementById('avatar-menu-wrap');
+  if (wrap && !wrap.contains(e.target)) {
+    var dd = document.getElementById('avatar-dropdown');
+    if (dd) dd.style.display = 'none';
+  }
+});
+
+function cargarTodo() {
+  var icon = document.getElementById('refresh-icon');
+  icon.classList.add('spin');
+  fetch('/api/coordinador/resumen')
+    .then(function(r){ return r.json(); })
+    .then(function(d) {
+      icon.classList.remove('spin');
+      if (d.error) { alert(d.error); return; }
+      renderTodo(d);
+    })
+    .catch(function(e){
+      icon.classList.remove('spin');
+      console.error(e);
+    });
+}
+
+function renderTodo(d) {
+  var k = d.kpis;
+  var cicloLabel = d.ciclo === 'primer_ciclo' ? '1er Ciclo (1ro-3ro)'
+                 : d.ciclo === 'segundo_ciclo' ? '2do Ciclo (4to-6to)'
+                 : 'Todos los ciclos';
+  var cicloClass = d.ciclo === 'primer_ciclo' ? 'ciclo-primero'
+                 : d.ciclo === 'segundo_ciclo' ? 'ciclo-segundo' : 'ciclo-todos';
+
+  document.getElementById('ciclo-badge').textContent = cicloLabel;
+  document.getElementById('ciclo-badge').className = 'ciclo-badge ' + cicloClass;
+  document.getElementById('page-sub').textContent =
+    'Vista consolidada -- ' + k.total_estudiantes + ' estudiantes registrados';
+
+  // Alert strip
+  var strip = document.getElementById('alert-strip');
+  if (k.criticos > 0) {
+    document.getElementById('alert-txt').innerHTML =
+      '<strong>' + k.criticos + ' estudiante' + (k.criticos>1?'s':'') + '</strong> en alerta crítica (promedio < 70). ' +
+      'Se recomienda intervención inmediata.';
+    strip.style.display = 'flex';
+  } else {
+    strip.style.display = 'none';
+  }
+
+  // KPIs
+  var promColor = k.prom_ciclo >= 80 ? 'var(--green)' : k.prom_ciclo >= 70 ? 'var(--orange)' : 'var(--red)';
+  var kpis = [
+    { icon:'👥', val: k.total_estudiantes, lbl:'Total estudiantes', color:'var(--text)' },
+    { icon:'📊', val: (k.prom_ciclo||0).toFixed(1), lbl:'Promedio del ciclo', color: promColor },
+    { icon:'🚨', val: k.criticos, lbl:'Alerta crítica (<70)', color: k.criticos>0?'var(--red)':'var(--muted)' },
+    { icon:'⚠️', val: k.observacion, lbl:'En observación (70-79)', color: k.observacion>0?'var(--orange)':'var(--muted)' },
+    { icon:'⭐', val: k.excelentes, lbl:'Excelentes (≥85)', color:'var(--green)' },
+    { icon:'📋', val: k.con_notas, lbl:'Con notas cargadas', color:'var(--text)' },
+    { icon:'📅', val: k.ausencias_semana, lbl:'Ausencias esta semana', color: k.ausencias_semana>5?'var(--orange)':'var(--muted)' },
+    { icon:'📝', val: k.reportes_semana, lbl:'Reportes esta semana', color: k.reportes_semana>0?'var(--blue)':'var(--muted)' },
+  ];
+  document.getElementById('kpi-grid').innerHTML = kpis.map(function(kp){
+    return '<div class="kpi">' +
+      '<div class="kpi-icon">' + kp.icon + '</div>' +
+      '<div class="kpi-val" style="color:' + kp.color + '">' + kp.val + '</div>' +
+      '<div class="kpi-lbl">' + kp.lbl + '</div>' +
+      '</div>';
+  }).join('');
+
+  // En riesgo
+  var rl = document.getElementById('riesgo-list');
+  if (!d.en_riesgo || !d.en_riesgo.length) {
+    rl.innerHTML = '<div class="empty"><div class="empty-icon">✅</div>Sin estudiantes en riesgo</div>';
+  } else {
+    rl.innerHTML = d.en_riesgo.map(function(e){
+      var pct = e.p_acad || 0;
+      var col = pct < 70 ? 'var(--red)' : pct < 80 ? 'var(--orange)' : 'var(--green)';
+      var avCol = pct < 70 ? 'rgba(255,107,107,.15)' : pct < 80 ? 'rgba(255,196,77,.15)' : 'rgba(77,255,180,.15)';
+      var initials = ((e.nombre||'?')[0] + (e.apellido||'?')[0]).toUpperCase();
+      var secStr = e.seccion ? ' · Sec. ' + e.seccion : '';
+      return '<div class="risk-row" onclick="window.location.href=\'/perfil/' + e.id + '\'">' +
+        '<div class="risk-avatar" style="background:' + avCol + ';color:' + col + '">' + initials + '</div>' +
+        '<div class="risk-info">' +
+          '<div class="risk-name">' + (e.apellido||'') + ', ' + (e.nombre||'') + '</div>' +
+          '<div class="risk-grado">' + (e.grado||'') + (e.curso?' · '+e.curso:'') + secStr + '</div>' +
+        '</div>' +
+        '<div>' +
+          '<div class="risk-pct" style="color:' + col + '">' + pct.toFixed(1) + '</div>' +
+          '<div class="risk-bar-wrap"><div class="risk-bar">' +
+            '<div class="risk-bar-fill" style="width:' + Math.min(100,pct) + '%;background:' + col + '"></div>' +
+          '</div></div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  // Casos
+  var cl = document.getElementById('casos-list');
+  var TIPO_BADGE = {
+    conducta:   'background:rgba(239,68,68,.15);color:var(--red)',
+    psicologico:'background:rgba(38,97,246,.12);color:#8BAEF8',
+    academico:  'background:rgba(4,64,127,.2);color:#BDD1FA',
+    asistencia: 'background:rgba(91,138,247,.15);color:var(--orange)',
+  };
+  if (!d.casos_abiertos || !d.casos_abiertos.length) {
+    cl.innerHTML = '<div class="empty"><div class="empty-icon">📂</div>Sin casos activos</div>';
+  } else {
+    cl.innerHTML = d.casos_abiertos.map(function(c){
+      var bstyle = TIPO_BADGE[c.tipo] || 'background:rgba(136,135,128,.15);color:var(--muted)';
+      var dias = Math.round((Date.now() - new Date(c.creado_en).getTime()) / 86400000);
+      return '<div class="caso-row" onclick="window.location.href=\'/casos\'">' +
+        '<div class="caso-top">' +
+          '<span class="caso-titulo">' + (c.titulo||'Sin título') + '</span>' +
+          '<span class="caso-badge" style="' + bstyle + '">' + (c.tipo||'') + '</span>' +
+        '</div>' +
+        '<div class="caso-sub">' + (c.estudiante||'') + ' · ' + (c.grado||'') +
+          ' · hace ' + dias + ' día' + (dias!==1?'s':'') + '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  // Por grado
+  var gl = document.getElementById('grado-list');
+  if (!d.por_grado || !d.por_grado.length) {
+    gl.innerHTML = '<div class="empty"><div class="empty-icon">📚</div>Sin datos por grado</div>';
+  } else {
+    gl.innerHTML = d.por_grado.map(function(g){
+      var prom = g.prom || 0;
+      var col  = prom >= 80 ? 'var(--green)' : prom >= 70 ? 'var(--orange)' : 'var(--red)';
+      var barW = Math.min(100, prom);
+      return '<div class="grado-row">' +
+        '<div class="grado-top">' +
+          '<span class="grado-name">' + (g.grado||'') + '</span>' +
+          '<div class="grado-stats">' +
+            '<span>' + (g.total||0) + ' est.</span>' +
+            '<span style="color:' + col + '">' + (prom?prom.toFixed(1):'--') + ' prom.</span>' +
+            (g.en_riesgo ? '<span style="color:var(--red)">⚠ ' + g.en_riesgo + '</span>' : '') +
+          '</div>' +
+        '</div>' +
+        '<div class="grado-bar-bg"><div class="grado-bar-fill" style="width:' + barW + '%;background:' + col + '"></div></div>' +
+      '</div>';
+    }).join('');
+  }
+
+  // Semana
+  var sp = document.getElementById('semana-panel');
+  sp.innerHTML =
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border)">' +
+    _semanaKpi('📅', k.ausencias_semana, 'Ausencias', k.ausencias_semana>5?'var(--orange)':'var(--text)') +
+    _semanaKpi('📝', k.reportes_semana, 'Reportes', k.reportes_semana>0?'var(--blue)':'var(--text)') +
+    _semanaKpi('⚠️', k.criticos, 'En alerta crítica', k.criticos>0?'var(--red)':'var(--text)') +
+    _semanaKpi('✅', k.excelentes, 'Excelentes', 'var(--green)') +
+    '</div>' +
+    '<div style="padding:12px 16px;border-top:1px solid var(--border)">' +
+      '<a href="/casos" style="display:flex;align-items:center;justify-content:space-between;' +
+        'background:var(--surface2);border:1px solid var(--border);border-radius:8px;' +
+        'padding:10px 14px;font-size:12px;color:var(--text);transition:border-color .15s"' +
+        'onmouseover="this.style.borderColor=\'rgba(255,255,255,.2)\'" ' +
+        'onmouseout="this.style.borderColor=\'var(--border)\'">' +
+        '<span><i class="fas fa-folder-open" style="margin-right:8px;color:var(--blue)"></i>Gestionar todos los casos</span>' +
+        '<i class="fas fa-arrow-right" style="color:var(--muted)"></i>' +
+      '</a>' +
+    '</div>' +
+    '<div style="padding:0 16px 12px">' +
+      '<a href="/reportes" style="display:flex;align-items:center;justify-content:space-between;' +
+        'background:var(--surface2);border:1px solid var(--border);border-radius:8px;' +
+        'padding:10px 14px;font-size:12px;color:var(--text);transition:border-color .15s"' +
+        'onmouseover="this.style.borderColor=\'rgba(255,255,255,.2)\'" ' +
+        'onmouseout="this.style.borderColor=\'var(--border)\'">' +
+        '<span><i class="fas fa-chart-line" style="margin-right:8px;color:var(--accent)"></i>Ver reportes y patrones</span>' +
+        '<i class="fas fa-arrow-right" style="color:var(--muted)"></i>' +
+      '</a>' +
+    '</div>';
+}
+
+function _semanaKpi(icon, val, lbl, col) {
+  return '<div style="background:var(--surface);padding:16px;text-align:center">' +
+    '<div style="font-size:16px;margin-bottom:4px">' + icon + '</div>' +
+    '<div style="font-size:22px;font-weight:800;color:' + col + ';font-family:DM Mono,monospace">' + val + '</div>' +
+    '<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:3px">' + lbl + '</div>' +
+    '</div>';
+}
+
+cargarTodo();
+cargarMetricasAvanzadas();
+
+function cargarMetricasAvanzadas() {
+  fetch('/api/dashboard/metricas-avanzadas')
+    .then(function(r){ return r.json(); })
+    .then(function(d){ if (!d.error) renderMetricas(d); })
+    .catch(function(){});
+}
+
+function renderMetricas(d) {
+  var NIVEL_C = {destacado:'#8BAEF8',satisfactorio:'#5B8AF7',basico:'#2661F6',en_proceso:'#BDD1FA',insuficiente:'#ef4444',sin_nota:'#4A5E7A'};
+  var NIVEL_L = {destacado:'Destacado',satisfactorio:'Satisfactorio',basico:'Básico',en_proceso:'En Proceso',insuficiente:'Insuficiente',sin_nota:'Sin nota'};
+
+  // ── Distribución niveles ──
+  var nv = d.niveles || {};
+  var total_nv = Object.values(nv).reduce(function(a,b){ return a+(b||0); }, 0);
+  var nPanel = document.getElementById('niveles-panel');
+  if (total_nv > 0) {
+    var nHtml = '<div style="display:flex;flex-direction:column;gap:8px;padding:4px 0;">';
+    ['destacado','satisfactorio','basico','en_proceso','insuficiente','sin_nota'].forEach(function(k) {
+      var cnt = nv[k] || 0;
+      var pct = total_nv > 0 ? Math.round(cnt / total_nv * 100) : 0;
+      var col = NIVEL_C[k];
+      nHtml += '<div style="display:flex;align-items:center;gap:8px;">' +
+        '<div style="width:90px;font-size:10px;color:var(--muted);text-align:right;">' + NIVEL_L[k] + '</div>' +
+        '<div style="flex:1;background:#111;border-radius:4px;height:16px;overflow:hidden;">' +
+          '<div style="width:' + pct + '%;height:100%;background:' + col + ';border-radius:4px;transition:width .5s;"></div>' +
+        '</div>' +
+        '<div style="width:36px;font-size:11px;font-weight:700;color:' + col + ';font-family:DM Mono,monospace;">' + cnt + '</div>' +
+        '<div style="width:32px;font-size:10px;color:var(--muted);">' + pct + '%</div>' +
+      '</div>';
+    });
+    nHtml += '</div>';
+    nPanel.innerHTML = nHtml;
+  } else {
+    nPanel.innerHTML = '<div class="empty"><div class="empty-icon">📊</div>Sin datos</div>';
+  }
+
+  // ── Tendencia P1→P4 ──
+  var td = d.tendencia || {};
+  var periodos = ['p1','p2','p3','p4'];
+  var vals = periodos.map(function(p){ return td[p]; });
+  var hasVals = vals.some(function(v){ return v !== null && v !== undefined; });
+  var tPanel = document.getElementById('tendencia-panel');
+  if (hasVals) {
+    var maxV = Math.max.apply(null, vals.filter(function(v){ return v; }));
+    var tHtml = '<div style="display:flex;align-items:flex-end;gap:12px;padding:8px 4px;height:120px;">';
+    periodos.forEach(function(p, i) {
+      var v = td[p];
+      if (v === null || v === undefined) {
+        tHtml += '<div style="flex:1;text-align:center;"><div style="color:#333;font-size:10px;">—</div><div style="background:#111;border-radius:4px;height:4px;margin-top:4px;"></div><div style="font-size:10px;color:#555;margin-top:4px;">' + p.toUpperCase() + '</div></div>';
+        return;
+      }
+      var h = Math.round((v / (maxV || 100)) * 80);
+      var col = v >= 80 ? '#8BAEF8' : v >= 70 ? '#5B8AF7' : '#ef4444';
+      tHtml += '<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;">' +
+        '<div style="font-size:12px;font-weight:800;color:' + col + ';font-family:DM Mono,monospace;margin-bottom:4px;">' + v + '</div>' +
+        '<div style="width:100%;height:' + h + 'px;background:' + col + ';border-radius:4px 4px 0 0;opacity:.85;"></div>' +
+        '<div style="font-size:10px;color:var(--muted);margin-top:4px;font-weight:700;">' + p.toUpperCase() + '</div>' +
+      '</div>';
+    });
+    tHtml += '</div><div style="font-size:10px;color:var(--muted);text-align:center;padding-top:4px;">Promedio general del ciclo por período</div>';
+    tPanel.innerHTML = tHtml;
+  } else {
+    tPanel.innerHTML = '<div class="empty"><div class="empty-icon">📈</div>Sin datos de períodos</div>';
+  }
+
+  // ── Por mención ──
+  var mPanel = document.getElementById('mencion-panel');
+  if (d.por_mencion && d.por_mencion.length) {
+    var mHtml = '<div style="display:flex;flex-direction:column;gap:1px;">';
+    d.por_mencion.forEach(function(m) {
+      var prom = m.promedio || 0;
+      var col = prom >= 80 ? 'var(--green)' : prom >= 70 ? 'var(--orange)' : 'var(--red)';
+      var aprobPct = m.total > 0 ? Math.round((m.aprobados || 0) / m.total * 100) : 0;
+      mHtml += '<div style="display:flex;align-items:center;justify-content:space-between;' +
+               'padding:8px 4px;border-bottom:1px solid #1a1a1a;">' +
+        '<div>' +
+          '<div style="font-size:12px;font-weight:600;">' + (m.grado||'') + ' · ' + (m.mencion||'—') + '</div>' +
+          '<div style="font-size:10px;color:var(--muted);">' + (m.total||0) + ' estudiantes · ' + aprobPct + '% aprobación</div>' +
+        '</div>' +
+        '<div style="font-size:18px;font-weight:800;color:' + col + ';font-family:DM Mono,monospace;">' + (prom ? prom.toFixed(1) : '—') + '</div>' +
+      '</div>';
+    });
+    mHtml += '</div>';
+    mPanel.innerHTML = mHtml;
+  } else {
+    mPanel.innerHTML = '<div class="empty"><div class="empty-icon">🎓</div>Sin datos</div>';
+  }
+
+  // ── Asistencia por grado ──
+  var aPanel = document.getElementById('asist-grado-panel');
+  if (d.asistencia_por_grado && d.asistencia_por_grado.length) {
+    var aHtml = '<div style="display:flex;flex-direction:column;gap:6px;padding:4px 0;">';
+    d.asistencia_por_grado.forEach(function(g) {
+      var pct = g.pct_asistencia || 0;
+      var col = pct >= 90 ? '#8BAEF8' : pct >= 80 ? '#5B8AF7' : pct >= 70 ? '#2661F6' : '#ef4444';
+      aHtml += '<div style="display:flex;align-items:center;gap:8px;">' +
+        '<div style="width:40px;font-size:10px;color:var(--muted);text-align:right;">' + (g.grado||'') + '</div>' +
+        '<div style="flex:1;background:#111;border-radius:4px;height:14px;overflow:hidden;">' +
+          '<div style="width:' + Math.min(100, pct) + '%;height:100%;background:' + col + ';border-radius:4px;"></div>' +
+        '</div>' +
+        '<div style="width:44px;font-size:11px;font-weight:700;color:' + col + ';font-family:DM Mono,monospace;">' + (pct ? pct.toFixed(1) + '%' : '—') + '</div>' +
+      '</div>';
+    });
+    aHtml += '</div><div style="font-size:10px;color:var(--muted);text-align:center;padding-top:6px;">% asistencia real registrada</div>';
+    aPanel.innerHTML = aHtml;
+  } else {
+    aPanel.innerHTML = '<div class="empty"><div class="empty-icon">📅</div>Sin registros de asistencia</div>';
+  }
+}
+
+// Auto-scroll to #periodos if hash present
+if (window.location.hash === '#periodos') {
+  setTimeout(function() {
+    var el = document.getElementById('periodos');
+    if (el) el.scrollIntoView({behavior: 'smooth', block: 'start'});
+  }, 600);
+}
+
+// -- PANEL DE BLOQUEO DE PERÍODOS -----------------------------------------
+function cargarEstadoPeriodos() {
+  fetch('/api/periodos/estado')
+    .then(function(r){ return r.json(); })
+    .then(function(d) {
+      var anioEl = document.getElementById('lock-anio');
+      if (anioEl) anioEl.textContent = d.anio_escolar || '';
+      renderPeriodos(d.periodos || {});
+    }).catch(function(){});
+}
+
+function renderPeriodos(estado) {
+  var grid = document.getElementById('periodos-grid');
+  if (!grid) return;
+  var periodos  = ['P1','P2','P3','P4'];
+  var sublabels = {P1:'1er Período',P2:'2do Período',P3:'3er Período',P4:'4to Período'};
+  grid.innerHTML = periodos.map(function(p) {
+    var bloqueado = estado[p];
+    var cls = bloqueado ? 'bloqueado' : 'abierto';
+    var icon = bloqueado ? '🔒' : '🔓';
+    var statusCls = bloqueado ? 'lock' : 'open';
+    var statusTxt = bloqueado ? 'Bloqueado -- Solo coord/directora' : 'Abierto -- Profesores pueden editar';
+    var btnCls = bloqueado ? 'btn-desbloquear' : 'btn-bloquear';
+    var btnTxt = bloqueado ? 'Desbloquear período' : 'Bloquear período';
+    return '<div class="periodo-card ' + cls + '">' +
+      '<div class="periodo-icon">' + icon + '</div>' +
+      '<div class="periodo-label">' + p + '</div>' +
+      '<div class="periodo-sublabel">' + sublabels[p] + '</div>' +
+      '<div class="periodo-status ' + statusCls + '">' + statusTxt + '</div>' +
+      '<button class="btn-periodo ' + btnCls + '" ' +
+        'onclick="togglePeriodo(\'' + p + '\',' + bloqueado + ')">' +
+        btnTxt +
+      '</button>' +
+    '</div>';
+  }).join('');
+}
+
+function togglePeriodo(periodo, estaBloqueado) {
+  var url = estaBloqueado ? '/api/periodos/desbloquear' : '/api/periodos/bloquear';
+  var msg = estaBloqueado
+    ? '¿Desbloquear ' + periodo + '? Los profesores podrán modificar calificaciones.'
+    : '¿Bloquear ' + periodo + '? Los profesores NO podrán modificar calificaciones.';
+
+  if (!confirm(msg)) return;
+
+  var body = {periodo: periodo};
+  if (!estaBloqueado) {
+    body.motivo = 'Cierre de ' + periodo + ' -- ' + new Date().toLocaleDateString('es-DO');
+  }
+
+  fetch(url, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(body)
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d) {
+    var msgEl = document.getElementById('lock-msg');
+    if (msgEl) {
+      msgEl.textContent = d.mensaje || (d.error ? '⚠ ' + d.error : '');
+      msgEl.style.display = 'block';
+      msgEl.style.background = d.error ? 'rgba(185,28,28,.08)' : 'rgba(55,138,221,.08)';
+      msgEl.style.border = d.error ? '1px solid rgba(185,28,28,.25)' : '1px solid rgba(55,138,221,.25)';
+      msgEl.style.color = d.error ? '#B91C1C' : 'var(--accent)';
+      setTimeout(function(){ msgEl.style.display = 'none'; }, 4000);
+    }
+    if (!d.error) cargarEstadoPeriodos();
+  }).catch(function(err){
+    var msgEl = document.getElementById('lock-msg');
+    if (msgEl) {
+      msgEl.textContent = '⚠ Error de conexión: ' + err.message;
+      msgEl.style.display = 'block';
+      msgEl.style.background = 'rgba(185,28,28,.08)';
+      msgEl.style.border = '1px solid rgba(185,28,28,.25)';
+      msgEl.style.color = '#B91C1C';
+    }
+  });
+}
+
+// Load on init
+cargarTodo = (function(_orig) {
+  return function() {
+    _orig();
+    cargarEstadoPeriodos();
+  };
+})(cargarTodo);
+cargarEstadoPeriodos();
+
+</script>
+<script>
+
+// ── Notificaciones ─────────────────────────────────────────────────────────
+var _notifOpen = false;
+var _notifPanelLoaded = false;
+
+function toggleNotifPanel() {
+  _notifOpen = !_notifOpen;
+  document.getElementById('notif-panel').style.display = _notifOpen ? 'block' : 'none';
+  if (_notifOpen && !_notifPanelLoaded) {
+    cargarNotificaciones();
+    _notifPanelLoaded = true;
+  }
+}
+
+document.addEventListener('click', function(e) {
+  var wrap = document.getElementById('notif-wrap');
+  if (wrap && !wrap.contains(e.target) && _notifOpen) {
+    _notifOpen = false;
+    document.getElementById('notif-panel').style.display = 'none';
+  }
+});
+
+async function cargarNotificaciones() {
+  try {
+    var r = await fetch('/api/notificaciones?limit=20');
+    var d = await r.json();
+    renderNotifPanel(d.notificaciones || []);
+    actualizarBadge(d.no_leidas || 0);
+  } catch(e) {
+    document.getElementById('notif-lista').innerHTML =
+      '<div style="text-align:center;padding:16px;color:var(--muted);font-size:12px;">Error al cargar</div>';
+  }
+}
+
+function renderNotifPanel(notifs) {
+  var el = document.getElementById('notif-lista');
+  if (!notifs.length) {
+    el.innerHTML = '<div style="text-align:center;padding:24px;color:var(--muted);font-size:12px;">Sin notificaciones nuevas</div>';
+    return;
+  }
+  var TIPO_ICON = { riesgo_nota:'&#9888;', riesgo_asistencia:'&#128197;', caso_nuevo:'&#129504;', sistema:'&#8505;' };
+  el.innerHTML = notifs.map(function(n) {
+    var op  = n.leida ? 'opacity:.55;' : '';
+    var icon = TIPO_ICON[n.tipo] || '&#128276;';
+    var fecha = (n.creado || '').slice(0,16).replace('T',' ');
+    var fw   = n.leida ? '400' : '700';
+    var dot  = n.leida ? '' : '<span style="width:7px;height:7px;border-radius:50%;background:#ef4444;flex-shrink:0;margin-top:4px;"></span>';
+    var urlEnc = JSON.stringify(n.url || '');
+    return '<div class="notif-item" onclick="notifClick(' + n.id + ',' + urlEnc + ')" '
+         + 'style="padding:11px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s;' + op + '">'
+         + '<div style="display:flex;align-items:flex-start;gap:8px;">'
+         +   '<span style="font-size:14px;flex-shrink:0;margin-top:1px;">' + icon + '</span>'
+         +   '<div style="flex:1;min-width:0;">'
+         +     '<div style="font-size:12px;font-weight:' + fw + ';color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + n.titulo + '</div>'
+         +     '<div style="font-size:11px;color:var(--muted);margin-top:2px;line-height:1.4;">' + n.mensaje + '</div>'
+         +     '<div style="font-size:9px;color:var(--muted);margin-top:4px;">' + fecha + '</div>'
+         +   '</div>' + dot + '</div></div>';
+  }).join('');
+  el.querySelectorAll('.notif-item').forEach(function(item) {
+    item.addEventListener('mouseenter', function() { this.style.background = 'var(--hover)'; });
+    item.addEventListener('mouseleave', function() { this.style.background = ''; });
+  });
+}
+
+function notifClick(nid, url) {
+  marcarLeida(nid);
+  if (url) window.location.href = url;
+}
+
+function actualizarBadge(n) {
+  var badge = document.getElementById('notif-badge');
+  if (!badge) return;
+  if (n > 0) {
+    badge.textContent = n > 99 ? '99+' : n;
+    badge.style.display = 'block';
+    document.getElementById('notif-btn').style.borderColor = 'rgba(239,68,68,.4)';
+  } else {
+    badge.style.display = 'none';
+    document.getElementById('notif-btn').style.borderColor = 'var(--border)';
+  }
+}
+
+async function marcarLeida(nid) {
+  try {
+    await fetch('/api/notificaciones/' + nid + '/leer', { method: 'POST' });
+    _notifPanelLoaded = false;
+    cargarNotificaciones();
+  } catch(e) {}
+}
+
+async function marcarTodasLeidas() {
+  try {
+    await fetch('/api/notificaciones/leer-todas', { method: 'POST' });
+    _notifPanelLoaded = false;
+    cargarNotificaciones();
+  } catch(e) {}
+}
+
+// Polling badge cada 30s
+(function pollBadge() {
+  fetch('/api/notificaciones/conteo')
+    .then(function(r){ return r.json(); })
+    .then(function(d){ actualizarBadge(d.no_leidas || 0); })
+    .catch(function(){});
+  setTimeout(pollBadge, 30000);
+})();
+
+// ── CARGAR NOTAS EXCEL ───────────────────────────────────────────────────
+function coordSetStatus(elId, msg, isErr) {
+  var el = document.getElementById(elId);
+  if (!el) return;
+  el.textContent = msg;
+  el.style.display = 'block';
+  el.style.background = isErr ? 'rgba(255,107,107,.08)' : 'rgba(34,197,94,.08)';
+  el.style.color = isErr ? '#ef4444' : '#8BAEF8';
+}
+
+function coordCargarBoletin(input) {
+  if (!input.files[0]) return;
+  var fd = new FormData();
+  fd.append('file', input.files[0]);
+  coordSetStatus('coord-status-boletin', '⏳ Procesando boletín...', false);
+  var csrfToken = (document.cookie.match(/csrf_token=([^;]+)/) || [])[1] || '';
+  fetch('/api/cargar-boletin', { method: 'POST', headers: { 'X-CSRF-Token': T }, body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.ok) {
+        coordSetStatus('coord-status-boletin',
+          '✓ ' + (d.mensaje || (d.estudiantes_procesados + ' estudiantes, ' + d.materias_guardadas + ' calificaciones.')), false);
+      } else {
+        coordSetStatus('coord-status-boletin', '✗ ' + (d.error || 'Error al cargar el boletín'), true);
+      }
+      input.value = '';
+    })
+    .catch(function(e) { coordSetStatus('coord-status-boletin', '✗ Error: ' + e.message, true); });
+}
+
+function coordCargarRegistro(input) {
+  if (!input.files[0]) return;
+  var fd = new FormData();
+  fd.append('file', input.files[0]);
+  coordSetStatus('coord-status-registro', '⏳ Detectando formato...', false);
+  fetch('/api/cargar-plantilla-bj', { method: 'POST', headers: { 'X-CSRF-Token': T }, body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.ok) {
+        coordSetStatus('coord-status-registro', '✓ ' + (d.mensaje || 'Registro cargado'), false);
+      } else {
+        var fd2 = new FormData();
+        fd2.append('file', input.files[0]);
+        fetch('/api/cargar-registro', { method: 'POST', headers: { 'X-CSRF-Token': T }, body: fd2 })
+          .then(function(r2) { return r2.json(); })
+          .then(function(d2) {
+            if (d2.ok || d2.status === 'success') {
+              coordSetStatus('coord-status-registro', '✓ ' + (d2.mensaje || 'Registro cargado'), false);
+            } else {
+              coordSetStatus('coord-status-registro', '✗ ' + (d2.error || d.error || 'Formato no reconocido'), true);
+            }
+          });
+      }
+      input.value = '';
+    })
+    .catch(function(e) { coordSetStatus('coord-status-registro', '✗ Error: ' + e.message, true); });
+}
+
+// ── PROMOCION ────────────────────────────────────────────────────────────────
+var _promData = [];
+
+function promCargar() {
+  var grado = document.getElementById('prom-grado').value;
+  var anio  = document.getElementById('prom-anio').value;
+  if (!grado) { alert('Selecciona un grado'); return; }
+
+  var emptyEl   = document.getElementById('prom-empty');
+  var tablaWrap = document.getElementById('prom-tabla-wrap');
+  var kpisEl    = document.getElementById('prom-kpis');
+  var ctrlEl    = document.getElementById('prom-controles');
+  var footerEl  = document.getElementById('prom-footer');
+
+  emptyEl.style.display   = 'block';
+  emptyEl.innerHTML        = '<i class="fas fa-spinner fa-spin"></i> Calculando...';
+  tablaWrap.style.display  = 'none';
+  kpisEl.style.display     = 'none';
+  ctrlEl.style.display     = 'none';
+  footerEl.style.display   = 'none';
+
+  fetch('/api/coordinador/promocion-preview?grado=' + encodeURIComponent(grado) + '&anio_escolar=' + encodeURIComponent(anio))
+    .then(function(r){ return r.json(); })
+    .then(function(d) {
+      if (!d.ok) { emptyEl.textContent = 'Error: ' + d.error; return; }
+      _promData = d.estudiantes;
+
+      document.getElementById('pk-total').textContent   = d.total;
+      document.getElementById('pk-prom').textContent    = d.resumen.promovidos;
+      document.getElementById('pk-cond').textContent    = d.resumen.condicionados;
+      document.getElementById('pk-noprom').textContent  = d.resumen.no_promovidos;
+
+      kpisEl.style.display   = 'flex';
+      ctrlEl.style.display   = 'flex';
+      footerEl.style.display = 'flex';
+
+      var colors = { PROMOVIDO: '#22c55e', CONDICIONADO: '#fbbf24', NO_PROMOVIDO: '#ef4444' };
+      var labels = { PROMOVIDO: 'PROMOVIDO', CONDICIONADO: 'CONDICIONADO', NO_PROMOVIDO: 'NO PROMOVIDO' };
+
+      var html = _promData.map(function(e) {
+        var puede  = e.estado !== 'NO_PROMOVIDO';
+        var badge  = '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;background:' + colors[e.estado] + '22;color:' + colors[e.estado] + ';border:1px solid ' + colors[e.estado] + '44">' + labels[e.estado] + '</span>';
+        var proc   = e.ya_procesado ? '<span style="font-size:9px;color:var(--muted)"> (ya procesado)</span>' : '';
+        return '<tr style="border-bottom:1px solid var(--border)">' +
+          '<td style="padding:7px 8px"><input type="checkbox" class="prom-chk" data-id="' + e.id + '" ' + (puede ? '' : 'disabled') + (puede ? 'checked' : '') + '></td>' +
+          '<td style="padding:7px 8px;font-weight:600">' + e.apellido + ', ' + e.nombre + proc + '</td>' +
+          '<td style="padding:7px 8px;text-align:center">' + (e.seccion || '-') + '</td>' +
+          '<td style="padding:7px 8px;text-align:center;font-size:11px;color:var(--muted)">' + (e.mencion || '-') + '</td>' +
+          '<td style="padding:7px 8px;text-align:center;color:#22c55e;font-weight:700">' + e.mats_aprobadas + '/' + e.mats_total + '</td>' +
+          '<td style="padding:7px 8px;text-align:center;color:' + (e.mats_reprobadas > 0 ? '#ef4444' : 'var(--muted)') + ';font-weight:700">' + e.mats_reprobadas + '</td>' +
+          '<td style="padding:7px 8px;font-size:11px;color:#ef4444">' + (e.reprobadas.length ? e.reprobadas.join(', ') : '-') + '</td>' +
+          '<td style="padding:7px 8px;text-align:center">' + badge + '</td>' +
+          '</tr>';
+      }).join('');
+
+      document.getElementById('prom-tbody').innerHTML = html;
+      tablaWrap.style.display = 'block';
+      emptyEl.style.display   = 'none';
+    })
+    .catch(function(e) { emptyEl.textContent = 'Error: ' + e.message; });
+}
+
+function promSelAll(sel) {
+  document.querySelectorAll('.prom-chk:not([disabled])').forEach(function(c){ c.checked = sel; });
+}
+
+function promEjecutar() {
+  var grado = document.getElementById('prom-grado').value;
+  var anio  = document.getElementById('prom-anio').value;
+  var obs   = document.getElementById('prom-obs').value;
+  var ids   = Array.from(document.querySelectorAll('.prom-chk:checked')).map(function(c){ return parseInt(c.dataset.id); });
+
+  if (!ids.length) { alert('Selecciona al menos un estudiante'); return; }
+  if (!confirm('Ejecutar promocion de ' + ids.length + ' estudiante(s) de ' + grado + '? Esta accion actualiza sus grados.')) return;
+
+  var statusEl = document.getElementById('prom-exec-status');
+  statusEl.textContent = 'Procesando...';
+
+  fetch('/api/coordinador/promocion-ejecutar', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': (typeof T !== 'undefined' ? T : '') },
+    body: JSON.stringify({ grado: grado, anio_escolar: anio, estudiante_ids: ids, observacion: obs })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d) {
+    if (d.ok) {
+      statusEl.innerHTML = '<span style="color:#22c55e;font-weight:700">' + d.mensaje + '</span>';
+      if (d.errores && d.errores.length) {
+        statusEl.innerHTML += '<br><span style="color:#ef4444;font-size:11px">' + d.errores.join(' | ') + '</span>';
+      }
+      promCargar();
+    } else {
+      statusEl.innerHTML = '<span style="color:#ef4444">Error: ' + d.error + '</span>';
+    }
+  })
+  .catch(function(e) { statusEl.textContent = 'Error: ' + e.message; });
+}
+
+</script>
+</body>
+</html>

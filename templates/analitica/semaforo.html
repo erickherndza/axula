@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Semáforo Conductual — Axula</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script>
+(function(){
+  var K='axula_theme',S=6,E=19;
+  function auto(){var h=new Date().getHours();return h>=S&&h<E?'light':'dark';}
+  function get(){try{return localStorage.getItem(K)||'auto';}catch(e){return 'auto';}}
+  function apply(p){document.documentElement.setAttribute('data-theme',p==='auto'?auto():p);}
+  apply(get());
+})();
+</script>
+<link rel="stylesheet" href="/static/theme.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;min-height:100vh}
+
+/* NAV */
+nav{display:flex;align-items:center;gap:10px;padding:0 24px;height:50px;
+    background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+.logo{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:var(--accent);
+      letter-spacing:-.5px;text-decoration:none}
+.logo span{color:var(--muted)}
+.nav-r{margin-left:auto;display:flex;align-items:center;gap:8px}
+.nav-link{font-size:12px;color:var(--muted);text-decoration:none;
+          display:flex;align-items:center;gap:5px;padding:5px 10px;
+          border-radius:7px;transition:all .15s}
+.nav-link:hover{color:var(--text);background:var(--surface2)}
+
+main{max-width:1300px;margin:0 auto;padding:20px 24px}
+
+/* HEADER */
+.pg-header{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+.pg-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:800}
+.pg-sub{color:var(--muted);font-size:12px;margin-top:2px}
+
+/* FILTROS */
+.filtros-bar{display:flex;align-items:flex-end;gap:10px;
+             background:var(--surface);border:1px solid var(--border);
+             border-radius:10px;padding:14px 16px;margin-bottom:20px;flex-wrap:wrap}
+.filtros-bar label{font-size:11px;color:var(--muted);display:block;margin-bottom:4px}
+.filtros-bar select,.filtros-bar input{
+  height:34px;border:1px solid var(--border);border-radius:7px;
+  background:var(--bg);color:var(--text);padding:0 10px;font-size:13px;min-width:140px}
+.btn{display:inline-flex;align-items:center;gap:6px;height:34px;
+     padding:0 14px;border:none;border-radius:7px;cursor:pointer;font-size:13px;
+     font-family:'DM Sans',sans-serif;font-weight:500;transition:all .15s}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{filter:brightness(1.1)}
+.btn-outline{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+.btn-outline:hover{background:var(--accent);color:#fff}
+.btn-sm{height:28px;padding:0 10px;font-size:12px}
+
+/* SEMÁFORO RESUMEN */
+.semaforo-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:22px}
+.sem-card{border-radius:12px;padding:18px 20px;display:flex;align-items:center;gap:14px}
+.sem-card.verde{background:#d1fae5;color:#065f46;border:1px solid #6ee7b7}
+.sem-card.amarillo{background:#fef3c7;color:#92400e;border:1px solid #fcd34d}
+.sem-card.rojo{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5}
+[data-theme="dark"] .sem-card.verde{background:#064e3b;color:#6ee7b7;border-color:#065f46}
+[data-theme="dark"] .sem-card.amarillo{background:#451a03;color:#fcd34d;border-color:#92400e}
+[data-theme="dark"] .sem-card.rojo{background:#450a0a;color:#fca5a5;border-color:#991b1b}
+.sem-icon{font-size:28px;width:44px;height:44px;border-radius:50%;display:flex;
+          align-items:center;justify-content:center;background:rgba(255,255,255,.3)}
+.sem-num{font-family:'Syne',sans-serif;font-size:32px;font-weight:800;line-height:1}
+.sem-lbl{font-size:12px;opacity:.8;margin-top:2px}
+
+/* TABLA */
+.tabla-wrap{background:var(--surface);border:1px solid var(--border);
+            border-radius:10px;overflow:hidden}
+.tabla-hdr{display:flex;align-items:center;justify-content:space-between;
+           padding:14px 18px;border-bottom:1px solid var(--border)}
+.tabla-hdr h3{font-size:14px;font-weight:600}
+table{width:100%;border-collapse:collapse}
+th{background:var(--surface2);text-align:left;padding:8px 14px;
+   font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+td{padding:9px 14px;border-top:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:var(--surface2)}
+
+/* NIVEL BADGE */
+.nivel-badge{display:inline-flex;align-items:center;gap:5px;
+             padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.nivel-badge.VERDE{background:#d1fae5;color:#065f46}
+.nivel-badge.AMARILLO{background:#fef3c7;color:#92400e}
+.nivel-badge.ROJO{background:#fee2e2;color:#991b1b}
+.nivel-badge.SIN_DATOS{background:var(--surface2);color:var(--muted)}
+[data-theme="dark"] .nivel-badge.VERDE{background:#064e3b;color:#6ee7b7}
+[data-theme="dark"] .nivel-badge.AMARILLO{background:#451a03;color:#fcd34d}
+[data-theme="dark"] .nivel-badge.ROJO{background:#450a0a;color:#fca5a5}
+
+/* BARRA SCORE */
+.score-bar{display:flex;align-items:center;gap:8px}
+.bar-track{flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden}
+.bar-fill{height:100%;border-radius:3px;transition:width .3s}
+.bar-fill.VERDE{background:#10b981}
+.bar-fill.AMARILLO{background:#f59e0b}
+.bar-fill.ROJO{background:#ef4444}
+.bar-fill.SIN_DATOS{background:var(--muted)}
+.score-num{font-family:'DM Mono',monospace;font-size:12px;width:32px;text-align:right}
+
+/* TAGS */
+.tags-cell{display:flex;gap:6px;flex-wrap:wrap}
+.tag-pip{font-size:11px;padding:2px 8px;border-radius:20px}
+.tag-pos{background:#d1fae5;color:#065f46}
+.tag-neg{background:#fee2e2;color:#991b1b}
+[data-theme="dark"] .tag-pos{background:#064e3b;color:#6ee7b7}
+[data-theme="dark"] .tag-neg{background:#450a0a;color:#fca5a5}
+
+/* EMPTY STATE */
+.empty{text-align:center;padding:60px 20px;color:var(--muted)}
+.empty i{font-size:36px;margin-bottom:12px;display:block;opacity:.4}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:500;
+               display:none;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal-box{background:var(--surface);border:1px solid var(--border);border-radius:14px;
+           padding:24px;width:500px;max-width:95vw;max-height:90vh;overflow-y:auto}
+.modal-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;margin-bottom:16px}
+.tag-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.tag-btn{padding:5px 12px;border-radius:20px;border:1px solid var(--border);
+         cursor:pointer;font-size:12px;background:var(--bg);color:var(--text);transition:all .15s}
+.tag-btn.pos.sel{background:#d1fae5;color:#065f46;border-color:#10b981}
+.tag-btn.neg.sel{background:#fee2e2;color:#991b1b;border-color:#ef4444}
+.pol-row{display:flex;gap:8px;margin-bottom:16px}
+.pol-opt{flex:1;padding:8px;border:2px solid var(--border);border-radius:8px;
+         cursor:pointer;text-align:center;font-size:13px;transition:all .15s}
+.pol-opt.sel.positivo{border-color:#10b981;background:#d1fae5;color:#065f46}
+.pol-opt.sel.negativo{border-color:#ef4444;background:#fee2e2;color:#991b1b}
+.pol-opt.sel.neutro{border-color:var(--accent);background:var(--surface2)}
+
+/* SPINNER */
+.spin{display:none;width:18px;height:18px;border:2px solid var(--border);
+      border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading .spin{display:inline-block}
+
+/* Toast */
+#toast{position:fixed;bottom:20px;right:20px;padding:10px 18px;border-radius:8px;
+       font-size:13px;font-weight:500;z-index:999;opacity:0;transform:translateY(10px);
+       transition:all .25s;pointer-events:none}
+#toast.show{opacity:1;transform:none}
+#toast.ok{background:#10b981;color:#fff}
+#toast.err{background:#ef4444;color:#fff}
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="logo" href="/"><span>Tecno</span>Axula</a>
+  <a class="nav-link" href="/profesor"><i class="fa fa-chalkboard-teacher"></i> Portal Profesor</a>
+  <a class="nav-link" href="/"><i class="fa fa-home"></i> Inicio</a>
+  <div class="nav-r">
+    <span style="font-size:12px;color:var(--muted)">{{ usuario }}</span>
+    <a class="nav-link" href="/logout"><i class="fa fa-sign-out-alt"></i></a>
+  </div>
+</nav>
+
+<main>
+  <!-- Header -->
+  <div class="pg-header">
+    <div style="width:40px;height:40px;border-radius:10px;background:#185FA522;
+                display:flex;align-items:center;justify-content:center;font-size:20px">
+      🚦
+    </div>
+    <div>
+      <div class="pg-title">Semáforo Conductual</div>
+      <div class="pg-sub">Año escolar {{ anio }} · Motor conductual Fase 1</div>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <form class="filtros-bar" method="GET" action="/analitica/semaforo" id="filtros-form">
+    <div>
+      <label>Grado</label>
+      <select name="grado" id="sel-grado" onchange="filtrarSecciones()">
+        <option value="">-- Grado --</option>
+        {% set grados_vistos = [] %}
+        {% for s in secciones %}
+          {% if s.grado not in grados_vistos %}
+            {% set _ = grados_vistos.append(s.grado) %}
+            <option value="{{ s.grado }}" {% if s.grado == grado_sel %}selected{% endif %}>{{ s.grado }}</option>
+          {% endif %}
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label>Sección</label>
+      <select name="seccion" id="sel-seccion">
+        <option value="">-- Sección --</option>
+        {% for s in secciones %}
+          <option value="{{ s.seccion }}"
+                  data-grado="{{ s.grado }}"
+                  {% if s.grado == grado_sel and s.seccion == seccion_sel %}selected{% endif %}>
+            {{ s.seccion }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label>&nbsp;</label>
+      <button type="submit" class="btn btn-primary"><i class="fa fa-search"></i> Ver sección</button>
+    </div>
+    {% if grado_sel and seccion_sel %}
+    <div>
+      <label>&nbsp;</label>
+      <button type="button" class="btn btn-outline" onclick="recalcular()">
+        <span class="spin"></span>
+        <i class="fa fa-sync"></i> Recalcular
+      </button>
+    </div>
+    {% endif %}
+  </form>
+
+  {% if datos %}
+  <!-- Semáforo resumen -->
+  <div class="semaforo-cards">
+    <div class="sem-card verde">
+      <div class="sem-icon">✅</div>
+      <div>
+        <div class="sem-num">{{ datos.resumen.VERDE }}</div>
+        <div class="sem-lbl">VERDE · Score &gt;70</div>
+      </div>
+    </div>
+    <div class="sem-card amarillo">
+      <div class="sem-icon">⚠️</div>
+      <div>
+        <div class="sem-num">{{ datos.resumen.AMARILLO }}</div>
+        <div class="sem-lbl">AMARILLO · Score 50–70</div>
+      </div>
+    </div>
+    <div class="sem-card rojo">
+      <div class="sem-icon">🔴</div>
+      <div>
+        <div class="sem-num">{{ datos.resumen.ROJO }}</div>
+        <div class="sem-lbl">ROJO · Score &lt;50</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabla -->
+  <div class="tabla-wrap">
+    <div class="tabla-hdr">
+      <h3>{{ grado_sel }} – Sección {{ seccion_sel }}
+          <span style="color:var(--muted);font-weight:400;font-size:12px">
+            ({{ datos.estudiantes|length }} estudiantes)
+          </span>
+      </h3>
+      <div style="display:flex;gap:8px">
+        {% if datos.resumen.SIN_DATOS is defined and datos.resumen.SIN_DATOS > 0 %}
+        <span style="font-size:11px;color:var(--muted);align-self:center">
+          {{ datos.resumen.SIN_DATOS }} sin datos — usa Recalcular
+        </span>
+        {% endif %}
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Estudiante</th>
+          <th>Score total</th>
+          <th>Notas (40%)</th>
+          <th>Asistencia (35%)</th>
+          <th>Tags (25%)</th>
+          <th>Nivel</th>
+          <th>Registros</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for est in datos.estudiantes %}
+        <tr>
+          <td>
+            <div style="font-weight:500">{{ est.nombre }} {{ est.apellido }}</div>
+            <div style="font-size:11px;color:var(--muted)">ID {{ est.id }}</div>
+          </td>
+          <td>
+            {% set nivel = est.nivel or 'SIN_DATOS' %}
+            {% set score = est.score_total %}
+            <div class="score-bar">
+              <div class="bar-track">
+                <div class="bar-fill {{ nivel }}"
+                     style="width:{{ score or 0 }}%"></div>
+              </div>
+              <div class="score-num">{{ '%.0f'|format(score) if score is not none else '—' }}</div>
+            </div>
+          </td>
+          <td class="score-num">{{ '%.0f'|format(est.score_notas) if est.score_notas is not none else '—' }}</td>
+          <td class="score-num">{{ '%.0f'|format(est.score_asistencia) if est.score_asistencia is not none else '—' }}</td>
+          <td>
+            <div class="tags-cell">
+              {% if est.tags_positivos %}
+              <span class="tag-pip tag-pos">+{{ est.tags_positivos }}</span>
+              {% endif %}
+              {% if est.tags_negativos %}
+              <span class="tag-pip tag-neg">−{{ est.tags_negativos }}</span>
+              {% endif %}
+              {% if not est.tags_positivos and not est.tags_negativos %}
+              <span style="color:var(--muted);font-size:11px">—</span>
+              {% endif %}
+            </div>
+          </td>
+          <td>
+            <span class="nivel-badge {{ nivel }}">
+              {% if nivel == 'VERDE' %}✅{% elif nivel == 'AMARILLO' %}⚠️{% elif nivel == 'ROJO' %}🔴{% else %}—{% endif %}
+              {{ nivel }}
+            </span>
+          </td>
+          <td style="color:var(--muted)">{{ est.total_registros or 0 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Calculado en -->
+  {% if datos.estudiantes and datos.estudiantes[0].calculado_en %}
+  <div style="text-align:right;font-size:11px;color:var(--muted);margin-top:8px">
+    Última actualización: {{ datos.estudiantes[0].calculado_en[:16] }}
+  </div>
+  {% endif %}
+
+  {% elif grado_sel and seccion_sel %}
+  <div class="empty">
+    <i class="fa fa-circle-notch fa-spin"></i>
+    Sin datos para {{ grado_sel }} – {{ seccion_sel }}. Usa <b>Recalcular</b>.
+  </div>
+
+  {% else %}
+  <div class="empty">
+    <i class="fa fa-traffic-light"></i>
+    Selecciona un grado y sección para ver el semáforo conductual.
+  </div>
+  {% endif %}
+</main>
+
+<div id="toast"></div>
+
+<script>
+const GRADO_SEL  = "{{ grado_sel }}";
+const SECCION_SEL = "{{ seccion_sel }}";
+const ANIO       = "{{ anio }}";
+
+// Filtrar opciones de sección según grado
+function filtrarSecciones() {
+  const grado = document.getElementById('sel-grado').value;
+  const selSec = document.getElementById('sel-seccion');
+  Array.from(selSec.options).forEach(opt => {
+    if (!opt.value) return;
+    opt.hidden = opt.dataset.grado !== grado;
+  });
+  // Reset selección si no coincide
+  if (selSec.options[selSec.selectedIndex]?.dataset.grado !== grado) {
+    selSec.value = '';
+  }
+}
+
+// Init filtro al cargar
+if (GRADO_SEL) filtrarSecciones();
+
+// Recalcular sección
+async function recalcular() {
+  const btn = document.querySelector('[onclick="recalcular()"]');
+  btn.classList.add('loading');
+  btn.disabled = true;
+
+  try {
+    const res = await fetch('/analitica/api/recalcular', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': document.cookie.match(/csrf_token=([^;]+)/)?.[1] || ''
+      },
+      body: JSON.stringify({ grado: GRADO_SEL, seccion: SECCION_SEL, anio: ANIO })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      toast(`✅ Recalculados ${data.calculados} estudiantes`, 'ok');
+      setTimeout(() => location.reload(), 1200);
+    } else {
+      toast('❌ ' + (data.error || 'Error'), 'err');
+    }
+  } catch(e) {
+    toast('❌ Error de red', 'err');
+  } finally {
+    btn.classList.remove('loading');
+    btn.disabled = false;
+  }
+}
+
+function toast(msg, type='ok') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show ' + type;
+  setTimeout(() => t.className = '', 3000);
+}
+</script>
+</body>
+</html>

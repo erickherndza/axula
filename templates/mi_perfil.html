@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Mi Perfil — Axula</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="/static/theme.css">
+
+<!-- CSRF Token -->
+<script>
+(function(){
+  var CSRF_TOKEN = "{{ csrf_token }}";
+  var _orig = window.fetch;
+  window.fetch = function(url,opts){
+    opts = opts||{};
+    var m=(opts.method||"GET").toUpperCase();
+    if(m!=="GET"&&m!=="HEAD"&&m!=="OPTIONS"){
+      opts.headers=opts.headers||{};
+      if(opts.headers instanceof Headers) opts.headers.set("X-CSRF-Token",CSRF_TOKEN);
+      else opts.headers["X-CSRF-Token"]=CSRF_TOKEN;
+    }
+    return _orig.apply(this,[url,opts]);
+  };
+})();
+</script>
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh}
+
+/* NAV */
+nav{display:flex;align-items:center;gap:10px;padding:0 24px;height:50px;
+    background:var(--surface);border-bottom:1px solid var(--border);
+    position:sticky;top:0;z-index:100}
+.logo{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;
+      color:var(--accent);text-decoration:none;letter-spacing:-.5px}
+.logo span{color:var(--muted)}
+.nav-r{margin-left:auto;display:flex;gap:8px;align-items:center}
+.nav-btn{display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:8px;
+         border:1px solid var(--border);background:transparent;color:var(--muted);
+         font-size:12px;cursor:pointer;text-decoration:none;transition:all .15s;
+         font-family:'DM Sans',sans-serif}
+.nav-btn:hover{color:var(--text);border-color:var(--accent)}
+.nav-btn.danger{color:#ff6b6b}
+.nav-btn.danger:hover{background:rgba(255,107,107,.1);border-color:#ff6b6b}
+
+/* LAYOUT */
+main{max-width:1100px;margin:0 auto;padding:28px 24px}
+
+/* HERO */
+.hero{display:flex;gap:28px;align-items:flex-start;
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:16px;padding:28px;margin-bottom:24px;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;
+              border-radius:16px 16px 0 0}
+.hero.dir::before{background:linear-gradient(90deg,#378ADD,#00b4d8)}
+.hero.coord::before{background:linear-gradient(90deg,#2e75b6,#00b4d8)}
+.hero.psico::before{background:linear-gradient(90deg,#b44be8,#e040fb)}
+.hero.prof::before{background:linear-gradient(90deg,#ff9f60,#f7c948)}
+.hero.admin::before{background:linear-gradient(90deg,#60b8f0,#00b4d8)}
+
+.avatar-wrap{position:relative;flex-shrink:0}
+.avatar{width:96px;height:96px;border-radius:50%;
+        display:flex;align-items:center;justify-content:center;
+        font-family:'Syne',sans-serif;font-size:36px;font-weight:800;
+        background:rgba(55,138,221,.15);color:var(--accent);
+        border:3px solid var(--accent)}
+.avatar.dir{background:rgba(55,138,221,.15);color:#378ADD;border-color:#378ADD}
+.avatar.coord{background:rgba(46,117,182,.15);color:#2e75b6;border-color:#2e75b6}
+.avatar.psico{background:rgba(180,75,232,.15);color:#b44be8;border-color:#b44be8}
+.avatar.prof{background:rgba(255,159,96,.15);color:#ff9f60;border-color:#ff9f60}
+.avatar.admin{background:rgba(96,184,240,.15);color:#60b8f0;border-color:#60b8f0}
+
+.avatar-edit{position:absolute;bottom:0;right:0;width:26px;height:26px;
+             border-radius:50%;background:var(--accent);border:2px solid var(--bg);
+             display:flex;align-items:center;justify-content:center;
+             font-size:10px;color:#000;cursor:pointer;transition:transform .2s}
+.avatar-edit:hover{transform:scale(1.1)}
+
+.hero-info{flex:1;min-width:0}
+.hero-nombre{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;
+             margin-bottom:4px;line-height:1.1}
+.hero-cargo{font-size:13px;font-weight:600;color:var(--muted);margin-bottom:12px;
+            display:flex;align-items:center;gap:8px}
+.badge-rol{padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;
+           text-transform:uppercase;letter-spacing:.5px}
+.br-dir{background:rgba(55,138,221,.15);color:#378ADD}
+.br-coord{background:rgba(46,117,182,.15);color:#60b8f0}
+.br-psico{background:rgba(180,75,232,.15);color:#b44be8}
+.br-prof{background:rgba(255,159,96,.15);color:#ff9f60}
+.br-admin{background:rgba(96,184,240,.15);color:#60b8f0}
+
+.hero-meta{display:flex;flex-wrap:wrap;gap:16px;font-size:12px;color:var(--muted)}
+.hero-meta span{display:flex;align-items:center;gap:5px}
+.hero-meta i{font-size:11px;color:var(--accent)}
+
+.hero-actions{display:flex;flex-direction:column;gap:8px;flex-shrink:0}
+.btn-edit{padding:8px 16px;border-radius:9px;background:var(--accent);
+          border:none;color:#000;font-size:12px;font-weight:700;
+          cursor:pointer;font-family:'DM Sans',sans-serif;
+          display:flex;align-items:center;gap:6px;transition:all .15s}
+.btn-edit:hover{background:#d8ff70;transform:translateY(-1px)}
+.btn-pwd{padding:8px 16px;border-radius:9px;background:transparent;
+         border:1px solid var(--border);color:var(--muted);font-size:12px;
+         cursor:pointer;font-family:'DM Sans',sans-serif;
+         display:flex;align-items:center;gap:6px;transition:all .15s}
+.btn-pwd:hover{border-color:var(--accent);color:var(--accent)}
+
+/* GRID PRINCIPAL */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.grid.triple{grid-template-columns:1fr 1fr 1fr}
+.grid.full{grid-template-columns:1fr}
+
+/* CARD */
+.card{background:var(--surface);border:1px solid var(--border);
+      border-radius:12px;padding:20px}
+.card-title{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;
+            text-transform:uppercase;letter-spacing:.6px;color:var(--muted);
+            margin-bottom:14px;display:flex;align-items:center;gap:7px}
+.card-title i{color:var(--accent)}
+
+/* KPI STATS */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+.kpi{background:var(--surface);border:1px solid var(--border);
+     border-radius:12px;padding:16px;text-align:center}
+.kpi-n{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;
+       color:var(--accent);line-height:1}
+.kpi-l{font-size:10px;color:var(--muted);margin-top:4px}
+
+/* FORM */
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-label{font-size:11px;font-weight:600;color:var(--muted);
+            text-transform:uppercase;letter-spacing:.4px}
+.form-input{background:var(--surface2);border:1px solid var(--border);
+            color:var(--text);font-size:13px;border-radius:8px;
+            padding:9px 12px;font-family:'DM Sans',sans-serif;
+            transition:border .15s;outline:none}
+.form-input:focus{border-color:var(--accent)}
+.form-input:disabled{opacity:.5;cursor:not-allowed}
+.form-textarea{background:var(--surface2);border:1px solid var(--border);
+               color:var(--text);font-size:13px;border-radius:8px;
+               padding:9px 12px;font-family:'DM Sans',sans-serif;
+               transition:border .15s;outline:none;resize:vertical;min-height:80px}
+.form-textarea:focus{border-color:var(--accent)}
+
+/* INFO FIELD (solo lectura) */
+.info-field{padding:9px 12px;background:var(--surface2);
+            border-radius:8px;font-size:13px;border:1px solid var(--border)}
+.info-label{font-size:10px;color:var(--muted);font-weight:600;
+            text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
+
+/* ACTIVIDAD */
+.act-item{display:flex;align-items:flex-start;gap:10px;
+          padding:10px 0;border-bottom:1px solid var(--border)}
+.act-item:last-child{border-bottom:none}
+.act-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.act-text{font-size:12px;line-height:1.4}
+.act-time{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace}
+
+/* PERMISSIONS */
+.perm-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
+.perm-item{display:flex;align-items:center;gap:7px;font-size:11px;padding:6px 8px;
+           border-radius:7px;background:var(--surface2)}
+.perm-ok{color:var(--success)}
+.perm-no{color:var(--muted);opacity:.5}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);
+               z-index:1000;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;
+       padding:24px;width:520px;max-width:95vw;max-height:90vh;overflow-y:auto}
+.modal-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;margin-bottom:4px}
+.modal-sub{font-size:12px;color:var(--muted);margin-bottom:18px}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.btn-save{padding:9px 20px;border-radius:9px;background:var(--accent);border:none;
+          color:#000;font-size:13px;font-weight:700;cursor:pointer;
+          font-family:'DM Sans',sans-serif}
+.btn-cancel{padding:9px 20px;border-radius:9px;background:transparent;
+            border:1px solid var(--border);color:var(--muted);font-size:13px;
+            cursor:pointer;font-family:'DM Sans',sans-serif}
+
+/* TOAST */
+#toast{position:fixed;bottom:24px;right:24px;padding:10px 18px;border-radius:10px;
+       font-size:13px;font-weight:600;opacity:0;transition:opacity .3s;
+       pointer-events:none;z-index:9999}
+#toast.ok{background:rgba(2,73,89,.9);color:#fff;border:1px solid rgba(2,73,89,.5)}
+#toast.err{background:#3d1a1a;color:#f87171;border:1px solid #7f1d1d}
+
+/* RESPONSIVE */
+@media(max-width:768px){
+  .grid,.grid.triple,.kpi-row{grid-template-columns:1fr}
+  .hero{flex-direction:column}
+  .form-row{grid-template-columns:1fr}
+  .hero-actions{flex-direction:row}
+}
+
+/* ── Bloqueo de períodos ──────────────────────────────────────────── */
+.periodos-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}
+@media(max-width:600px){.periodos-grid{grid-template-columns:repeat(2,1fr)}}
+.periodo-tile{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center}
+.periodo-tile.bloqueado{background:rgba(255,107,107,.07);border-color:rgba(255,107,107,.25)}
+.periodo-tile.abierto{background:rgba(77,255,180,.06);border-color:rgba(77,255,180,.2)}
+.pt-nombre{font-size:16px;font-weight:800;font-family:monospace;margin-bottom:5px}
+.pt-estado{font-size:12px;margin-bottom:10px;font-weight:600}
+.pt-estado.lock{color:#ff6b6b}
+.pt-estado.open{color:var(--success)}
+.pt-btn{width:100%;padding:8px;border-radius:7px;border:none;font-size:12px;font-weight:700;cursor:pointer}
+.pt-btn.bloquear{background:rgba(255,107,107,.15);color:#ff6b6b;border:1px solid rgba(255,107,107,.3)}
+.pt-btn.bloquear:hover{background:rgba(255,107,107,.3)}
+.pt-btn.desbloquear{background:rgba(77,255,180,.1);color:var(--success);border:1px solid rgba(77,255,180,.3)}
+.pt-btn.desbloquear:hover{background:rgba(77,255,180,.2)}
+.lock-anuncio{background:rgba(255,107,107,.06);border:1px solid rgba(255,107,107,.2);
+  border-left:3px solid #ff6b6b;border-radius:8px;padding:10px 14px;
+  font-size:12px;color:#ff8080;margin-top:10px;display:none}
+
+.dd-item{padding:8px 12px;border-radius:7px;font-size:13px;color:var(--text);
+  cursor:pointer;display:flex;align-items:center;gap:8px;transition:background .15s;}
+.dd-item:hover{background:var(--hover,rgba(255,255,255,.05));}
+</style>
+</head>
+<body>
+<script src="/static/theme.js"></script>
+
+<!-- NAV -->
+<nav>
+  <a href="/" class="logo">Axula</a>
+  <span style="font-size:11px;color:var(--muted);padding:3px 10px;
+              background:var(--surface2);border-radius:7px;border:1px solid var(--border)">
+    <i class="fas fa-id-card" style="color:var(--accent);margin-right:5px"></i>
+    Mi Perfil
+  </span>
+  <div class="nav-r">
+    {% if current_user.es_coord or current_user.es_directora %}
+    <a href="/usuarios" class="nav-btn"><i class="fas fa-users-cog"></i> Usuarios</a>
+    {% endif %}
+    <a href="/" class="nav-btn"><i class="fas fa-table-columns"></i> Dashboard</a>
+    <div style="position:relative" id="avatar-menu-wrap">
+      <div style="display:flex;align-items:center;gap:8px;padding:5px 10px 5px 5px;
+                  border:1px solid var(--border);border-radius:99px;background:var(--surface);
+                  cursor:pointer;user-select:none;transition:border-color .15s;"
+           onclick="toggleAvatarMenu()"
+           onmouseover="this.style.borderColor='var(--accent)'"
+           onmouseout="this.style.borderColor='var(--border)'">
+        <div style="width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;
+                    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;">
+          {{ current_user.nombre[:1].upper() if current_user and current_user.nombre else 'U' }}
+        </div>
+        <div style="max-width:80px;overflow:hidden;">
+          <div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)">{{ current_user.nombre if current_user else 'Usuario' }}</div>
+          <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;font-weight:700;">{{ current_user.rol | replace('_',' ') | title if current_user else '' }}</div>
+        </div>
+        <i class="fas fa-chevron-down" style="font-size:9px;color:var(--muted)"></i>
+      </div>
+      <div id="avatar-dropdown" style="display:none;position:absolute;top:calc(100% + 6px);right:0;
+            width:200px;background:var(--surface);border:1px solid var(--border);
+            border-radius:11px;box-shadow:0 8px 24px rgba(0,0,0,.3);z-index:500;padding:6px;">
+        <div style="padding:10px 12px;border-bottom:1px solid var(--border);margin-bottom:4px">
+          <div style="font-weight:700;font-size:13px;color:var(--text)">{{ current_user.nombre if current_user else '' }}</div>
+          <div style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace">@{{ current_user.username if current_user else '' }}</div>
+        </div>
+        <a href="/mi-perfil" style="text-decoration:none"><div class="dd-item"><i class="fas fa-id-card" style="color:var(--accent);width:16px"></i> Mi perfil</div></a>
+        <a href="/" style="text-decoration:none"><div class="dd-item"><i class="fas fa-table-columns" style="color:var(--muted);width:16px"></i> Dashboard</div></a>
+        <div style="border-top:1px solid var(--border);margin-top:4px;padding-top:4px">
+          <a href="/logout" style="text-decoration:none"><div class="dd-item" style="color:#ff6b6b"><i class="fas fa-right-from-bracket" style="width:16px"></i> Cerrar sesion</div></a>
+        </div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+{% set rol = staff.rol | lower %}
+{% set es_dir   = 'directora' in rol or 'director' in rol %}
+{% set es_coord = 'coord' in rol and not es_dir %}
+{% set es_psico = 'psicolog' in rol %}
+{% set es_prof  = rol == 'profesor' %}
+{% set clase_rol = 'dir' if es_dir else 'coord' if es_coord else 'psico' if es_psico else 'prof' if es_prof else 'admin' %}
+
+{% set ROL_LABELS = {
+  'directora': '👑 Directora',
+  'coordinador_general': '🏛️ Coordinador/a General',
+  'coordinador_primer_ciclo': '📚 Coordinador/a 1er Ciclo',
+  'coordinador_segundo_ciclo': '🎓 Coordinador/a 2do Ciclo',
+  'psicologa_primer_ciclo': '🧠 Psicóloga 1er Ciclo',
+  'psicologa_segundo_ciclo': '🧠 Psicóloga 2do Ciclo',
+  'profesor': '🏫 Docente',
+  'secretaria': '📋 Secretaria',
+  'secretaria_docente': '📋 Secretaria Docente',
+  'digitador': '⌨️ Digitador/a',
+  'auxiliar_contabilidad': '🧮 Auxiliar Contabilidad',
+} %}
+
+{% set label_rol = ROL_LABELS.get(staff.rol, staff.rol | replace('_',' ') | title) %}
+{% set es_propio = current_user.id == staff.id %}
+
+<main>
+
+  <!-- HERO -->
+  <div class="hero {{ clase_rol }}">
+    <div class="avatar-wrap">
+      <div class="avatar {{ clase_rol }}">
+        {{ staff.nombre[:1].upper() }}
+      </div>
+      {% if es_propio %}
+      <div class="avatar-edit" title="Cambiar foto (próximamente)">
+        <i class="fas fa-camera"></i>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="hero-info">
+      <div class="hero-nombre">{{ staff.nombre }}</div>
+      <div class="hero-cargo">
+        <span class="badge-rol br-{{ clase_rol }}">{{ label_rol }}</span>
+        {% if staff.departamento %}
+        <span style="color:var(--muted)">· {{ staff.departamento }}</span>
+        {% endif %}
+        {% if not staff.activo %}
+        <span style="background:rgba(255,107,107,.15);color:#ff6b6b;padding:2px 8px;
+                     border-radius:20px;font-size:10px;font-weight:700">INACTIVO</span>
+        {% endif %}
+      </div>
+      <div class="hero-meta">
+        {% if staff.email %}
+        <span><i class="fas fa-envelope"></i>{{ staff.email }}</span>
+        {% endif %}
+        {% if staff.telefono %}
+        <span><i class="fas fa-phone"></i>{{ staff.telefono }}</span>
+        {% endif %}
+        {% if staff.titulo_academico %}
+        <span><i class="fas fa-graduation-cap"></i>{{ staff.titulo_academico }}</span>
+        {% endif %}
+        {% if staff.fecha_ingreso %}
+        <span><i class="fas fa-calendar-check"></i>Desde {{ staff.fecha_ingreso }}</span>
+        {% endif %}
+        {% if es_prof and staff.grado %}
+        <span><i class="fas fa-chalkboard"></i>Grado: {{ staff.grado }}</span>
+        {% endif %}
+        {% if es_prof and staff.materia %}
+        <span><i class="fas fa-book-open"></i>{{ staff.materia }}</span>
+        {% endif %}
+      </div>
+
+      {% if staff.bio %}
+      <div style="margin-top:10px;font-size:12px;color:var(--muted);
+                  line-height:1.6;max-width:500px;font-style:italic">
+        "{{ staff.bio }}"
+      </div>
+      {% endif %}
+    </div>
+
+    {% if es_propio %}
+    <div class="hero-actions">
+      <button class="btn-edit" onclick="abrirEditarPerfil()">
+        <i class="fas fa-pen"></i> Editar perfil
+      </button>
+      <button class="btn-pwd" onclick="abrirCambiarPassword()">
+        <i class="fas fa-lock"></i> Cambiar contraseña
+      </button>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- KPIs según rol -->
+  {% if stats %}
+  <div class="kpi-row">
+    {% if es_dir or es_coord %}
+    <div class="kpi">
+      <div class="kpi-n">{{ stats.get('total_estudiantes', 0) }}</div>
+      <div class="kpi-l">Estudiantes activos</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-n" style="color:{% if stats.get('casos_abiertos',0) > 0 %}#ff9f60{% else %}var(--success){% endif %}">
+        {{ stats.get('casos_abiertos', 0) }}</div>
+      <div class="kpi-l">Casos abiertos</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-n">{{ stats.get('reportes_mes', 0) }}</div>
+      <div class="kpi-l">Reportes este mes</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-n">{{ stats.get('usuarios_activos', 0) }}</div>
+      <div class="kpi-l">Personal activo</div>
+    </div>
+    {% elif es_psico %}
+    <div class="kpi">
+      <div class="kpi-n" style="color:{% if stats.get('casos_abiertos',0) > 0 %}#ff9f60{% else %}var(--success){% endif %}">
+        {{ stats.get('casos_abiertos', 0) }}</div>
+      <div class="kpi-l">Casos activos mi ciclo</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-n">{{ stats.get('acuerdos', 0) }}</div>
+      <div class="kpi-l">Acuerdos redactados</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-n" style="color:{% if stats.get('notif_pendientes',0) > 0 %}#ff6b6b{% else %}var(--success){% endif %}">
+        {{ stats.get('notif_pendientes', 0) }}</div>
+      <div class="kpi-l">Notificaciones pendientes</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-n">—</div>
+      <div class="kpi-l">Seguimientos activos</div>
+    </div>
+    {% elif es_prof %}
+    <div class="kpi">
+      <div class="kpi-n">{{ stats.get('mis_estudiantes', 0) }}</div>
+      <div class="kpi-l">Mis estudiantes</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-n">{{ stats.get('planificaciones', 0) }}</div>
+      <div class="kpi-l">Planificaciones guardadas</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-n">{{ stats.get('reportes_creados', 0) }}</div>
+      <div class="kpi-l">Reportes creados</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-n">—</div>
+      <div class="kpi-l">Asistencias registradas</div>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- GRID INFO + PERMISOS -->
+  <div class="grid">
+
+    <!-- Información del cargo -->
+    <div class="card">
+      <div class="card-title"><i class="fas fa-id-badge"></i>Información del Cargo</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div>
+          <div class="info-label">Cargo / Rol</div>
+          <div class="info-field">{{ label_rol }}</div>
+        </div>
+        {% if staff.departamento %}
+        <div>
+          <div class="info-label">Departamento</div>
+          <div class="info-field">{{ staff.departamento }}</div>
+        </div>
+        {% endif %}
+        {% if es_prof %}
+        <div>
+          <div class="info-label">Tipo de docencia</div>
+          <div class="info-field">
+            {% if staff.tipo_docencia == 'basica' %}📚 Materias Básicas
+            {% elif staff.tipo_docencia == 'tecnica' %}🎨 Materias Técnicas
+            {% else %}📖 Básicas y Técnicas{% endif %}
+          </div>
+        </div>
+        <div>
+          <div class="info-label">Ciclo asignado</div>
+          <div class="info-field">
+            {% if staff.ciclo == 'primer_ciclo' %}1er Ciclo (1ro–3ro)
+            {% elif staff.ciclo == 'segundo_ciclo' %}2do Ciclo (4to–6to)
+            {% else %}Ambos Ciclos{% endif %}
+          </div>
+        </div>
+        {% if staff.grado %}
+        <div>
+          <div class="info-label">Grados específicos</div>
+          <div class="info-field" style="display:flex;flex-wrap:wrap;gap:5px;padding:6px 10px">
+            {% for g in staff.grado.split(',') %}
+            <span style="background:rgba(55,138,221,.1);border:1px solid rgba(55,138,221,.2);
+                         color:var(--accent);padding:2px 8px;border-radius:20px;font-size:11px">
+              {{ g.strip() }}
+            </span>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+        {% if staff.mencion %}
+        <div>
+          <div class="info-label">Menciones</div>
+          <div class="info-field" style="display:flex;flex-wrap:wrap;gap:5px;padding:6px 10px">
+            {% set MENCION_EMOJI = {'multimedia':'🎬','artes_visuales':'🎨','musica':'🎵','teatro':'🎭','danza':'💃'} %}
+            {% for m in staff.mencion.split(',') %}
+            <span style="background:var(--surface2);border:1px solid var(--border);
+                         padding:2px 8px;border-radius:20px;font-size:11px">
+              {{ MENCION_EMOJI.get(m.strip(),'') }} {{ m.strip() | replace('_',' ') | title }}
+            </span>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+        {% if staff.asignaturas or staff.materia %}
+        <div>
+          <div class="info-label">Materias que imparte</div>
+          <div class="info-field" style="display:flex;flex-wrap:wrap;gap:5px;padding:6px 10px">
+            {% for mat in (staff.asignaturas or staff.materia or '').split(',') %}
+            {% if mat.strip() %}
+            <span style="background:var(--surface2);border:1px solid var(--border);
+                         padding:2px 8px;border-radius:20px;font-size:10px">
+              {{ mat.strip() }}
+            </span>
+            {% endif %}
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+        {% endif %}
+        {% if es_psico %}
+        <div>
+          <div class="info-label">Ciclo asignado</div>
+          <div class="info-field">
+            {{ '1er Ciclo (1ro–3ro)' if 'primer' in staff.rol else '2do Ciclo (4to–6to)' }}
+          </div>
+        </div>
+        {% endif %}
+        <div>
+          <div class="info-label">Usuario del sistema</div>
+          <div class="info-field" style="font-family:'DM Mono',monospace;font-size:12px">
+            @{{ staff.username }}
+          </div>
+        </div>
+        <div>
+          <div class="info-label">Miembro desde</div>
+          <div class="info-field">{{ staff.creado or '—' }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Permisos del rol -->
+    <div class="card">
+      <div class="card-title"><i class="fas fa-shield-check"></i>Permisos del Rol</div>
+      <div class="perm-grid">
+
+        {% set perms = {
+          'Ver dashboard completo':      es_dir or es_coord,
+          'Ver todos los estudiantes':   es_dir or es_coord,
+          'Ver boletines':               es_dir or es_coord,
+          'Gestionar usuarios':          es_dir or es_coord,
+          'Panel de auditoría':          es_dir or (staff.rol == 'coordinador_general'),
+          'Gestión de casos':            es_dir or es_coord or es_psico,
+          'Cargar datos Excel':          es_dir or es_coord or (staff.rol in ['digitador','secretaria_docente']),
+          'Planificación con IA':        es_prof or es_coord or es_dir,
+          'Registrar asistencia':        es_prof,
+          'Cuaderno anecdótico':         es_prof or es_psico or es_coord,
+          'Acuerdos-Compromiso':         es_psico or es_coord or es_dir,
+          'Ver reportes disciplinares':  es_coord or es_dir or es_psico,
+        } %}
+
+        {% for perm, tiene in perms.items() %}
+        <div class="perm-item">
+          <i class="fas fa-{{ 'check-circle perm-ok' if tiene else 'times-circle perm-no' }}"></i>
+          <span style="font-size:11px;{% if not tiene %}opacity:.4{% endif %}">{{ perm }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Datos de contacto editable + accesos rápidos -->
+  <div class="grid">
+
+    <div class="card">
+      <div class="card-title"><i class="fas fa-address-card"></i>Datos de Contacto</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div>
+          <div class="info-label">Correo institucional</div>
+          <div class="info-field">{{ staff.email or '—' }}</div>
+        </div>
+        <div>
+          <div class="info-label">Teléfono</div>
+          <div class="info-field">{{ staff.telefono or 'No registrado' }}</div>
+        </div>
+        <div>
+          <div class="info-label">Título académico</div>
+          <div class="info-field">{{ staff.titulo_academico or 'No registrado' }}</div>
+        </div>
+        <div>
+          <div class="info-label">Descripción / Bio</div>
+          <div class="info-field" style="min-height:50px;line-height:1.5">
+            {{ staff.bio or 'Sin descripción' }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Accesos rápidos según rol -->
+    <div class="card">
+      <div class="card-title"><i class="fas fa-bolt"></i>Accesos Rápidos</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+
+        <a href="/" style="text-decoration:none">
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;
+                      border-radius:9px;border:1px solid var(--border);transition:all .15s;
+                      background:var(--surface2)"
+               onmouseover="this.style.borderColor='var(--accent)'"
+               onmouseout="this.style.borderColor='var(--border)'">
+            <i class="fas fa-chart-pie" style="color:var(--accent);width:16px"></i>
+            <span style="font-size:13px">Dashboard principal</span>
+          </div>
+        </a>
+
+        {% if es_prof %}
+        <a href="/profesor" style="text-decoration:none">
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;
+                      border-radius:9px;border:1px solid var(--border);
+                      background:var(--surface2);transition:all .15s"
+               onmouseover="this.style.borderColor='var(--accent)'"
+               onmouseout="this.style.borderColor='var(--border)'">
+            <i class="fas fa-clipboard-check" style="color:#ff9f60;width:16px"></i>
+            <span style="font-size:13px">Portal del docente</span>
+          </div>
+        </a>
+        <a href="/planificacion" style="text-decoration:none">
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;
+                      border-radius:9px;border:1px solid var(--border);
+                      background:var(--surface2);transition:all .15s"
+               onmouseover="this.style.borderColor='var(--accent)'"
+               onmouseout="this.style.borderColor='var(--border)'">
+            <i class="fas fa-book-open" style="color:var(--accent);width:16px"></i>
+            <span style="font-size:13px">Planificación con IA</span>
+          </div>
+        </a>
+        {% endif %}
+
+        {% if es_psico or es_coord or es_dir %}
+        <a href="/casos" style="text-decoration:none">
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;
+                      border-radius:9px;border:1px solid var(--border);
+                      background:var(--surface2);transition:all .15s"
+               onmouseover="this.style.borderColor='var(--accent)'"
+               onmouseout="this.style.borderColor='var(--border)'">
+            <i class="fas fa-briefcase-medical" style="color:#ff8080;width:16px"></i>
+            <span style="font-size:13px">Gestión de casos</span>
+          </div>
+        </a>
+        {% endif %}
+
+        {% if es_dir or (staff.rol == 'coordinador_general') %}
+        <a href="/auditoria" style="text-decoration:none">
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;
+                      border-radius:9px;border:1px solid var(--border);
+                      background:var(--surface2);transition:all .15s"
+               onmouseover="this.style.borderColor='var(--accent)'"
+               onmouseout="this.style.borderColor='var(--border)'">
+            <i class="fas fa-chart-mixed" style="color:var(--accent);width:16px"></i>
+            <span style="font-size:13px">Panel de auditoría</span>
+          </div>
+        </a>
+        {% endif %}
+
+        {% if es_dir or es_coord %}
+        <a href="/usuarios" style="text-decoration:none">
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;
+                      border-radius:9px;border:1px solid var(--border);
+                      background:var(--surface2);transition:all .15s"
+               onmouseover="this.style.borderColor='var(--accent)'"
+               onmouseout="this.style.borderColor='var(--border)'">
+            <i class="fas fa-users-cog" style="color:#60b8f0;width:16px"></i>
+            <span style="font-size:13px">Gestión de usuarios</span>
+          </div>
+        </a>
+        {% endif %}
+
+      </div>
+    </div>
+
+  </div>
+
+
+  <!-- TIMELINE UNIFICADO -->
+  <div class="grid full" style="margin-top:0">
+    <div class="card">
+      <div class="card-title" style="margin-bottom:16px">
+        <i class="fas fa-timeline"></i>
+        Actividad reciente
+        <span style="margin-left:auto;font-size:10px;font-weight:400;color:var(--muted)">
+          Últimas 50 acciones en el sistema
+        </span>
+      </div>
+
+      {% if timeline %}
+      <div id="timeline-list">
+        {% set TIPO_CONFIG = {
+          'reporte':       ('fas fa-flag',          '#ff9f60', 'Reporte'),
+          'caso':          ('fas fa-briefcase-medical', '#ff8080', 'Caso'),
+          'caso_accion':   ('fas fa-comment-dots',  '#60b8f0', 'Acción'),
+          'acuerdo':       ('fas fa-file-signature','#b44be8', 'Acuerdo'),
+          'planificacion': ('fas fa-book-open',     'var(--accent)', 'Planificación'),
+          'notificacion':  ('fas fa-bell',          '#f7c948', 'Notificación'),
+        } %}
+
+        {% set _prev_fecha = namespace(v='') %}
+        {% for item in timeline %}
+          {% set conf = TIPO_CONFIG.get(item.tipo, ('fas fa-circle', 'var(--muted)', item.tipo)) %}
+
+          {# Separador de fecha #}
+          {% set fecha_dia = (item.fecha or '')[:10] %}
+          {% if fecha_dia != _prev_fecha.v %}
+            {% set _prev_fecha.v = fecha_dia %}
+            <div style="display:flex;align-items:center;gap:10px;margin:14px 0 8px;font-size:10px;
+                        color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px">
+              <div style="flex:1;height:1px;background:var(--border)"></div>
+              {{ fecha_dia or 'Sin fecha' }}
+              <div style="flex:1;height:1px;background:var(--border)"></div>
+            </div>
+          {% endif %}
+
+          <div style="display:flex;align-items:flex-start;gap:12px;padding:9px 0;
+                      border-bottom:1px solid var(--border)">
+            <div style="width:30px;height:30px;border-radius:8px;flex-shrink:0;
+                        background:rgba(0,0,0,.15);display:flex;align-items:center;
+                        justify-content:center;margin-top:1px">
+              <i class="{{ conf[0] }}" style="color:{{ conf[1] }};font-size:12px"></i>
+            </div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:12px;line-height:1.4;margin-bottom:2px">
+                {% if item.url %}
+                <a href="{{ item.url }}" style="color:var(--text);text-decoration:none"
+                   onmouseover="this.style.color='var(--accent)'"
+                   onmouseout="this.style.color='var(--text)'">
+                  {{ item.desc or '—' }}
+                </a>
+                {% else %}
+                {{ item.desc or '—' }}
+                {% endif %}
+              </div>
+              <div style="display:flex;align-items:center;gap:8px">
+                {% if item.extra %}
+                <span style="font-size:10px;padding:1px 7px;border-radius:20px;
+                             background:var(--surface2);color:var(--muted)">
+                  {{ item.extra }}
+                </span>
+                {% endif %}
+                <span style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace">
+                  {{ (item.fecha or '')[:16].replace('T',' ') }}
+                </span>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+
+      {% else %}
+      <div style="text-align:center;padding:32px;color:var(--muted)">
+        <i class="fas fa-inbox" style="font-size:32px;opacity:.3;margin-bottom:10px;display:block"></i>
+        <div style="font-size:13px">Sin actividad registrada aún</div>
+        <div style="font-size:11px;margin-top:4px">
+          Las acciones que realices en el sistema aparecerán aquí
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+
+  <!-- ══ CONTROL DE PERÍODOS — Coord y Directora ══════════════════ -->
+  {% if es_dir or es_coord %}
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;
+              padding:20px;margin-top:24px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div style="font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px">
+        <i class="fas fa-lock-open" style="color:var(--accent)"></i>
+        Control de períodos
+      </div>
+      <span style="font-size:11px;color:var(--muted)">Año escolar <strong id="mp-lock-anio"></strong></span>
+    </div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:4px;line-height:1.6">
+      Bloquea un período para cerrar la edición de calificaciones por profesores.<br>
+      Coordinadores y directora pueden editar notas aunque el período esté bloqueado.
+    </p>
+    <div class="periodos-grid" id="mp-periodos-grid"></div>
+    <div class="lock-anuncio" id="mp-lock-msg"></div>
+  </div>
+  {% endif %}
+
+</main>
+
+<!-- MODAL: Editar perfil -->
+{% if es_propio %}
+<div class="modal-overlay" id="modal-editar">
+  <div class="modal">
+    <div class="modal-title">Editar mi perfil</div>
+    <div class="modal-sub">Actualiza tu información de contacto visible al equipo</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Teléfono</label>
+        <input class="form-input" id="edit-telefono" type="tel"
+               placeholder="809-XXX-XXXX" value="{{ staff.telefono or '' }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Título académico</label>
+        <input class="form-input" id="edit-titulo" type="text"
+               placeholder="Ej: Lic. en Educación, M.A." value="{{ staff.titulo_academico or '' }}">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Departamento</label>
+        <input class="form-input" id="edit-departamento" type="text"
+               placeholder="Ej: Multimedia, Orientación" value="{{ staff.departamento or '' }}">
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label class="form-label">Descripción / Bio</label>
+      <textarea class="form-textarea" id="edit-bio"
+                placeholder="Una breve descripción de tu rol y especialidad...">{{ staff.bio or '' }}</textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="cerrarModal('modal-editar')">Cancelar</button>
+      <button class="btn-save" onclick="guardarPerfil()">
+        <i class="fas fa-save"></i> Guardar cambios
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Cambiar contraseña -->
+<div class="modal-overlay" id="modal-password">
+  <div class="modal">
+    <div class="modal-title">Cambiar contraseña</div>
+    <div class="modal-sub">La nueva contraseña debe tener al menos 8 caracteres</div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label class="form-label">Contraseña actual</label>
+      <input class="form-input" id="pwd-actual" type="password" placeholder="Tu contraseña actual">
+    </div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label class="form-label">Nueva contraseña</label>
+      <input class="form-input" id="pwd-nueva" type="password" placeholder="Mínimo 8 caracteres">
+    </div>
+    <div class="form-group" style="margin-bottom:4px">
+      <label class="form-label">Confirmar nueva contraseña</label>
+      <input class="form-input" id="pwd-confirmar" type="password" placeholder="Repite la nueva contraseña">
+    </div>
+    <div id="pwd-error" style="font-size:11px;color:#ff6b6b;min-height:16px;margin-bottom:8px"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="cerrarModal('modal-password')">Cancelar</button>
+      <button class="btn-save" onclick="cambiarPassword()">
+        <i class="fas fa-lock"></i> Actualizar contraseña
+      </button>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div id="toast"></div>
+
+<script>
+var STAFF_ID = {{ staff.id }};
+
+function tk(msg, tipo) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = tipo === 'ok' ? 'ok' : 'err';
+  t.style.opacity = '1';
+  setTimeout(function(){ t.style.opacity = '0'; }, 3000);
+}
+
+function abrirEditarPerfil() {
+  document.getElementById('modal-editar').classList.add('open');
+}
+function abrirCambiarPassword() {
+  document.getElementById('pwd-actual').value = '';
+  document.getElementById('pwd-nueva').value = '';
+  document.getElementById('pwd-confirmar').value = '';
+  document.getElementById('pwd-error').textContent = '';
+  document.getElementById('modal-password').classList.add('open');
+}
+function cerrarModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+// Cerrar modales con Escape
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.modal-overlay.open').forEach(function(m){
+      m.classList.remove('open');
+    });
+  }
+});
+
+async function guardarPerfil() {
+  var data = {
+    telefono:         document.getElementById('edit-telefono').value.trim(),
+    titulo_academico: document.getElementById('edit-titulo').value.trim(),
+    departamento:     document.getElementById('edit-departamento').value.trim(),
+    bio:              document.getElementById('edit-bio').value.trim(),
+  };
+  try {
+    var r = await fetch('/mi-perfil/editar', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(data)
+    });
+    var d = await r.json();
+    if (d.ok) {
+      cerrarModal('modal-editar');
+      tk('Perfil actualizado', 'ok');
+      setTimeout(function(){ location.reload(); }, 1000);
+    } else {
+      tk(d.error || 'Error al guardar', 'err');
+    }
+  } catch(e) {
+    tk('Error de conexión', 'err');
+  }
+}
+
+async function cambiarPassword() {
+  var actual    = document.getElementById('pwd-actual').value;
+  var nueva     = document.getElementById('pwd-nueva').value;
+  var confirmar = document.getElementById('pwd-confirmar').value;
+  var errEl     = document.getElementById('pwd-error');
+
+  errEl.textContent = '';
+  if (!actual) { errEl.textContent = 'Ingresa tu contraseña actual'; return; }
+  if (nueva.length < 8) { errEl.textContent = 'Mínimo 8 caracteres'; return; }
+  if (nueva !== confirmar) { errEl.textContent = 'Las contraseñas no coinciden'; return; }
+
+  try {
+    var r = await fetch('/api/cambiar-password', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ password_actual: actual, password_nueva: nueva })
+    });
+    var d = await r.json();
+    if (d.ok) {
+      cerrarModal('modal-password');
+      tk('Contraseña actualizada correctamente', 'ok');
+    } else {
+      errEl.textContent = d.error || 'Error al cambiar contraseña';
+    }
+  } catch(e) {
+    errEl.textContent = 'Error de conexión';
+  }
+}
+
+// ── CONTROL DE PERÍODOS ────────────────────────────────────────────
+(function(){
+  var grid = document.getElementById('mp-periodos-grid');
+  if (!grid) return; // solo coord/directora
+
+  function cargar() {
+    fetch('/api/periodos/estado')
+      .then(function(r){ return r.json(); })
+      .then(function(d) {
+        var anioEl = document.getElementById('mp-lock-anio');
+        if (anioEl) anioEl.textContent = d.anio_escolar || '';
+        renderGrid(d.periodos || {});
+      }).catch(function(){});
+  }
+
+  function renderGrid(estado) {
+    var ps = ['P1','P2','P3','P4'];
+    grid.innerHTML = ps.map(function(p) {
+      var bl = estado[p];
+      return '<div class="periodo-tile ' + (bl ? 'bloqueado' : 'abierto') + '">' +
+        '<div class="pt-nombre">' + p + '</div>' +
+        '<div class="pt-estado ' + (bl ? 'lock' : 'open') + '">' +
+          (bl ? '🔒 Bloqueado' : '🔓 Abierto') +
+        '</div>' +
+        '<button class="pt-btn ' + (bl ? 'desbloquear' : 'bloquear') + '" ' +
+          'onclick="mpToggle('' + p + '',' + bl + ')">' +
+          (bl ? 'Desbloquear' : 'Bloquear') +
+        '</button>' +
+      '</div>';
+    }).join('');
+  }
+
+  window.mpToggle = function(periodo, bloqueado) {
+    var url = bloqueado ? '/api/periodos/desbloquear' : '/api/periodos/bloquear';
+    var txt = bloqueado
+      ? '¿Desbloquear ' + periodo + '? Los profesores podrán modificar calificaciones.'
+      : '¿Bloquear ' + periodo + '? Los profesores NO podrán modificar calificaciones de este período.';
+    if (!confirm(txt)) return;
+    var body = {periodo: periodo};
+    if (!bloqueado) body.motivo = 'Cierre de ' + periodo + ' — ' + new Date().toLocaleDateString('es-DO');
+    fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)})
+      .then(function(r){ return r.json(); })
+      .then(function(d) {
+        var msg = document.getElementById('mp-lock-msg');
+        if (msg) {
+          msg.textContent = d.mensaje || (d.error ? '⚠ ' + d.error : '');
+          msg.style.display = 'block';
+          msg.style.color = d.error ? '#ff6b6b' : 'var(--success)';
+          setTimeout(function(){ msg.style.display='none'; }, 4000);
+        }
+        if (!d.error) cargar();
+      }).catch(function(){});
+  };
+
+  cargar();
+})();
+
+</script>
+</body>
+</html>

@@ -1422,7 +1422,9 @@ a:hover { text-decoration: underline; }
   overflow: hidden;
   transition: box-shadow .2s, transform .15s;
 }
-.axula-metric-card:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(5,14,31,.15); }
+.axula-metric-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(5,14,31,.14); }
+.axula-metric-card.axula-metric-clickable { cursor: pointer; }
+.axula-metric-card.axula-metric-clickable:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(5,14,31,.18); }
 .axula-metric-card::before {
   content: '';
   position: absolute;
@@ -1463,8 +1465,31 @@ a:hover { text-decoration: underline; }
 [data-theme="dark"] .axula-metric-card.accent-blue   .axula-metric-value { color: var(--ax-frost, #BDD1FA); }
 [data-theme="dark"] .axula-metric-card.accent-navy   .axula-metric-value { color: #C8DAFB; }
 
-.axula-metric-footer { display: flex; align-items: center; gap: 6px; }
+.axula-metric-footer { display: flex; align-items: center; gap: 6px; min-height: 18px; }
 .axula-delta-ctx  { font-size: 11px; color: var(--ax-text-secondary, var(--muted)); }
+
+/* CTA hover en cards clickeables */
+.axula-metric-cta {
+  display: none;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ax-royal, #2661F6);
+  margin-left: auto;
+  opacity: .9;
+  white-space: nowrap;
+  letter-spacing: .01em;
+}
+.axula-metric-clickable:hover .axula-metric-cta  { display: inline; }
+.axula-metric-clickable:hover .axula-delta-ctx   { display: none; }
+
+/* Chip de filtro de nivel activo (aparece en toolbar) */
+.chip-nivel {
+  background: rgba(38,97,246,.12);
+  border-color: #2661F6;
+  color: #2661F6;
+  font-weight: 700;
+}
+.chip-nivel::after { content: ' ✕'; opacity: .55; font-size: 10px; }
 .axula-delta-up   { font-size: 11px; font-weight: 700; color: var(--ax-royal, #2661F6); }
 .axula-delta-down { font-size: 11px; font-weight: 700; color: var(--danger, #d13438); }
 

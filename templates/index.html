@@ -2239,59 +2239,71 @@ tr:hover td{background:var(--hover)}
       </div>
 
       <div class="axula-metrics-grid" id="wc-kpis" style="margin-bottom:24px">
-        <div class="axula-metric-card accent-teal">
+        <div class="axula-metric-card accent-teal axula-metric-clickable"
+             onclick="irAListado()" title="Ver listado completo de estudiantes">
           <div class="axula-metric-icon"><i class="fas fa-users"></i></div>
           <div class="axula-metric-label">Estudiantes activos</div>
           <div class="axula-metric-value" id="wc-total">—</div>
           <div class="axula-metric-footer">
             <span class="axula-delta-ctx" id="wc-ki-total">cargando...</span>
+            <span class="axula-metric-cta">Ver listado →</span>
           </div>
         </div>
 
-        <div class="axula-metric-card accent-danger">
+        <div class="axula-metric-card accent-danger axula-metric-clickable"
+             onclick="irAListadoFiltrado('bajo')" title="Ver estudiantes En Proceso e Insuficiente (promedio &lt;70)">
           <div class="axula-metric-icon"><i class="fas fa-triangle-exclamation"></i></div>
           <div class="axula-metric-label">En proceso / Insuficiente</div>
           <div class="axula-metric-value" id="wc-alertas">—</div>
           <div class="axula-metric-footer">
             <span class="axula-delta-ctx">Ord.04-2023 · nivel &lt;70</span>
+            <span class="axula-metric-cta">Filtrar →</span>
           </div>
         </div>
 
-        <div class="axula-metric-card accent-warn">
+        <div class="axula-metric-card accent-warn axula-metric-clickable"
+             onclick="irAListadoFiltrado('basico')" title="Ver estudiantes Nivel B · Básico (70–79 pts)">
           <div class="axula-metric-icon"><i class="fas fa-chart-simple"></i></div>
           <div class="axula-metric-label">Nivel B · Básico</div>
           <div class="axula-metric-value" id="wc-obs">—</div>
           <div class="axula-metric-footer">
             <span class="axula-delta-ctx">Rango 70–79 pts</span>
+            <span class="axula-metric-cta">Filtrar →</span>
           </div>
         </div>
 
-        <div class="axula-metric-card accent-blue">
+        <div class="axula-metric-card accent-blue axula-metric-clickable"
+             onclick="irAListadoFiltrado('destacado')" title="Ver estudiantes Destacados (promedio ≥89)">
           <div class="axula-metric-icon"><i class="fas fa-graduation-cap"></i></div>
           <div class="axula-metric-label">Promedio general</div>
           <div class="axula-metric-value" id="wc-prom">—</div>
           <div class="axula-metric-footer">
             <span class="axula-delta-ctx" id="wc-ki-prom">cargando...</span>
+            <span class="axula-metric-cta">Ver destacados →</span>
           </div>
         </div>
 
         {% if current_user and (current_user.es_coord or current_user.es_directora or current_user.es_psicologa) %}
-        <div class="axula-metric-card accent-navy">
+        <div class="axula-metric-card accent-navy axula-metric-clickable"
+             onclick="window.location.href='/casos'" title="Ir al módulo de gestión de casos">
           <div class="axula-metric-icon"><i class="fas fa-folder-open"></i></div>
           <div class="axula-metric-label">Casos activos</div>
           <div class="axula-metric-value" id="wc-casos">—</div>
           <div class="axula-metric-footer">
             <span class="axula-delta-ctx">Sin resolver</span>
+            <span class="axula-metric-cta">Gestionar →</span>
           </div>
         </div>
         {% endif %}
 
-        <div class="axula-metric-card accent-success">
+        <div class="axula-metric-card accent-success axula-metric-clickable"
+             onclick="irAListadoMencion()" title="Ver listado por especialidad">
           <div class="axula-metric-icon"><i class="fas fa-palette"></i></div>
           <div class="axula-metric-label">Especialidades</div>
           <div class="axula-metric-value">5</div>
           <div class="axula-metric-footer">
             <span class="axula-delta-ctx">MM · MU · AV · TE · DZ</span>
+            <span class="axula-metric-cta">Ver por mención →</span>
           </div>
         </div>
       </div>
@@ -2463,6 +2475,7 @@ tr:hover td{background:var(--hover)}
       <button class="chip active" data-filtro="todos"              onclick="setFiltro(this)">Todos</button>
       <button class="chip"        data-filtro="ALERTA DE REPROBACIÓN" onclick="setFiltro(this)">⚠ Alerta</button>
       <button class="chip"        data-filtro="CASO SILENCIOSO"    onclick="setFiltro(this)">🔇 Silenciosos</button>
+      <button class="chip chip-nivel" id="chip-nivel" style="display:none" onclick="limpiarFiltroNivel()"></button>
       <button class="chip" id="btn-vista-tabla" onclick="setVista('tabla')" title="Vista tabla">⊞ Tabla</button>
       <button class="chip" id="btn-vista-cards" onclick="setVista('cards')" title="Vista tarjetas">▦ Tarjetas</button>
     </div>
@@ -3307,6 +3320,7 @@ var filtroActivo = 'todos';
 var filtroEstado = 'todos';
 var filtroCiclo   = '';
 var filtroSeccion = ''; // '' = todas, 'A','B','C','D','E'
+var filtroNivel   = ''; // '' | 'bajo' (<70) | 'basico' (70-79) | 'destacado' (≥89)
 var gradosActivos = [];
 var mencionesActivas = [];
 var vistaActual = 'tabla';
@@ -3335,6 +3349,33 @@ function irAListado() {
   document.getElementById('actions-bar').style.display     = '';
   document.getElementById('estudiantes-section').style.display = '';
   cargarDatos(false);
+}
+
+// KPI cards → listado con filtro de nivel pre-aplicado
+var _NIVEL_LABELS = { bajo: '⚠ Nivel Bajo (<70)', basico: '📊 Nivel Básico (70–79)', destacado: '⭐ Destacado (≥89)' };
+function irAListadoFiltrado(nivel) {
+  filtroNivel = nivel;
+  irAListado();
+  // Mostrar chip de nivel en toolbar
+  var chip = document.getElementById('chip-nivel');
+  if (chip) {
+    chip.textContent = _NIVEL_LABELS[nivel] || nivel;
+    chip.style.display = '';
+  }
+}
+function limpiarFiltroNivel() {
+  filtroNivel = '';
+  var chip = document.getElementById('chip-nivel');
+  if (chip) chip.style.display = 'none';
+  filtrar();
+}
+function irAListadoMencion() {
+  irAListado();
+  // Scroll al panel de menciones en el toolbar
+  setTimeout(function() {
+    var el = document.querySelector('.chip[data-mencion]');
+    if (el) el.closest('.toolbar-row, .toolbar, #toolbar-bar').scrollIntoView({behavior:'smooth', block:'start'});
+  }, 200);
 }
 
 function cargarStatsWelcome(datos) {
@@ -3677,6 +3718,14 @@ function filtrar() {
     // Filtro de categoría (chips principales)
     if (filtroActivo !== 'todos') {
       if ((e.categoria || '') !== filtroActivo) return false;
+    }
+
+    // Filtro de nivel académico (desde KPI cards)
+    if (filtroNivel) {
+      var p = e.p_acad || 0;
+      if (filtroNivel === 'bajo'      && !(p > 0 && p < 70))   return false;
+      if (filtroNivel === 'basico'    && !(p >= 70 && p < 80))  return false;
+      if (filtroNivel === 'destacado' && !(p >= 89))             return false;
     }
 
     // Filtro de estado (sidebar)

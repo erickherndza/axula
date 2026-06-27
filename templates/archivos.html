@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Archivos Digitales — Axula</title>
+<link rel="stylesheet" href="/static/theme.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+  .arch-header {
+    display: flex; align-items: center; gap: 1rem;
+    padding: 1.25rem 1.5rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .arch-header h1 { font-size: 1.25rem; font-weight: 600; color: var(--text); margin: 0; flex: 1; }
+  .arch-body { display: grid; grid-template-columns: 280px 1fr; gap: 0; min-height: calc(100vh - 60px); }
+  .arch-sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 1.25rem;
+    display: flex; flex-direction: column; gap: 1rem;
+  }
+  .arch-main { padding: 1.25rem; background: var(--bg); }
+
+  /* Zona de subida */
+  .drop-zone {
+    border: 2px dashed var(--border);
+    border-radius: 8px;
+    padding: 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .2s, background .2s;
+    background: var(--bg);
+  }
+  .drop-zone:hover, .drop-zone.drag-over {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 6%, var(--bg));
+  }
+  .drop-zone i { font-size: 2rem; color: var(--accent); margin-bottom: .5rem; display: block; }
+  .drop-zone p { margin: 0; font-size: .85rem; color: var(--text-muted); }
+  .drop-zone input[type="file"] { display: none; }
+
+  /* Form upload */
+  .upload-form { display: flex; flex-direction: column; gap: .6rem; }
+  .upload-form label { font-size: .8rem; font-weight: 600; color: var(--text-muted); }
+  .upload-form input, .upload-form select, .upload-form textarea {
+    width: 100%; padding: .45rem .6rem; border: 1px solid var(--border);
+    border-radius: 5px; background: var(--surface); color: var(--text);
+    font-size: .85rem; box-sizing: border-box;
+  }
+  .upload-form textarea { resize: vertical; min-height: 56px; }
+
+  /* Filtros */
+  .filtros { display: flex; gap: .6rem; flex-wrap: wrap; margin-bottom: 1rem; align-items: center; }
+  .filtros input[type="text"] {
+    flex: 1; min-width: 180px; padding: .42rem .7rem;
+    border: 1px solid var(--border); border-radius: 5px;
+    background: var(--surface); color: var(--text); font-size: .85rem;
+  }
+  .filtros select {
+    padding: .42rem .6rem; border: 1px solid var(--border);
+    border-radius: 5px; background: var(--surface); color: var(--text); font-size: .85rem;
+  }
+
+  /* Tabla de archivos */
+  .tabla-archivos { width: 100%; border-collapse: collapse; font-size: .875rem; }
+  .tabla-archivos th {
+    background: var(--surface); padding: .6rem .8rem; text-align: left;
+    font-size: .78rem; font-weight: 600; color: var(--text-muted);
+    border-bottom: 2px solid var(--border); white-space: nowrap;
+  }
+  .tabla-archivos td {
+    padding: .65rem .8rem; border-bottom: 1px solid var(--border);
+    vertical-align: middle; color: var(--text);
+  }
+  .tabla-archivos tr:hover td { background: color-mix(in srgb, var(--accent) 4%, var(--surface)); }
+
+  .badge-tipo {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .2rem .55rem; border-radius: 4px; font-size: .75rem; font-weight: 600;
+  }
+  .badge-pdf  { background: #fee2e2; color: #b91c1c; }
+  .badge-docx { background: #dbeafe; color: #1d4ed8; }
+  .badge-xlsx { background: #dcfce7; color: #166534; }
+  .badge-jpg, .badge-jpeg, .badge-png { background: #fef9c3; color: #854d0e; }
+  .badge-otro { background: var(--border); color: var(--text-muted); }
+
+  .badge-acceso {
+    display: inline-block; padding: .18rem .45rem;
+    border-radius: 3px; font-size: .72rem; font-weight: 600;
+  }
+  .acc-institucional { background: #e0f2fe; color: #0369a1; }
+  .acc-psicologico   { background: #f3e8ff; color: #7e22ce; }
+  .acc-financiero    { background: #fef3c7; color: #92400e; }
+
+  .btn-icono {
+    background: none; border: none; cursor: pointer;
+    padding: .3rem .4rem; border-radius: 4px; color: var(--text-muted);
+    transition: color .15s, background .15s;
+  }
+  .btn-icono:hover { color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+  .btn-icono.danger:hover { color: #dc2626; background: #fee2e2; }
+
+  .empty-state { text-align: center; padding: 3rem 1rem; color: var(--text-muted); }
+  .empty-state i { font-size: 2.5rem; margin-bottom: .75rem; display: block; opacity: .4; }
+
+  /* Progress bar */
+  .progress-bar {
+    height: 4px; background: var(--border); border-radius: 2px;
+    overflow: hidden; display: none; margin-top: .5rem;
+  }
+  .progress-bar-fill { height: 100%; background: var(--accent); width: 0; transition: width .3s; }
+
+  .section-title { font-size: .8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; margin: 0 0 .5rem; }
+
+  @media (max-width: 768px) {
+    .arch-body { grid-template-columns: 1fr; }
+    .arch-sidebar { border-right: none; border-bottom: 1px solid var(--border); }
+  }
+</style>
+</head>
+<body>
+<!-- Navbar -->
+<div class="arch-header">
+  <a href="/" style="color:var(--text-muted);text-decoration:none;font-size:.9rem;">
+    <i class="fa fa-arrow-left"></i>
+  </a>
+  <i class="fa fa-folder-open" style="color:var(--accent);font-size:1.2rem;"></i>
+  <h1>Biblioteca de Archivos Digitales</h1>
+  <span style="font-size:.8rem;color:var(--text-muted);">{{ current_user.nombre }}</span>
+  <button onclick="window.location='/logout'" class="btn-icono" title="Cerrar sesión">
+    <i class="fa fa-sign-out-alt"></i>
+  </button>
+</div>
+
+<div class="arch-body">
+  <!-- SIDEBAR: SUBIR ARCHIVO -->
+  <aside class="arch-sidebar">
+    <p class="section-title"><i class="fa fa-upload" style="margin-right:.4rem;"></i>Subir Archivo</p>
+
+    <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+      <i class="fa fa-cloud-upload-alt"></i>
+      <strong style="font-size:.9rem;color:var(--text);">Haz clic o arrastra aquí</strong>
+      <p>PDF, DOCX, XLSX, JPG, PNG — máx. 10 MB</p>
+      <input type="file" id="fileInput" accept=".pdf,.docx,.xlsx,.doc,.xls,.jpg,.jpeg,.png">
+    </div>
+
+    <div class="upload-form" id="uploadForm" style="display:none;">
+      <label>Nombre del archivo</label>
+      <input type="text" id="upNombre" placeholder="Nombre descriptivo" maxlength="200">
+
+      <label>Descripción (opcional)</label>
+      <textarea id="upDescripcion" placeholder="Breve descripción..." maxlength="500"></textarea>
+
+      <label>Categoría</label>
+      <select id="upCategoria">
+        {% for key, label in categorias.items() %}
+        <option value="{{ key }}">{{ label }}</option>
+        {% endfor %}
+      </select>
+
+      {% if accesos_visibles | length > 1 %}
+      <label>Nivel de acceso</label>
+      <select id="upAcceso">
+        {% if 'institucional' in accesos_visibles %}<option value="institucional">Institucional</option>{% endif %}
+        {% if 'psicologico' in accesos_visibles %}<option value="psicologico">Psicológico (restringido)</option>{% endif %}
+        {% if 'financiero' in accesos_visibles %}<option value="financiero">Financiero (restringido)</option>{% endif %}
+      </select>
+      {% else %}
+      <input type="hidden" id="upAcceso" value="{{ accesos_visibles[0] if accesos_visibles else 'institucional' }}">
+      {% endif %}
+
+      <div id="archivoSeleccionado" style="font-size:.8rem;color:var(--text-muted);padding:.3rem .5rem;background:var(--bg);border-radius:4px;word-break:break-all;"></div>
+
+      <div class="progress-bar" id="progressBar">
+        <div class="progress-bar-fill" id="progressFill"></div>
+      </div>
+
+      <button class="btn btn-primary" onclick="subirArchivo()" id="btnSubir">
+        <i class="fa fa-upload"></i> Subir Archivo
+      </button>
+      <button class="btn btn-secondary" onclick="cancelarUpload()" style="font-size:.8rem;">
+        Cancelar
+      </button>
+    </div>
+
+    <div id="uploadMsg"></div>
+
+    <!-- Estadísticas rápidas -->
+    <div style="margin-top:auto;padding-top:1rem;border-top:1px solid var(--border);">
+      <p class="section-title">Resumen</p>
+      <div id="statsResumen" style="font-size:.82rem;color:var(--text-muted);line-height:1.8;"></div>
+    </div>
+  </aside>
+
+  <!-- MAIN: BIBLIOTECA -->
+  <main class="arch-main">
+    <div class="filtros">
+      <i class="fa fa-search" style="color:var(--text-muted);"></i>
+      <input type="text" id="busqueda" placeholder="Buscar por nombre o descripción..." oninput="debounceCargar()">
+      <select id="filtroCategoria" onchange="cargarArchivos()">
+        <option value="">Todas las categorías</option>
+        {% for key, label in categorias.items() %}
+        <option value="{{ key }}">{{ label }}</option>
+        {% endfor %}
+      </select>
+      <button class="btn btn-secondary" onclick="cargarArchivos()" style="font-size:.8rem;">
+        <i class="fa fa-sync-alt"></i> Actualizar
+      </button>
+    </div>
+
+    <div id="contadorArchivos" style="font-size:.8rem;color:var(--text-muted);margin-bottom:.75rem;"></div>
+
+    <div id="tablaContainer">
+      <div class="empty-state">
+        <i class="fa fa-folder-open"></i>
+        <p>Cargando archivos...</p>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="/static/theme.js"></script>
+<script>
+const CSRF = '{{ csrf_token }}';
+
+let archivoSeleccionado = null;
+let debounceTimer = null;
+
+// ── Drag & drop ────────────────────────────────────────────────────────────
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f) seleccionarArchivo(f);
+});
+fileInput.addEventListener('change', () => {
+  if (fileInput.files[0]) seleccionarArchivo(fileInput.files[0]);
+});
+
+function seleccionarArchivo(f) {
+  archivoSeleccionado = f;
+  document.getElementById('uploadForm').style.display = 'flex';
+  document.getElementById('archivoSeleccionado').textContent = `📎 ${f.name} (${(f.size/1024).toFixed(0)} KB)`;
+  // Prellenar nombre sin extensión
+  if (!document.getElementById('upNombre').value) {
+    document.getElementById('upNombre').value = f.name.replace(/\.[^.]+$/, '');
+  }
+}
+
+function cancelarUpload() {
+  archivoSeleccionado = null;
+  fileInput.value = '';
+  document.getElementById('uploadForm').style.display = 'none';
+  document.getElementById('upNombre').value = '';
+  document.getElementById('upDescripcion').value = '';
+  document.getElementById('uploadMsg').innerHTML = '';
+  document.getElementById('archivoSeleccionado').textContent = '';
+}
+
+// ── Subir archivo ─────────────────────────────────────────────────────────
+function subirArchivo() {
+  if (!archivoSeleccionado) return;
+
+  const nombre = document.getElementById('upNombre').value.trim();
+  if (!nombre) { mostrarMsg('error', 'Escribe un nombre para el archivo.'); return; }
+
+  const formData = new FormData();
+  formData.append('archivo', archivoSeleccionado);
+  formData.append('nombre', nombre);
+  formData.append('descripcion', document.getElementById('upDescripcion').value.trim());
+  formData.append('categoria', document.getElementById('upCategoria').value);
+  formData.append('acceso', document.getElementById('upAcceso').value);
+
+  const btn = document.getElementById('btnSubir');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Subiendo...';
+  document.getElementById('progressBar').style.display = 'block';
+  document.getElementById('progressFill').style.width = '30%';
+
+  const xhr = new XMLHttpRequest();
+  xhr.upload.addEventListener('progress', e => {
+    if (e.lengthComputable) {
+      document.getElementById('progressFill').style.width = (e.loaded/e.total*90) + '%';
+    }
+  });
+
+  xhr.onload = () => {
+    document.getElementById('progressFill').style.width = '100%';
+    setTimeout(() => { document.getElementById('progressBar').style.display = 'none'; }, 400);
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa fa-upload"></i> Subir Archivo';
+
+    if (xhr.status === 200) {
+      const res = JSON.parse(xhr.responseText);
+      mostrarMsg('ok', `✅ "${res.nombre}" subido correctamente (${res.tamanio_kb} KB)`);
+      cancelarUpload();
+      cargarArchivos();
+    } else {
+      const err = JSON.parse(xhr.responseText || '{}');
+      mostrarMsg('error', err.error || 'Error al subir el archivo.');
+    }
+  };
+  xhr.onerror = () => {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa fa-upload"></i> Subir Archivo';
+    mostrarMsg('error', 'Error de conexión.');
+  };
+
+  xhr.open('POST', '/api/archivos/subir');
+  xhr.setRequestHeader('X-CSRF-Token', CSRF);
+  xhr.send(formData);
+}
+
+function mostrarMsg(tipo, texto) {
+  const div = document.getElementById('uploadMsg');
+  div.innerHTML = `<div style="padding:.5rem .7rem;border-radius:5px;font-size:.83rem;margin-top:.3rem;
+    background:${tipo==='ok'?'#dcfce7':'#fee2e2'};color:${tipo==='ok'?'#166534':'#b91c1c'};">
+    ${texto}</div>`;
+  if (tipo === 'ok') setTimeout(() => { div.innerHTML = ''; }, 5000);
+}
+
+// ── Cargar y renderizar archivos ─────────────────────────────────────────
+function debounceCargar() {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(cargarArchivos, 350);
+}
+
+async function cargarArchivos() {
+  const q = encodeURIComponent(document.getElementById('busqueda').value.trim());
+  const cat = document.getElementById('filtroCategoria').value;
+  const params = new URLSearchParams({ q, categoria: cat });
+
+  document.getElementById('tablaContainer').innerHTML = `
+    <div class="empty-state"><i class="fa fa-spinner fa-spin"></i><p>Cargando...</p></div>`;
+
+  try {
+    const r = await fetch(`/api/archivos?${params}`);
+    const data = await r.json();
+    renderTabla(data.archivos || []);
+  } catch {
+    document.getElementById('tablaContainer').innerHTML =
+      `<div class="empty-state"><i class="fa fa-exclamation-circle"></i><p>Error al cargar archivos.</p></div>`;
+  }
+}
+
+function renderTabla(archivos) {
+  const cont = document.getElementById('contadorArchivos');
+  cont.textContent = archivos.length === 0 ? '' : `${archivos.length} archivo${archivos.length !== 1 ? 's' : ''}`;
+
+  if (!archivos.length) {
+    document.getElementById('tablaContainer').innerHTML = `
+      <div class="empty-state">
+        <i class="fa fa-folder-open"></i>
+        <p>No hay archivos en esta categoría.</p>
+        <p style="font-size:.8rem;">Sube el primero usando el panel de la izquierda.</p>
+      </div>`;
+
+    // Stats igual
+    actualizarStats([]);
+    return;
+  }
+
+  const filas = archivos.map(a => {
+    const ext = a.tipo_archivo || 'otro';
+    const iconoTipo = { pdf:'fa-file-pdf', docx:'fa-file-word', xlsx:'fa-file-excel',
+      jpg:'fa-file-image', jpeg:'fa-file-image', png:'fa-file-image' }[ext] || 'fa-file';
+    const fechaCorta = a.fecha_subida ? a.fecha_subida.substring(0,10) : '—';
+    const tam = a.tamanio_kb > 1024 ? `${(a.tamanio_kb/1024).toFixed(1)} MB` : `${a.tamanio_kb} KB`;
+
+    const btnEliminar = a.puede_eliminar
+      ? `<button class="btn-icono danger" onclick="eliminarArchivo(${a.id}, '${a.nombre.replace(/'/g,"\\'")}', this)" title="Eliminar">
+           <i class="fa fa-trash"></i>
+         </button>`
+      : '';
+
+    return `<tr id="fila-${a.id}">
+      <td>
+        <span class="badge-tipo badge-${ext}">
+          <i class="fa ${iconoTipo}"></i> ${ext.toUpperCase()}
+        </span>
+      </td>
+      <td>
+        <div style="font-weight:500;">${_esc(a.nombre)}</div>
+        ${a.descripcion ? `<div style="font-size:.78rem;color:var(--text-muted);">${_esc(a.descripcion)}</div>` : ''}
+      </td>
+      <td>${a.categoria_label}</td>
+      <td><span class="badge-acceso acc-${a.acceso}">${_labelAcceso(a.acceso)}</span></td>
+      <td style="color:var(--text-muted);font-size:.82rem;">${tam}</td>
+      <td style="color:var(--text-muted);font-size:.82rem;">${_esc(a.subido_por)}</td>
+      <td style="color:var(--text-muted);font-size:.82rem;">${fechaCorta}</td>
+      <td style="white-space:nowrap;">
+        <a href="/api/archivos/${a.id}/descargar" class="btn-icono" title="Descargar" download>
+          <i class="fa fa-download"></i>
+        </a>
+        ${btnEliminar}
+      </td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('tablaContainer').innerHTML = `
+    <div style="overflow-x:auto;">
+    <table class="tabla-archivos">
+      <thead><tr>
+        <th>Tipo</th><th>Nombre</th><th>Categoría</th>
+        <th>Acceso</th><th>Tamaño</th><th>Subido por</th><th>Fecha</th><th></th>
+      </tr></thead>
+      <tbody>${filas}</tbody>
+    </table>
+    </div>`;
+
+  actualizarStats(archivos);
+}
+
+function actualizarStats(archivos) {
+  const total = archivos.length;
+  const totalKb = archivos.reduce((s, a) => s + (a.tamanio_kb || 0), 0);
+  const tam = totalKb > 1024 ? `${(totalKb/1024).toFixed(1)} MB` : `${totalKb} KB`;
+  document.getElementById('statsResumen').innerHTML =
+    total === 0
+      ? 'Sin archivos aún'
+      : `${total} archivo${total!==1?'s':''}<br>${tam} en total`;
+}
+
+async function eliminarArchivo(id, nombre, btn) {
+  if (!confirm(`¿Eliminar "${nombre}"? Esta acción no se puede deshacer.`)) return;
+  btn.disabled = true;
+  try {
+    const r = await fetch(`/api/archivos/${id}`, {
+      method: 'DELETE',
+      headers: { 'X-CSRF-Token': CSRF },
+    });
+    const data = await r.json();
+    if (data.ok) {
+      const fila = document.getElementById(`fila-${id}`);
+      fila && fila.remove();
+    } else {
+      alert(data.error || 'Error al eliminar');
+      btn.disabled = false;
+    }
+  } catch {
+    alert('Error de conexión');
+    btn.disabled = false;
+  }
+}
+
+function _labelAcceso(a) {
+  return {institucional:'Institucional', psicologico:'Psicológico', financiero:'Financiero'}[a] || a;
+}
+
+function _esc(s) {
+  return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Arranque
+cargarArchivos();
+</script>
+</body>
+</html>

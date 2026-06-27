@@ -1,0 +1,1712 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Gestión de Usuarios — Axula</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="/static/theme.css">
+<script>
+/* Axula — theme inline (siempre disponible) */
+(function(){
+  var K='axula_theme', S=6, E=19;
+  function auto(){ var h=new Date().getHours(); return h>=S&&h<E?'light':'dark'; }
+  function get(){ try{return localStorage.getItem(K)||'auto';}catch(e){return 'auto';} }
+  function set(v){ try{localStorage.setItem(K,v);}catch(e){} }
+  function apply(p){ document.documentElement.setAttribute('data-theme',p==='auto'?auto():p); sync(p); }
+  function sync(p){ document.querySelectorAll('[data-mt]').forEach(function(b){ b.classList.toggle('theme-btn-active',b.getAttribute('data-mt')===p); }); }
+  window.setTheme=function(p){ set(p); apply(p); };
+  window.getTheme=function(){ return get(); };
+  apply(get());
+  document.addEventListener('DOMContentLoaded',function(){ sync(get()); setInterval(function(){if(get()==='auto')apply('auto');},60000); });
+})();
+</script>
+
+<script>
+(function(){
+  var T="{{csrf_token}}";
+  var o=window.fetch;
+  window.fetch=function(u,p){p=p||{};var m=(p.method||"GET").toUpperCase();
+    if(m!="GET"&&m!="HEAD"){p.headers=p.headers||{};
+      if(p.headers instanceof Headers)p.headers.set("X-CSRF-Token",T);
+      else p.headers["X-CSRF-Token"]=T;}return o.apply(this,[u,p]);};
+})();
+</script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh}
+
+nav{display:flex;align-items:center;gap:10px;padding:0 24px;height:50px;
+    background:var(--surface);border-bottom:1px solid var(--border);
+    position:sticky;top:0;z-index:200}
+.logo{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;
+      color:var(--accent);text-decoration:none;letter-spacing:-.5px}
+.logo span{color:var(--muted)}
+.nav-r{margin-left:auto;display:flex;gap:8px;align-items:center}
+.nbtn{display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:8px;
+      border:1px solid var(--border);background:transparent;color:var(--muted);
+      font-size:12px;cursor:pointer;text-decoration:none;transition:all .15s;
+      font-family:'DM Sans',sans-serif}
+.nbtn:hover{color:var(--text);border-color:var(--accent)}
+.nbtn.danger{color:#ff6b6b}
+.nbtn.danger:hover{background:rgba(255,107,107,.1)}
+
+main{max-width:1200px;margin:0 auto;padding:28px 24px}
+
+/* HEADER */
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
+.page-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:800}
+.page-sub{font-size:12px;color:var(--muted);margin-top:2px}
+
+/* STATS BAR */
+.stats-bar{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+.stat-chip{display:flex;align-items:center;gap:7px;padding:7px 14px;
+           border-radius:20px;border:1px solid var(--border);
+           background:var(--surface);font-size:12px;cursor:pointer;transition:all .15s}
+.stat-chip:hover{border-color:var(--accent)}
+.stat-chip.active{background:rgba(55,138,221,.1);border-color:var(--accent);color:var(--accent)}
+.stat-n{font-weight:800;font-family:'Syne',sans-serif;font-size:15px}
+
+/* TOOLBAR */
+.toolbar{display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
+.search-box{display:flex;align-items:center;gap:7px;background:var(--surface);
+            border:1px solid var(--border);border-radius:9px;padding:0 12px;
+            height:36px;flex:1;min-width:200px}
+.search-box input{background:none;border:none;outline:none;color:var(--text);
+                  font-size:13px;width:100%;font-family:'DM Sans',sans-serif}
+.btn-nuevo{display:flex;align-items:center;gap:6px;padding:9px 18px;
+           border-radius:9px;background:var(--accent);border:none;
+           color:#000;font-size:13px;font-weight:700;cursor:pointer;
+           font-family:'DM Sans',sans-serif;transition:all .15s;white-space:nowrap}
+.btn-nuevo:hover{background:#d8ff70;transform:translateY(-1px)}
+
+/* TABLA */
+.table-wrap{background:var(--surface);border:1px solid var(--border);
+            border-radius:12px;overflow:hidden}
+table{width:100%;border-collapse:collapse}
+thead{background:var(--surface2)}
+th{padding:10px 14px;text-align:left;font-size:10px;font-weight:700;
+   text-transform:uppercase;letter-spacing:.5px;color:var(--muted);
+   border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px;
+   vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--hover)}
+
+.u-avatar{width:32px;height:32px;border-radius:50%;
+          display:inline-flex;align-items:center;justify-content:center;
+          font-size:12px;font-weight:800;font-family:'Syne',sans-serif;flex-shrink:0}
+.u-nombre{font-weight:600;font-size:13px}
+.u-user{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace}
+
+/* ROL BADGE */
+.rol-badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;
+           font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;
+           white-space:nowrap}
+.rb-dir{background:rgba(55,138,221,.15);color:#378ADD}
+.rb-coord{background:rgba(96,184,240,.15);color:#60b8f0}
+.rb-psico{background:rgba(180,75,232,.15);color:#b44be8}
+.rb-prof{background:rgba(255,159,96,.15);color:#ff9f60}
+.rb-admin{background:rgba(96,184,240,.1);color:#60b8f0}
+.rb-secretaria{background:rgba(200,200,200,.1);color:var(--muted)}
+
+/* STATUS */
+.dot-active{width:7px;height:7px;border-radius:50%;background:var(--success);
+            display:inline-block;margin-right:4px}
+.dot-inactive{width:7px;height:7px;border-radius:50%;background:var(--muted);
+              display:inline-block;margin-right:4px;opacity:.4}
+
+/* ACCIONES */
+.acts{display:flex;gap:4px}
+.act-btn{width:28px;height:28px;border-radius:7px;border:1px solid var(--border);
+         background:transparent;color:var(--muted);cursor:pointer;
+         display:flex;align-items:center;justify-content:center;
+         font-size:11px;transition:all .15s}
+.act-btn:hover{border-color:var(--accent);color:var(--accent)}
+.act-btn.del:hover{border-color:#ff6b6b;color:#ff6b6b}
+.act-btn.pwd:hover{border-color:#f7c948;color:#f7c948}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);
+               z-index:1000;align-items:center;justify-content:center;padding:16px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;
+       padding:26px;width:560px;max-width:100%;max-height:90vh;overflow-y:auto}
+.modal-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;margin-bottom:3px}
+.modal-sub{font-size:12px;color:var(--muted);margin-bottom:20px}
+
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-group.full{grid-column:1/-1}
+.flabel{font-size:11px;font-weight:600;color:var(--muted);
+        text-transform:uppercase;letter-spacing:.4px}
+.finput{background:var(--surface2);border:1px solid var(--border);
+        color:var(--text);font-size:13px;border-radius:8px;padding:9px 12px;
+        font-family:'DM Sans',sans-serif;outline:none;transition:border .15s}
+.finput:focus{border-color:var(--accent)}
+.fselect{background:var(--surface2);border:1px solid var(--border);
+         color:var(--text);font-size:13px;border-radius:8px;padding:9px 12px;
+         font-family:'DM Sans',sans-serif;outline:none;cursor:pointer}
+
+/* Campos condicionados al rol */
+.campos-prof{display:none}
+.campos-prof.visible{display:contents}
+
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;
+              padding-top:14px;border-top:1px solid var(--border)}
+.btn-save{padding:9px 22px;border-radius:9px;background:var(--accent);border:none;
+          color:#000;font-size:13px;font-weight:700;cursor:pointer;
+          font-family:'DM Sans',sans-serif;transition:all .15s}
+.btn-save:hover{background:#d8ff70}
+.btn-cancel{padding:9px 16px;border-radius:9px;background:transparent;
+            border:1px solid var(--border);color:var(--muted);font-size:13px;
+            cursor:pointer;font-family:'DM Sans',sans-serif}
+.btn-danger{padding:9px 16px;border-radius:9px;background:rgba(255,107,107,.1);
+            border:1px solid rgba(255,107,107,.3);color:#ff6b6b;font-size:13px;
+            cursor:pointer;font-family:'DM Sans',sans-serif}
+
+/* SEPARADOR DE GRUPOS */
+.rol-section{margin-bottom:4px;padding:6px 14px;
+             font-size:9px;font-weight:700;text-transform:uppercase;
+             letter-spacing:.8px;color:var(--muted);background:var(--surface2);
+             border-bottom:1px solid var(--border)}
+
+/* EMPTY STATE */
+.empty{text-align:center;padding:48px 24px;color:var(--muted)}
+.empty i{font-size:40px;margin-bottom:12px;opacity:.3}
+
+
+/* Botones radio/check estilo chip */
+.radio-btn, .check-btn {
+  display:inline-flex;align-items:center;gap:5px;padding:5px 11px;
+  border-radius:20px;border:1px solid var(--border);font-size:11px;
+  cursor:pointer;transition:all .15s;user-select:none;
+  background:var(--surface);color:var(--muted);white-space:nowrap;
+}
+.radio-btn:hover, .check-btn:hover {
+  border-color:var(--accent);color:var(--accent)
+}
+.radio-btn input, .check-btn input { display:none }
+.radio-btn:has(input:checked),
+.check-btn:has(input:checked) {
+  background:rgba(55,138,221,.12);
+  border-color:var(--accent);
+  color:var(--accent);
+  font-weight:700;
+}
+/* Fallback para navegadores sin :has() */
+.radio-btn.sel, .check-btn.sel {
+  background:rgba(55,138,221,.12);
+  border-color:var(--accent);
+  color:var(--accent);
+  font-weight:700;
+}
+
+#toast{position:fixed;bottom:24px;right:24px;padding:10px 18px;
+       border-radius:10px;font-size:13px;font-weight:600;
+       opacity:0;transition:opacity .3s;pointer-events:none;z-index:9999}
+#toast.ok{background:#1a3d2b;color:#4ade80;border:1px solid #2d6a4f}
+#toast.err{background:#3d1a1a;color:#f87171;border:1px solid #7f1d1d}
+#toast.warn{background:#3d2e00;color:#fbbf24;border:1px solid #78350f}
+
+@media(max-width:768px){
+  .form-grid{grid-template-columns:1fr}
+  th:nth-child(4),td:nth-child(4),
+  th:nth-child(5),td:nth-child(5){display:none}
+}
+.dd-item{padding:8px 12px;border-radius:7px;font-size:13px;color:var(--text);
+  cursor:pointer;display:flex;align-items:center;gap:8px;transition:background .15s;}
+.dd-item:hover{background:var(--hover,rgba(255,255,255,.05));}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="logo">Axula</a>
+  <div class="nav-r">
+    <!-- ── THEME TOGGLE ── -->
+    <div class="mt-theme-toggle" title="Cambiar tema">
+      <button class="mt-tbtn" data-mt="light"  onclick="setTheme('light')">&#9728; Claro</button>
+      <button class="mt-tbtn" data-mt="auto"   onclick="setTheme('auto')">&#8635; Auto</button>
+      <button class="mt-tbtn" data-mt="dark"   onclick="setTheme('dark')">&#9790; Oscuro</button>
+    </div>
+    <a href="/" class="nbtn"><i class="fas fa-table-columns"></i> Dashboard</a>
+
+    <!-- Avatar dropdown -->
+    <div style="position:relative" id="avatar-menu-wrap">
+      <div style="display:flex;align-items:center;gap:8px;padding:5px 10px 5px 5px;
+                  border:1px solid var(--border);border-radius:99px;background:var(--surface);
+                  cursor:pointer;user-select:none;transition:border-color .15s;"
+           onclick="toggleAvatarMenu()"
+           onmouseover="this.style.borderColor='var(--accent)'"
+           onmouseout="this.style.borderColor='var(--border)'">
+        <div style="width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;
+                    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;">
+          {{ current_user.nombre[:1].upper() if current_user and current_user.nombre else 'U' }}
+        </div>
+        <div style="max-width:80px;overflow:hidden;">
+          <div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;
+                      text-overflow:ellipsis;color:var(--text)">
+            {{ current_user.nombre if current_user else 'Usuario' }}
+          </div>
+          <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;font-weight:700;">
+            {{ current_user.rol | replace('_',' ') | title if current_user else '' }}
+          </div>
+        </div>
+        <i class="fas fa-chevron-down" style="font-size:9px;color:var(--muted)"></i>
+      </div>
+
+      <div id="avatar-dropdown" style="display:none;position:absolute;top:calc(100% + 6px);
+            right:0;width:210px;background:var(--surface);border:1px solid var(--border);
+            border-radius:11px;box-shadow:0 8px 24px rgba(0,0,0,.3);z-index:500;padding:6px;">
+        <div style="padding:10px 12px;border-bottom:1px solid var(--border);margin-bottom:4px">
+          <div style="font-weight:700;font-size:13px;color:var(--text)">{{ current_user.nombre if current_user else '' }}</div>
+          <div style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace">@{{ current_user.username if current_user else '' }}</div>
+        </div>
+        <a href="/mi-perfil" style="text-decoration:none">
+          <div class="dd-item"><i class="fas fa-id-card" style="color:var(--accent);width:16px"></i> Mi perfil</div>
+        </a>
+        {% if current_user and current_user.rol == 'profesor' %}
+        <a href="/profesor" style="text-decoration:none">
+          <div class="dd-item"><i class="fas fa-clipboard-check" style="color:#ff9f60;width:16px"></i> Portal docente</div>
+        </a>
+        {% endif %}
+        <a href="/usuarios" style="text-decoration:none">
+          <div class="dd-item" style="background:var(--hover,rgba(255,255,255,.05))">
+            <i class="fas fa-users-cog" style="color:#60b8f0;width:16px"></i> Gestión de usuarios
+          </div>
+        </a>
+        {% if current_user and current_user.es_directora %}
+        <a href="/auditoria" style="text-decoration:none">
+          <div class="dd-item"><i class="fas fa-chart-mixed" style="color:var(--accent);width:16px"></i> Auditoría</div>
+        </a>
+        {% endif %}
+        <div style="border-top:1px solid var(--border);margin-top:4px;padding-top:4px">
+          <a href="/logout" style="text-decoration:none">
+            <div class="dd-item" style="color:#ff6b6b">
+              <i class="fas fa-right-from-bracket" style="width:16px"></i> Cerrar sesión
+            </div>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<main>
+
+  <div class="page-header">
+    <div>
+      <div class="page-title">
+        <i class="fas fa-users-cog" style="color:var(--accent);margin-right:8px"></i>
+        Gestión de Usuarios
+      </div>
+      <div class="page-sub">Personal del C.E. Benito Juárez — Axula</div>
+    </div>
+    <button class="btn-nuevo" onclick="abrirNuevo()">
+      <i class="fas fa-plus"></i> Nuevo usuario
+    </button>
+  </div>
+
+  <!-- Stats por rol -->
+  <div class="stats-bar" id="stats-bar">
+    <div class="stat-chip active" data-filtro="" onclick="filtrarRol(this,'')">
+      <span class="stat-n" id="cnt-todos">—</span>
+      <span>Todos</span>
+    </div>
+    <div class="stat-chip" data-filtro="directora" onclick="filtrarRol(this,'directora')">
+      <span>👑</span><span class="stat-n" id="cnt-dir">—</span><span>Directivos</span>
+    </div>
+    <div class="stat-chip" data-filtro="coord" onclick="filtrarRol(this,'coord')">
+      <span>🏛️</span><span class="stat-n" id="cnt-coord">—</span><span>Coordinación</span>
+    </div>
+    <div class="stat-chip" data-filtro="psicologa" onclick="filtrarRol(this,'psicologa')">
+      <span>🧠</span><span class="stat-n" id="cnt-psico">—</span><span>Psicología</span>
+    </div>
+    <div class="stat-chip" data-filtro="profesor" onclick="filtrarRol(this,'profesor')">
+      <span>🏫</span><span class="stat-n" id="cnt-prof">—</span><span>Docentes</span>
+    </div>
+    <div class="stat-chip" data-filtro="admin" onclick="filtrarRol(this,'admin')">
+      <span>📋</span><span class="stat-n" id="cnt-admin">—</span><span>Administrativo</span>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="search-box">
+      <i class="fas fa-magnifying-glass" style="color:var(--muted);font-size:12px"></i>
+      <input type="text" id="buscar" placeholder="Buscar por nombre, usuario o email..."
+             oninput="renderTabla()">
+    </div>
+    <select class="finput" id="filtro-activo" onchange="renderTabla()"
+            style="height:36px;padding:0 12px;min-width:130px">
+      <option value="">Todos</option>
+      <option value="1">Activos</option>
+      <option value="0">Inactivos</option>
+    </select>
+  </div>
+
+  <!-- Tabla -->
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Usuario</th>
+          <th>Rol</th>
+          <th>Asignación</th>
+          <th>Email</th>
+          <th>Estado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="tabla-body">
+        <tr><td colspan="6" class="empty">
+          <i class="fas fa-spinner fa-spin" style="font-size:20px;opacity:.3"></i>
+          <div style="margin-top:8px">Cargando usuarios...</div>
+        </td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div id="tabla-empty" class="empty" style="display:none">
+    <i class="fas fa-users-slash"></i>
+    <div>No se encontraron usuarios con ese filtro</div>
+  </div>
+
+  <!-- Panel prueba SMTP — solo visible para coords/directora via JS -->
+  <!-- ══ PORTAL DE PADRES ═══════════════════════════════════════════════ -->
+  <div style="margin-top:32px;background:var(--surface);border:1px solid var(--border);
+              border-radius:14px;padding:24px;max-width:560px;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+      <span style="font-size:22px;">👨‍👩‍👧</span>
+      <div>
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:15px;">Portal de Padres / Tutores</div>
+        <div style="font-size:12px;color:var(--muted);">Vincula un padre/tutor a sus hijos registrados</div>
+      </div>
+    </div>
+
+    <!-- Paso 1: buscar usuario padre -->
+    <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;">
+      1. Buscar usuario con rol Padre/Madre/Tutor
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:14px;">
+      <input id="padre-buscar-input" type="text" placeholder="Nombre o usuario del padre..."
+        style="flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);
+               padding:9px 12px;border-radius:8px;font-size:13px;font-family:inherit;outline:none;"
+        oninput="buscarPadres(this.value)">
+    </div>
+    <div id="padre-resultados" style="margin-bottom:14px;"></div>
+
+    <!-- Paso 2: vincular estudiante -->
+    <div id="padre-vincular-panel" style="display:none;">
+      <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;">
+        2. Buscar estudiante a vincular
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <input id="est-vincular-input" type="text" placeholder="Nombre del estudiante..."
+          style="flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);
+                 padding:9px 12px;border-radius:8px;font-size:13px;font-family:inherit;outline:none;"
+          oninput="buscarEstudiantesVincular(this.value)">
+        <select id="parentesco-sel"
+          style="background:var(--surface2);border:1px solid var(--border);color:var(--text);
+                 padding:9px 12px;border-radius:8px;font-size:12px;font-family:inherit;outline:none;">
+          <option value="padre/madre">Padre/Madre</option>
+          <option value="tutor">Tutor/a</option>
+          <option value="abuelo/abuela">Abuelo/a</option>
+          <option value="tío/tía">Tío/a</option>
+          <option value="hermano/hermana">Hermano/a mayor</option>
+          <option value="otro">Otro</option>
+        </select>
+      </div>
+      <div id="est-vincular-resultados" style="margin-bottom:10px;"></div>
+      <div id="padre-vinculos-actuales" style="margin-top:12px;"></div>
+    </div>
+
+    <div id="vinculo-resultado" style="margin-top:10px;font-size:12px;min-height:16px;"></div>
+  </div>
+
+  <div id="smtp-panel" style="margin-top:32px;background:var(--surface);
+              border:1px solid var(--border);border-radius:14px;padding:24px;max-width:560px;">
+
+    <!-- Encabezado -->
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;">
+      <span style="font-size:22px;">📧</span>
+      <div>
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:15px;">Configuración de Email</div>
+        <div style="font-size:12px;color:var(--muted);">Correos de recuperación de contraseña</div>
+      </div>
+      <button onclick="toggleSmtpConfig()" id="btn-smtp-config"
+        style="margin-left:auto;font-size:11px;padding:5px 14px;border-radius:8px;
+               border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;">
+        ⚙ Configurar
+      </button>
+    </div>
+
+    <!-- Formulario de configuración (oculto por defecto) -->
+    <div id="smtp-config-form" style="display:none;margin-bottom:18px;
+         background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px;">
+
+      <!-- Tabs método -->
+      <div style="display:flex;gap:6px;margin-bottom:16px;">
+        <button onclick="setMetodoEmail('resend')" id="tab-resend"
+          style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(55,138,221,.4);
+                 background:rgba(55,138,221,.1);color:var(--accent);font-size:12px;font-weight:700;
+                 cursor:pointer;font-family:inherit;">
+          ⚡ Resend <span style="font-size:10px;opacity:.7;">(recomendado)</span>
+        </button>
+        <button onclick="setMetodoEmail('smtp')" id="tab-smtp"
+          style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--border);
+                 background:transparent;color:var(--muted);font-size:12px;
+                 cursor:pointer;font-family:inherit;">
+          📮 Gmail SMTP
+        </button>
+      </div>
+
+      <!-- Resend panel -->
+      <div id="panel-resend">
+        <div style="padding:10px 14px;border-radius:8px;background:rgba(55,138,221,.06);
+             border:1px solid rgba(55,138,221,.2);font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.7;">
+          <strong style="color:var(--text);">Resend</strong> es una API de email moderna — sin configurar servidores SMTP.<br>
+          Plan gratuito: <strong style="color:var(--accent);">3,000 emails/mes</strong> · Solo necesitas una API key.
+          <a href="https://resend.com/signup" target="_blank"
+            style="color:var(--accent);text-decoration:none;font-weight:700;margin-left:4px;">
+            Crear cuenta gratis →
+          </a>
+        </div>
+        <div style="margin-bottom:10px;">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">
+            RESEND_API_KEY
+            <a href="https://resend.com/api-keys" target="_blank"
+              style="color:var(--accent);text-decoration:none;margin-left:6px;">Obtener API key →</a>
+          </div>
+          <input id="cfg-resend-key" type="password" placeholder="re_xxxxxxxxxxxxxxxxxxxx"
+            style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);
+                   padding:8px 12px;border-radius:7px;font-size:12px;font-family:inherit;outline:none;">
+        </div>
+        <div style="margin-bottom:12px;">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">
+            RESEND_FROM (remitente)
+          </div>
+          <input id="cfg-resend-from" type="text" value="Axula &lt;onboarding@resend.dev&gt;"
+            style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);
+                   padding:8px 12px;border-radius:7px;font-size:12px;font-family:inherit;outline:none;">
+          <div style="font-size:10px;color:var(--muted);margin-top:3px;">
+            Con plan gratis usa <code style="font-size:10px;"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="c6a9a8a4a9a7b4a2afa8a186b4a3b5a3a8a2e8a2a3b0">[email&#160;protected]</a></code>.
+            Con dominio propio verificado puedes poner tu correo.
+          </div>
+        </div>
+        <button onclick="guardarConfigResend()"
+          style="background:var(--accent);border:none;color:#000;padding:9px 20px;border-radius:8px;
+                 cursor:pointer;font-size:12px;font-weight:700;font-family:inherit;">
+          💾 Guardar API key
+        </button>
+      </div>
+
+      <!-- SMTP panel -->
+      <div id="panel-smtp" style="display:none;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+          <div>
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">SMTP_USER</div>
+            <input id="cfg-smtp-user" type="email" placeholder="correo@gmail.com"
+              style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);
+                     padding:8px 12px;border-radius:7px;font-size:12px;font-family:inherit;outline:none;">
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">SMTP_HOST</div>
+            <input id="cfg-smtp-host" type="text" value="smtp.gmail.com"
+              style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);
+                     padding:8px 12px;border-radius:7px;font-size:12px;font-family:inherit;outline:none;">
+          </div>
+        </div>
+        <div style="margin-bottom:10px;">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">
+            SMTP_PASS — Contraseña de aplicación Google
+            <a href="https://myaccount.google.com/apppasswords" target="_blank"
+              style="color:var(--accent);text-decoration:none;margin-left:6px;">Generar →</a>
+          </div>
+          <form autocomplete="new-password" style="display:contents"><input id="cfg-smtp-pass" type="password" placeholder="xxxx xxxx xxxx xxxx" autocomplete="new-password"
+            style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);
+                   padding:8px 12px;border-radius:7px;font-size:12px;font-family:inherit;outline:none;"></form>
+          <div style="font-size:10px;color:var(--muted);margin-top:3px;">
+            Google: Mi cuenta → Seguridad → Verificación 2 pasos → Contraseñas de aplicaciones
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:80px 1fr;gap:10px;margin-bottom:14px;">
+          <div>
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">Puerto</div>
+            <input id="cfg-smtp-port" type="number" value="587"
+              style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);
+                     padding:8px 12px;border-radius:7px;font-size:12px;font-family:inherit;outline:none;">
+          </div>
+          <div style="display:flex;align-items:flex-end;">
+            <div style="font-size:11px;color:var(--muted);padding-bottom:10px;">587 = TLS (recomendado) · 465 = SSL</div>
+          </div>
+        </div>
+        <button onclick="guardarConfigSMTP()"
+          style="background:var(--accent);border:none;color:#000;padding:9px 20px;border-radius:8px;
+                 cursor:pointer;font-size:12px;font-weight:700;font-family:inherit;">
+          💾 Guardar configuración SMTP
+        </button>
+      </div>
+
+      <div id="smtp-config-result" style="margin-top:10px;font-size:12px;min-height:16px;"></div>
+    </div>
+
+    <!-- Prueba de envío -->
+    <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;">
+      Enviar email de prueba
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <input type="email" id="smtp-test-email" placeholder="destino@gmail.com"
+             style="flex:1;background:var(--surface2);border:1px solid var(--border);
+                    color:var(--text);padding:10px 14px;border-radius:8px;font-size:13px;
+                    font-family:inherit;outline:none;transition:border-color .2s;"
+             onkeydown="if(event.key==='Enter') probarSMTP()">
+      <button onclick="probarSMTP()"
+              style="background:var(--accent);border:none;color:#000;padding:10px 20px;
+                     border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;
+                     font-family:inherit;white-space:nowrap;flex-shrink:0;">
+        Enviar prueba
+      </button>
+    </div>
+    <div id="smtp-resultado" style="margin-top:12px;font-size:13px;min-height:20px;line-height:1.6;"></div>
+  </div>
+
+</main>
+
+    <!-- Formulario de configuración (oculto por defecto) -->
+    <div id="smtp-config-form" style="display:none;margin-bottom:18px;
+         background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px;">
+      <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;
+                  letter-spacing:.05em;margin-bottom:12px;">Credenciales Gmail / SMTP</div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+        <div>
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">SMTP_USER (correo remitente)</div>
+          <input id="cfg-smtp-user" type="email" placeholder="correo@gmail.com"
+            style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);
+                   padding:8px 12px;border-radius:7px;font-size:12px;font-family:inherit;outline:none;">
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">SMTP_HOST</div>
+          <input id="cfg-smtp-host" type="text" value="smtp.gmail.com"
+            style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);
+                   padding:8px 12px;border-radius:7px;font-size:12px;font-family:inherit;outline:none;">
+        </div>
+      </div>
+
+      <div style="margin-bottom:10px;">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">
+          SMTP_PASS — Contraseña de aplicación
+          <a href="https://myaccount.google.com/apppasswords" target="_blank"
+            style="color:var(--accent);text-decoration:none;margin-left:6px;">Generar en Google →</a>
+        </div>
+        <input id="cfg-smtp-pass" type="password" placeholder="xxxx xxxx xxxx xxxx  (16 caracteres sin espacios extra)"
+          style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);
+                 padding:8px 12px;border-radius:7px;font-size:12px;font-family:inherit;outline:none;">
+        <div style="font-size:10px;color:var(--muted);margin-top:3px;">
+          En Gmail: Cuenta → Seguridad → Verificación en 2 pasos → Contraseñas de aplicaciones
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:80px 1fr;gap:10px;margin-bottom:14px;">
+        <div>
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">Puerto</div>
+          <input id="cfg-smtp-port" type="number" value="587"
+            style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);
+                   padding:8px 12px;border-radius:7px;font-size:12px;font-family:inherit;outline:none;">
+        </div>
+        <div style="display:flex;align-items:flex-end;">
+          <div style="font-size:11px;color:var(--muted);padding-bottom:10px;line-height:1.5;">
+            587 = TLS/STARTTLS (recomendado Gmail)<br>
+            465 = SSL directo
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;">
+        <button onclick="guardarConfigSMTP()"
+          style="background:var(--accent);border:none;color:#000;padding:9px 20px;border-radius:8px;
+                 cursor:pointer;font-size:12px;font-weight:700;font-family:inherit;">
+          💾 Guardar en .env
+        </button>
+        <button onclick="toggleSmtpConfig()"
+          style="background:transparent;border:1px solid var(--border);color:var(--muted);
+                 padding:9px 16px;border-radius:8px;cursor:pointer;font-size:12px;font-family:inherit;">
+          Cancelar
+        </button>
+      </div>
+      <div id="smtp-config-result" style="margin-top:10px;font-size:12px;min-height:16px;"></div>
+    </div>
+
+    <!-- Prueba de envío -->
+    <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;">
+      Enviar email de prueba
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <input type="email" id="smtp-test-email" placeholder="destino@gmail.com"
+             style="flex:1;background:var(--surface2);border:1px solid var(--border);
+                    color:var(--text);padding:10px 14px;border-radius:8px;font-size:13px;
+                    font-family:inherit;outline:none;transition:border-color .2s;"
+             onkeydown="if(event.key==='Enter') probarSMTP()">
+      <button onclick="probarSMTP()"
+              style="background:var(--accent);border:none;color:#000;padding:10px 20px;
+                     border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;
+                     font-family:inherit;white-space:nowrap;flex-shrink:0;">
+        Enviar prueba
+      </button>
+    </div>
+    <div id="smtp-resultado" style="margin-top:12px;font-size:13px;min-height:20px;line-height:1.6;"></div>
+  </div>
+
+</main>
+
+<!-- MODAL: Crear / Editar usuario -->
+<div class="modal-overlay" id="modal-usuario">
+  <div class="modal">
+    <div class="modal-title" id="modal-titulo">Nuevo usuario</div>
+    <div class="modal-sub" id="modal-subtitulo">Completa los datos del nuevo miembro del personal</div>
+    <input type="hidden" id="u-id">
+
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="flabel">Nombre completo *</label>
+        <input class="finput" id="u-nombre" type="text" placeholder="Ej: María Rodríguez">
+      </div>
+      <div class="form-group">
+        <label class="flabel">Usuario (login) *</label>
+        <input class="finput" id="u-username" type="text" placeholder="Ej: m.rodriguez"
+               oninput="this.value=this.value.toLowerCase().replace(/\s/g,'')">
+      </div>
+      <div class="form-group">
+        <label class="flabel" id="email-label">Correo institucional</label>
+        <input class="finput" id="u-email" type="email" placeholder="usuario@educacion.edu.do">
+</div>
+      <!-- Contraseña: visible para nuevo usuario, collapsible para edición -->
+      <div class="form-group" id="pwd-group-nuevo">
+        <label class="flabel">Contraseña <span id="pwd-req-label">*</span></label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <form autocomplete="new-password" style="display:contents"><input class="finput" id="u-password" type="password" placeholder="Mínimo 6 caracteres" style="flex:1" autocomplete="new-password"></form>
+          <button type="button" id="btn-toggle-pwd" onclick="togglePwdSection()"
+            style="display:none;background:var(--surface2);border:1px solid var(--border);
+            color:var(--muted);padding:8px 12px;border-radius:8px;cursor:pointer;
+            font-size:11px;white-space:nowrap;">🔑 Cambiar</button>
+        </div>
+        <div id="pwd-hint" style="font-size:10px;color:var(--muted);margin-top:4px;display:none">
+          Deja vacío para no cambiar la contraseña actual
+        </div>
+      </div>
+
+      <div class="form-group full">
+        <label class="flabel">Rol / Cargo *</label>
+        <select class="fselect" id="u-rol" onchange="onRolChange()">
+          <optgroup label="── Directivos ──">
+            <option value="directora">👑 Directora / Director</option>
+            <option value="coordinador_general">🏛️ Coordinador/a General</option>
+          </optgroup>
+          <optgroup label="── Coordinación ──">
+            <option value="coordinador_primer_ciclo">📚 Coordinador/a 1er Ciclo (1ro–3ro)</option>
+            <option value="coordinador_segundo_ciclo">🎓 Coordinador/a 2do Ciclo (4to–6to)</option>
+          </optgroup>
+          <optgroup label="── Orientación ──">
+            <option value="psicologa_primer_ciclo">🧠 Psicóloga/o 1er Ciclo</option>
+            <option value="psicologa_segundo_ciclo">🧠 Psicóloga/o 2do Ciclo</option>
+          </optgroup>
+          <optgroup label="── Docentes ──">
+            <option value="profesor" selected>🏫 Docente / Profesor/a</option>
+          </optgroup>
+          <optgroup label="── Personal Administrativo ──">
+            <option value="secretaria">📋 Secretaria/o</option>
+            <option value="secretaria_docente">📋 Secretaria/o Docente</option>
+            <option value="digitador">⌨️ Digitador/a</option>
+            <option value="auxiliar_contabilidad">🧮 Auxiliar de Contabilidad</option>
+            <option value="bibliotecario">📚 Bibliotecario/a</option>
+            <option value="orientador">🎯 Orientador/a Educativo/a</option>
+            <option value="trabajador_social">👥 Trabajador/a Social</option>
+            <option value="encargado_tecnologia">💻 Encargado/a de Tecnología</option>
+            <option value="auxiliar_administrativo">🗂️ Auxiliar Administrativo/a</option>
+            <option value="conserje">🧹 Conserjería / Mantenimiento</option>
+          </optgroup>
+          <optgroup label="── Portal Familiar ──">
+            <option value="padre">👨‍👩‍👧 Padre / Madre / Tutor</option>
+          </optgroup>
+        </select>
+      </div>
+
+      <!-- ══ CAMPOS PARA PROFESORES ══════════════════════════════════════ -->
+      <div class="campos-prof full" id="bloque-prof" style="grid-column:1/-1">
+
+        <!-- Tipo de docente -->
+        <div style="background:rgba(55,138,221,.06);border:1px solid rgba(55,138,221,.2);
+                    border-radius:10px;padding:14px;margin-bottom:12px">
+          <div class="flabel" style="margin-bottom:8px">
+            <i class="fas fa-chalkboard-user" style="color:var(--accent)"></i>
+            Tipo de docencia
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <label class="radio-btn" id="tipo-basica">
+              <input type="radio" name="tipo-docencia" value="basica" onclick="onTipoDocencia('basica')">
+              <span>📚 Materias Básicas</span>
+            </label>
+            <label class="radio-btn" id="tipo-tecnica">
+              <input type="radio" name="tipo-docencia" value="tecnica" onclick="onTipoDocencia('tecnica')">
+              <span>🎨 Materias Técnicas</span>
+            </label>
+            <label class="radio-btn" id="tipo-ambas">
+              <input type="radio" name="tipo-docencia" value="ambas" onclick="onTipoDocencia('ambas')" checked>
+              <span>📖 Ambas</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Ciclo y grados -->
+        <div style="background:var(--surface2);border:1px solid var(--border);
+                    border-radius:10px;padding:14px;margin-bottom:12px">
+          <div class="flabel" style="margin-bottom:8px">Ciclo y grados asignados</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+            <label class="radio-btn" id="ciclo-primero">
+              <input type="radio" name="ciclo-radio" value="primer_ciclo" onclick="onCicloChange('primer_ciclo')">
+              <span>1er Ciclo (1ro–3ro)</span>
+            </label>
+            <label class="radio-btn" id="ciclo-segundo">
+              <input type="radio" name="ciclo-radio" value="segundo_ciclo" onclick="onCicloChange('segundo_ciclo')">
+              <span>2do Ciclo (4to–6to)</span>
+            </label>
+            <label class="radio-btn" id="ciclo-ambos">
+              <input type="radio" name="ciclo-radio" value="ambos" onclick="onCicloChange('ambos')" checked>
+              <span>Ambos ciclos</span>
+            </label>
+          </div>
+          <div class="flabel" style="margin-bottom:6px">Grados específicos (opcional)</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <label class="check-btn"><input type="checkbox" value="1ro" class="chk-grado"> 1ro</label>
+            <label class="check-btn"><input type="checkbox" value="2do" class="chk-grado"> 2do</label>
+            <label class="check-btn"><input type="checkbox" value="3ro" class="chk-grado"> 3ro</label>
+            <label class="check-btn"><input type="checkbox" value="4to" class="chk-grado"> 4to</label>
+            <label class="check-btn"><input type="checkbox" value="5to" class="chk-grado"> 5to</label>
+            <label class="check-btn"><input type="checkbox" value="6to" class="chk-grado"> 6to</label>
+          </div>
+        </div>
+
+        <!-- Mención (solo técnicas) -->
+        <div id="bloque-mencion" style="background:var(--surface2);border:1px solid var(--border);
+                    border-radius:10px;padding:14px;margin-bottom:12px">
+          <div class="flabel" style="margin-bottom:8px">Mención que imparte</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap" id="mencion-chips">
+            <label class="check-btn"><input type="checkbox" value="multimedia" class="chk-mencion" onchange="onMencionChange()"> 🎬 Multimedia</label>
+            <label class="check-btn"><input type="checkbox" value="artes_visuales" class="chk-mencion" onchange="onMencionChange()"> 🎨 Artes Visuales</label>
+            <label class="check-btn"><input type="checkbox" value="musica" class="chk-mencion" onchange="onMencionChange()"> 🎵 Música</label>
+            <label class="check-btn"><input type="checkbox" value="teatro" class="chk-mencion" onchange="onMencionChange()"> 🎭 Teatro</label>
+            <label class="check-btn"><input type="checkbox" value="danza" class="chk-mencion" onchange="onMencionChange()"> 💃 Danza</label>
+          </div>
+        </div>
+
+        <!-- Materias -->
+        <div style="background:var(--surface2);border:1px solid var(--border);
+                    border-radius:10px;padding:14px">
+          <div class="flabel" style="margin-bottom:8px">Materias que imparte</div>
+
+          <!-- Básicas -->
+          <div id="mats-basicas-wrap">
+            <div style="font-size:10px;color:var(--muted);margin-bottom:6px;font-weight:600">
+              MATERIAS ACADÉMICAS (comunes a todas las menciones)
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <label class="check-btn mat-b"><input type="checkbox" value="Lengua Española" class="chk-mat"> Lengua Española</label>
+              <label class="check-btn mat-b"><input type="checkbox" value="Inglés" class="chk-mat"> Inglés</label>
+              <label class="check-btn mat-b"><input type="checkbox" value="Matemática" class="chk-mat"> Matemática</label>
+              <label class="check-btn mat-b"><input type="checkbox" value="Ciencias Sociales" class="chk-mat"> Ciencias Sociales</label>
+              <label class="check-btn mat-b"><input type="checkbox" value="Ciencias de la Naturaleza" class="chk-mat"> Ciencias Naturales</label>
+              <label class="check-btn mat-b"><input type="checkbox" value="Formación Integral Humana y Religiosa" class="chk-mat"> FIHR</label>
+              <label class="check-btn mat-b"><input type="checkbox" value="Educación Física" class="chk-mat"> Educación Física</label>
+              <label class="check-btn mat-b"><input type="checkbox" value="Identidad, Cultura y Emprendimiento" class="chk-mat"> Identidad y Cultura</label>
+              <label class="check-btn mat-b"><input type="checkbox" value="Idioma Francés" class="chk-mat"> Francés</label>
+              <label class="check-btn mat-b"><input type="checkbox" value="Educación Artística" class="chk-mat"> Educación Artística</label>
+            </div>
+          </div>
+
+          <!-- Técnicas por mención (se muestran según selección) -->
+          <div id="mats-tecnicas-wrap" style="margin-top:10px;display:none">
+            <div id="mats-multimedia" class="mats-mencion" style="display:none">
+              <div style="font-size:10px;color:#60b8f0;margin-bottom:6px;font-weight:700">🎬 MULTIMEDIA</div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <label class="check-btn mat-t"><input type="checkbox" value="Fotografía" class="chk-mat"> Fotografía</label>
+                <label class="check-btn mat-t"><input type="checkbox" value="Lenguaje Visual, Dibujo y Creación de Personajes" class="chk-mat"> Lenguaje Visual</label>
+                <label class="check-btn mat-t"><input type="checkbox" value="Diseño Básico y Expresión Visual" class="chk-mat"> Diseño Básico</label>
+                <label class="check-btn mat-t"><input type="checkbox" value="Historia del Arte Universal y la Estética Digital" class="chk-mat"> Historia del Arte</label>
+                <label class="check-btn mat-t"><input type="checkbox" value="Lenguaje Musical" class="chk-mat"> Lenguaje Musical</label>
+                <label class="check-btn mat-t"><input type="checkbox" value="Lenguaje Danzario y Teatral" class="chk-mat"> Lenguaje Danzario</label>
+              </div>
+            </div>
+            <div id="mats-artes_visuales" class="mats-mencion" style="display:none;margin-top:8px">
+              <div style="font-size:10px;color:#f78337;margin-bottom:6px;font-weight:700">🎨 ARTES VISUALES</div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <label class="check-btn mat-t"><input type="checkbox" value="Historia del Arte Universal" class="chk-mat"> Historia del Arte</label>
+                <label class="check-btn mat-t"><input type="checkbox" value="Lenguaje Plástico y Visual" class="chk-mat"> Lenguaje Plástico</label>
+                <label class="check-btn mat-t"><input type="checkbox" value="Dibujo Técnico y Artístico" class="chk-mat"> Dibujo Técnico</label>
+                <label class="check-btn mat-t"><input type="checkbox" value="Pintura y Técnicas Mixtas" class="chk-mat"> Pintura</label>
+              </div>
+            </div>
+            <div id="mats-musica" class="mats-mencion" style="display:none;margin-top:8px">
+              <div style="font-size:10px;color:#b44be8;margin-bottom:6px;font-weight:700">🎵 MÚSICA</div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <label class="check-btn mat-t"><input type="checkbox" value="Historia de la Música Universal" class="chk-mat"> Historia de la Música</label>
+                <label class="check-btn mat-t"><input type="checkbox" value="Teoría y Solfeo" class="chk-mat"> Teoría y Solfeo</label>
+                <label class="check-btn mat-t"><input type="checkbox" value="Instrumento Principal I" class="chk-mat"> Instrumento Principal</label>
+                <label class="check-btn mat-t"><input type="checkbox" value="Coro y Conjunto Musical I" class="chk-mat"> Coro y Conjunto</label>
+              </div>
+            </div>
+            <div id="mats-teatro" class="mats-mencion" style="display:none;margin-top:8px">
+              <div style="font-size:10px;color:#f7c948;margin-bottom:6px;font-weight:700">🎭 TEATRO</div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <label class="check-btn mat-t"><input type="checkbox" value="Historia del Teatro Universal" class="chk-mat"> Historia del Teatro</label>
+                <label class="check-btn mat-t"><input type="checkbox" value="Expresión Corporal y Movimiento Escénico" class="chk-mat"> Expresión Corporal</label>
+                <label class="check-btn mat-t"><input type="checkbox" value="Técnica Vocal y Dicción" class="chk-mat"> Técnica Vocal</label>
+                <label class="check-btn mat-t"><input type="checkbox" value="Actuación I — Técnicas Básicas" class="chk-mat"> Actuación I</label>
+              </div>
+            </div>
+            <div id="mats-danza" class="mats-mencion" style="display:none;margin-top:8px">
+              <div style="font-size:10px;color:#ff8080;margin-bottom:6px;font-weight:700">💃 DANZA</div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <label class="check-btn mat-t"><input type="checkbox" value="Historia de la Danza Universal" class="chk-mat"> Historia de la Danza</label>
+                <label class="check-btn mat-t"><input type="checkbox" value="Técnica de Danza Clásica I" class="chk-mat"> Danza Clásica</label>
+                <label class="check-btn mat-t"><input type="checkbox" value="Técnica de Danza Folklórica Dominicana I" class="chk-mat"> Danza Folklórica</label>
+                <label class="check-btn mat-t"><input type="checkbox" value="Expresión Corporal y Acondicionamiento Físico" class="chk-mat"> Expresión Corporal</label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Campos generales opcionales -->
+      <div class="form-group">
+        <label class="flabel">Teléfono</label>
+        <input class="finput" id="u-telefono" type="tel" placeholder="809-XXX-XXXX">
+      </div>
+      <div class="form-group">
+        <label class="flabel">Fecha de ingreso</label>
+        <input class="finput" id="u-fecha-ingreso" type="date">
+      </div>
+
+      <div class="form-group full">
+        <label class="flabel">Estado</label>
+        <select class="fselect" id="u-activo">
+          <option value="1">✅ Activo</option>
+          <option value="0">⏸ Inactivo</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn-save" id="btn-guardar" onclick="guardarUsuario()">
+        <i class="fas fa-save"></i> Guardar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Cambiar contraseña (admin) -->
+<div class="modal-overlay" id="modal-pwd">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-title">Resetear contraseña</div>
+    <div class="modal-sub" id="modal-pwd-sub">Nueva contraseña para el usuario</div>
+    <input type="hidden" id="pwd-uid">
+    <div class="form-group" style="margin-bottom:14px">
+      <label class="flabel">Nueva contraseña</label>
+      <form autocomplete="new-password" style="display:contents"><input class="finput" id="pwd-nueva" type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password"></form>
+    </div>
+    <div style="margin-top:12px;padding:10px;background:var(--surface2);border-radius:8px;
+                border:1px dashed var(--border);">
+      <div style="font-size:10px;color:var(--muted);margin-bottom:6px;">
+        <i class="fas fa-info-circle"></i> ¿Sin acceso al email? Genera un enlace de restablecimiento:
+      </div>
+      <button type="button" onclick="generarEnlaceReset(document.getElementById('pwd-uid').value, '')"
+        style="background:none;border:1px solid var(--border);color:var(--accent);
+        padding:5px 10px;border-radius:6px;cursor:pointer;font-size:11px;width:100%">
+        <i class="fas fa-link"></i> Generar enlace de restablecimiento
+      </button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="document.getElementById('modal-pwd').classList.remove('open')">Cancelar</button>
+      <button class="btn-save" onclick="resetearPassword()">
+        <i class="fas fa-lock"></i> Actualizar contraseña
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Confirmar eliminar -->
+<div class="modal-overlay" id="modal-del">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-title" style="color:#ff6b6b">
+      <i class="fas fa-triangle-exclamation"></i> Eliminar usuario
+    </div>
+    <div class="modal-sub">Esta acción es permanente y no se puede deshacer</div>
+    <input type="hidden" id="del-uid">
+    <p id="del-nombre" style="font-size:14px;font-weight:600;margin:12px 0;
+       padding:10px;background:rgba(255,107,107,.08);border-radius:8px;
+       border:1px solid rgba(255,107,107,.2)"></p>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="document.getElementById('modal-del').classList.remove('open')">Cancelar</button>
+      <button class="btn-danger" onclick="confirmarEliminar()">
+        <i class="fas fa-trash"></i> Eliminar definitivamente
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+var _todos = [];
+var _filtroRol = '';
+
+var ROL_LABELS = {
+  directora: '👑 Directora',
+  director: '👑 Director',
+  coordinador_general: '🏛 Coord. General',
+  coordinador_primer_ciclo: '📚 Coord. 1er Ciclo',
+  coordinador_segundo_ciclo: '🎓 Coord. 2do Ciclo',
+  psicologa_primer_ciclo: '🧠 Psicóloga 1er Ciclo',
+  psicologa_segundo_ciclo: '🧠 Psicóloga 2do Ciclo',
+  profesor: '🏫 Docente',
+  secretaria: '📋 Secretaria',
+  secretaria_docente: '📋 Secretaria Docente',
+  digitador: '⌨ Digitador/a',
+  auxiliar_contabilidad: '🧮 Aux. Contabilidad',
+  bibliotecario: '📚 Bibliotecario/a',
+  orientador: '🎯 Orientador/a',
+  trabajador_social: '👥 Trab. Social',
+  encargado_tecnologia: '💻 Enc. Tecnología',
+  auxiliar_administrativo: '🗂 Auxiliar Admin.',
+  conserje: '🧹 Conserjería',
+};
+
+var ROL_CLASE = {
+  directora:'dir', director:'dir',
+  coordinador_general:'coord', coordinador_primer_ciclo:'coord', coordinador_segundo_ciclo:'coord',
+  psicologa_primer_ciclo:'psico', psicologa_segundo_ciclo:'psico',
+  profesor:'prof',
+};
+
+function roClass(rol) {
+  return ROL_CLASE[rol] || 'admin';
+}
+
+function tk(msg, tipo) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = tipo || 'ok';
+  t.style.opacity = '1';
+  setTimeout(function(){ t.style.opacity='0'; }, 3000);
+}
+
+// -- Cargar usuarios ----------------------------------------------------------
+async function cargarUsuarios() {
+  try {
+    var r = await fetch('/api/usuarios');
+    _todos = await r.json();
+    actualizarContadores();
+    renderTabla();
+  } catch(e) {
+    tk('Error cargando usuarios', 'err');
+  }
+}
+
+function actualizarContadores() {
+  document.getElementById('cnt-todos').textContent  = _todos.length;
+  document.getElementById('cnt-dir').textContent    = _todos.filter(u => u.rol === 'directora' || u.rol === 'coordinador_general').length;
+  document.getElementById('cnt-coord').textContent  = _todos.filter(u => u.rol.includes('coordinador') && u.rol !== 'coordinador_general').length;
+  document.getElementById('cnt-psico').textContent  = _todos.filter(u => u.rol.includes('psicologa')).length;
+  document.getElementById('cnt-prof').textContent   = _todos.filter(u => u.rol === 'profesor').length;
+  document.getElementById('cnt-admin').textContent  = _todos.filter(u =>
+    !['directora','coordinador_general','coordinador_primer_ciclo','coordinador_segundo_ciclo',
+      'psicologa_primer_ciclo','psicologa_segundo_ciclo','profesor'].includes(u.rol)
+  ).length;
+}
+
+function filtrarRol(el, filtro) {
+  _filtroRol = filtro;
+  document.querySelectorAll('.stat-chip').forEach(function(c){ c.classList.remove('active'); });
+  el.classList.add('active');
+  renderTabla();
+}
+
+function renderTabla() {
+  var busq   = document.getElementById('buscar').value.toLowerCase();
+  var activo = document.getElementById('filtro-activo').value;
+
+  var datos = _todos.filter(function(u) {
+    // Filtro rol
+    if (_filtroRol) {
+      if (_filtroRol === 'admin') {
+        var no_admin = ['directora','coordinador_general','coordinador_primer_ciclo',
+                        'coordinador_segundo_ciclo','psicologa_primer_ciclo','psicologa_segundo_ciclo','profesor'];
+        if (no_admin.includes(u.rol)) return false;
+      } else if (!u.rol.includes(_filtroRol)) return false;
+    }
+    // Filtro activo
+    if (activo !== '' && String(u.activo) !== activo) return false;
+    // Búsqueda
+    if (busq && !(
+      (u.nombre||'').toLowerCase().includes(busq) ||
+      (u.username||'').toLowerCase().includes(busq) ||
+      (u.email||'').toLowerCase().includes(busq)
+    )) return false;
+    return true;
+  });
+
+  var tbody = document.getElementById('tabla-body');
+  if (!datos.length) {
+    tbody.innerHTML = '<tr><td colspan="6"><div class="empty"><i class="fas fa-users-slash"></i><div style="margin-top:8px">Sin resultados</div></div></td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = datos.map(function(u) {
+    var rc = roClass(u.rol);
+    var label = ROL_LABELS[u.rol] || (u.rol||'').replace(/_/g,' ');
+    var asign = u.grado ? (u.grado + (u.mencion ? ' · ' + u.mencion : '')) :
+                (u.materia || '');
+    var inicial = (u.nombre||'U')[0].toUpperCase();
+    return '<tr>' +
+      '<td><div style="display:flex;align-items:center;gap:10px">' +
+        '<div class="u-avatar" style="background:var(--hover)">' + inicial + '</div>' +
+        '<div><div class="u-nombre">' + (u.nombre||'') + '</div>' +
+          '<div class="u-user">@' + (u.username||'') + '</div></div></div></td>' +
+      '<td><span class="rol-badge rb-' + rc + '">' + label + '</span></td>' +
+      '<td style="font-size:12px;color:var(--muted)">' + (asign || '--') + '</td>' +
+      '<td style="font-size:12px;color:var(--muted)">' + (u.email || '--') + '</td>' +
+      '<td>' +
+        (u.activo
+          ? '<span><span class="dot-active"></span>Activo</span>'
+          : '<span style="opacity:.5"><span class="dot-inactive"></span>Inactivo</span>') +
+      '</td>' +
+      '<td><div class="acts">' +
+        '<button class="act-btn" onclick="abrirEditar(' + u.id + ')" title="Editar"><i class="fas fa-pen"></i></button>' +
+        '<button class="act-btn pwd" onclick="abrirPwd(' + u.id + ',\'' + (u.nombre||'').replace(/'/g,'') + '\')" title="Resetear contraseña"><i class="fas fa-lock"></i></button>' +
+        '<button class="act-btn del" onclick="abrirDel(' + u.id + ',\'' + (u.nombre||'').replace(/'/g,'') + '\')" title="Eliminar"><i class="fas fa-trash"></i></button>' +
+      '</div></td>' +
+    '</tr>';
+  }).join('');
+}
+
+// -- Rol change -> mostrar campos de profesor ----------------------------------
+function onRolChange() {
+  var rol    = document.getElementById('u-rol').value;
+  var esProf = (rol === 'profesor');
+  var esPadre = (rol === 'padre');
+
+  // Bloque campos docentes
+  var bloque = document.getElementById('bloque-prof');
+  if (bloque) bloque.style.display = esProf ? 'grid' : 'none';
+
+  // Email label + hint
+  var emailLabel = document.getElementById('email-label');
+  var emailInput = document.getElementById('u-email');
+  if (emailLabel) emailLabel.textContent = esPadre ? 'Correo personal (opcional)' : 'Correo institucional';
+  if (emailInput) emailInput.placeholder = esPadre ? 'nombre@gmail.com (opcional)' : 'usuario@educacion.edu.do';
+  if (!esProf) return;
+  // Inicializar estado visible
+  onTipoDocencia(_tipoDocencia);
+  onMencionChange();
+}
+
+function togglePwdSection() {
+  var inp = document.getElementById('u-password');
+  var btn = document.getElementById('btn-toggle-pwd');
+  var hint = document.getElementById('pwd-hint');
+  if (inp.style.display === 'none' || inp.style.display === '') {
+    inp.style.display = 'block';
+    inp.style.width = '100%';
+    inp.focus();
+    btn.innerHTML = '✕ Cancelar cambio';
+    btn.style.color = '#ff6b6b';
+    btn.style.borderColor = '#ff6b6b';
+    hint.style.display = 'block';
+  } else {
+    inp.style.display = 'none';
+    inp.value = '';
+    btn.innerHTML = '🔑 Cambiar contraseña';
+    btn.style.color = 'var(--muted)';
+    btn.style.borderColor = '';
+    hint.style.display = 'none';
+  }
+}
+
+var _tipoDocencia = 'ambas';
+var _cicloActual  = 'ambos';
+
+function onTipoDocencia(tipo) {
+  _tipoDocencia = tipo;
+  var basWrap  = document.getElementById('mats-basicas-wrap');
+  var tecWrap  = document.getElementById('mats-tecnicas-wrap');
+  var menWrap  = document.getElementById('bloque-mencion');
+
+  // Actualizar estilo visual de los radio buttons
+  document.querySelectorAll('input[name="tipo-docencia"]').forEach(function(r) {
+    var lbl = r.parentElement;
+    if (r.value === tipo) { r.checked = true; lbl.classList.add('sel'); }
+    else lbl.classList.remove('sel');
+  });
+
+  if (tipo === 'basica') {
+    if (basWrap) basWrap.style.display = 'block';
+    if (tecWrap) tecWrap.style.display = 'none';
+    if (menWrap) menWrap.style.display = 'none';
+  } else if (tipo === 'tecnica') {
+    if (basWrap) basWrap.style.display = 'none';
+    if (tecWrap) tecWrap.style.display = 'block';
+    if (menWrap) menWrap.style.display = 'block';
+  } else { // ambas
+    if (basWrap) basWrap.style.display = 'block';
+    if (tecWrap) tecWrap.style.display = 'block';
+    if (menWrap) menWrap.style.display = 'block';
+  }
+}
+
+function onCicloChange(ciclo) {
+  _cicloActual = ciclo;
+  // Visual feedback en radio buttons de ciclo
+  document.querySelectorAll('input[name="ciclo-radio"]').forEach(function(r) {
+    var lbl = r.parentElement;
+    if (r.value === ciclo) { r.checked = true; lbl.classList.add('sel'); }
+    else lbl.classList.remove('sel');
+  });
+  // Mostrar/ocultar grados según ciclo
+  document.querySelectorAll('.chk-grado').forEach(function(chk) {
+    var g = chk.value;
+    var esPrimero = ['1ro','2do','3ro'].includes(g);
+    var lbl = chk.parentElement;
+    if (ciclo === 'primer_ciclo')  lbl.style.display = esPrimero ? '' : 'none';
+    else if (ciclo === 'segundo_ciclo') lbl.style.display = !esPrimero ? '' : 'none';
+    else lbl.style.display = '';
+  });
+}
+
+function onMencionChange() {
+  var seleccionadas = Array.from(
+    document.querySelectorAll('.chk-mencion:checked')
+  ).map(function(c){ return c.value; });
+
+  document.querySelectorAll('.mats-mencion').forEach(function(div) {
+    // El id es mats-{mención}
+    var mKey = div.id.replace('mats-','');
+    div.style.display = seleccionadas.includes(mKey) ? 'block' : 'none';
+  });
+
+  // Visual feedback de checks de mención
+  document.querySelectorAll('.chk-mencion').forEach(function(c) {
+    var lbl = c.parentElement;
+    if (c.checked) lbl.classList.add('sel'); else lbl.classList.remove('sel');
+  });
+}
+
+function _getGradosSeleccionados() {
+  var chks = Array.from(document.querySelectorAll('.chk-grado:checked'));
+  if (chks.length === 0) {
+    // Usar todos los del ciclo
+    if (_cicloActual === 'primer_ciclo') return '1ro,2do,3ro';
+    if (_cicloActual === 'segundo_ciclo') return '4to,5to,6to';
+    return 'todos';
+  }
+  return chks.map(function(c){ return c.value; }).join(',');
+}
+
+function _getMencionesSeleccionadas() {
+  return Array.from(document.querySelectorAll('.chk-mencion:checked'))
+    .map(function(c){ return c.value; }).join(',');
+}
+
+function _getMateriasSeleccionadas() {
+  return Array.from(document.querySelectorAll('.chk-mat:checked'))
+    .map(function(c){ return c.value; }).join(',');
+}
+
+function _setChecks(selector, valoresStr) {
+  if (!valoresStr) return;
+  var vals = valoresStr.split(',').map(function(v){ return v.trim(); });
+  document.querySelectorAll(selector).forEach(function(chk) {
+    var lbl = chk.parentElement;
+    if (vals.includes(chk.value)) {
+      chk.checked = true; lbl.classList.add('sel');
+    } else {
+      chk.checked = false; lbl.classList.remove('sel');
+    }
+  });
+}
+
+// -- Abrir modal nuevo --------------------------------------------------------
+function abrirNuevo() {
+  document.getElementById('modal-titulo').textContent = 'Nuevo usuario';
+  document.getElementById('modal-subtitulo').textContent = 'Completa los datos del nuevo miembro del personal';
+  document.getElementById('btn-guardar').innerHTML = '<i class="fas fa-plus"></i> Crear usuario';
+  document.getElementById('u-id').value = '';
+  document.getElementById('u-nombre').value = '';
+  document.getElementById('u-username').value = '';
+  document.getElementById('u-email').value = '';
+  document.getElementById('u-password').value = '';
+  document.getElementById('u-password').placeholder = 'Mínimo 6 caracteres';
+  document.getElementById('u-password').required = true;
+  document.getElementById('pwd-req-label').style.display = '';
+  document.getElementById('pwd-hint').style.display = 'none';
+  document.getElementById('btn-toggle-pwd').style.display = 'none';
+  document.getElementById('u-rol').value = 'profesor';
+  _tipoDocencia = 'ambas';
+  _cicloActual  = 'ambos';
+  document.querySelectorAll('.chk-grado').forEach(function(c){ c.checked=false; c.parentElement.classList.remove('sel'); });
+  document.querySelectorAll('.chk-mencion').forEach(function(c){ c.checked=false; c.parentElement.classList.remove('sel'); });
+  document.querySelectorAll('.chk-mat').forEach(function(c){ c.checked=false; c.parentElement.classList.remove('sel'); });
+  document.querySelectorAll('input[name="tipo-docencia"]').forEach(function(r){
+    r.checked = (r.value==='ambas'); r.parentElement.classList.toggle('sel', r.value==='ambas');
+  });
+  document.querySelectorAll('input[name="ciclo-radio"]').forEach(function(r){
+    r.checked = (r.value==='ambos'); r.parentElement.classList.toggle('sel', r.value==='ambos');
+  });
+  document.getElementById('u-telefono').value = '';
+  document.getElementById('u-fecha-ingreso').value = '';
+  document.getElementById('u-activo').value = '1';
+  onRolChange();
+  document.getElementById('modal-usuario').classList.add('open');
+}
+
+// -- Abrir modal editar -------------------------------------------------------
+function abrirEditar(uid) {
+  var u = _todos.find(function(x){ return x.id === uid; });
+  if (!u) return;
+  document.getElementById('modal-titulo').textContent = 'Editar usuario';
+  document.getElementById('modal-subtitulo').textContent = 'Modifica los datos de ' + u.nombre;
+  document.getElementById('btn-guardar').innerHTML = '<i class="fas fa-save"></i> Guardar cambios';
+  document.getElementById('u-id').value      = u.id;
+  document.getElementById('u-nombre').value  = u.nombre || '';
+  document.getElementById('u-username').value= u.username || '';
+  document.getElementById('u-email').value   = u.email || '';
+  document.getElementById('u-password').value= '';
+  document.getElementById('u-password').placeholder = '';
+  document.getElementById('u-password').required = false;
+  document.getElementById('u-password').style.display = 'none'; // hidden until toggle
+  document.getElementById('pwd-req-label').style.display = 'none';
+  document.getElementById('pwd-hint').style.display = 'none';
+  document.getElementById('btn-toggle-pwd').style.display = 'block';
+  document.getElementById('u-rol').value     = u.rol || 'profesor';
+  // Cargar ciclo guardado en u.ciclo
+  var cicloGuardado = u.ciclo || 'ambos';
+  _cicloActual = cicloGuardado;
+  document.querySelectorAll('input[name="ciclo-radio"]').forEach(function(r){
+    r.checked = (r.value === cicloGuardado);
+    r.parentElement.classList.toggle('sel', r.value === cicloGuardado);
+  });
+  // Cargar grados (guardados en u.grado separados por coma)
+  _setChecks('.chk-grado', u.grado || '');
+  // Cargar menciones (guardadas en u.mencion separadas por coma)
+  _setChecks('.chk-mencion', u.mencion || '');
+  // Cargar materias (guardadas en u.asignaturas separadas por coma)
+  _setChecks('.chk-mat', u.asignaturas || u.materia || '');
+  // Cargar tipo de docencia desde materia o asignaturas
+  var tipoG = u.tipo_docencia || 'ambas';
+  _tipoDocencia = tipoG;
+  document.querySelectorAll('input[name="tipo-docencia"]').forEach(function(r){
+    r.checked = (r.value === tipoG);
+    r.parentElement.classList.toggle('sel', r.value === tipoG);
+  });
+  onMencionChange();
+  onTipoDocencia(tipoG); // Ensure correct panels shown for tipo_docencia
+  document.getElementById('u-telefono').value= u.telefono || '';
+  document.getElementById('u-fecha-ingreso').value = u.fecha_ingreso || '';
+  document.getElementById('u-activo').value  = String(u.activo);
+  onRolChange();
+  document.getElementById('modal-usuario').classList.add('open');
+}
+
+// -- Guardar usuario ----------------------------------------------------------
+async function guardarUsuario() {
+  var uid      = document.getElementById('u-id').value;
+  var nombre   = document.getElementById('u-nombre').value.trim();
+  var username = document.getElementById('u-username').value.trim();
+  var email    = document.getElementById('u-email').value.trim();
+  var pwdInput = document.getElementById('u-password');
+  var password  = (pwdInput && pwdInput.style.display !== 'none') ? pwdInput.value.trim() : '';
+  var rol      = document.getElementById('u-rol').value;
+  var grado    = _getGradosSeleccionados();
+  var mencion  = _getMencionesSeleccionadas();
+  var materia  = _getMateriasSeleccionadas();
+  var ciclo    = _cicloActual;
+  var tipo_doc = _tipoDocencia;
+  var telefono = document.getElementById('u-telefono').value.trim();
+  var fecha    = document.getElementById('u-fecha-ingreso').value;
+  var activo   = parseInt(document.getElementById('u-activo').value);
+
+  if (!nombre || !username) { tk('Nombre y usuario son obligatorios', 'err'); return; }
+  if (!uid && !password)    { tk('La contraseña es obligatoria para nuevos usuarios', 'err'); return; }
+  if (password && password.length < 6) { tk('La contraseña debe tener al menos 6 caracteres', 'err'); return; }
+
+  var body = { nombre, username, email, rol, grado, mencion,
+               materia, asignaturas: materia, ciclo,
+               tipo_docencia: tipo_doc,
+               fecha_ingreso: fecha, activo };
+
+  // Include password in main body for both new and existing users
+  if (password) body.password = password;
+
+  try {
+    var url    = uid ? '/api/usuarios/' + uid : '/api/usuarios';
+    var method = uid ? 'PATCH' : 'POST';
+    var r = await fetch(url, {
+      method, headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body)
+    });
+    var d = await r.json();
+    if (d.ok || d.id) {
+      cerrarModal();
+      tk(uid ? 'Usuario actualizado' : 'Usuario creado correctamente', 'ok');
+      await cargarUsuarios();
+    } else {
+      tk(d.error || 'Error al guardar', 'err');
+    }
+  } catch(e) {
+    tk('Error de conexión', 'err');
+  }
+}
+
+// -- Resetear contraseña (admin) -----------------------------------------------
+function abrirPwd(uid, nombre) {
+  document.getElementById('pwd-uid').value = uid;
+  document.getElementById('modal-pwd-sub').textContent = 'Nueva contraseña para ' + nombre;
+  document.getElementById('pwd-nueva').value = '';
+  document.getElementById('modal-pwd').classList.add('open');
+}
+
+async function resetearPassword() {
+  var uid = document.getElementById('pwd-uid').value;
+  var pwd = document.getElementById('pwd-nueva').value.trim();
+  if (!pwd || pwd.length < 6) { tk('Mínimo 6 caracteres', 'warn'); return; }
+  try {
+    // Use dedicated reset endpoint -- avoids double-hash bug
+    var r = await fetch('/api/usuarios/' + uid + '/reset-password', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ password: pwd })
+    });
+    var d = await r.json();
+    if (d.ok) {
+      document.getElementById('modal-pwd').classList.remove('open');
+      document.getElementById('pwd-nueva').value = '';
+      tk('Contraseña de ' + (d.mensaje || 'usuario') + ' actualizada ✓', 'ok');
+    } else {
+      tk(d.error || 'Error al cambiar contraseña', 'err');
+    }
+  } catch(e) { tk('Error de conexión', 'err'); }
+}
+
+// -- Generar enlace de reset (sin necesidad de email) -------------------------
+async function generarEnlaceReset(uid, nombre) {
+  try {
+    var r = await fetch('/api/recovery/link/' + uid, { method: 'POST', headers: {'Content-Type':'application/json'} });
+    var d = await r.json();
+    if (d.ok) {
+      // Show the link in a prompt so admin can copy it
+      var msg = 'Enlace para ' + d.nombre + ' (válido 24h):\n' + d.reset_url;
+      if (window.prompt) {
+        window.prompt('Copia este enlace y envíaselo al usuario:', d.reset_url);
+      } else {
+        alert(msg);
+      }
+    } else {
+      tk(d.error || 'Error', 'err');
+    }
+  } catch(e) { tk('Error', 'err'); }
+}
+
+// -- Eliminar ------------------------------------------------------------------
+function abrirDel(uid, nombre) {
+  document.getElementById('del-uid').value = uid;
+  document.getElementById('del-nombre').textContent = '¿Eliminar a ' + nombre + '?';
+  document.getElementById('modal-del').classList.add('open');
+}
+
+async function confirmarEliminar() {
+  var uid = document.getElementById('del-uid').value;
+  try {
+    var r = await fetch('/api/usuarios/' + uid, { method: 'DELETE' });
+    var d = await r.json();
+    if (d.ok) {
+      document.getElementById('modal-del').classList.remove('open');
+      tk('Usuario eliminado', 'ok');
+      await cargarUsuarios();
+    } else {
+      tk(d.error || 'Error al eliminar', 'err');
+    }
+  } catch(e) { tk('Error', 'err'); }
+}
+
+function cerrarModal() {
+  document.getElementById('modal-usuario').classList.remove('open');
+}
+
+document.addEventListener('keydown', function(e){
+  if(e.key==='Escape') document.querySelectorAll('.modal-overlay.open').forEach(function(m){m.classList.remove('open');});
+});
+
+// Inicializar
+cargarUsuarios();
+
+// -- Avatar dropdown ---------------------------------------------------------
+function toggleAvatarMenu() {
+  var dd = document.getElementById('avatar-dropdown');
+  if (!dd) return;
+  dd.style.display = dd.style.display === 'block' ? 'none' : 'block';
+}
+document.addEventListener('click', function(e) {
+  var wrap = document.getElementById('avatar-menu-wrap');
+  if (wrap && !wrap.contains(e.target)) {
+    var dd = document.getElementById('avatar-dropdown');
+    if (dd) dd.style.display = 'none';
+  }
+});
+
+// -- Mostrar panel SMTP para coordinadores y directora ------------------------
+(function mostrarSmtpSiEsAdmin() {
+  // Leer rol del avatar ya renderizado -- más confiable que Jinja2 en JS
+  var rolEl = document.querySelector('#avatar-dropdown [style*="muted"]');
+  // Alternativa: ver si el usuario puede ver /api/usuarios (si llegó aquí, puede)
+  // Solo coords y directora tienen acceso a esta página
+  var panel = document.getElementById('smtp-panel');
+  if (panel) panel.style.display = 'block';
+})();
+
+
+</script>
+
+<script>
+// -- Prueba de SMTP -----------------------------------------------------------
+function setMetodoEmail(metodo) {
+  var isResend = metodo === 'resend';
+  document.getElementById('panel-resend').style.display = isResend ? 'block' : 'none';
+  document.getElementById('panel-smtp').style.display   = isResend ? 'none'  : 'block';
+  var tR = document.getElementById('tab-resend');
+  var tS = document.getElementById('tab-smtp');
+  tR.style.background    = isResend ? 'rgba(55,138,221,.1)' : 'transparent';
+  tR.style.borderColor   = isResend ? 'rgba(55,138,221,.4)' : 'var(--border)';
+  tR.style.color         = isResend ? 'var(--accent)' : 'var(--muted)';
+  tS.style.background    = !isResend ? 'rgba(55,138,221,.1)' : 'transparent';
+  tS.style.borderColor   = !isResend ? 'rgba(55,138,221,.4)' : 'var(--border)';
+  tS.style.color         = !isResend ? 'var(--accent)' : 'var(--muted)';
+}
+
+async function guardarConfigResend() {
+  var key  = (document.getElementById('cfg-resend-key').value || '').trim();
+  var from = (document.getElementById('cfg-resend-from').value || '').trim();
+  var resEl = document.getElementById('smtp-config-result');
+  if (!key || !key.startsWith('re_')) {
+    resEl.innerHTML = '<span style="color:var(--danger)">La API key debe empezar con re_</span>';
+    return;
+  }
+  resEl.innerHTML = '<span style="color:var(--muted)">Guardando...</span>';
+  try {
+    var r = await fetch('/api/smtp/config', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ resend_api_key: key, resend_from: from })
+    });
+    var d = await r.json();
+    if (d.ok) {
+      resEl.innerHTML = '<span style="color:var(--success)">✓ API key guardada. Envía una prueba para verificar.</span>';
+      document.getElementById('cfg-resend-key').value = '';
+    } else {
+      resEl.innerHTML = '<span style="color:var(--danger)">Error: ' + (d.error || 'No se pudo guardar') + '</span>';
+    }
+  } catch(e) { resEl.innerHTML = '<span style="color:var(--danger)">Error de conexión</span>'; }
+}
+
+// ── Portal de Padres — gestión de vínculos ────────────────────────────────
+var _padreSelId   = null;
+var _padreSelNombre = '';
+
+async function buscarPadres(q) {
+  if (q.length < 2) { document.getElementById('padre-resultados').innerHTML = ''; return; }
+  try {
+    var r = await fetch('/api/usuarios?rol=padre&q=' + encodeURIComponent(q));
+    var d = await r.json();
+    var usuarios = (d.usuarios || d || []).filter(function(u) { return u.rol === 'padre'; });
+    if (!usuarios.length) {
+      document.getElementById('padre-resultados').innerHTML =
+        '<div style="font-size:12px;color:var(--muted);padding:8px;">Sin resultados. Crea primero el usuario con rol "Padre/Madre/Tutor".</div>';
+      return;
+    }
+    document.getElementById('padre-resultados').innerHTML = usuarios.slice(0,5).map(function(u) {
+      return '<div onclick="seleccionarPadre(' + u.id + ',\'' + (u.nombre||'').replace(/'/g,"\\'") + '\')" ' +
+             'style="padding:9px 12px;background:var(--surface2);border:1px solid var(--border);' +
+             'border-radius:8px;cursor:pointer;margin-bottom:4px;font-size:13px;transition:all .15s;" ' +
+             'onmouseover="this.style.borderColor=\'var(--accent)\'" onmouseout="this.style.borderColor=\'var(--border)\'">' +
+             '<strong>' + u.nombre + '</strong> <span style="color:var(--muted);font-size:11px;">@' + u.username + '</span>' +
+             '</div>';
+    }).join('');
+  } catch(e) {}
+}
+
+async function seleccionarPadre(id, nombre) {
+  _padreSelId = id;
+  _padreSelNombre = nombre;
+  document.getElementById('padre-resultados').innerHTML =
+    '<div style="padding:9px 12px;background:rgba(var(--accent-rgb),.08);border:1px solid rgba(var(--accent-rgb),.3);' +
+    'border-radius:8px;font-size:13px;font-weight:600;color:var(--accent);">✓ ' + nombre + ' seleccionado/a</div>';
+  document.getElementById('padre-vincular-panel').style.display = 'block';
+  await cargarVinculosActuales(id);
+}
+
+async function cargarVinculosActuales(padreId) {
+  try {
+    var r = await fetch('/api/padres/vinculos?padre_id=' + padreId);
+    var d = await r.json();
+    var vinculos = d.vinculos || [];
+    var el = document.getElementById('padre-vinculos-actuales');
+    if (!vinculos.length) {
+      el.innerHTML = '<div style="font-size:11px;color:var(--muted);">Sin hijos vinculados aún.</div>';
+      return;
+    }
+    el.innerHTML = '<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;">Hijos vinculados actualmente</div>' +
+      vinculos.map(function(v) {
+        return '<div style="display:flex;align-items:center;justify-content:space-between;' +
+               'padding:7px 10px;background:var(--surface2);border:1px solid var(--border);' +
+               'border-radius:7px;margin-bottom:4px;font-size:12px;">' +
+               '<span><strong>' + v.est_nombre + ' ' + v.est_apellido + '</strong> ' +
+               '<span style="color:var(--muted);font-size:10px;">' + v.grado + ' · ' + v.parentesco + '</span></span>' +
+               '<button onclick="eliminarVinculo(' + v.id + ')" ' +
+               'style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:11px;" ' +
+               'title="Eliminar vínculo">✕</button>' +
+               '</div>';
+      }).join('');
+  } catch(e) {}
+}
+
+async function buscarEstudiantesVincular(q) {
+  if (q.length < 2) { document.getElementById('est-vincular-resultados').innerHTML = ''; return; }
+  try {
+    var r = await fetch('/api/buscar-estudiantes?q=' + encodeURIComponent(q));
+    var ests = await r.json();
+    document.getElementById('est-vincular-resultados').innerHTML = ests.slice(0,5).map(function(e) {
+      return '<div onclick="vincularEstudiante(' + e.id + ',\'' + (e.nombre + ' ' + e.apellido).replace(/'/g,"\\'") + '\')" ' +
+             'style="padding:9px 12px;background:var(--surface2);border:1px solid var(--border);' +
+             'border-radius:8px;cursor:pointer;margin-bottom:4px;font-size:12px;transition:all .15s;" ' +
+             'onmouseover="this.style.borderColor=\'var(--accent)\'" onmouseout="this.style.borderColor=\'var(--border)\'">' +
+             '<strong>' + e.nombre + ' ' + e.apellido + '</strong> ' +
+             '<span style="color:var(--muted);font-size:10px;">' + (e.grado||'') + ' ' + (e.curso||'') + '</span>' +
+             '</div>';
+    }).join('');
+  } catch(e) {}
+}
+
+async function vincularEstudiante(estId, estNombre) {
+  if (!_padreSelId) return;
+  var parentesco = document.getElementById('parentesco-sel').value;
+  var resEl = document.getElementById('vinculo-resultado');
+  resEl.innerHTML = '<span style="color:var(--muted)">Vinculando...</span>';
+  try {
+    var r = await fetch('/api/padres/vinculos', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ padre_id: _padreSelId, estudiante_id: estId, parentesco: parentesco })
+    });
+    var d = await r.json();
+    if (d.ok) {
+      resEl.innerHTML = '<span style="color:var(--success)">✓ ' + d.mensaje + '</span>';
+      document.getElementById('est-vincular-input').value = '';
+      document.getElementById('est-vincular-resultados').innerHTML = '';
+      await cargarVinculosActuales(_padreSelId);
+    } else {
+      resEl.innerHTML = '<span style="color:var(--danger)">' + (d.error || 'Error al vincular') + '</span>';
+    }
+  } catch(e) { resEl.innerHTML = '<span style="color:var(--danger)">Error de conexión</span>'; }
+}
+
+async function eliminarVinculo(vinculoId) {
+  if (!confirm('¿Eliminar este vínculo?')) return;
+  try {
+    var r = await fetch('/api/padres/vinculos/' + vinculoId, { method: 'DELETE' });
+    var d = await r.json();
+    if (d.ok && _padreSelId) await cargarVinculosActuales(_padreSelId);
+  } catch(e) {}
+}
+
+function toggleSmtpConfig() {
+  var form = document.getElementById('smtp-config-form');
+  var btn  = document.getElementById('btn-smtp-config');
+  var open = form.style.display === 'none' || form.style.display === '';
+  form.style.display = open ? 'block' : 'none';
+  btn.textContent    = open ? '\u2715 Cerrar' : '\u2699 Configurar';
+  if (open) {
+    fetch('/api/smtp/config').then(function(r){ return r.json(); }).then(function(d){
+      // Mostrar el método que está activo
+      var metodo = (d.metodo === 'smtp') ? 'smtp' : 'resend';
+      setMetodoEmail(metodo);
+      if (d.smtp_host) document.getElementById('cfg-smtp-host').value = d.smtp_host;
+      if (d.smtp_port) document.getElementById('cfg-smtp-port').value = d.smtp_port;
+      if (d.smtp_user) document.getElementById('cfg-smtp-user').value = d.smtp_user;
+      if (d.resend_from) document.getElementById('cfg-resend-from').value = d.resend_from;
+      // Mostrar estado actual
+      var resEl = document.getElementById('smtp-config-result');
+      if (d.configurado) {
+        resEl.innerHTML = '<span style="color:var(--success)">\u2713 Método activo: ' + d.metodo.toUpperCase()
+          + (d.metodo === 'smtp' ? ' (' + d.smtp_user + ')' : '') + '</span>';
+      }
+    }).catch(function(){});
+  }
+}
+
+async function guardarConfigSMTP() {
+  var user  = (document.getElementById('cfg-smtp-user').value || '').trim();
+  var pass  = (document.getElementById('cfg-smtp-pass').value || '').trim();
+  var host  = (document.getElementById('cfg-smtp-host').value || 'smtp.gmail.com').trim();
+  var port  = parseInt(document.getElementById('cfg-smtp-port').value || '587');
+  var resEl = document.getElementById('smtp-config-result');
+  if (!user || !user.includes('@')) { resEl.innerHTML = '<span style="color:var(--danger)">Ingresa un correo v\u00e1lido</span>'; return; }
+  if (!pass) { resEl.innerHTML = '<span style="color:var(--danger)">Ingresa la contrase\u00f1a de aplicaci\u00f3n</span>'; return; }
+  resEl.innerHTML = '<span style="color:var(--muted)">Guardando...</span>';
+  try {
+    var r = await fetch('/api/smtp/config', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ smtp_user: user, smtp_pass: pass, smtp_host: host, smtp_port: port })
+    });
+    var d = await r.json();
+    if (d.ok) {
+      resEl.innerHTML = '<span style="color:var(--success)">\u2713 Guardado. Ahora env\u00eda una prueba para verificar.</span>';
+      document.getElementById('cfg-smtp-pass').value = '';
+    } else {
+      resEl.innerHTML = '<span style="color:var(--danger)">Error: ' + (d.error || 'No se pudo guardar') + '</span>';
+    }
+  } catch(e) { resEl.innerHTML = '<span style="color:var(--danger)">Error de conexi\u00f3n</span>'; }
+}
+
+async function probarSMTP() {
+  var email  = (document.getElementById('smtp-test-email').value || '').trim();
+  var resEl  = document.getElementById('smtp-resultado');
+  if (!email || !email.includes('@')) {
+    resEl.innerHTML = '<span style="color:var(--danger,#ef4444)">(!) Ingresa un email válido</span>';
+    return;
+  }
+  resEl.innerHTML = '<span style="color:var(--muted)">... Enviando email de prueba...</span>';
+  try {
+    var r = await fetch('/api/smtp/test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email })
+    });
+    var d = await r.json();
+    if (d.ok) {
+      resEl.innerHTML =
+        '<span style="color:#15803D">' +
+        '(OK) <strong>SMTP funciona correctamente.</strong><br>' +
+        'Email enviado a <strong>' + email + '</strong>. Revisa tu bandeja de entrada.<br>' +
+        '<span style="font-size:11px;color:var(--muted)">Servidor: ' + d.smtp_host + ':' + d.smtp_port + '</span>' +
+        '</span>';
+    } else {
+      var ayudaHtml = '';
+      if (d.ayuda) {
+        var lines = d.ayuda.split('\n').map(function(l) {
+          if (l.match(/^SMTP_/)) return '<code style="display:block;background:rgba(0,0,0,.15);padding:2px 8px;border-radius:4px;margin:2px 0;font-size:11px;color:#378ADD;">' + l + '</code>';
+          return l ? l : '';
+        }).join('<br>');
+        ayudaHtml = '<div style="margin-top:8px;padding:10px 14px;border-radius:8px;background:rgba(247,183,49,.07);border:1px solid rgba(247,183,49,.3);font-size:12px;color:var(--warn,#f7b731);line-height:1.9;">💡 ' + lines + '</div>';
+      }
+      resEl.innerHTML =
+        '<span style="color:var(--danger,#ef4444)">(X) <strong>' + (d.error

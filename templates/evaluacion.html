@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Evaluación por Competencias — Axula</title>
+<link rel="stylesheet" href="/static/theme.css">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-height:100vh}
+.top{display:flex;align-items:center;justify-content:space-between;padding:14px 28px;background:var(--surface);border-bottom:1px solid var(--border)}
+.top h1{font-family:var(--font-display);font-size:1.2rem;font-weight:800}.top .r{display:flex;gap:12px;font-size:.85rem;color:var(--muted)}.top a{color:var(--accent);text-decoration:none;font-weight:600;font-size:.85rem}
+.tipo-badge{display:inline-block;padding:4px 12px;border-radius:99px;font-size:.72rem;font-weight:700;text-transform:uppercase;margin-left:10px}
+.tipo-basica{background:rgba(var(--accent-rgb),.12);color:var(--accent)}
+.tipo-tecnica{background:rgba(255,196,77,.12);color:var(--warn)}
+.c{max-width:1400px;margin:0 auto;padding:24px}
+.grid2{display:grid;grid-template-columns:340px 1fr;gap:20px}
+@media(max-width:900px){.grid2{grid-template-columns:1fr}}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px}
+.panel h2{font-size:1rem;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.f{margin-bottom:12px}.f label{display:block;font-size:.75rem;font-weight:600;color:var(--muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:.03em}
+.f input,.f select,.f textarea{width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:.85rem;font-family:var(--font-body)}
+.f textarea{resize:vertical;min-height:60px}
+.b{padding:8px 16px;border-radius:8px;border:none;font-weight:600;cursor:pointer;font-size:.84rem;display:inline-flex;align-items:center;gap:6px;transition:all .15s}
+.bp{background:var(--accent);color:#000}.bp:hover{filter:brightness(.9)}
+.bs{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+.bd{color:var(--danger);background:none;border:1px solid var(--danger);padding:4px 10px;font-size:.75rem}
+.check-group{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.check-item{display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:8px;border:1px solid var(--border);font-size:.8rem;cursor:pointer;transition:all .15s}
+.check-item:hover{border-color:var(--accent)}
+.check-item.sel{background:rgba(var(--accent-rgb),.1);border-color:var(--accent);color:var(--accent);font-weight:600}
+.check-item input{display:none}
+.act-list{max-height:400px;overflow-y:auto}
+.act-item{padding:10px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:background .1s}
+.act-item:hover{background:var(--hover)}
+.act-item.sel{background:rgba(var(--accent-rgb),.06);border-left:3px solid var(--accent)}
+.act-item .titulo{font-weight:600;font-size:.88rem}.act-item .meta{font-size:.75rem;color:var(--muted)}
+.act-item .tags{display:flex;gap:4px;margin-top:3px}
+.tag{display:inline-block;padding:2px 7px;border-radius:4px;font-size:.68rem;font-weight:700;background:var(--surface2);color:var(--muted)}
+.tag.comp{background:rgba(var(--accent-rgb),.1);color:var(--accent)}
+table{width:100%;border-collapse:collapse;font-size:.85rem}
+th{text-align:left;padding:8px 12px;font-weight:600;color:var(--muted);border-bottom:2px solid var(--border);font-size:.76rem;text-transform:uppercase}
+td{padding:8px 12px;border-bottom:1px solid var(--border)}
+tr:hover{background:var(--hover)}
+.nota-inp{width:60px;padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);text-align:center;font-size:.9rem;font-weight:600}
+.nota-inp:focus{border-color:var(--accent);outline:none}
+.resumen-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:16px}
+.res-card{background:var(--surface2);border-radius:10px;padding:14px;text-align:center}
+.res-card .val{font-size:1.5rem;font-weight:800;color:var(--accent)}.res-card .lbl{font-size:.72rem;color:var(--muted);text-transform:uppercase;margin-top:4px}
+.empty{text-align:center;padding:40px 16px;color:var(--muted)}.empty i{font-size:2rem;margin-bottom:10px;display:block;opacity:.4}
+.tabs{display:flex;gap:4px;margin-bottom:16px;border-bottom:2px solid var(--border)}
+.tb{padding:8px 16px;border:none;background:none;color:var(--muted);font-family:var(--font-body);font-size:.85rem;font-weight:600;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px}
+.tb.a{color:var(--accent);border-bottom-color:var(--accent)}
+.pnl{display:none}.pnl.a{display:block}
+</style>
+<script src="/static/theme.js"></script>
+</head>
+<body>
+<div class="top">
+  <h1>
+    <i class="fas fa-clipboard-check" style="color:var(--accent)"></i>
+    Evaluación por Competencias
+    <span class="tipo-badge" id="tipo-badge"></span>
+  </h1>
+  <div class="r">
+    <span>{{ current_user.nombre }}</span><div class="mt-theme-toggle" style="margin-left:auto;margin-right:12px"><button class="mt-tbtn" data-theme="dark" onclick="setTheme('dark')">🌙</button><button class="mt-tbtn" data-theme="light" onclick="setTheme('light')">☀️</button></div>
+    <a href="/profesor"><i class="fas fa-arrow-left"></i> Portal</a>
+    <a href="/home"><i class="fas fa-home"></i> Inicio</a>
+  </div>
+</div>
+
+<div class="c">
+<div class="grid2">
+  <!-- COLUMNA IZQUIERDA: filtros + lista de actividades -->
+  <div>
+    <div class="panel" style="margin-bottom:16px">
+      <h2><i class="fas fa-filter"></i> Filtros</h2>
+      <div class="f"><label>Materia</label><select id="f-mat" onchange="onFiltro()"><option value="">Cargando...</option></select></div>
+      <div class="f"><label>Grado</label><select id="f-gra" onchange="onFiltro()"><option value="">—</option></select></div>
+      <div class="f"><label>Mención</label><select id="f-men" onchange="onFiltro()"><option value="">Todas</option></select></div>
+      <div class="f"><label>Período</label>
+        <select id="f-per" onchange="onFiltro()"><option value="P1">P1</option><option value="P2">P2</option><option value="P3">P3</option><option value="P4">P4</option></select>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2><i class="fas fa-list"></i> Actividades <button class="b bp" style="margin-left:auto;padding:5px 12px;font-size:.78rem" onclick="abrirCrear()"><i class="fas fa-plus"></i> Nueva</button></h2>
+      <div class="act-list" id="act-list">
+        <div class="empty"><i class="fas fa-tasks"></i>Selecciona materia y grado</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COLUMNA DERECHA: contenido principal -->
+  <div>
+    <div class="panel">
+      <div class="tabs">
+        <button class="tb a" onclick="showTab('calificar',this)"><i class="fas fa-pen"></i> Calificar</button>
+        <button class="tb" onclick="showTab('resumen',this)"><i class="fas fa-chart-bar"></i> Resumen Competencias</button>
+      </div>
+
+      <!-- Tab: Calificar actividad -->
+      <div class="pnl a" id="p-calificar">
+        <div id="calificar-content">
+          <div class="empty"><i class="fas fa-hand-pointer"></i>Selecciona una actividad de la lista</div>
+        </div>
+      </div>
+
+      <!-- Tab: Resumen por competencias -->
+      <div class="pnl" id="p-resumen">
+        <div id="resumen-content">
+          <div class="empty"><i class="fas fa-chart-bar"></i>Selecciona materia, grado y período para ver el resumen</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- Modal: Crear Actividad -->
+<div style="position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:1000" id="modal-crear">
+<div class="panel" style="width:95%;max-width:560px;max-height:85vh;overflow-y:auto">
+  <h2><i class="fas fa-plus-circle" style="color:var(--accent)"></i> Nueva Actividad</h2>
+  <div class="f"><label>Título</label><input id="c-titulo" placeholder="Ej: Prueba corta - Tema 3"></div>
+  <div class="f"><label>Tipo</label>
+    <select id="c-tipo">
+      <option value="tarea">Tarea</option>
+      <option value="prueba_corta">Prueba Corta</option>
+      <option value="prueba_parcial">Prueba Parcial</option>
+      <option value="proyecto">Proyecto</option>
+      <option value="participacion">Participación</option>
+      <option value="examen">Examen</option>
+    </select>
+  </div>
+  <div class="f"><label>Peso (% del total)</label><input id="c-peso" type="number" min="0" max="100" value="0" placeholder="Ej: 20"></div>
+  <div class="f"><label>Competencias que evalúa</label>
+    <div class="check-group" id="c-comps"></div>
+  </div>
+  <div class="f"><label>Descripción (opcional)</label><textarea id="c-desc" placeholder="Detalles de la actividad..."></textarea></div>
+  <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
+    <button class="b bs" onclick="cerrarCrear()">Cancelar</button>
+    <button class="b bp" onclick="guardarActividad()"><i class="fas fa-save"></i> Crear</button>
+  </div>
+</div>
+</div>
+
+<script>
+const CS = '{{ csrf_token }}';
+const H = {'Content-Type':'application/json','X-CSRF-Token':CS};
+let PERFIL = null;
+let ACT_SELECCIONADA = null;
+
+function showTab(id, btn) {
+  document.querySelectorAll('.pnl').forEach(p => p.classList.remove('a'));
+  document.querySelectorAll('.tb').forEach(b => b.classList.remove('a'));
+  document.getElementById('p-' + id).classList.add('a');
+  btn.classList.add('a');
+  if (id === 'resumen') cargarResumen();
+}
+
+// ── Cargar perfil del profesor ──
+async function init() {
+  try {
+    const r = await (await fetch('/api/evaluacion/mi-perfil')).json();
+    PERFIL = r;
+    // Badge
+    const badge = document.getElementById('tipo-badge');
+    if (r.tipo_evaluacion === 'basica') {
+      badge.textContent = 'Secuencia Didáctica';
+      badge.className = 'tipo-badge tipo-basica';
+    } else {
+      badge.textContent = 'Planificación Técnica';
+      badge.className = 'tipo-badge tipo-tecnica';
+    }
+    // Populate filters
+    const matSel = document.getElementById('f-mat');
+    const mat = r.profesor.materia || '';
+    const materias = mat.split(',').map(m => m.trim()).filter(m => m);
+    matSel.innerHTML = materias.map(m => '<option value="' + m + '">' + m + '</option>').join('');
+
+    const graSel = document.getElementById('f-gra');
+    graSel.innerHTML = r.alcance.grados.map(g => '<option value="' + g + '">' + g + '</option>').join('');
+
+    const menSel = document.getElementById('f-men');
+    if (r.alcance.menciones.length > 0) {
+      menSel.innerHTML = '<option value="">Todas</option>' + r.alcance.menciones.map(m => '<option value="' + m + '">' + m + '</option>').join('');
+    }
+
+    // Build competencias checkboxes
+    buildCompChecks();
+    onFiltro();
+  } catch (e) {
+    console.error('Error loading profile:', e);
+  }
+}
+
+function buildCompChecks() {
+  const container = document.getElementById('c-comps');
+  if (PERFIL.tipo_evaluacion === 'basica') {
+    const comps = PERFIL.competencias;
+    container.innerHTML = Object.entries(comps).map(([code, name]) =>
+      '<label class="check-item" onclick="toggleCheck(this)"><input type="checkbox" value="' + code + '"> ' + name + '</label>'
+    ).join('');
+  } else {
+    // Técnicas: campo libre para agregar competencias
+    container.innerHTML = '<input id="c-comp-custom" placeholder="Ej: Creatividad, Técnica, Presentación (separar con comas)" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:.85rem">';
+  }
+}
+
+function toggleCheck(el) {
+  el.classList.toggle('sel');
+  el.querySelector('input').checked = el.classList.contains('sel');
+}
+
+// ── Cargar actividades ──
+async function onFiltro() {
+  const mat = document.getElementById('f-mat').value;
+  const gra = document.getElementById('f-gra').value;
+  const men = document.getElementById('f-men').value;
+  const per = document.getElementById('f-per').value;
+  if (!mat || !gra) return;
+
+  const url = '/api/evaluacion/actividades?materia=' + encodeURIComponent(mat) +
+    '&grado=' + gra + '&periodo=' + per + '&mencion=' + encodeURIComponent(men);
+  const acts = await (await fetch(url)).json();
+  const list = document.getElementById('act-list');
+
+  if (!acts.length) {
+    list.innerHTML = '<div class="empty"><i class="fas fa-tasks"></i>Sin actividades. Crea una con el botón +</div>';
+    return;
+  }
+
+  list.innerHTML = acts.map(a => {
+    const tipos = {"tarea":"Tarea","prueba_corta":"P. Corta","prueba_parcial":"P. Parcial","proyecto":"Proyecto","participacion":"Particip.","examen":"Examen"};
+    const compTags = (a.competencias || []).map(c =>
+      '<span class="tag comp">' + (PERFIL.competencias[c] || c) + '</span>'
+    ).join('');
+    return '<div class="act-item" data-id="' + a.id + '" onclick="seleccionarAct(' + a.id + ',this)">' +
+      '<div><div class="titulo">' + a.titulo + '</div>' +
+      '<div class="meta">' + (tipos[a.tipo] || a.tipo) + (a.peso ? ' · ' + a.peso + '%' : '') + '</div>' +
+      '<div class="tags">' + compTags + '</div></div>' +
+      '<button class="bd" onclick="event.stopPropagation();eliminarAct(' + a.id + ')"><i class="fas fa-trash"></i></button></div>';
+  }).join('');
+}
+
+// ── Seleccionar actividad para calificar ──
+async function seleccionarAct(id, el) {
+  ACT_SELECCIONADA = id;
+  document.querySelectorAll('.act-item').forEach(a => a.classList.remove('sel'));
+  if (el) el.classList.add('sel');
+
+  const r = await (await fetch('/api/evaluacion/notas/' + id)).json();
+  const act = r.actividad;
+  const ests = r.estudiantes;
+
+  let html = '<h3 style="margin-bottom:12px;font-size:.95rem">' + act.titulo +
+    ' <span style="color:var(--muted);font-weight:400;font-size:.82rem">(' + act.tipo + ')</span></h3>';
+  html += '<table><thead><tr><th>#</th><th>Estudiante</th><th style="text-align:center">Nota (0-100)</th></tr></thead><tbody>';
+  ests.forEach((e, i) => {
+    html += '<tr><td>' + (i + 1) + '</td><td>' + e.apellido + ', ' + e.nombre + '</td>' +
+      '<td style="text-align:center"><input class="nota-inp" data-id="' + e.id + '" type="number" min="0" max="100" step="1" value="' + (e.nota !== null ? e.nota : '') + '" placeholder="—"></td></tr>';
+  });
+  html += '</tbody></table>';
+  html += '<div style="margin-top:14px;text-align:right"><button class="b bp" onclick="guardarNotas()"><i class="fas fa-save"></i> Guardar notas</button></div>';
+
+  document.getElementById('calificar-content').innerHTML = html;
+}
+
+async function guardarNotas() {
+  if (!ACT_SELECCIONADA) return;
+  const inputs = document.querySelectorAll('.nota-inp');
+  const notas = {};
+  inputs.forEach(inp => {
+    if (inp.value !== '') notas[inp.dataset.id] = parseFloat(inp.value);
+  });
+
+  const r = await (await fetch('/api/evaluacion/notas/' + ACT_SELECCIONADA, {
+    method: 'POST', headers: H, body: JSON.stringify({notas})
+  })).json();
+
+  if (r.ok) {
+    alert('Guardadas: ' + r.guardadas + ' notas');
+  } else {
+    alert(r.error || 'Error');
+  }
+}
+
+// ── Crear actividad ──
+function abrirCrear() {
+  document.getElementById('modal-crear').style.display = 'flex';
+}
+function cerrarCrear() {
+  document.getElementById('modal-crear').style.display = 'none';
+}
+
+async function guardarActividad() {
+  const mat = document.getElementById('f-mat').value;
+  const gra = document.getElementById('f-gra').value;
+  const men = document.getElementById('f-men').value;
+  const per = document.getElementById('f-per').value;
+  const titulo = document.getElementById('c-titulo').value.trim();
+  if (!titulo) { alert('Escribe un título'); return; }
+
+  // Get competencias
+  let competencias = [];
+  if (PERFIL.tipo_evaluacion === 'basica') {
+    document.querySelectorAll('#c-comps input:checked').forEach(c => competencias.push(c.value));
+  } else {
+    const custom = (document.getElementById('c-comp-custom') || {}).value || '';
+    competencias = custom.split(',').map(c => c.trim()).filter(c => c);
+  }
+
+  const body = {
+    titulo, tipo: document.getElementById('c-tipo').value,
+    peso: document.getElementById('c-peso').value,
+    materia: mat, grado: gra, mencion: men, periodo: per,
+    competencias, descripcion: document.getElementById('c-desc').value,
+  };
+
+  const r = await (await fetch('/api/evaluacion/actividades', {
+    method: 'POST', headers: H, body: JSON.stringify(body)
+  })).json();
+
+  if (r.ok) {
+    cerrarCrear();
+    document.getElementById('c-titulo').value = '';
+    document.getElementById('c-desc').value = '';
+    onFiltro();
+  } else {
+    alert(r.error || 'Error');
+  }
+}
+
+async function eliminarAct(id) {
+  if (!confirm('¿Eliminar esta actividad y sus notas?')) return;
+  await fetch('/api/evaluacion/actividades/' + id, {method:'DELETE', headers:H});
+  onFiltro();
+  document.getElementById('calificar-content').innerHTML = '<div class="empty"><i class="fas fa-hand-pointer"></i>Selecciona una actividad</div>';
+}
+
+// ── Helpers nivel ──
+var NIVEL_LABEL = {destacado:'Destacado',satisfactorio:'Satisfactorio',basico:'Básico',en_proceso:'En Proceso',insuficiente:'Insuficiente'};
+var NIVEL_COLOR = {destacado:'#4dffb4',satisfactorio:'#60b8f0',basico:'#378ADD',en_proceso:'#f7b731',insuficiente:'#ff6b6b'};
+function nivelBadge(estado) {
+  var c = NIVEL_COLOR[estado] || '#888';
+  var l = NIVEL_LABEL[estado] || estado;
+  return '<span style="padding:2px 8px;border-radius:4px;font-size:.7rem;font-weight:700;' +
+         'background:' + c + '22;border:1px solid ' + c + '55;color:' + c + ';">' + l + '</span>';
+}
+function notaColor(v) {
+  return v === undefined || v === null ? 'var(--muted)' : v >= 89 ? '#4dffb4' : v >= 80 ? '#60b8f0' : v >= 70 ? '#378ADD' : v >= 60 ? '#f7b731' : '#ff6b6b';
+}
+
+// Guardar datos del resumen actual para el PDF/IA
+var _resumenData = null;
+
+// ── Resumen por competencias ──
+async function cargarResumen() {
+  const mat = document.getElementById('f-mat').value;
+  const gra = document.getElementById('f-gra').value;
+  const men = document.getElementById('f-men').value;
+  const per = document.getElementById('f-per').value;
+  if (!mat || !gra || !per) {
+    document.getElementById('resumen-content').innerHTML = '<div class="empty"><i class="fas fa-filter"></i>Selecciona materia, grado y período</div>';
+    return;
+  }
+
+  const url = '/api/evaluacion/resumen-competencias?materia=' + encodeURIComponent(mat) +
+    '&grado=' + gra + '&periodo=' + per + '&mencion=' + encodeURIComponent(men);
+  const r = await (await fetch(url)).json();
+  _resumenData = r;
+
+  if (!r.estudiantes || !r.estudiantes.length) {
+    document.getElementById('resumen-content').innerHTML = '<div class="empty"><i class="fas fa-chart-bar"></i>Sin datos. Crea actividades y registra notas primero.</div>';
+    return;
+  }
+
+  const comps = r.competencias;
+  const compCodes = Object.keys(comps);
+
+  // Botones de exportar
+  const pdfUrl = '/api/evaluacion/informe-pdf?materia=' + encodeURIComponent(mat) +
+    '&grado=' + gra + '&periodo=' + per + '&mencion=' + encodeURIComponent(men);
+  let html = '<div style="display:flex;gap:8px;margin-bottom:14px;">' +
+    '<a href="' + pdfUrl + '" target="_blank" class="b bs" style="font-size:.78rem;text-decoration:none;">' +
+    '<i class="fas fa-file-pdf" style="color:#ef4444;"></i> Imprimir / PDF</a>' +
+    '</div>';
+
+  // Cards promedios por competencia
+  html += '<div class="resumen-grid">';
+  compCodes.forEach(code => {
+    const vals = r.estudiantes.map(e => e.competencias[code]).filter(v => v !== undefined && v !== null);
+    const avg = vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : '—';
+    const col = vals.length ? notaColor(parseFloat(avg)) : '#888';
+    html += '<div class="res-card"><div class="val" style="color:' + col + '">' + avg + '</div><div class="lbl">' + comps[code] + '</div></div>';
+  });
+  const allProms = r.estudiantes.map(e => e.promedio).filter(v => v !== null && v !== undefined);
+  const overallAvg = allProms.length ? (allProms.reduce((a, b) => a + b, 0) / allProms.length).toFixed(1) : '—';
+  html += '<div class="res-card"><div class="val" style="color:var(--blue)">' + overallAvg + '</div><div class="lbl">Promedio General</div></div>';
+  html += '</div>';
+
+  // Tabla con nivel badge + botón IA por estudiante
+  html += '<table><thead><tr><th>#</th><th>Estudiante</th>';
+  compCodes.forEach(code => { html += '<th style="text-align:center">' + comps[code] + '</th>'; });
+  html += '<th style="text-align:center;font-weight:800">Final</th><th style="text-align:center">Nivel</th><th style="text-align:center">IA</th></tr></thead><tbody>';
+
+  r.estudiantes.forEach((e, i) => {
+    html += '<tr><td>' + (i + 1) + '</td><td><b>' + e.apellido + '</b>, ' + e.nombre + '</td>';
+    compCodes.forEach(code => {
+      const val = e.competencias[code];
+      html += '<td style="text-align:center;color:' + notaColor(val) + ';font-weight:600">' + (val !== undefined && val !== null ? val : '—') + '</td>';
+    });
+    const pColor = notaColor(e.promedio);
+    html += '<td style="text-align:center;font-weight:800;color:' + pColor + '">' + (e.promedio !== null && e.promedio !== undefined ? e.promedio : '—') + '</td>';
+    html += '<td style="text-align:center">' + nivelBadge(e.estado) + '</td>';
+    html += '<td style="text-align:center"><button class="b bs" style="font-size:.7rem;padding:4px 8px;" ' +
+            'onclick="pedirRetroIA(' + i + ')" title="Retroalimentación IA"><i class="fas fa-robot"></i></button></td>';
+    html += '</tr>';
+    // Fila oculta para mostrar la retroalimentación IA
+    html += '<tr id="ia-row-' + i + '" style="display:none;"><td colspan="' + (compCodes.length + 5) + '">' +
+            '<div id="ia-content-' + i + '" style="padding:10px 14px;font-size:.82rem;color:var(--muted);' +
+            'background:rgba(96,184,240,.05);border-left:3px solid #60b8f0;line-height:1.6;"></div></td></tr>';
+  });
+  html += '</tbody></table>';
+
+  document.getElementById('resumen-content').innerHTML = html;
+}
+
+async function pedirRetroIA(idx) {
+  if (!_resumenData) return;
+  const e = _resumenData.estudiantes[idx];
+  const mat = document.getElementById('f-mat').value;
+
+  var rowIA = document.getElementById('ia-row-' + idx);
+  var content = document.getElementById('ia-content-' + idx);
+
+  if (rowIA.style.display !== 'none') {
+    rowIA.style.display = 'none';
+    return;
+  }
+
+  content.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando retroalimentación...';
+  rowIA.style.display = '';
+
+  try {
+    const res = await fetch('/api/evaluacion/retroalimentacion-ia', {
+      method: 'POST', headers: H,
+      body: JSON.stringify({
+        nombre: e.nombre + ' ' + e.apellido,
+        materia: mat,
+        competencias: e.competencias,
+        promedio: e.promedio
+      })
+    });
+    const d = await res.json();
+    if (d.ok) {
+      content.innerHTML = '<i class="fas fa-robot" style="color:#60b8f0;margin-right:6px;"></i>' + d.retroalimentacion;
+    } else {
+      content.innerHTML = '<span style="color:var(--danger)">Error: ' + (d.error || 'desconocido') + '</span>';
+    }
+  } catch(ex) {
+    content.innerHTML = '<span style="color:var(--danger)">Error de conexión</span>';
+  }
+}
+
+// Theme
+(function(){var t=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',t);document.querySelectorAll('.mt-tbtn').forEach(function(b){b.classList.toggle('theme-btn-active',b.dataset.theme===t)})})();
+
+// Init
+init();
+</script>
+</body>
+</html>

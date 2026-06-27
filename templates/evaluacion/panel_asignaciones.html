@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Panel de Evaluación — Axula</title>
+<link rel="stylesheet" href="/static/theme.css">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--font-body,DM Sans,sans-serif);background:var(--bg);color:var(--text);min-height:100vh}
+
+/* ─── Layout ─── */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;background:var(--surface);border-bottom:1px solid var(--border)}
+.topbar h1{font-size:1.05rem;font-weight:700;display:flex;align-items:center;gap:8px}
+.topbar .back{color:var(--accent);text-decoration:none;font-size:.85rem;font-weight:600}
+.container{max-width:1100px;margin:0 auto;padding:24px 20px;display:grid;grid-template-columns:320px 1fr;gap:20px}
+@media(max-width:800px){.container{grid-template-columns:1fr}}
+
+/* ─── Panel cards ─── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px}
+.card h2{font-size:.9rem;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:7px;color:var(--text)}
+
+/* ─── Period tabs ─── */
+.period-tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+.period-tab{padding:5px 14px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:.82rem;font-weight:600;cursor:pointer;transition:.15s}
+.period-tab.active{background:#185FA5;color:#fff;border-color:#185FA5}
+
+/* ─── Medidor de puntos ─── */
+.pts-meter{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:14px}
+.pts-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.pts-label{font-size:.82rem;color:var(--muted)}
+.pts-value{font-size:1.1rem;font-weight:700}
+.pts-value.ok{color:#185FA5}
+.pts-value.warn{color:#E8A020}
+.pts-value.over{color:#A32D2D}
+.pts-bar-track{height:8px;background:var(--border);border-radius:4px;overflow:hidden}
+.pts-bar-fill{height:100%;background:#185FA5;border-radius:4px;transition:width .3s}
+.pts-bar-fill.over-limit{background:#A32D2D}
+.pts-hint{font-size:.75rem;color:var(--muted);margin-top:6px}
+
+/* ─── Actividades list ─── */
+.act-list{list-style:none;display:flex;flex-direction:column;gap:7px;margin-bottom:14px}
+.act-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:7px;font-size:.83rem}
+.act-item .tipo-badge{padding:2px 8px;border-radius:99px;font-size:.7rem;font-weight:700;text-transform:uppercase;background:rgba(3,140,140,.12);color:#185FA5}
+.act-item .pts-badge{margin-left:auto;font-weight:700;color:#185FA5;min-width:40px;text-align:right}
+.act-item a.calificar-link{font-size:.75rem;color:var(--accent);text-decoration:none;white-space:nowrap}
+.act-empty{font-size:.83rem;color:var(--muted);text-align:center;padding:16px 0}
+
+/* ─── Formulario crear actividad ─── */
+.form-grid{display:grid;gap:10px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:.78rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.field input,.field select,.field textarea{
+    padding:7px 10px;border:1px solid var(--border);border-radius:6px;
+    background:var(--bg);color:var(--text);font-size:.88rem;font-family:inherit
+}
+.field input:focus,.field select:focus{outline:none;border-color:#185FA5}
+
+.pts-preview{font-size:.8rem;margin-top:4px;min-height:16px}
+.pts-preview.ok{color:#185FA5}
+.pts-preview.error{color:#A32D2D}
+
+/* ─── Buttons ─── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:6px;border:none;font-size:.85rem;font-weight:600;cursor:pointer;transition:.15s}
+.btn-primary{background:#185FA5;color:#fff}
+.btn-primary:hover{background:#042C53}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text)}
+.btn-outline:hover{border-color:#185FA5;color:#185FA5}
+.btn-danger{background:#A32D2D;color:#fff}
+.btn-danger:hover{background:#7a2020}
+
+/* ─── Alert / notices ─── */
+.notice{padding:9px 12px;border-radius:7px;font-size:.82rem;margin-bottom:12px}
+.notice-warn{background:rgba(232,160,32,.12);border:1px solid rgba(232,160,32,.3);color:var(--text)}
+.notice-ok{background:rgba(3,140,140,.1);border:1px solid rgba(3,140,140,.3);color:#042C53}
+.notice-error{background:rgba(163,45,45,.1);border:1px solid rgba(163,45,45,.3);color:#A32D2D}
+
+/* ─── Modal ─── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;max-width:440px;width:90%;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:1rem;font-weight:700;margin-bottom:12px}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.warn-list{font-size:.82rem;list-style:disc;padding-left:18px;color:var(--muted);margin:8px 0}
+</style>
+</head>
+<body>
+
+<!-- ─── Topbar ─── -->
+<div class="topbar">
+  <h1><i class="fa fa-clipboard-check" style="color:#185FA5"></i> Panel de Evaluación</h1>
+  <div style="display:flex;align-items:center;gap:16px">
+    <span style="font-size:.82rem;color:var(--muted)">
+      <strong>{{ materia }}</strong> · {{ grado or '' }}
+    </span>
+    <a href="/profesor" class="back"><i class="fa fa-arrow-left"></i> Volver</a>
+  </div>
+</div>
+
+<!-- ─── Container ─── -->
+<div class="container">
+
+  <!-- ─── Columna izquierda: medidor + lista ─── -->
+  <div>
+    <!-- Selector de período -->
+    <div class="period-tabs" id="periodTabs">
+      {% for p in [1,2,3,4] %}
+      <button class="period-tab {% if p == periodo_activo %}active{% endif %}"
+              data-periodo="{{ p }}" onclick="switchPeriodo({{ p }})">
+        P{{ p }}
+      </button>
+      {% endfor %}
+    </div>
+
+    <!-- Medidor de puntos -->
+    <div class="pts-meter">
+      <div class="pts-header">
+        <span class="pts-label">Puntos asignados / período</span>
+        <span class="pts-value ok" id="ptsValue">— / 100</span>
+      </div>
+      <div class="pts-bar-track">
+        <div class="pts-bar-fill" id="ptsBar" style="width:0%"></div>
+      </div>
+      <div class="pts-hint" id="ptsHint">Cargando...</div>
+    </div>
+
+    <!-- Lista actividades -->
+    <div class="card">
+      <h2><i class="fa fa-list-check"></i> Actividades del período</h2>
+      <ul class="act-list" id="actList">
+        <li class="act-empty">Cargando...</li>
+      </ul>
+
+      <!-- Botón cerrar período -->
+      <div id="cerrarWrap" style="display:none;margin-top:8px">
+        <button class="btn btn-danger" onclick="abrirModalCierre()" id="btnCerrar">
+          <i class="fa fa-lock"></i> Cerrar período
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Columna derecha: formulario crear actividad ─── -->
+  <div>
+    <div class="card">
+      <h2><i class="fa fa-plus-circle"></i> Nueva actividad</h2>
+      <form id="formCrear" class="form-grid" onsubmit="crearActividad(event)">
+
+        <div class="form-row">
+          <div class="field">
+            <label>Título</label>
+            <input type="text" id="inTitulo" placeholder="Ej: Proyecto identidad visual" required>
+          </div>
+          <div class="field">
+            <label>Tipo</label>
+            <select id="inTipo">
+              <option value="tarea">Tarea</option>
+              <option value="proyecto">Proyecto</option>
+              <option value="prueba">Prueba</option>
+              <option value="participacion">Participación</option>
+              <option value="exposicion">Exposición</option>
+              <option value="otro">Otro</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="field">
+            <label>Valor en puntos</label>
+            <input type="number" id="inPuntos" min="1" max="100" placeholder="Ej: 20"
+                   oninput="previewPuntos()" required>
+            <div class="pts-preview" id="ptsPreview"></div>
+          </div>
+          <div class="field">
+            <label>Fecha entrega</label>
+            <input type="date" id="inFecha">
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Vinculación a planificación</label>
+          <select id="inPlanificacion" required>
+            <option value="">— Seleccionar planificación —</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Competencia vinculada <span style="font-weight:400;color:var(--muted)">(opcional)</span></label>
+          <select id="inCompetencia">
+            <option value="">— Ninguna —</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Descripción <span style="font-weight:400;color:var(--muted)">(opcional)</span></label>
+          <textarea id="inDesc" rows="2" placeholder="Instrucciones o descripción..."></textarea>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;gap:8px">
+          <button type="button" class="btn btn-outline" onclick="resetForm()">Limpiar</button>
+          <button type="submit" class="btn btn-primary" id="btnGuardar">
+            <i class="fa fa-save"></i> Guardar actividad
+          </button>
+        </div>
+
+        <div id="formMsg" style="display:none" class="notice"></div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Modal cierre de período ─── -->
+<div class="modal-overlay" id="modalCierre">
+  <div class="modal">
+    <h3><i class="fa fa-lock" style="color:#A32D2D"></i> Cerrar período <span id="modalPeriodoLabel"></span></h3>
+    <p style="font-size:.85rem;color:var(--muted);margin-bottom:10px">
+      Esta acción calcula y guarda la nota definitiva de todos los estudiantes para el período.
+      No podrá modificarse sin intervención manual.
+    </p>
+    <div id="advertenciasCierre"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn btn-danger" id="btnConfirmarCierre" onclick="confirmarCierre()">
+        <i class="fa fa-lock"></i> Confirmar cierre
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+const MATERIA     = {{ materia | tojson }};
+const GRADO       = {{ grado | tojson }};
+const MENCION     = {{ mencion | tojson }};
+const ANIO_ID     = {{ anio_escolar_id | int }};
+const CSRF_TOKEN  = document.cookie.match(/csrf_token=([^;]+)/)?.[1] || "";
+
+let periodoActivo  = {{ periodo_activo | int }};
+let statusCache    = {};
+let planificaciones = [];
+
+// ─── Inicialización ───
+document.addEventListener("DOMContentLoaded", () => {
+  cargarPlanificaciones();
+  cargarCompetencias();
+  loadStatus(periodoActivo);
+});
+
+// ─── Cambio de período ───
+function switchPeriodo(p) {
+  periodoActivo = p;
+  document.querySelectorAll(".period-tab").forEach(t => t.classList.toggle("active", +t.dataset.periodo === p));
+  loadStatus(p);
+}
+
+// ─── Cargar estado del período (medidor + actividades) ───
+async function loadStatus(periodo) {
+  document.getElementById("ptsHint").textContent = "Cargando...";
+  document.getElementById("actList").innerHTML = '<li class="act-empty">Cargando...</li>';
+
+  const params = new URLSearchParams({ materia: MATERIA, periodo, anio_escolar_id: ANIO_ID });
+  const res = await fetch(`/evaluacion/actividades/periodo-status?${params}`);
+  if (!res.ok) { renderError("Error cargando estado"); return; }
+  const data = await res.json();
+  statusCache[periodo] = data;
+  renderMedidor(data);
+  renderActividades(data);
+  previewPuntos();
+}
+
+function renderMedidor(data) {
+  const { puntos_usados, puntos_disponibles, advertencia } = data;
+  const pct  = Math.min(100, puntos_usados);
+  const over = puntos_usados > 100;
+
+  const val  = document.getElementById("ptsValue");
+  const bar  = document.getElementById("ptsBar");
+  const hint = document.getElementById("ptsHint");
+
+  val.textContent = `${puntos_usados} / 100 pts`;
+  val.className   = `pts-value ${over ? "over" : puntos_usados >= 100 ? "ok" : "warn"}`;
+  bar.style.width = pct + "%";
+  bar.className   = `pts-bar-fill ${over ? "over-limit" : ""}`;
+  hint.textContent = advertencia || (puntos_usados === 100 ? "✓ Período completo (100 pts)" : `${puntos_disponibles} pts disponibles`);
+}
+
+function renderActividades(data) {
+  const ul = document.getElementById("actList");
+  const wrap = document.getElementById("cerrarWrap");
+
+  if (!data.actividades.length) {
+    ul.innerHTML = '<li class="act-empty">Sin actividades en este período</li>';
+    wrap.style.display = "none";
+    return;
+  }
+
+  ul.innerHTML = data.actividades.map(a => `
+    <li class="act-item">
+      <span class="tipo-badge">${a.tipo}</span>
+      <span style="flex:1;font-weight:500">${escHtml(a.titulo)}</span>
+      <a class="calificar-link" href="/evaluacion/actividades/${a.id}/calificar">
+        <i class="fa fa-pen"></i> Calificar
+      </a>
+      <span class="pts-badge">${a.valor_puntos}pts</span>
+    </li>`).join("");
+
+  wrap.style.display = data.puede_cerrar ? "block" : "none";
+}
+
+function renderError(msg) {
+  document.getElementById("actList").innerHTML = `<li class="act-empty" style="color:var(--danger)">${msg}</li>`;
+}
+
+// ─── Preview de puntos al escribir ───
+function previewPuntos() {
+  const el   = document.getElementById("ptsPreview");
+  const val  = parseInt(document.getElementById("inPuntos").value) || 0;
+  const data = statusCache[periodoActivo];
+  if (!data || !val) { el.textContent = ""; return; }
+
+  const nuevoTotal = data.puntos_usados + val;
+  if (nuevoTotal > 100) {
+    el.textContent = `⚠ Supera el límite: ${nuevoTotal}/100 pts`;
+    el.className   = "pts-preview error";
+  } else {
+    el.textContent = `Total período quedaría: ${nuevoTotal}/100 pts`;
+    el.className   = "pts-preview ok";
+  }
+}
+
+// ─── Cargar planificaciones ───
+async function cargarPlanificaciones() {
+  try {
+    const res = await fetch(`/api/planificaciones?materia=${encodeURIComponent(MATERIA)}&periodo=${periodoActivo}`);
+    if (!res.ok) return;
+    planificaciones = await res.json();
+    const sel = document.getElementById("inPlanificacion");
+    planificaciones.forEach(p => {
+      const opt = document.createElement("option");
+      opt.value = p.id;
+      opt.textContent = `P${p.periodo} — ${p.area || MATERIA} (${p.estado || ""})`;
+      sel.appendChild(opt);
+    });
+  } catch(_) {}
+}
+
+// ─── Cargar competencias ───
+async function cargarCompetencias() {
+  try {
+    const res = await fetch(`/api/evaluacion/competencias?materia=${encodeURIComponent(MATERIA)}`);
+    if (!res.ok) return;
+    const items = await res.json();
+    const sel = document.getElementById("inCompetencia");
+    items.forEach(c => {
+      const opt = document.createElement("option");
+      opt.value = c.id;
+      opt.textContent = c.nombre;
+      sel.appendChild(opt);
+    });
+  } catch(_) {}
+}
+
+// ─── Crear actividad ───
+async function crearActividad(e) {
+  e.preventDefault();
+  const btn = document.getElementById("btnGuardar");
+  const msg = document.getElementById("formMsg");
+  btn.disabled = true;
+
+  const body = {
+    materia:         MATERIA,
+    grado:           GRADO,
+    mencion:         MENCION,
+    titulo:          document.getElementById("inTitulo").value.trim(),
+    tipo:            document.getElementById("inTipo").value,
+    valor_puntos:    parseInt(document.getElementById("inPuntos").value),
+    periodo:         periodoActivo,
+    anio_escolar_id: ANIO_ID,
+    planificacion_id: document.getElementById("inPlanificacion").value || null,
+    competencia_id:  document.getElementById("inCompetencia").value || null,
+    fecha_entrega:   document.getElementById("inFecha").value || null,
+    descripcion:     document.getElementById("inDesc").value.trim(),
+  };
+
+  try {
+    const res = await fetch("/evaluacion/actividades/crear", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json", "X-CSRF-Token": CSRF_TOKEN },
+      body:    JSON.stringify(body),
+    });
+    const data = await res.json();
+
+    if (res.ok) {
+      msg.className   = "notice notice-ok";
+      msg.textContent = `✓ Actividad creada. ${data.mensaje}`;
+      msg.style.display = "block";
+      resetForm();
+      loadStatus(periodoActivo);
+    } else {
+      msg.className   = "notice notice-error";
+      msg.textContent = data.error || "Error al crear la actividad";
+      msg.style.display = "block";
+    }
+  } catch(err) {
+    msg.className   = "notice notice-error";
+    msg.textContent = "Error de conexión";
+    msg.style.display = "block";
+  }
+
+  btn.disabled = false;
+  setTimeout(() => { msg.style.display = "none"; }, 5000);
+}
+
+function resetForm() {
+  document.getElementById("formCrear").reset();
+  document.getElementById("ptsPreview").textContent = "";
+  document.getElementById("formMsg").style.display = "none";
+}
+
+// ─── Modal cierre ───
+function abrirModalCierre() {
+  const data = statusCache[periodoActivo];
+  document.getElementById("modalPeriodoLabel").textContent = periodoActivo;
+  document.getElementById("advertenciasCierre").innerHTML = data?.advertencia
+    ? `<div class="notice notice-warn">${escHtml(data.advertencia)}</div>`
+    : "";
+  document.getElementById("modalCierre").classList.add("open");
+}
+
+function cerrarModal() {
+  document.getElementById("modalCierre").classList.remove("open");
+}
+
+async function confirmarCierre() {
+  const btn = document.getElementById("btnConfirmarCierre");
+  btn.disabled = true;
+
+  const res = await fetch(`/evaluacion/periodo/${periodoActivo}/cerrar`, {
+    method:  "POST",
+    headers: { "Content-Type": "application/json", "X-CSRF-Token": CSRF_TOKEN },
+    body:    JSON.stringify({ materia: MATERIA, anio_escolar_id: ANIO_ID }),
+  });
+  const data = await res.json();
+
+  cerrarModal();
+  btn.disabled = false;
+
+  if (res.ok && data.exitoso) {
+    alert(`✓ Período ${periodoActivo} cerrado. ${data.procesados} estudiante(s) procesados.`);
+    loadStatus(periodoActivo);
+  } else {
+    alert("Error: " + (data.mensaje || data.error || "No se pudo cerrar el período"));
+  }
+}
+
+function escHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+</script>
+</body>
+</html>
