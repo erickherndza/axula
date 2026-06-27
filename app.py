@@ -68,8 +68,7 @@ from core.security.headers import init_security_headers
 app = Flask(__name__)
 
 # Base de datos
-from core.constants import DATABASE
-FOTOS_DIR = os.path.join("static", "fotos")
+from core.constants import DATABASE, FOTOS_DIR
 os.makedirs(FOTOS_DIR, exist_ok=True)
 
 # Secret key — nunca usar valor fijo predecible
@@ -299,6 +298,12 @@ def error_excepcion(e):
         return jsonify({"error": "Error interno del servidor. Intenta de nuevo."}), 500
     return render_template("login.html",
         error="Ocurrió un error inesperado. Por favor recarga la página."), 500
+
+
+# ── HEALTH CHECK (Render / uptime monitors) ──────────────────────────────────
+@app.route("/health")
+def health():
+    return {"status": "ok", "app": "axula"}, 200
 
 
 # ── ARRANQUE ─────────────────────────────────────────────────────────────────

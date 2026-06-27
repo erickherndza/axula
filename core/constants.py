@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 """Constantes puras del sistema Axula — sin código ejecutable."""
 
-DATABASE = "database.db"
-
 import os
-FOTOS_DIR = os.path.join("static", "fotos")
+
+# En Render: DATABASE_PATH=/data/database.db (disco persistente)
+# En local:  database.db (raíz del proyecto)
+DATABASE  = os.environ.get("DATABASE_PATH", "database.db")
+FOTOS_DIR = os.environ.get("FOTOS_DIR", os.path.join("static", "fotos"))
 
 # ── JERARQUÍA DE ROLES ──────────────────────────────────────
 #

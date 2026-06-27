@@ -1,0 +1,42 @@
+services:
+  - type: web
+    name: axula
+    runtime: python
+    region: ohio          # us-east-1 — más cercano a RD
+    plan: starter         # $7/mo — necesario para disco persistente
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --workers 2 --threads 4 --bind 0.0.0.0:$PORT --timeout 120 --access-logfile -
+
+    # ── Variables de entorno ───────────────────────────────
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true           # Render genera un valor seguro automático
+
+      - key: DATABASE_PATH
+        value: /data/database.db      # disco persistente
+
+      - key: FOTOS_DIR
+        value: /data/fotos            # fotos de estudiantes en disco persistente
+
+      - key: LOG_DIR
+        value: /data/logs
+
+      - key: SESSION_COOKIE_SECURE
+        value: "true"                 # HTTPS obligatorio en producción
+
+      - key: FLASK_DEBUG
+        value: "0"
+
+      # Agregar en el dashboard de Render (no poner aquí):
+      # GROQ_API_KEY = sk-...
+      # SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS (si se usa email)
+
+    # ── Disco persistente (SQLite + uploads) ──────────────
+    # Sin esto el DB se borra en cada deploy
+    disk:
+      name: axula-data
+      mountPath: /data
+      sizeGB: 1                       # 1 GB = $0.25/mes
+
+    # ── Health check ──────────────────────────────────────
+    healthCheckPath: /health
