@@ -125,7 +125,67 @@ Endpoints protegidos: resumen_calificaciones, boletin_estudiante, boletin_view, 
 get_recuperaciones, resumen_asistencia, get_asistencia_mensual_est,
 get_evaluaciones_narrativas, casos_del_estudiante, historial_por_estudiante (expediente)
 
+## Producción — Render
+
+- URL: https://axula.onrender.com
+- Plan: Starter $7/mes + disco persistente 1 GB ($0.25/mes)
+- DB en disco: `/data/database.db` — sobrevive deploys
+- Gunicorn: `--workers 2 --threads 4 --preload`
+- Deploy: `git push origin main` → Render redeploya automático
+
+### Variables de entorno en Render (configurar en dashboard)
+
+| Variable | Valor |
+|----------|-------|
+| `SECRET_KEY` | generado por Render |
+| `DATABASE_PATH` | `/data/database.db` |
+| `FOTOS_DIR` | `/data/fotos` |
+| `LOG_DIR` | `/data/logs` |
+| `SESSION_COOKIE_SECURE` | `true` |
+| `GROQ_API_KEY` | `gsk_...` (clave real en dashboard) |
+
+### Si la DB se pierde en producción — protocolo de restauración
+
+```bash
+# 1. En Mac — subir la BD local
+cd /Users/erickhernandez/elearning && .venv/bin/python3 upload_db.py
+
+# 2. En Render Shell — mover al disco persistente
+cp /tmp/database_pending.db /data/database.db
+rm -f /data/database.db-shm /data/database.db-wal
+
+# 3. Render dashboard → Manual Deploy
+
+# 4. Render Shell — resetear password admin
+python3
+from core.database import get_db
+from core.auth import _hash
+conn = get_db().__enter__()
+conn.execute("UPDATE usuarios SET password=? WHERE username='admin'", (_hash('Admin2026!'),))
+conn.commit()
+exit()
+```
+
+### Lecciones aprendidas del deploy (2026-06-28)
+
+- `--preload` en gunicorn es obligatorio con SQLite para evitar race condition en init
+- `constants.py` auto-detecta entorno: si `/data` existe → usa `/data/database.db`, si no → `database.db`
+- Env vars en Render dashboard: KEY va en el campo KEY, VALUE va en el campo VALUE (no confundir con Secret Files)
+- `kill -HUP gunicorn` NO funciona con `--preload` para recargar DB — usar Manual Deploy
+- `upload_db.py` guarda en `/tmp/` (siempre escribible), luego `cp` a `/data/`
+
 ## Log de sesiones
+
+### 2026-06-28 (sesión 4 — Deploy a producción en Render)
+- **Deploy completo** a https://axula.onrender.com — app en producción
+- Disco persistente `/data` configurado — DB sobrevive redeploys
+- Transferencia BD local → producción via `upload_db.py` (httpx multipart, 6.9 MB)
+- Fix: `core/constants.py` auto-detecta `/data` sin depender de env var DATABASE_PATH
+- Fix: `gunicorn --preload` para evitar race condition SQLite con múltiples workers
+- Fix Excel primer ciclo: regex `(?:\s+(.+))?` — mención opcional para 1ERO–3ERO
+- KPI dashboard cards clickables con filtro por nivel (bajo/básico/destacado)
+- Header perfil.html: 11 botones → dropdown "Acciones ▼" compacto
+- **Groq/IA funcionando** en producción — GROQ_API_KEY configurada en Render dashboard
 
 ### 2026-06-27 (sesión 3 — Ponytail audit: limpieza + unificación currículo)
 - **Ponytail instalado**: npm + skill files en `.claude/commands/` y `.claude/skills/`
