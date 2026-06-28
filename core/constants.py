@@ -3,10 +3,10 @@
 
 import os
 
-# En Render: DATABASE_PATH=/data/database.db (disco persistente)
-# En local:  database.db (raíz del proyecto)
-DATABASE  = os.environ.get("DATABASE_PATH", "database.db")
-FOTOS_DIR = os.environ.get("FOTOS_DIR", os.path.join("static", "fotos"))
+# Auto-detecta entorno: si /data existe (Render con disco) lo usa; si no, usa rutas locales
+_en_render = os.path.isdir("/data")
+DATABASE  = os.environ.get("DATABASE_PATH",  "/data/database.db"              if _en_render else "database.db")
+FOTOS_DIR = os.environ.get("FOTOS_DIR",      "/data/fotos"                    if _en_render else os.path.join("static", "fotos"))
 
 # ── JERARQUÍA DE ROLES ──────────────────────────────────────
 #
