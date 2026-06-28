@@ -44,7 +44,7 @@ ROLES_DISPONIBLES = {
     "padre":                      "Padre/Madre/Tutor",
 }
 
-DOMINIOS_INSTITUCIONALES = {"educacion.edu.do", "minerd.gob.do", "minerd.edu.do"}
+DOMINIOS_INSTITUCIONALES = {"educacion.edu.do", "mail.educacion.edu.do", "minerd.gob.do", "minerd.edu.do"}
 
 _CACHE_TTL = 90  # segundos
 
