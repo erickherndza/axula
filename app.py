@@ -318,10 +318,9 @@ def db_restore():
         f = request.files.get("db")
         if not f:
             return jsonify({"error": "No file", "files": list(request.files.keys())}), 400
-        os.makedirs("/data", exist_ok=True)
-        f.save("/data/database_pending.db")
-        size = os.path.getsize("/data/database_pending.db")
-        return jsonify({"ok": True, "size_bytes": size, "msg": "Guardado en /data/database_pending.db"}), 200
+        f.save("/tmp/database_pending.db")
+        size = os.path.getsize("/tmp/database_pending.db")
+        return jsonify({"ok": True, "size_bytes": size, "msg": "Guardado en /tmp/database_pending.db"}), 200
     except Exception as _ex:
         return jsonify({"error": str(_ex), "type": type(_ex).__name__}), 500
 
