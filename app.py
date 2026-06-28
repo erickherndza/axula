@@ -310,15 +310,20 @@ def health():
 import hmac as _hmac
 @app.route("/db-restore", methods=["POST"])
 def db_restore():
-    token    = request.headers.get("X-Restore-Token", "")
-    expected = os.environ.get("RESTORE_TOKEN", "")
-    if not expected or not _hmac.compare_digest(token, expected):
-        return jsonify({"error": "Forbidden"}), 403
-    f = request.files.get("db")
-    if not f:
-        return jsonify({"error": "No file"}), 400
-    f.save("/data/database_pending.db")
-    return jsonify({"ok": True, "msg": "Guardado en /data/database_pending.db"}), 200
+    try:
+        token    = request.headers.get("X-Restore-Token", "")
+        expected = os.environ.get("RESTORE_TOKEN", "")
+        if not expected or not _hmac.compare_digest(token, expected):
+            return jsonify({"error": "Forbidden", "hint": "token incorrecto o RESTORE_TOKEN no configurado"}), 403
+        f = request.files.get("db")
+        if not f:
+            return jsonify({"error": "No file", "files": list(request.files.keys())}), 400
+        os.makedirs("/data", exist_ok=True)
+        f.save("/data/database_pending.db")
+        size = os.path.getsize("/data/database_pending.db")
+        return jsonify({"ok": True, "size_bytes": size, "msg": "Guardado en /data/database_pending.db"}), 200
+    except Exception as _ex:
+        return jsonify({"error": str(_ex), "type": type(_ex).__name__}), 500
 
 
 # ── ARRANQUE ─────────────────────────────────────────────────────────────────
