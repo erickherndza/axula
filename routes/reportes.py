@@ -41,6 +41,8 @@ def vista_reportes():
 @reportes_bp.route("/api/reportes", methods=["GET"])
 @login_required
 def listar_reportes():
+    u         = get_usuario()
+    rol       = _normalizar_rol(u.get("rol", ""))
     tipo      = request.args.get("tipo", "")
     estado    = request.args.get("estado", "")
     est_id    = request.args.get("estudiante_id", "")
@@ -52,8 +54,12 @@ def listar_reportes():
         JOIN estudiantes e ON e.id = r.estudiante_id
         WHERE 1=1
     """
-    # caso_id ya es columna de reportes (migración)
     params = []
+
+    # Psicóloga solo ve reportes del canal conductual
+    if "psicologa" in rol:
+        q += " AND (r.canal='conductual' OR r.canal IS NULL)"
+
     if tipo:      q += " AND r.tipo=?";             params.append(tipo)
     if estado:    q += " AND r.estado=?";           params.append(estado)
     if est_id:    q += " AND r.estudiante_id=?";    params.append(int(est_id))
@@ -72,10 +78,14 @@ def listar_reportes():
 @reportes_bp.route("/api/reportes", methods=["POST"])
 @login_required
 def crear_reporte():
-    d = request.get_json(silent=True) or {}
+    u           = get_usuario()
+    d           = request.get_json(silent=True) or {}
     est_id      = d.get("estudiante_id")
     tipo        = d.get("tipo", "").strip()
     descripcion = d.get("descripcion", "").strip()
+    canal       = d.get("canal", "pedagogico")  # 'pedagogico' | 'conductual'
+    if canal not in ("pedagogico", "conductual"):
+        canal = "pedagogico"
     if not est_id or not tipo or not descripcion:
         return jsonify({"error": "estudiante_id, tipo y descripcion son requeridos"}), 400
 
@@ -83,19 +93,20 @@ def crear_reporte():
         conn.execute("""
             INSERT INTO reportes
                 (estudiante_id, tipo, subtipo, titulo, descripcion,
-                 severidad, reportado_por, estado)
-            VALUES (?,?,?,?,?,?,?,?)
+                 severidad, reportado_por, estado, canal, autor_id)
+            VALUES (?,?,?,?,?,?,?,?,?,?)
         """, (est_id, tipo,
-              d.get("subtipo",""),
-              d.get("titulo",""),
+              d.get("subtipo", ""),
+              d.get("titulo", ""),
               descripcion,
-              d.get("severidad","Media"),
-              d.get("reportado_por",""),
-              "Abierto"))
+              d.get("severidad", "Media"),
+              d.get("reportado_por", u.get("nombre", "")),
+              "Abierto",
+              canal,
+              u.get("id")))
         conn.commit()
         rid = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
 
-    # ── Notificar automáticamente a psicóloga ─────────────────────────────
     with sqlite3.connect(DATABASE, timeout=10) as conn2:
         conn2.row_factory = sqlite3.Row
         _notificar_reporte_nuevo(
@@ -103,7 +114,8 @@ def crear_reporte():
             tipo,
             d.get("severidad", "Media"),
             d.get("titulo", ""),
-            d.get("reportado_por", "")
+            d.get("reportado_por", u.get("nombre", "")),
+            canal=canal
         )
         conn2.commit()
 

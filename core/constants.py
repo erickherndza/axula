@@ -1021,6 +1021,13 @@ MIGRACIONES_ESPECIALES = [
     ("Agregar entregado a entregas_asignacion",
      "ALTER TABLE entregas_asignacion ADD COLUMN entregado INTEGER DEFAULT 1",
      "entregado", "entregas_asignacion"),
+    # ── Motor conductual — canal de visibilidad ───────────────────────────────
+    ("Agregar canal a reportes",
+     "ALTER TABLE reportes ADD COLUMN canal TEXT DEFAULT 'pedagogico'",
+     "canal", "reportes"),
+    ("Agregar autor_id a reportes",
+     "ALTER TABLE reportes ADD COLUMN autor_id INTEGER",
+     "autor_id", "reportes"),
     # ← AGREGA MIGRACIONES PUNTUALES AQUÍ
 ]
 

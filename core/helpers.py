@@ -1156,23 +1156,76 @@ def _verificar_ausencias_semana(conn, estudiante_id, fecha_str):
             ))
 
 
-def _notificar_reporte_nuevo(conn, estudiante_id, reporte_id, tipo_reporte, severidad, titulo_rep, reportado_por):
+def _notificar_directora_coordinador(conn, estudiante_id, origen_tipo, origen_id, titulo, cuerpo):
     """
-    Genera notificación automática a psicóloga cuando se crea un reporte.
-    Para reportes graves, también notifica al coordinador.
+    Notifica a directora y coordinador del ciclo (NO a psicóloga).
+    Usado para reportes pedagógicos del profesor.
+    """
+    est = conn.execute(
+        "SELECT ciclo FROM estudiantes WHERE id=?", (estudiante_id,)
+    ).fetchone()
+    ciclo = (est["ciclo"] if est else None) or "segundo_ciclo"
+    rol_coord = "coordinador_primer_ciclo" if ciclo == "primer_ciclo" else "coordinador_segundo_ciclo"
+
+    destinatarios = conn.execute(
+        "SELECT id, nombre, email FROM usuarios WHERE rol IN (?,?,?) AND activo=1",
+        (rol_coord, "coordinador_general", "directora")
+    ).fetchall()
+
+    for dest in destinatarios:
+        conn.execute("""
+            INSERT INTO notificaciones
+                (destinatario_id, origen_tipo, origen_id, estudiante_id, titulo, cuerpo)
+            VALUES (?,?,?,?,?,?)
+        """, (dest["id"], origen_tipo, origen_id, estudiante_id, titulo, cuerpo))
+        if dest["email"]:
+            url_base = os.environ.get("APP_URL", "http://localhost:5000").rstrip("/")
+            html = (
+                f"<div style='font-family:Arial,sans-serif;max-width:520px;margin:0 auto;"
+                f"padding:24px;background:#0d0d0d;color:#e0e0e0;border-radius:12px;'>"
+                f"<h3 style='color:#378ADD;margin:0 0 4px;'>Axula</h3>"
+                f"<p style='color:#888;font-size:11px;margin:0 0 16px;'>"
+                f"C.E. Benito Juárez — Modalidad Artes</p>"
+                f"<p>Hola <strong>{dest['nombre'] or 'usuario'}</strong>,</p>"
+                f"<p style='margin:12px 0;background:#1a1a1a;padding:12px;border-radius:8px;"
+                f"border-left:3px solid #378ADD;'>{cuerpo}</p>"
+                f"<div style='text-align:center;margin:20px 0;'>"
+                f"<a href='{url_base}/perfil/{estudiante_id}' style='background:#378ADD;color:#fff;"
+                f"padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:700;"
+                f"font-size:13px;'>Ver expediente</a></div>"
+                f"<hr style='border-color:#222;margin:16px 0;'>"
+                f"<p style='font-size:10px;color:#555;'>Axula · C.E. Benito Juárez</p>"
+                f"</div>"
+            )
+            _enviar_email_raw(dest["email"], titulo, html)
+
+
+def _notificar_reporte_nuevo(conn, estudiante_id, reporte_id, tipo_reporte, severidad, titulo_rep, reportado_por, canal="pedagogico"):
+    """
+    Enruta notificaciones según el canal del reporte:
+    - 'pedagogico' → directora + coordinador (el profesor maneja en su aula)
+    - 'conductual'  → directora + coordinador + psicóloga (requiere orientación)
     """
     est = conn.execute(
         "SELECT nombre, apellido FROM estudiantes WHERE id=?", (estudiante_id,)
     ).fetchone()
     nombre_est = f"{est['nombre']} {est['apellido']}" if est else f"Estudiante #{estudiante_id}"
 
-    titulo = f"📋 Nuevo reporte {tipo_reporte.upper()} — {nombre_est}"
-    cuerpo = (
-        f"El/la docente {reportado_por} registró un reporte de {tipo_reporte} "
-        f"con severidad {severidad}: \"{titulo_rep or 'Sin título'}\". "
-        f"Requiere seguimiento de orientación."
-    )
-    _notificar_psicologa(conn, estudiante_id, "reporte", reporte_id, titulo, cuerpo)
+    if canal == "conductual":
+        titulo = f"🚨 Reporte conductual — {nombre_est}"
+        cuerpo = (
+            f"El/la docente {reportado_por} registró un reporte de conducta "
+            f"({tipo_reporte}, severidad {severidad}): \"{titulo_rep or 'Sin título'}\". "
+            f"Requiere seguimiento de orientación."
+        )
+        _notificar_psicologa(conn, estudiante_id, "reporte", reporte_id, titulo, cuerpo)
+    else:
+        titulo = f"📋 Observación pedagógica — {nombre_est}"
+        cuerpo = (
+            f"El/la docente {reportado_por} registró una observación pedagógica "
+            f"({tipo_reporte}, severidad {severidad}): \"{titulo_rep or 'Sin título'}\"."
+        )
+        _notificar_directora_coordinador(conn, estudiante_id, "reporte", reporte_id, titulo, cuerpo)
 
 
 def _anio_escolar_actual():
