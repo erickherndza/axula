@@ -17,9 +17,9 @@ from pathlib import Path
 logger = logging.getLogger("axula")
 
 # ── Configuración ─────────────────────────────────────────────────────────────
-_BACKUP_DIR      = os.environ.get("BACKUP_DIR", "backups")
+_BACKUP_DIR      = os.environ.get("BACKUP_DIR", "/data/backups" if os.path.isdir("/data") else "backups")
 _BACKUP_MAX_DIAS = int(os.environ.get("BACKUP_MAX_DIAS", "30"))  # retener 30 días
-_DB_PATH         = os.environ.get("DATABASE", "database.db")
+_DB_PATH         = os.environ.get("DATABASE_PATH", "/data/database.db" if os.path.isdir("/data") else "database.db")
 
 _ultimo_respaldo: str | None = None   # fecha ISO del último respaldo en esta sesión
 _lock = threading.Lock()
