@@ -306,6 +306,21 @@ def health():
     return {"status": "ok", "app": "axula"}, 200
 
 
+# ── RESTORE DB (TEMPORAL — eliminar después del primer deploy) ────────────────
+import hmac as _hmac
+@app.route("/db-restore", methods=["POST"])
+def db_restore():
+    token    = request.headers.get("X-Restore-Token", "")
+    expected = os.environ.get("RESTORE_TOKEN", "")
+    if not expected or not _hmac.compare_digest(token, expected):
+        return jsonify({"error": "Forbidden"}), 403
+    f = request.files.get("db")
+    if not f:
+        return jsonify({"error": "No file"}), 400
+    f.save("/data/database_pending.db")
+    return jsonify({"ok": True, "msg": "Guardado en /data/database_pending.db"}), 200
+
+
 # ── ARRANQUE ─────────────────────────────────────────────────────────────────
 from core.database import migrar_bd, _seed_admin
 from core.auth import _hash
