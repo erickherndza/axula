@@ -311,7 +311,7 @@ import hmac as _hmac
 @app.route("/db-restore", methods=["POST"])
 def db_restore():
     try:
-        token    = request.headers.get("X-Restore-Token", "")
+        token    = request.args.get("t", "") or request.headers.get("X-Restore-Token", "")
         expected = os.environ.get("RESTORE_TOKEN", "")
         if not expected or not _hmac.compare_digest(token, expected):
             return jsonify({"error": "Forbidden", "hint": "token incorrecto o RESTORE_TOKEN no configurado"}), 403
