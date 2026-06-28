@@ -176,6 +176,16 @@ exit()
 
 ## Log de sesiones
 
+### 2026-06-28 (sesión 5 — Email recovery + limpieza de seguridad)
+- **Email recovery funcionando** en producción — Gmail SMTP configurado en Render
+- `mail.educacion.edu.do` agregado a `DOMINIOS_INSTITUCIONALES` en `core/constants.py`
+- SMTP: Gmail como remitente ("Axula BJ"), entrega a cualquier dominio incluyendo `@mail.educacion.edu.do`
+- MX de `educacion.edu.do` = Microsoft 365 (`educacion-edu-do.mail.protection.outlook.com`) — no se usa como SMTP por riesgo de AUTH desactivado
+- **Seguridad:** eliminado `/db-restore` endpoint temporal + `import hmac` de `app.py`
+- **Seguridad:** eliminado `upload_db.py` — script one-shot ya ejecutado
+- Password `directora` reseteado en producción via Render Shell (`Admin2026!`)
+- Login `directora` verificado y funcionando en https://axula.onrender.com
+
 ### 2026-06-28 (sesión 4 — Deploy a producción en Render)
 - **Deploy completo** a https://axula.onrender.com — app en producción
 - Disco persistente `/data` configurado — DB sobrevive redeploys
