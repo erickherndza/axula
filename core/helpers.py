@@ -2050,6 +2050,97 @@ def _get_periodos_estado(anio_escolar: str = None) -> dict:
 
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+#  NORMALIZACIÓN DE MATERIAS — deduplicación y filtro por profesor
+# ══════════════════════════════════════════════════════════════════════════════
+
+_MATERIA_SINONIMOS = {
+    # Abreviaciones y variantes conocidas del C.E. Benito Juárez
+    "fihr":                                              "formacion integral humana y religiosa",
+    "formacion integral humana y religiosa":             "formacion integral humana y religiosa",
+    "lenguaje visual y artesanal":                       "lenguaje visual y principios del diseno artesanal",
+    "lenguaje visual, dibujo y creacion de personajes":  "lenguaje visual y principios del diseno artesanal",
+    "lenguaje musical":                                  "lenguaje musical teoria y entrenamiento",
+    "lenguaje musical, teoria y entrenamiento":          "lenguaje musical teoria y entrenamiento",
+    "lenguaje musical, teoria y entrenamineto":          "lenguaje musical teoria y entrenamiento",
+    "intro. a la historia del arte universal y dom":     "introduccion a la historia del arte universal y dominicano",
+    "historia del arte universal y dominicano":          "introduccion a la historia del arte universal y dominicano",
+    "idioma ingles":                                     "ingles",
+    "ingles":                                            "ingles",
+}
+
+
+def _normalizar_clave_materia(nombre):
+    """Clave de comparación: sin acentos, minúsculas, sin puntuación final, con mapa de sinónimos."""
+    import unicodedata
+    s = unicodedata.normalize("NFD", (nombre or "").strip().lower().rstrip("."))
+    s = "".join(c for c in s if unicodedata.category(c) != "Mn")
+    s = " ".join(s.split())
+    return _MATERIA_SINONIMOS.get(s, s)
+
+
+def _dedup_materias(rows):
+    """
+    Deduplica materias con el mismo nombre en distinta capitalización, acentos distintos
+    o con typos menores (fuzzy ≥ 0.88).
+    Regla de merge: toma el entry con más períodos con nota y promedio mayor.
+    Para el nombre de display, prefiere Proper Case sobre TODO MAYÚSCULAS.
+    """
+    from collections import OrderedDict
+    from difflib import SequenceMatcher
+
+    def _merge_entries(entradas):
+        def score_datos(e):
+            periodos_con_nota = sum(1 for p in ("p1","p2","p3","p4") if e.get(p) and e[p] > 0)
+            return (periodos_con_nota, e.get("promedio") or 0)
+        mejor = max(entradas, key=score_datos)
+        for otra in entradas:
+            if otra is mejor:
+                continue
+            for p in ("p1","p2","p3","p4"):
+                if not (mejor.get(p) and mejor[p] > 0) and (otra.get(p) and otra[p] > 0):
+                    mejor[p] = otra[p]
+        periodos_vals = [mejor[p] for p in ("p1","p2","p3","p4") if mejor.get(p) and mejor[p] > 0]
+        if periodos_vals:
+            mejor["promedio"] = round(sum(periodos_vals) / len(periodos_vals), 2)
+        nombre_display = mejor["materia"]
+        for e in entradas:
+            if e["materia"] != e["materia"].upper():
+                nombre_display = e["materia"]
+                break
+            if len(e["materia"]) > len(nombre_display):
+                nombre_display = e["materia"]
+        mejor["materia"] = nombre_display
+        return mejor
+
+    grupos = OrderedDict()
+    for r in rows:
+        clave = _normalizar_clave_materia(r["materia"])
+        grupos.setdefault(clave, []).append(r)
+
+    candidatos = []
+    for clave, entradas in grupos.items():
+        merged = _merge_entries(entradas) if len(entradas) > 1 else entradas[0]
+        candidatos.append((clave, merged))
+
+    usados = [False] * len(candidatos)
+    resultado = []
+    for i, (clave_i, entry_i) in enumerate(candidatos):
+        if usados[i]:
+            continue
+        grupo = [entry_i]
+        for j, (clave_j, entry_j) in enumerate(candidatos):
+            if j <= i or usados[j]:
+                continue
+            if SequenceMatcher(None, clave_i, clave_j).ratio() >= 0.88:
+                grupo.append(entry_j)
+                usados[j] = True
+        resultado.append(_merge_entries(grupo) if len(grupo) > 1 else grupo[0])
+        usados[i] = True
+
+    return resultado
+
+
 # ── ARRANQUE ─────────────────────────────────────────────────────────────────
 
 

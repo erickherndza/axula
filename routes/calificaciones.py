@@ -77,8 +77,39 @@ def listar_calificaciones():
     with sqlite3.connect(DATABASE, timeout=10) as conn:
         conn.row_factory = sqlite3.Row
         rows = conn.execute(q, params).fetchall()
+        rows = [dict(r) for r in rows]
 
-    return jsonify([dict(r) for r in rows])
+        # Fallback: si se busca por materia+período y no hay filtro de estudiante individual,
+        # completar con notas de materias_calificaciones para los que no tienen nota manual.
+        if materia and periodo and not est_id:
+            campo_periodo = {'P1': 'p1', 'P2': 'p2', 'P3': 'p3', 'P4': 'p4'}.get(periodo.upper())
+            if campo_periodo:
+                notas_manuales = {r['estudiante_id'] for r in rows}
+                anio_q = anio or _anio_escolar_actual()
+                mc_rows = conn.execute(f"""
+                    SELECT mc.estudiante_id, mc.{campo_periodo} AS calificacion,
+                           e.nombre, e.apellido, e.curso, e.grado
+                    FROM materias_calificaciones mc
+                    JOIN estudiantes e ON e.id = mc.estudiante_id
+                    WHERE LOWER(mc.materia) = LOWER(?)
+                      AND mc.anio_escolar = ?
+                      AND mc.{campo_periodo} IS NOT NULL
+                      AND mc.{campo_periodo} > 0
+                """, (materia, anio_q)).fetchall()
+
+                for r in mc_rows:
+                    if r['estudiante_id'] not in notas_manuales:
+                        row = dict(r)
+                        row['materia'] = materia
+                        row['periodo'] = periodo
+                        row['anio_escolar'] = anio_q
+                        row['observacion'] = ''
+                        row['profesor_nombre'] = None
+                        row['profesor_id'] = None
+                        row['id'] = None
+                        rows.append(row)
+
+    return jsonify(rows)
 
 
 @calificaciones_bp.route("/api/calificaciones", methods=["POST"])
@@ -248,7 +279,7 @@ def resumen_calificaciones(est_id):
 
     # Organizar notas por materia — clave normalizada para deduplicar variantes de capitalización
     from collections import defaultdict
-    from routes.estudiantes import _normalizar_clave_materia as _mat_clave
+    from core.helpers import _normalizar_clave_materia as _mat_clave
 
     def _nombre_display(existente, nuevo):
         # Prefiere Proper Case sobre TODO MAYÚSCULAS, o el nombre más largo si ambos son uppercase
@@ -326,15 +357,7 @@ def resumen_calificaciones(est_id):
         })
 
     resultado.sort(key=lambda x: x["materia"])
-
-    # Profesores solo ven sus propias asignaturas
-    prof = _get_profesor()
-    if prof and _normalizar_rol(prof.get("rol", "")) == "profesor":
-        from routes.estudiantes import _normalizar_clave_materia as _nc
-        asigs_raw = (prof.get("asignaturas") or prof.get("materia") or "").strip()
-        asigs = {_nc(a) for a in asigs_raw.split(",") if a.strip()}
-        if asigs:
-            resultado = [r for r in resultado if _nc(r["materia"]) in asigs]
+    resultado = _rls.filtrar_materias_profesor(resultado)
 
     return jsonify({
         "estudiante_id": est_id,
@@ -688,6 +711,7 @@ def boletin_estudiante(est_id):
         })
 
     boletin_materias.sort(key=lambda x: x["materia"])
+    boletin_materias = _rls.filtrar_materias_profesor(boletin_materias)
 
     # Conteos con escala Ord.04-2023
     aprobadas    = sum(1 for m in boletin_materias if m["estado"] in ("destacado","satisfactorio","basico"))

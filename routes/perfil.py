@@ -1041,9 +1041,12 @@ def get_progreso_estudiante(est_id):
             ORDER BY en.periodo
         """, (est_id, anio_esc)).fetchall()
 
+    from core import rls as _rls
+    materias_filtradas = _rls.filtrar_materias_profesor([dict(m) for m in materias])
+
     return jsonify({
         "estudiante":  dict(est),
-        "materias":    [dict(m) for m in materias],
+        "materias":    materias_filtradas,
         "asistencia":  [dict(a) for a in asistencia],
         "cuaderno": {
             "total_entradas": cuaderno_cnt,

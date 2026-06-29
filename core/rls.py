@@ -142,6 +142,36 @@ def verificar_acceso_estudiante(conn: sqlite3.Connection, est_id: int) -> None:
     abort(403)
 
 
+def filtrar_materias_profesor(materias_list: list) -> list:
+    """
+    Middleware centralizado de materias por profesor.
+
+    Si el usuario en sesión es un PROFESOR, filtra la lista dejando solo
+    las materias que él tiene asignadas en su campo `asignaturas`.
+    Para cualquier otro rol devuelve la lista intacta.
+
+    Acepta listas de dicts con clave "materia" (str).
+    Compatible con boletin_estudiante, get_materias_estudiante,
+    get_indicadores_materias, resumen_calificaciones y cualquier endpoint futuro.
+    """
+    from core.helpers import _get_profesor, _normalizar_clave_materia
+    from core.auth import _normalizar_rol
+
+    prof = _get_profesor()
+    if not prof or _normalizar_rol(prof.get("rol", "")) != "profesor":
+        return materias_list  # no es profesor → sin filtro
+
+    asigs_raw = (prof.get("asignaturas") or prof.get("materia") or "").strip()
+    if not asigs_raw:
+        return materias_list  # profesor sin asignaturas asignadas → sin filtro
+
+    asigs = {_normalizar_clave_materia(a.strip()) for a in asigs_raw.split(",") if a.strip()}
+    if not asigs:
+        return materias_list
+
+    return [m for m in materias_list if _normalizar_clave_materia(m.get("materia", "")) in asigs]
+
+
 def verificar_acceso_o_none(conn: sqlite3.Connection, est_id: int) -> bool:
     """
     Versión no-abortante de verificar_acceso_estudiante.

@@ -23,7 +23,8 @@ from core.auth import (
     get_usuario,
 )
 from core.helpers import *
-from core.helpers import _anonimizar_estudiante, _buscar_estudiante_bd, _calcular_bienestar_emocional, _calcular_indice_conductual, _features_para_clustering, _get_profesor, _recalcular_indicadores, _validar_materia_profesor, _validar_magic_imagen
+from core.helpers import _anonimizar_estudiante, _buscar_estudiante_bd, _calcular_bienestar_emocional, _calcular_indice_conductual, _features_para_clustering, _get_profesor, _recalcular_indicadores, _validar_materia_profesor, _validar_magic_imagen, _normalizar_clave_materia, _dedup_materias
+from core import rls as _rls
 from core.ia import _get_groq_client, groq_client, construir_prompt, construir_prompt_planificacion, construir_prompt_rubrica, construir_prompt_estrategia
 from core.excel import _parsear_boletin_bj, _buscar_o_crear_estudiante, _detectar_mencion_listado, _limpiar_nota
 from core.pdf import _generar_pdf_acuerdo
@@ -1799,102 +1800,6 @@ def cargar_materia():
     })
 
 
-_MATERIA_SINONIMOS = {
-    # Abreviaciones y variantes conocidas del C.E. Benito Juárez
-    "fihr":                                              "formacion integral humana y religiosa",
-    "formacion integral humana y religiosa":             "formacion integral humana y religiosa",
-    "lenguaje visual y artesanal":                       "lenguaje visual y principios del diseno artesanal",
-    "lenguaje visual, dibujo y creacion de personajes":  "lenguaje visual y principios del diseno artesanal",
-    "lenguaje musical":                                  "lenguaje musical teoria y entrenamiento",
-    "lenguaje musical, teoria y entrenamiento":          "lenguaje musical teoria y entrenamiento",
-    "lenguaje musical, teoria y entrenamineto":          "lenguaje musical teoria y entrenamiento",
-    "intro. a la historia del arte universal y dom":     "introduccion a la historia del arte universal y dominicano",
-    "historia del arte universal y dominicano":          "introduccion a la historia del arte universal y dominicano",
-    "idioma ingles":                                     "ingles",
-    "ingles":                                            "ingles",
-}
-
-def _normalizar_clave_materia(nombre):
-    """Clave de deduplicación: sin acentos, minúsculas, sin puntuación final, con mapa de sinónimos."""
-    import unicodedata
-    s = unicodedata.normalize("NFD", nombre.strip().lower().rstrip("."))
-    s = "".join(c for c in s if unicodedata.category(c) != "Mn")  # quita diacríticos
-    s = " ".join(s.split())  # normaliza espacios
-    return _MATERIA_SINONIMOS.get(s, s)
-
-
-def _dedup_materias(rows):
-    """
-    Deduplica materias con el mismo nombre en distinta capitalización, acentos distintos
-    o con typos menores (fuzzy ≥ 0.88).
-    Regla de merge: toma el entry con más períodos con nota (> 0) y promedio mayor.
-    Para el nombre de display, prefiere el que NO está en todo-mayúsculas.
-    """
-    from collections import OrderedDict
-    from difflib import SequenceMatcher
-
-    def _merge_entries(entradas):
-        # Seleccionar el entry con más datos completos
-        def score_datos(e):
-            periodos_con_nota = sum(1 for p in ("p1","p2","p3","p4") if e.get(p) and e[p] > 0)
-            return (periodos_con_nota, e.get("promedio") or 0)
-        mejor = max(entradas, key=score_datos)
-        # Fusionar períodos de las otras entradas
-        for otra in entradas:
-            if otra is mejor:
-                continue
-            for p in ("p1","p2","p3","p4"):
-                if not (mejor.get(p) and mejor[p] > 0) and (otra.get(p) and otra[p] > 0):
-                    mejor[p] = otra[p]
-        # Recalcular promedio
-        periodos_vals = [mejor[p] for p in ("p1","p2","p3","p4") if mejor.get(p) and mejor[p] > 0]
-        if periodos_vals:
-            mejor["promedio"] = round(sum(periodos_vals) / len(periodos_vals), 2)
-        # Escoger el mejor nombre de display: Proper Case > nombre más largo > TODO MAYÚSCULAS
-        nombre_display = mejor["materia"]
-        for e in entradas:
-            if e["materia"] != e["materia"].upper():
-                nombre_display = e["materia"]
-                break
-            # Si ambos son uppercase, preferir el más largo (nombre completo vs abreviación)
-            if len(e["materia"]) > len(nombre_display):
-                nombre_display = e["materia"]
-        mejor["materia"] = nombre_display
-        return mejor
-
-    # Paso 1: agrupar por clave normalizada (sin acentos, lowercase)
-    grupos = OrderedDict()
-    for r in rows:
-        clave = _normalizar_clave_materia(r["materia"])
-        if clave not in grupos:
-            grupos[clave] = []
-        grupos[clave].append(r)
-
-    # Resolver cada grupo
-    candidatos = []  # lista de (clave_norm, entry_merged)
-    for clave, entradas in grupos.items():
-        merged = _merge_entries(entradas) if len(entradas) > 1 else entradas[0]
-        candidatos.append((clave, merged))
-
-    # Paso 2: fuzzy merge entre candidatos restantes (SequenceMatcher ≥ 0.88)
-    usados = [False] * len(candidatos)
-    resultado = []
-    for i, (clave_i, entry_i) in enumerate(candidatos):
-        if usados[i]:
-            continue
-        grupo_fuzzy = [entry_i]
-        for j, (clave_j, entry_j) in enumerate(candidatos):
-            if i == j or usados[j]:
-                continue
-            sim = SequenceMatcher(None, clave_i, clave_j).ratio()
-            if sim >= 0.88:
-                grupo_fuzzy.append(entry_j)
-                usados[j] = True
-        usados[i] = True
-        resultado.append(_merge_entries(grupo_fuzzy) if len(grupo_fuzzy) > 1 else grupo_fuzzy[0])
-
-    return resultado
-
 
 @estudiantes_bp.route("/api/materias/<int:estudiante_id>")
 @login_required
@@ -1915,43 +1820,7 @@ def get_materias_estudiante(estudiante_id):
         """, (estudiante_id,)).fetchall()
     resultado = _dedup_materias([dict(r) for r in rows])
     resultado.sort(key=lambda r: (0 if r["tipo"] == "académico" else 1, r["materia"].lower()))
-    # Profesores solo ven sus propias asignaturas
-    if prof and _normalizar_rol(prof.get("rol", "")) == "profesor":
-        asigs_raw = (prof.get("asignaturas") or prof.get("materia") or "").strip()
-        if asigs_raw:
-            # Normalizar sin mapa de sinónimos para no perder nombres con comas internas
-            import unicodedata as _ud
-            def _norm_simple(s):
-                s = _ud.normalize("NFD", s.strip().lower().rstrip("."))
-                s = "".join(c for c in s if _ud.category(c) != "Mn")
-                return " ".join(s.split())
-            # Dividir por coma Y reconectar fragmentos que no inician con letra capital
-            # (para manejar "Materia A, con coma interna" vs "Materia B")
-            partes = [p.strip() for p in asigs_raw.split(",") if p.strip()]
-            asigs_norm = set()
-            acum = ""
-            for p in partes:
-                if acum and (not p[0].isupper() if p else False):
-                    acum += ", " + p  # continúa el nombre anterior
-                else:
-                    if acum:
-                        asigs_norm.add(_norm_simple(acum))
-                    acum = p
-            if acum:
-                asigs_norm.add(_norm_simple(acum))
-
-            if asigs_norm:
-                def _mat_visible(mat_nombre):
-                    clave = _normalizar_clave_materia(mat_nombre)
-                    norm  = _norm_simple(mat_nombre)
-                    # Coincidencia exacta por clave o por contención (para abreviaciones/prefijos)
-                    return (
-                        clave in asigs_norm or
-                        norm  in asigs_norm or
-                        any(a == norm or norm.startswith(a) or a.startswith(norm)
-                            for a in asigs_norm)
-                    )
-                resultado = [r for r in resultado if _mat_visible(r["materia"])]
+    resultado = _rls.filtrar_materias_profesor(resultado)
     return jsonify(resultado)
 
 
@@ -1980,6 +1849,8 @@ def get_materias_disponibles():
 @login_required
 def get_indicadores_materias(estudiante_id):
     """Lista de materias disponibles para el estudiante con promedio."""
+    from core.helpers import _get_profesor
+    from core.auth import _normalizar_rol
     with sqlite3.connect(DATABASE, timeout=10) as conn:
         conn.row_factory = sqlite3.Row
         rows = conn.execute("""
@@ -1991,7 +1862,9 @@ def get_indicadores_materias(estudiante_id):
             WHERE estudiante_id = ?
             ORDER BY materia
         """, (estudiante_id,)).fetchall()
-    return jsonify([dict(r) for r in rows])
+
+    result = _rls.filtrar_materias_profesor([dict(r) for r in rows])
+    return jsonify(result)
 
 
 @estudiantes_bp.route("/api/indicadores/<int:estudiante_id>")
@@ -3732,9 +3605,11 @@ def get_progreso_estudiante(est_id):
             ORDER BY en.periodo
         """, (est_id, anio_esc)).fetchall()
 
+    materias_filtradas = _rls.filtrar_materias_profesor([dict(m) for m in materias])
+
     return jsonify({
         "estudiante":  dict(est),
-        "materias":    [dict(m) for m in materias],
+        "materias":    materias_filtradas,
         "asistencia":  [dict(a) for a in asistencia],
         "cuaderno": {
             "total_entradas": cuaderno_cnt,
