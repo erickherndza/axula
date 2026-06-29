@@ -246,33 +246,54 @@ def resumen_calificaciones(est_id):
             GROUP BY materia, periodo
         """, (est_id,)).fetchall()
 
-    # Organizar notas por materia
+    # Organizar notas por materia — clave normalizada para deduplicar variantes de capitalización
     from collections import defaultdict
+    from routes.estudiantes import _normalizar_clave_materia as _mat_clave
+
+    def _nombre_display(existente, nuevo):
+        # Prefiere Proper Case sobre TODO MAYÚSCULAS, o el nombre más largo si ambos son uppercase
+        if existente == existente.upper() and nuevo != nuevo.upper():
+            return nuevo
+        if existente == existente.upper() and len(nuevo) > len(existente):
+            return nuevo
+        return existente
+
+    # clave_a_nombre: mapea clave_norm → nombre de display preferido
+    clave_a_nombre = {}
     materias = defaultdict(lambda: {"P1": None, "P2": None, "P3": None, "P4": None, "tipo": "académico"})
 
     # Primero: datos del boletín Excel (fuente base)
     for r in mat_rows:
         mat_name = r["materia"]
-        materias[mat_name]["tipo"] = r["tipo"] or "académico"
-        if r["p1"] is not None: materias[mat_name]["P1"] = r["p1"]
-        if r["p2"] is not None: materias[mat_name]["P2"] = r["p2"]
-        if r["p3"] is not None: materias[mat_name]["P3"] = r["p3"]
-        if r["p4"] is not None: materias[mat_name]["P4"] = r["p4"]
+        clave = _mat_clave(mat_name)
+        if clave not in clave_a_nombre:
+            clave_a_nombre[clave] = mat_name
+        else:
+            clave_a_nombre[clave] = _nombre_display(clave_a_nombre[clave], mat_name)
+        materias[clave]["tipo"] = r["tipo"] or "académico"
+        if r["p1"] is not None and r["p1"] > 0: materias[clave]["P1"] = r["p1"]
+        if r["p2"] is not None and r["p2"] > 0: materias[clave]["P2"] = r["p2"]
+        if r["p3"] is not None and r["p3"] > 0: materias[clave]["P3"] = r["p3"]
+        if r["p4"] is not None and r["p4"] > 0: materias[clave]["P4"] = r["p4"]
 
     # Then: overlay with calificaciones_periodo (manual entry — higher priority)
     for r in notas_rows:
-        materias[r["materia"]][r["periodo"]] = r["calificacion"]
+        clave = _mat_clave(r["materia"])
+        if clave not in clave_a_nombre:
+            clave_a_nombre[clave] = r["materia"]
+        materias[clave][r["periodo"]] = r["calificacion"]
 
-    # Organizar asistencia por materia (acumular todos los períodos)
+    # Organizar asistencia por materia (acumular todos los períodos, clave normalizada)
     asist_por_materia = defaultdict(lambda: {"horas_total": 0, "horas_ausente": 0, "horas_tardanza_peso": 0})
     for r in asist_rows:
-        m = r["materia"]
-        asist_por_materia[m]["horas_total"]          += (r["horas_total"] or 0)
-        asist_por_materia[m]["horas_ausente"]         += (r["horas_ausente"] or 0)
-        asist_por_materia[m]["horas_tardanza_peso"]   += (r["horas_tardanza_peso"] or 0)
+        clave = _mat_clave(r["materia"])
+        asist_por_materia[clave]["horas_total"]          += (r["horas_total"] or 0)
+        asist_por_materia[clave]["horas_ausente"]         += (r["horas_ausente"] or 0)
+        asist_por_materia[clave]["horas_tardanza_peso"]   += (r["horas_tardanza_peso"] or 0)
 
     resultado = []
-    for materia, periodos in materias.items():
+    for clave, periodos in materias.items():
+        materia = clave_a_nombre.get(clave, clave)
         # ── grades.py: única fuente de verdad ──
         nota_final  = G.promedio_periodos(
             periodos.get("P1"), periodos.get("P2"),
@@ -281,7 +302,7 @@ def resumen_calificaciones(est_id):
         s1 = G.semestre(periodos.get("P1"), periodos.get("P2"))
         s2 = G.semestre(periodos.get("P3"), periodos.get("P4"))
 
-        ai = asist_por_materia.get(materia, {})
+        ai = asist_por_materia.get(clave, {})
         pct_inasist = G.calcular_pct_inasistencia(
             ai.get("horas_ausente", 0),
             ai.get("horas_tardanza_peso", 0),
@@ -309,9 +330,11 @@ def resumen_calificaciones(est_id):
     # Profesores solo ven sus propias asignaturas
     prof = _get_profesor()
     if prof and _normalizar_rol(prof.get("rol", "")) == "profesor":
-        asigs = {a.strip().lower() for a in (prof.get("asignaturas") or prof.get("materia") or "").split(",") if a.strip()}
+        from routes.estudiantes import _normalizar_clave_materia as _nc
+        asigs_raw = (prof.get("asignaturas") or prof.get("materia") or "").strip()
+        asigs = {_nc(a) for a in asigs_raw.split(",") if a.strip()}
         if asigs:
-            resultado = [r for r in resultado if r["materia"].strip().lower() in asigs]
+            resultado = [r for r in resultado if _nc(r["materia"]) in asigs]
 
     return jsonify({
         "estudiante_id": est_id,
