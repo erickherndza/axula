@@ -223,7 +223,7 @@ def _seed_admin(hash_func):
 
         n = conn.execute("SELECT COUNT(*) FROM usuarios").fetchone()[0]
         if n == 0:
-            pwd_admin = _s.token_urlsafe(10)
+            pwd_admin = os.environ.get("SEED_PASSWORD_ADMIN", _s.token_urlsafe(10))
             conn.execute(
                 "INSERT INTO usuarios (username, password, nombre, rol) VALUES (?,?,?,?)",
                 ("admin", hash_func(pwd_admin), "Coordinador General", "coordinador_general"),
@@ -236,11 +236,12 @@ def _seed_admin(hash_func):
             logger.info("  ║  Cámbiala desde el panel de usuarios.        ║")
             logger.info("  ╚══════════════════════════════════════════════╝")
 
+        # Búsqueda case-insensitive: evita crear duplicado si rol está como 'Directora'
         existe_directora = conn.execute(
-            "SELECT id FROM usuarios WHERE rol='directora' LIMIT 1"
+            "SELECT id FROM usuarios WHERE lower(rol)='directora' LIMIT 1"
         ).fetchone()
         if not existe_directora:
-            pwd_dir = _s.token_urlsafe(10)
+            pwd_dir = os.environ.get("SEED_PASSWORD_DIRECTORA", _s.token_urlsafe(10))
             conn.execute(
                 "INSERT INTO usuarios (username, password, nombre, rol, activo) VALUES (?,?,?,?,1)",
                 ("directora", hash_func(pwd_dir), "Dirección General", "directora"),

@@ -295,20 +295,19 @@ td{padding:11px 14px;font-size:12px;vertical-align:middle;}
     <div class="field">
       <label>¿A quién va dirigido este reporte?</label>
       <div style="display:flex;gap:8px;margin-top:4px;">
-        <label id="lbl-canal-ped" style="flex:1;cursor:pointer;border:2px solid var(--accent);
+        <div id="lbl-canal-ped" onclick="selCanal('pedagogico')" style="flex:1;cursor:pointer;border:2px solid var(--accent);
                border-radius:10px;padding:10px 12px;font-size:12px;background:rgba(55,138,221,.12);
                display:flex;flex-direction:column;gap:2px;">
-          <input type="radio" name="nr-canal" value="pedagogico" checked style="display:none;">
           <span style="font-weight:700;color:var(--accent);">📋 Dirección y Coordinación</span>
           <span style="color:var(--muted);font-size:10px;">Observación pedagógica — la psicóloga no lo ve</span>
-        </label>
-        <label id="lbl-canal-con" style="flex:1;cursor:pointer;border:2px solid #444;
+        </div>
+        <div id="lbl-canal-con" onclick="selCanal('conductual')" style="flex:1;cursor:pointer;border:2px solid #444;
                border-radius:10px;padding:10px 12px;font-size:12px;
                display:flex;flex-direction:column;gap:2px;">
-          <input type="radio" name="nr-canal" value="conductual" style="display:none;">
           <span style="font-weight:700;color:#f87171;">🚨 Orientación + Dirección</span>
           <span style="color:var(--muted);font-size:10px;">Conducta grave — lo recibe también la psicóloga</span>
-        </label>
+        </div>
+        <input type="hidden" id="nr-canal" value="pedagogico">
       </div>
     </div>
 
@@ -392,18 +391,14 @@ var SUBTIPOS = {
   psicologico:      ['Ansiedad observable','Tristeza persistente','Aislamiento social','Autolesión','Crisis emocional','Cambio brusco de conducta','Otro']
 };
 
-// Toggle visual canal
-document.addEventListener('DOMContentLoaded', function() {
-  document.querySelectorAll('input[name="nr-canal"]').forEach(function(radio) {
-    radio.addEventListener('change', function() {
-      var esPed = this.value === 'pedagogico';
-      document.getElementById('lbl-canal-ped').style.borderColor = esPed ? 'var(--accent)' : '#444';
-      document.getElementById('lbl-canal-ped').style.background  = esPed ? 'rgba(55,138,221,.12)' : 'transparent';
-      document.getElementById('lbl-canal-con').style.borderColor = esPed ? '#444' : '#f87171';
-      document.getElementById('lbl-canal-con').style.background  = esPed ? 'transparent' : 'rgba(248,113,113,.1)';
-    });
-  });
-});
+function selCanal(val) {
+  document.getElementById('nr-canal').value = val;
+  var esPed = val === 'pedagogico';
+  document.getElementById('lbl-canal-ped').style.borderColor = esPed ? 'var(--accent)' : '#444';
+  document.getElementById('lbl-canal-ped').style.background  = esPed ? 'rgba(55,138,221,.12)' : 'transparent';
+  document.getElementById('lbl-canal-con').style.borderColor = esPed ? '#444' : '#f87171';
+  document.getElementById('lbl-canal-con').style.background  = esPed ? 'transparent' : 'rgba(248,113,113,.1)';
+}
 
 function tipoBadge(tipo) {
   var map = {
@@ -482,6 +477,7 @@ function cerrarNuevo() {
   });
   document.getElementById('nr-est-id').value = '';
   document.getElementById('nr-est-seleccionado').textContent = '';
+  selCanal('pedagogico');
 }
 
 async function guardarReporte() {
@@ -494,7 +490,7 @@ async function guardarReporte() {
   var btn = document.getElementById('btn-guardar-reporte');
   btn.textContent = 'Guardando...'; btn.disabled = true;
 
-  var canal = document.querySelector('input[name="nr-canal"]:checked').value;
+  var canal = document.getElementById('nr-canal').value || 'pedagogico';
   var res = await fetch('/api/reportes', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
@@ -700,10 +696,9 @@ function filtrarEstado(val) {
   recargar();
 }
 
-async function renderResumen() {
-  // Top estudiantes con más reportes
-  var res  = await fetch('/api/reportes?limit=200');
-  var data = await res.json();
+function renderResumen() {
+  // Usa TODOS_REPORTES ya cargado — sin fetch adicional
+  var data = TODOS_REPORTES;
 
   // Count por estudiante
   var conteo = {};
@@ -714,7 +709,7 @@ async function renderResumen() {
   });
   var top = Object.values(conteo).sort(function(a,b){return b.n - a.n;}).slice(0, 5);
 
-  // Count por tipo
+  // Count por tipo — dinámico, incluye todos los tipos presentes
   var porTipo = {};
   data.forEach(function(r) {
     porTipo[r.tipo] = (porTipo[r.tipo] || 0) + 1;
@@ -722,13 +717,19 @@ async function renderResumen() {
 
   var tipoLabels = {
     conducta:'⚡ Conducta', psicologico:'🧠 Psicológico',
-    academico:'📚 Académico', incidente_grave:'🚨 Incidente'
+    academico:'📚 Académico', incidente_grave:'🚨 Incidente',
+    observacion_aula:'👁 Obs. Aula', rendimiento:'📉 Rendimiento',
+    actitud:'🙁 Actitud', asistencia:'🗓 Asistencia', entrega:'📦 Entregas'
   };
   var tipoColors = {
     conducta:'#ffc44d', psicologico:'#60b8f0',
-    academico:'#378ADD', incidente_grave:'#ff6b6b'
+    academico:'#378ADD', incidente_grave:'#ff6b6b',
+    observacion_aula:'#378ADD', rendimiento:'#f97316',
+    actitud:'#ffc44d', asistencia:'#a78bfa', entrega:'#34d399'
   };
   var total = data.length || 1;
+  // Tipos presentes ordenados por frecuencia
+  var tiposPresentes = Object.keys(porTipo).sort(function(a,b){ return porTipo[b]-porTipo[a]; });
 
   var html1 = '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:18px;">' +
     '<div style="font-family:Syne,sans-serif;font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;">📌 Más reportes</div>';
@@ -738,7 +739,7 @@ async function renderResumen() {
   } else {
     top.forEach(function(e, i) {
       html1 +=
-        '<div onclick="window.location='/perfil/'+'+e.id+'" style="display:flex;align-items:center;gap:10px;padding:8px 0;' +
+        '<div onclick="window.location=\'/perfil/'+e.id+'\'" style="display:flex;align-items:center;gap:10px;padding:8px 0;' +
         (i < top.length-1 ? 'border-bottom:1px solid #1a1a1a;' : '') + 'cursor:pointer;">' +
           '<div style="font-family:DM Mono,monospace;font-size:13px;font-weight:700;color:' +
             (i===0?'#ff6b6b':i===1?'#ffc44d':'#888') + ';min-width:20px;">'+(i+1)+'.</div>' +
@@ -757,23 +758,28 @@ async function renderResumen() {
   var html2 = '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:18px;">' +
     '<div style="font-family:Syne,sans-serif;font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;">📊 Distribución por tipo</div>';
 
-  ['conducta','psicologico','academico','incidente_grave'].forEach(function(tipo) {
-    var n   = porTipo[tipo] || 0;
-    var pct = Math.round(n / total * 100);
-    var col = tipoColors[tipo];
-    html2 +=
-      '<div style="margin-bottom:10px;">' +
-        '<div style="display:flex;justify-content:space-between;margin-bottom:4px;">' +
-          '<span style="font-size:11px;color:var(--text);">' + tipoLabels[tipo] + '</span>' +
-          '<span style="font-family:DM Mono,monospace;font-size:11px;color:' + col + ';font-weight:700;">' +
-            n + ' <span style="color:#555;font-weight:400;">(' + pct + '%)</span>' +
-          '</span>' +
-        '</div>' +
-        '<div style="height:7px;background:#1a1a1a;border-radius:4px;overflow:hidden;">' +
-          '<div style="width:' + pct + '%;height:100%;background:' + col + ';border-radius:4px;transition:width .8s ease;"></div>' +
-        '</div>' +
-      '</div>';
-  });
+  if (tiposPresentes.length === 0) {
+    html2 += '<div style="color:#555;font-size:12px;">Sin reportes aún</div>';
+  } else {
+    tiposPresentes.forEach(function(tipo) {
+      var n   = porTipo[tipo] || 0;
+      var pct = Math.round(n / total * 100);
+      var col = tipoColors[tipo] || '#888';
+      var lbl = tipoLabels[tipo] || tipo;
+      html2 +=
+        '<div style="margin-bottom:10px;">' +
+          '<div style="display:flex;justify-content:space-between;margin-bottom:4px;">' +
+            '<span style="font-size:11px;color:var(--text);">' + lbl + '</span>' +
+            '<span style="font-family:DM Mono,monospace;font-size:11px;color:' + col + ';font-weight:700;">' +
+              n + ' <span style="color:#555;font-weight:400;">(' + pct + '%)</span>' +
+            '</span>' +
+          '</div>' +
+          '<div style="height:7px;background:#1a1a1a;border-radius:4px;overflow:hidden;">' +
+            '<div style="width:' + pct + '%;height:100%;background:' + col + ';border-radius:4px;transition:width .8s ease;"></div>' +
+          '</div>' +
+        '</div>';
+    });
+  }
   html2 += '</div>';
 
   document.getElementById('resumen-row').innerHTML = html1 + html2;

@@ -505,8 +505,8 @@ def cambiar_password_propio():
         row = conn.execute("SELECT password FROM usuarios WHERE id=?", (u["id"],)).fetchone()
         if not row or not _check_password(row["password"], pwd_actual):
             return jsonify({"error": "La contraseña actual es incorrecta"}), 403
-        from werkzeug.security import generate_password_hash
-        nuevo_hash = generate_password_hash(pwd_nueva)
+        from core.auth import _hash as _hash_fn
+        nuevo_hash = _hash_fn(pwd_nueva)
         conn.execute("UPDATE usuarios SET password=? WHERE id=?", (nuevo_hash, u["id"]))
         conn.commit()
 

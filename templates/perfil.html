@@ -1967,16 +1967,39 @@
                     style="background:none;border:none;color:var(--text-muted);
                     font-size:18px;cursor:pointer;padding:0 4px;">✕</button>
             </div>
+            <!-- Canal -->
+            <div style="display:flex;gap:8px;margin-bottom:12px;">
+                <div id="rp-lbl-ped" onclick="rpSelCanal('pedagogico')"
+                    style="flex:1;cursor:pointer;border:2px solid var(--accent);border-radius:10px;
+                    padding:8px 10px;font-size:11px;display:flex;flex-direction:column;gap:2px;
+                    background:rgba(55,138,221,.1);">
+                    <span style="font-weight:700;color:var(--accent);">📋 Dirección y Coordinación</span>
+                    <span style="color:var(--text-muted);font-size:10px;">La psicóloga no lo ve</span>
+                </div>
+                <div id="rp-lbl-con" onclick="rpSelCanal('conductual')"
+                    style="flex:1;cursor:pointer;border:2px solid #444;border-radius:10px;
+                    padding:8px 10px;font-size:11px;display:flex;flex-direction:column;gap:2px;">
+                    <span style="font-weight:700;color:#f87171;">🚨 Orientación + Dirección</span>
+                    <span style="color:var(--text-muted);font-size:10px;">También lo ve la psicóloga</span>
+                </div>
+                <input type="hidden" id="rp-canal" value="pedagogico">
+            </div>
             <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
                 <select id="rp-tipo" style="flex:1;min-width:140px;padding:8px;
                     background:var(--bg);border:1px solid var(--border);
                     border-radius:8px;color:var(--text);font-size:12px;">
-                    <option value="Académico">📘 Académico</option>
-                    <option value="Conductual">🔴 Conductual</option>
-                    <option value="Emocional">🟡 Emocional</option>
-                    <option value="Asistencia">📅 Asistencia</option>
-                    <option value="Familiar">🟠 Familiar</option>
-                    <option value="Otro">⚪ Otro</option>
+                    <optgroup label="── Pedagógicos ──">
+                        <option value="observacion_aula">👁 Observación de aula</option>
+                        <option value="rendimiento">📉 Rendimiento académico</option>
+                        <option value="actitud">🙁 Actitud / disposición</option>
+                        <option value="asistencia">🗓 Patrón de ausencias</option>
+                        <option value="entrega">📦 Incumplimiento de entregas</option>
+                    </optgroup>
+                    <optgroup label="── Conductuales ──">
+                        <option value="conducta">⚡ Conducta disruptiva</option>
+                        <option value="incidente_grave">🚨 Incidente grave</option>
+                        <option value="psicologico">🧠 Alerta emocional</option>
+                    </optgroup>
                 </select>
                 <select id="rp-severidad" style="padding:8px;background:var(--bg);
                     border:1px solid var(--border);border-radius:8px;
@@ -3379,10 +3402,20 @@ function abrirModalReporte() {
     document.getElementById('rp-descripcion').value = '';
     document.getElementById('rp-titulo').value = '';
     document.getElementById('rp-status').textContent = '';
+    rpSelCanal('pedagogico');
 }
 
 function cerrarModalReporte() {
     document.getElementById('modal-reporte-perfil').style.display = 'none';
+}
+
+function rpSelCanal(val) {
+    document.getElementById('rp-canal').value = val;
+    var esPed = val === 'pedagogico';
+    document.getElementById('rp-lbl-ped').style.borderColor = esPed ? 'var(--accent)' : '#444';
+    document.getElementById('rp-lbl-ped').style.background  = esPed ? 'rgba(55,138,221,.1)' : 'transparent';
+    document.getElementById('rp-lbl-con').style.borderColor = esPed ? '#444' : '#f87171';
+    document.getElementById('rp-lbl-con').style.background  = esPed ? 'transparent' : 'rgba(248,113,113,.1)';
 }
 
 function guardarReportePerfil() {
@@ -3400,6 +3433,7 @@ function guardarReportePerfil() {
             severidad:     document.getElementById('rp-severidad').value,
             titulo:        titulo,
             descripcion:   desc,
+            canal:         document.getElementById('rp-canal').value || 'pedagogico',
             reportado_por: {{ current_user.nombre | tojson if current_user else '""' }}
         })
     })

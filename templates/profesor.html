@@ -622,6 +622,16 @@ main{max-width:1200px;margin:0 auto;padding:28px 24px;}
           <label>Fecha *</label>
           <input type="date" id="lista-fecha" value="{{ fecha_hoy }}">
         </div>
+        {% if grados_prof and grados_prof|length > 1 %}
+        <div class="fld">
+          <label>Grado *</label>
+          <select id="lista-grado" onchange="filtrarListaGrado()">
+            {% for g in grados_prof %}
+            <option value="{{ g }}">{{ g }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        {% endif %}
         <div class="fld">
           <label>Materia *</label>
           <select id="lista-materia" onchange="onMateriaChange();">
@@ -816,6 +826,16 @@ main{max-width:1200px;margin:0 auto;padding:28px 24px;}
 
       <!-- Controles filtro -->
       <div class="lista-controls" style="margin-bottom:16px;">
+        {% if grados_prof and grados_prof|length > 1 %}
+        <div class="fld">
+          <label>Grado</label>
+          <select id="notas-grado" onchange="cargarTablaNotas()">
+            {% for g in grados_prof %}
+            <option value="{{ g }}">{{ g }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        {% endif %}
         <div class="fld">
           <label>Materia</label>
           <select id="notas-materia" onchange="cargarTablaNotas()">
@@ -1509,6 +1529,22 @@ function showTab(name) {
     if(name==='asignaciones')  { cargarAsignaciones(); actualizarSugerencia(); }
 }
 
+// ── FILTRO DE GRADO EN LISTA DE ASISTENCIA ────────────────────────────────────
+function filtrarListaGrado() {
+    var selGrado = document.getElementById('lista-grado');
+    var gradoFiltro = selGrado ? selGrado.value.toUpperCase() : '';
+    document.querySelectorAll('#lista-container .est-row').forEach(function(row) {
+        var estId = parseInt(row.dataset.id);
+        var est = ESTUDIANTES.find(function(e){ return e.id === estId; });
+        var gradoEst = est ? (est.grado || '').toUpperCase() : '';
+        row.style.display = (!gradoFiltro || gradoEst === gradoFiltro) ? '' : 'none';
+    });
+    // Actualizar contador "sin marcar"
+    var visibles = document.querySelectorAll('#lista-container .est-row:not([style*="display: none"])');
+    var sinN = document.getElementById('cnt-sin-n');
+    if (sinN) sinN.textContent = visibles.length;
+}
+
 // ── PASE DE LISTA ────────────────────────────────────────────────────────────
 function setEstado(btn, estado) {
     var row = btn.closest('.est-row');
@@ -1756,6 +1792,10 @@ async function cargarTablaNotas() {
     var cont    = document.getElementById('notas-table-container');
     var stats   = document.getElementById('notas-stats');
 
+    // Filtro de grado (solo si el selector existe — profesores multi-grado)
+    var selGrado = document.getElementById('notas-grado');
+    var gradoFiltro = selGrado ? selGrado.value.toUpperCase() : '';
+
     if (!materia || !periodo || !anio) return;
 
     NOTAS_BUFFER = {};
@@ -1765,6 +1805,13 @@ async function cargarTablaNotas() {
                    + '<i class="fas fa-spinner fa-spin"></i> Cargando…</div>';
 
     try {
+        // Filtrar estudiantes por grado seleccionado
+        var estList = gradoFiltro
+            ? ESTUDIANTES.filter(function(e) {
+                return (e.grado || '').toUpperCase() === gradoFiltro;
+              })
+            : ESTUDIANTES;
+
         // Cargar notas existentes del período
         var url = '/api/calificaciones?materia=' + encodeURIComponent(materia)
                 + '&periodo=' + periodo + '&anio=' + anio;
@@ -1789,7 +1836,7 @@ async function cargarTablaNotas() {
                  + '<th style="padding:8px 10px;color:#555;font-size:10px;text-transform:uppercase;">Estado</th>'
                  + '</tr></thead><tbody>';
 
-        ESTUDIANTES.forEach(function(est, idx) {
+        estList.forEach(function(est, idx) {
             var nota = notasMap[est.id] !== undefined ? notasMap[est.id] : '';
             if (nota !== '') {
                 nota = parseFloat(nota);
@@ -2001,6 +2048,11 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Check if list was already passed today on load
     verificarListaHoy();
+
+    // Aplicar filtro de grado inicial en lista de asistencia
+    if (document.getElementById('lista-grado')) {
+        filtrarListaGrado();
+    }
 });
 
 // ─── AUTO-HORAS POR MATERIA ───────────────────────────────────────────────

@@ -215,17 +215,22 @@ def eliminar_reporte(rid):
 @reportes_bp.route("/api/reportes/resumen")
 @login_required
 def resumen_reportes():
+    u   = get_usuario()
+    rol = _normalizar_rol(u.get("rol", ""))
+    filtro_canal = " AND (canal='conductual' OR canal IS NULL)" if "psicologa" in rol else ""
+
     with sqlite3.connect(DATABASE, timeout=10) as conn:
-        total  = conn.execute("SELECT COUNT(*) FROM reportes").fetchone()[0]
-        abiertos= conn.execute("SELECT COUNT(*) FROM reportes WHERE estado='Abierto'").fetchone()[0]
-        graves  = conn.execute("SELECT COUNT(*) FROM reportes WHERE tipo='incidente_grave'").fetchone()[0]
-        por_tipo= conn.execute("""
-            SELECT tipo, COUNT(*) n FROM reportes GROUP BY tipo ORDER BY n DESC
+        total    = conn.execute(f"SELECT COUNT(*) FROM reportes WHERE 1=1{filtro_canal}").fetchone()[0]
+        abiertos = conn.execute(f"SELECT COUNT(*) FROM reportes WHERE estado='Abierto'{filtro_canal}").fetchone()[0]
+        graves   = conn.execute(f"SELECT COUNT(*) FROM reportes WHERE tipo='incidente_grave'{filtro_canal}").fetchone()[0]
+        por_tipo = conn.execute(f"""
+            SELECT tipo, COUNT(*) n FROM reportes WHERE 1=1{filtro_canal} GROUP BY tipo ORDER BY n DESC
         """).fetchall()
-        recientes = conn.execute("""
+        recientes = conn.execute(f"""
             SELECT r.id, r.tipo, r.titulo, r.severidad, r.fecha, r.estado,
                    e.nombre, e.apellido
             FROM reportes r JOIN estudiantes e ON e.id=r.estudiante_id
+            WHERE 1=1{filtro_canal}
             ORDER BY r.fecha DESC, r.id DESC LIMIT 10
         """).fetchall()
     return jsonify({

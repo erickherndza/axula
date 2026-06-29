@@ -284,12 +284,21 @@ def portal_profesor():
       plan_mencion = PLAN_ARTES.get(mencion_key, PLAN_MULTIMEDIA)
       plan = plan_mencion.get(grado_key, plan_mencion.get("4to", []))
 
+      # Filtrar plan a solo las asignaturas que imparte el profesor
+      asigs_prof = {a.strip() for a in (prof.get("asignaturas") or prof.get("materia") or "").split(",") if a.strip()}
+      if asigs_prof and rol_norm == "profesor":
+          plan = [(asig, horas) for asig, horas in plan if asig in asigs_prof]
+
+      # Grados normalizados en mayúsculas para el selector del frontend
+      grados_display = [g.upper() for g in grados_prof] if grados_prof else ["4TO", "5TO", "6TO"]
+
       from datetime import date as _date
       return render_template(
           "profesor.html",
           profesor=prof,
           estudiantes=estudiantes,
           plan=plan,
+          grados_prof=grados_display,
           fecha_hoy=_date.today().isoformat(),
           current_user=get_usuario()
       )
