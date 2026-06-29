@@ -165,7 +165,7 @@ def filtrar_materias_profesor(materias_list: list) -> list:
     if not asigs_raw:
         return materias_list  # profesor sin asignaturas asignadas → sin filtro
 
-    asigs = {_normalizar_clave_materia(a.strip()) for a in asigs_raw.split(",") if a.strip()}
+    asigs = {_normalizar_clave_materia(a.strip()) for a in asigs_raw.split("|") if a.strip()}
     if not asigs:
         return materias_list
 

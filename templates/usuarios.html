@@ -1222,12 +1222,12 @@ function _getMencionesSeleccionadas() {
 
 function _getMateriasSeleccionadas() {
   return Array.from(document.querySelectorAll('.chk-mat:checked'))
-    .map(function(c){ return c.value; }).join(',');
+    .map(function(c){ return c.value; }).join('|');
 }
 
 function _setChecks(selector, valoresStr) {
   if (!valoresStr) return;
-  var vals = valoresStr.split(',').map(function(v){ return v.trim(); });
+  var vals = valoresStr.split('|').map(function(v){ return v.trim(); });
   document.querySelectorAll(selector).forEach(function(chk) {
     var lbl = chk.parentElement;
     if (vals.includes(chk.value)) {

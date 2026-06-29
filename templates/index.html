@@ -4403,7 +4403,7 @@ function editarUsuario(uid) {
         c.checked = mencArr.includes(c.value);
         c.parentElement.classList.toggle('sel', c.checked);
       });
-      var matsArr = (u.asignaturas || '').split(',').map(function(m){ return m.trim(); });
+      var matsArr = (u.asignaturas || '').split('|').map(function(m){ return m.trim(); });
       document.querySelectorAll('.chk-mat').forEach(function(c){
         c.checked = matsArr.includes(c.value);
         c.parentElement.classList.toggle('sel', c.checked);
@@ -5182,12 +5182,12 @@ function _getMencionesSeleccionadas() {
 
 function _getMateriasSeleccionadas() {
   return Array.from(document.querySelectorAll('.chk-mat:checked'))
-    .map(function(c){ return c.value; }).join(',');
+    .map(function(c){ return c.value; }).join('|');
 }
 
 function _setChecks(selector, valoresStr) {
   if (!valoresStr) return;
-  var vals = valoresStr.split(',').map(function(v){ return v.trim(); });
+  var vals = valoresStr.split('|').map(function(v){ return v.trim(); });
   document.querySelectorAll(selector).forEach(function(chk) {
     var lbl = chk.parentElement;
     if (vals.includes(chk.value)) { chk.checked = true;  lbl.classList.add('sel'); }

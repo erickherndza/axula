@@ -977,7 +977,7 @@ def _validar_materia_profesor(nombre_materia, nombre_curso, profesor):
     alcance      = _resolver_alcance_profesor(profesor)
     grados       = [g.lower() for g in alcance["grados"]]
     menciones    = [m.lower() for m in alcance["menciones"]]
-    prof_asigs   = [a.strip().lower() for a in (profesor.get("asignaturas") or "").split(",") if a.strip()]
+    prof_asigs   = [a.strip().lower() for a in (profesor.get("asignaturas") or "").split("|") if a.strip()]
     curso_lower  = (nombre_curso or "").lower()
     materia_lower = (nombre_materia or "").lower()
 

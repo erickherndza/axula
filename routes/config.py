@@ -307,7 +307,7 @@ def importar_profesores():
                 grado    = str(row.get("grado", "")).strip()
                 mencion  = str(row.get("mencion", "")).strip()
                 asigs    = str(row.get("asignaturas", "")).strip()
-                materia  = asigs.split(",")[0].strip() if asigs else ""
+                materia  = asigs.split("|")[0].strip() if asigs else ""
 
                 if not nombre or not username:
                     continue

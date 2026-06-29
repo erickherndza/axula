@@ -235,7 +235,7 @@ def crear_usuarios_bulk():
         grado       = str(u.get("grado", "")).strip()
         mencion     = str(u.get("mencion", "")).strip()
         asignaturas = str(u.get("asignaturas", "")).strip()
-        materia     = asignaturas.split(",")[0].strip() if asignaturas else ""
+        materia     = asignaturas.split("|")[0].strip() if asignaturas else ""
         if not username or not password or not nombre:
             resultados.append({"username": username, "ok": False, "error": "Faltan campos"})
             continue

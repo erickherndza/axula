@@ -286,7 +286,7 @@ def portal_profesor():
 
       # Filtrar plan a solo las asignaturas que imparte el profesor
       asigs_raw = (prof.get("asignaturas") or prof.get("materia") or "").strip()
-      asigs_prof = {a.strip().lower() for a in asigs_raw.split(",") if a.strip()}
+      asigs_prof = {a.strip().lower() for a in asigs_raw.split("|") if a.strip()}
       if asigs_prof and rol_norm == "profesor":
           plan_filtrado = [(asig, horas) for asig, horas in plan if asig.strip().lower() in asigs_prof]
           # Si el filtro no devuelve nada (nombre no coincide), conservar todo el plan
