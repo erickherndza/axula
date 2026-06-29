@@ -125,6 +125,49 @@ Endpoints protegidos: resumen_calificaciones, boletin_estudiante, boletin_view, 
 get_recuperaciones, resumen_asistencia, get_asistencia_mensual_est,
 get_evaluaciones_narrativas, casos_del_estudiante, historial_por_estudiante (expediente)
 
+### RLS para profesores — filtro de materias (2026-06-29)
+
+`filtrar_materias_profesor(materias_list)` en `core/rls.py`:
+- Recibe cualquier lista de dicts con clave `materia`
+- Si el usuario en sesión es `profesor`, filtra dejando solo sus asignaturas asignadas
+- Para cualquier otro rol devuelve la lista intacta (sin cambio de comportamiento)
+- Aplicado en: `get_materias_estudiante`, `get_indicadores_materias`, `get_progreso_estudiante`,
+  `resumen_calificaciones`, `boletin_estudiante`
+
+### Separador de asignaturas — PIPE `|` (2026-06-29)
+
+El campo `asignaturas` (y `materia`) usa `|` como separador, NO coma.
+Razón: materias como "Lenguaje Visual, Dibujo y Creación de Personajes" contienen comas.
+
+Ejemplo correcto en BD: `Fotografía|Lenguaje Visual, Dibujo y Creación de Personajes|Diseño Básico y Expresión Visual`
+
+Lugares que hacen split de `asignaturas` — TODOS usan `|`:
+- `core/rls.py` — `filtrar_materias_profesor`
+- `core/helpers.py` — `_validar_materia_profesor`
+- `routes/profesor.py` — filtro de plan curricular
+- `routes/usuarios.py` — importación masiva (extrae primera materia para campo legacy `materia`)
+- `routes/config.py` — importación desde Excel
+- `templates/usuarios.html` — `_setChecks` / `_getMateriasSeleccionadas`
+- `templates/index.html` — ídem (tiene su propio duplicado)
+- `templates/mi_perfil.html` — display de pills
+
+**Nunca usar coma como separador de `asignaturas`.**
+
+`_normalizar_clave_materia(nombre)` en `core/helpers.py`:
+- Strip acentos, lowercase, sinonimos (ej: "FIHR" → "formacion integral humana y religiosa")
+- Centralizada aquí (antes vivía en `routes/estudiantes.py`) — importar desde `core.helpers`
+- NO importar desde `routes/estudiantes` — riesgo de circular import
+
+**Fallback en `listar_calificaciones()`** (`routes/calificaciones.py`):
+- Si el profesor no tiene entradas en `calificaciones_periodo` (carga manual), busca en
+  `materias_calificaciones` (carga masiva desde PDF)
+- Soluciona que profesores como Aybelis Montaño (Matemática) vean sus datos sin haber
+  cargado notas manuales
+
+**`perfil_bp` NO está registrado** — `routes/perfil.py` tiene duplicados de rutas que nunca
+ejecutan. El endpoint activo de `get_progreso_estudiante` es el de `routes/estudiantes.py`.
+No tocar `perfil.py` hasta decidir si se elimina o se registra el blueprint.
+
 ## Producción — Render
 
 - URL: https://axula.onrender.com
@@ -175,6 +218,30 @@ exit()
 - `upload_db.py` guarda en `/tmp/` (siempre escribible), luego `cp` a `/data/`
 
 ## Log de sesiones
+
+### 2026-06-29 (sesión 7 — Fix separador asignaturas: coma → pipe)
+- **Bug:** materia "Lenguaje Visual, Dibujo y Creación de Personajes" tiene coma interna → `.split(",")` la partía en 2 piezas rotas
+- **Síntoma:** directora edita asignaturas del profesor, guarda, pero los cambios no se ven en perfil ni en filtros RLS
+- **Fix:** separador cambiado de `,` a `|` en 8 archivos (rls.py, helpers.py, profesor.py, usuarios.py, config.py, index.html, usuarios.html, mi_perfil.html)
+- **BD local** migrada: usuarios id=3 (Erick) e id=12 (prof_artes_qa) al formato `|`
+- **BD producción** migrada via Render Shell con script `/tmp/fix_asig.py`
+- Erick (id=3) tiene: `Fotografía|Lenguaje Visual, Dibujo y Creación de Personajes|Diseño Básico y Expresión Visual`
+- Commit `b34d3b9` → `git push origin main` ✅ — Render redeploya automático
+- QA ejecutado — encontró y se corrigieron `usuarios.py:238` y `config.py:310` (splits adicionales)
+
+### 2026-06-29 (sesión 6 — RLS profesor: filtro de materias + fallback PDF)
+- **Middleware centralizado**: `filtrar_materias_profesor()` en `core/rls.py`
+  - Un profesor solo ve sus propias materias en perfil de estudiante, progreso, boletín
+  - Reemplaza filtros inline dispersos en 5 endpoints
+- **`_normalizar_clave_materia()`** movida a `core/helpers.py` (eliminado circular import)
+- **Fallback a `materias_calificaciones`** en `listar_calificaciones()`:
+  - Profesores sin entradas manuales ahora ven datos cargados desde PDF
+  - Fix para Aybelis Montaño (Matemática): 711 registros P1 ahora visibles
+- **Bug detectado — no corregido**: `perfil_bp` no está registrado en `routes/__init__.py`
+  - `routes/perfil.py` tiene rutas duplicadas que nunca ejecutan
+  - Pendiente: decidir si se elimina perfil.py o se registra el blueprint
+- Healthcheck producción: `/health` ✅ `{"status":"ok"}` · `/login` ✅ HTTP 200
+- Push a producción: commit `9159f0c` → `git push origin main` ✅
 
 ### 2026-06-28 (sesión 5 — Email recovery + limpieza de seguridad)
 - **Email recovery funcionando** en producción — Gmail SMTP configurado en Render
