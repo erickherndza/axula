@@ -1802,7 +1802,8 @@ def cargar_materia():
 @estudiantes_bp.route("/api/materias/<int:estudiante_id>")
 @login_required
 def get_materias_estudiante(estudiante_id):
-    """Devuelve todas las materias cargadas para un estudiante, incluyendo tipo y profesor."""
+    """Devuelve materias cargadas para un estudiante. Profesores solo ven sus asignaturas."""
+    prof = _get_profesor()
     with sqlite3.connect(DATABASE, timeout=10) as conn:
         conn.row_factory = sqlite3.Row
         rows = conn.execute("""
@@ -1815,7 +1816,13 @@ def get_materias_estudiante(estudiante_id):
                           WHEN 'académico' THEN 0 ELSE 1 END,
                      materia
         """, (estudiante_id,)).fetchall()
-    return jsonify([dict(r) for r in rows])
+    resultado = [dict(r) for r in rows]
+    # Profesores solo ven sus propias asignaturas
+    if prof and _normalizar_rol(prof.get("rol", "")) == "profesor":
+        asigs = {a.strip().lower() for a in (prof.get("asignaturas") or prof.get("materia") or "").split(",") if a.strip()}
+        if asigs:
+            resultado = [r for r in resultado if r["materia"].strip().lower() in asigs]
+    return jsonify(resultado)
 
 
 @estudiantes_bp.route("/api/materias-disponibles")

@@ -305,6 +305,14 @@ def resumen_calificaciones(est_id):
         })
 
     resultado.sort(key=lambda x: x["materia"])
+
+    # Profesores solo ven sus propias asignaturas
+    prof = _get_profesor()
+    if prof and _normalizar_rol(prof.get("rol", "")) == "profesor":
+        asigs = {a.strip().lower() for a in (prof.get("asignaturas") or prof.get("materia") or "").split(",") if a.strip()}
+        if asigs:
+            resultado = [r for r in resultado if r["materia"].strip().lower() in asigs]
+
     return jsonify({
         "estudiante_id": est_id,
         "anio_escolar":  anio,

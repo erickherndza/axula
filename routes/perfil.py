@@ -18,7 +18,7 @@ from core.auth import (
 from core.helpers import (
     _anonimizar_estudiante, _calcular_bienestar_emocional,
     _calcular_indice_conductual, _recalcular_indicadores,
-    _validar_magic_imagen,
+    _validar_magic_imagen, _get_profesor,
 )
 from core.ia import _get_groq_client, construir_prompt
 
@@ -679,7 +679,7 @@ def get_expediente(est_id):
         reportes = conn.execute("""
             SELECT id,'reporte' as fuente,tipo,subtipo,titulo,descripcion,
                    severidad,reportado_por,fecha,estado,seguimiento,fecha_cierre,
-                   NULL as registrado_por
+                   NULL as registrado_por, COALESCE(autor_id, 0) as autor_id
             FROM reportes WHERE estudiante_id=? ORDER BY fecha DESC
         """, (est_id,)).fetchall()
         logros = []
@@ -698,7 +698,15 @@ def get_expediente(est_id):
                 (est_id,)).fetchone()
         except Exception:
             indicadores = None
-    eventos = [dict(r) for r in reportes] + [dict(r) for r in logros]
+    reportes_list = [dict(r) for r in reportes]
+    logros_list   = [dict(r) for r in logros]
+
+    # Profesores solo ven reportes que ellos crearon
+    prof = _get_profesor()
+    if prof and _normalizar_rol(prof.get("rol", "")) == "profesor":
+        reportes_list = [r for r in reportes_list if r.get("autor_id") == prof["id"]]
+
+    eventos = reportes_list + logros_list
     eventos.sort(key=lambda x: x.get('fecha','') or '', reverse=True)
     return jsonify({"eventos": eventos, "indicadores": dict(indicadores) if indicadores else {}})
 
