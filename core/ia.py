@@ -390,6 +390,101 @@ JSON REQUERIDO (completa cada campo con contenido real y extenso):
 Rellena TODOS los campos con contenido real, extenso y específico para {area_s} de {grado_s} en República Dominicana. El campo "estrategias" debe incluir el INICIO, DESARROLLO y CIERRE completo para CADA una de las {semanas} semanas. No uses placeholders como [descripción] — escribe el contenido real."""
 
 
+# ── WRAPPER CENTRALIZADO CON CONTROL DE TOKENS ──────────────────────────────
+
+# Límite de tokens de entrada antes de truncar (deja margen para la respuesta)
+_MAX_INPUT_TOKENS = 3500
+
+def _contar_tokens(texto: str) -> int:
+    """Cuenta tokens usando tiktoken (cl100k_base — compatible con LLaMA 3)."""
+    try:
+        import tiktoken
+        enc = tiktoken.get_encoding("cl100k_base")
+        return len(enc.encode(texto))
+    except Exception:
+        # Fallback: ~4 chars por token
+        return len(texto) // 4
+
+
+def _truncar_prompt(texto: str, max_tokens: int = _MAX_INPUT_TOKENS) -> tuple[str, int, int]:
+    """
+    Trunca el texto al límite de tokens conservando el inicio (instrucciones).
+    Returns: (texto_truncado, tokens_original, tokens_final)
+    """
+    try:
+        import tiktoken
+        enc = tiktoken.get_encoding("cl100k_base")
+        tokens = enc.encode(texto)
+        original = len(tokens)
+        if original <= max_tokens:
+            return texto, original, original
+        truncados = tokens[:max_tokens]
+        return enc.decode(truncados), original, max_tokens
+    except Exception:
+        # Fallback: truncar por chars
+        original = len(texto) // 4
+        if original <= max_tokens:
+            return texto, original, original
+        chars = max_tokens * 4
+        return texto[:chars], original, max_tokens
+
+
+def llamar_ia(
+    messages: list,
+    model: str = "llama-3.3-70b-versatile",
+    max_tokens: int = 800,
+    temperature: float = 0.7,
+    top_p: float = 0.9,
+) -> tuple:
+    """
+    Wrapper centralizado para llamadas a Groq API.
+
+    - Cuenta tokens de entrada antes de enviar
+    - Trunca automáticamente si supera _MAX_INPUT_TOKENS
+    - Loguea tokens usados por llamada
+
+    Returns: (contenido: str, tokens_totales: int)
+    Raises: RuntimeError si la API falla
+    """
+    # Contar tokens de todos los mensajes
+    texto_completo = " ".join(m.get("content", "") for m in messages)
+    tokens_antes = _contar_tokens(texto_completo)
+
+    # Truncar el último mensaje user si es muy largo
+    if tokens_antes > _MAX_INPUT_TOKENS:
+        for i in range(len(messages) - 1, -1, -1):
+            if messages[i].get("role") == "user":
+                texto_user = messages[i]["content"]
+                texto_truncado, orig, final = _truncar_prompt(
+                    texto_user,
+                    max_tokens=_MAX_INPUT_TOKENS - (tokens_antes - _contar_tokens(texto_user))
+                )
+                messages = list(messages)  # copia para no mutar el original
+                messages[i] = {**messages[i], "content": texto_truncado}
+                logger.info(
+                    f"[IA] Prompt truncado: {orig} → {final} tokens "
+                    f"(ahorrado: {orig - final} tokens)"
+                )
+                break
+
+    try:
+        client = _get_groq_client()
+        completion = client.chat.completions.create(
+            model=model,
+            messages=messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            top_p=top_p,
+        )
+        contenido = completion.choices[0].message.content.strip()
+        tokens_usados = completion.usage.total_tokens if completion.usage else max_tokens
+        logger.info(f"[IA] Groq OK — modelo={model} tokens={tokens_usados}")
+        return contenido, tokens_usados
+    except Exception as ex:
+        logger.error(f"[IA] Error Groq: {ex}")
+        raise RuntimeError(f"Error al llamar a la IA: {ex}") from ex
+
+
 # ── CACHÉ SEMÁNTICO DE IA ────────────────────────────────────────────────────
 
 def _keywords_ia(texto):
