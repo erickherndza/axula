@@ -24,7 +24,12 @@ import sqlite3
 import sys
 import os
 
-DB_PATH = os.path.join(os.path.dirname(__file__), '..', 'database.db')
+# Detecta si corre en Render (igual que constants.py)
+_en_render = os.path.exists('/data')
+DB_PATH = os.environ.get(
+    "DATABASE_PATH",
+    "/data/database.db" if _en_render else os.path.join(os.path.dirname(__file__), '..', 'database.db')
+)
 
 # ── Mapa de módulos artísticos (igual que en perfil.py) ─────────────────────
 MODULO_MAP = {
