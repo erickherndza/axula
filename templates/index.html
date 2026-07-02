@@ -170,6 +170,9 @@ body{
 .dot-th{background:#60b8f0;}
 .dot-mu{background:#ff9f60;}
 .dot-av{background:#c060f0;}
+/* Header de sidebar — solo visible en overlay (tablet/móvil) */
+.sb-mobile-header{ display:none; }
+@media(max-width:1024px){ .sb-mobile-header{ display:flex !important; } }
 .sb-sep{
   height:1px;background:var(--border);margin:8px 4px;
 }
@@ -584,46 +587,31 @@ td.td-nombre span{display:block;font-size:10px;color:var(--muted);font-weight:40
   .kpi-n{ font-size:18px; }
 }
 
-/* ── Tablet / 10" (768–1023px) ─────────────────── */
-@media(max-width:1023px){
-  /* Sidebar colapsa a solo íconos */
-  .sidebar{
-    width:44px; padding:10px 4px;
-    overflow:hidden;
-  }
-  .sb-item{ justify-content:center; padding:8px 4px; }
-  .sb-item span:not(.sb-count){ display:none; }
-  .sb-count{ display:none; }
-  .sb-label{ display:none; }
-  .sb-sep{ margin:4px 0; }
-  .prof-panel{ display:none; }
+/* ── Nav links → siempre ocultos (ahora viven en el sidebar) ── */
+.nav-links{ display:none !important; }
 
-  /* Toggle sidebar visible con botón */
+/* ── Tablet (<1025px) — sidebar como overlay ─────── */
+@media(max-width:1024px){
+  .sidebar{
+    position:fixed; left:-240px; top:0; bottom:0;
+    width:230px; z-index:400;
+    transition:left .28s cubic-bezier(.4,0,.2,1);
+    box-shadow:none;
+    height:100dvh;
+    overflow-y:auto;
+  }
+  .sidebar.open{ left:0; box-shadow:4px 0 24px rgba(0,0,0,.28); }
   .sidebar-toggle{ display:flex !important; }
 
   /* Cards 2 columnas */
   .est-card{ width:calc(50% - 5px); }
-  /* KPIs en 2 filas */
   .kpi{ min-width:120px; flex-basis:calc(33% - 8px); }
   .kpi-n{ font-size:17px; }
-
-  /* Nav comprime más */
-  .nl span:not(.nl-icon){ display:none; }
-  .nl i{ font-size:13px; }
-  .nl{ padding:6px 8px; }
 }
 
-/* ── Móvil (<768px) ─────────────────────────────── */
-@media(max-width:767px){
-  /* Sidebar oculto por defecto — toggle lo muestra */
-  .sidebar{
-    position:fixed; left:-220px; top:48px; bottom:0;
-    width:200px; z-index:300;
-    transition:left .25s ease;
-    box-shadow:4px 0 20px rgba(0,0,0,.3);
-  }
-  .sidebar.open{ left:0; }
-  .sidebar-toggle{ display:flex !important; }
+/* ── Móvil (<640px) ─────────────────────────────── */
+@media(max-width:639px){
+  .sidebar{ width:240px; left:-260px; top:0; }
 
   /* Cards 1 columna */
   .est-card{ width:100%; min-width:unset; }
@@ -634,16 +622,14 @@ td.td-nombre span{display:block;font-size:10px;color:var(--muted);font-weight:40
   .kpi-n{ font-size:16px; }
   .kpi-l{ font-size:9px; }
 
-  /* Toolbar responsive */
+  /* Toolbar */
   .toolbar{ padding:6px 10px; gap:4px; }
-  .sw{ min-width:140px; }
+  .sw{ min-width:130px; }
   #ordenar{ display:none; }
 
-  /* Nav simplificado */
-  .nav-links{ display:none; }
-  .mobile-menu-btn{ display:flex !important; }
-  .nav{ padding:0 12px; }
-  .user-name{ max-width:60px; font-size:11px; }
+  .nav{ padding:0 10px; }
+  .user-name{ display:none; }
+  .user-badge{ padding:4px 6px; background:transparent; }
   .user-badge{ padding:4px 6px; }
 }
 
@@ -651,10 +637,10 @@ td.td-nombre span{display:block;font-size:10px;color:var(--muted);font-weight:40
 .sidebar-toggle{
   display:none;
   align-items:center;justify-content:center;
-  width:32px;height:32px;border-radius:7px;
+  width:36px;height:36px;border-radius:9px;
   background:var(--hover);border:1px solid var(--border);
   color:var(--muted);cursor:pointer;flex-shrink:0;
-  font-size:12px;transition:all .15s;
+  font-size:14px;transition:all .15s;
 }
 .sidebar-toggle:hover{ color:var(--accent);border-color:var(--accent); }
 .mobile-menu-btn{
@@ -860,6 +846,9 @@ body{
 .dot-th{background:#60b8f0;}
 .dot-mu{background:#ff9f60;}
 .dot-av{background:#c060f0;}
+/* Header de sidebar — solo visible en overlay (tablet/móvil) */
+.sb-mobile-header{ display:none; }
+@media(max-width:1024px){ .sb-mobile-header{ display:flex !important; } }
 .sb-sep{
   height:1px;background:var(--border);margin:8px 4px;
 }
@@ -1274,46 +1263,31 @@ td.td-nombre span{display:block;font-size:10px;color:var(--muted);font-weight:40
   .kpi-n{ font-size:18px; }
 }
 
-/* ── Tablet / 10" (768–1023px) ─────────────────── */
-@media(max-width:1023px){
-  /* Sidebar colapsa a solo íconos */
-  .sidebar{
-    width:44px; padding:10px 4px;
-    overflow:hidden;
-  }
-  .sb-item{ justify-content:center; padding:8px 4px; }
-  .sb-item span:not(.sb-count){ display:none; }
-  .sb-count{ display:none; }
-  .sb-label{ display:none; }
-  .sb-sep{ margin:4px 0; }
-  .prof-panel{ display:none; }
+/* ── Nav links → siempre ocultos (ahora viven en el sidebar) ── */
+.nav-links{ display:none !important; }
 
-  /* Toggle sidebar visible con botón */
+/* ── Tablet (<1025px) — sidebar como overlay ─────── */
+@media(max-width:1024px){
+  .sidebar{
+    position:fixed; left:-240px; top:0; bottom:0;
+    width:230px; z-index:400;
+    transition:left .28s cubic-bezier(.4,0,.2,1);
+    box-shadow:none;
+    height:100dvh;
+    overflow-y:auto;
+  }
+  .sidebar.open{ left:0; box-shadow:4px 0 24px rgba(0,0,0,.28); }
   .sidebar-toggle{ display:flex !important; }
 
   /* Cards 2 columnas */
   .est-card{ width:calc(50% - 5px); }
-  /* KPIs en 2 filas */
   .kpi{ min-width:120px; flex-basis:calc(33% - 8px); }
   .kpi-n{ font-size:17px; }
-
-  /* Nav comprime más */
-  .nl span:not(.nl-icon){ display:none; }
-  .nl i{ font-size:13px; }
-  .nl{ padding:6px 8px; }
 }
 
-/* ── Móvil (<768px) ─────────────────────────────── */
-@media(max-width:767px){
-  /* Sidebar oculto por defecto — toggle lo muestra */
-  .sidebar{
-    position:fixed; left:-220px; top:48px; bottom:0;
-    width:200px; z-index:300;
-    transition:left .25s ease;
-    box-shadow:4px 0 20px rgba(0,0,0,.3);
-  }
-  .sidebar.open{ left:0; }
-  .sidebar-toggle{ display:flex !important; }
+/* ── Móvil (<640px) ─────────────────────────────── */
+@media(max-width:639px){
+  .sidebar{ width:240px; left:-260px; top:0; }
 
   /* Cards 1 columna */
   .est-card{ width:100%; min-width:unset; }
@@ -1324,16 +1298,14 @@ td.td-nombre span{display:block;font-size:10px;color:var(--muted);font-weight:40
   .kpi-n{ font-size:16px; }
   .kpi-l{ font-size:9px; }
 
-  /* Toolbar responsive */
+  /* Toolbar */
   .toolbar{ padding:6px 10px; gap:4px; }
-  .sw{ min-width:140px; }
+  .sw{ min-width:130px; }
   #ordenar{ display:none; }
 
-  /* Nav simplificado */
-  .nav-links{ display:none; }
-  .mobile-menu-btn{ display:flex !important; }
-  .nav{ padding:0 12px; }
-  .user-name{ max-width:60px; font-size:11px; }
+  .nav{ padding:0 10px; }
+  .user-name{ display:none; }
+  .user-badge{ padding:4px 6px; background:transparent; }
   .user-badge{ padding:4px 6px; }
 }
 
@@ -1341,10 +1313,10 @@ td.td-nombre span{display:block;font-size:10px;color:var(--muted);font-weight:40
 .sidebar-toggle{
   display:none;
   align-items:center;justify-content:center;
-  width:32px;height:32px;border-radius:7px;
+  width:36px;height:36px;border-radius:9px;
   background:var(--hover);border:1px solid var(--border);
   color:var(--muted);cursor:pointer;flex-shrink:0;
-  font-size:12px;transition:all .15s;
+  font-size:14px;transition:all .15s;
 }
 .sidebar-toggle:hover{ color:var(--accent);border-color:var(--accent); }
 .mobile-menu-btn{
@@ -1746,49 +1718,15 @@ tr:hover td{background:var(--hover)}
 
 <!-- ════════════════ NAVBAR ════════════════ -->
 <nav class="nav">
+  <!-- Hamburger — siempre disponible en tablet/móvil, oculto en desktop -->
+  <button class="sidebar-toggle" id="sb-toggle" onclick="toggleSidebar()" title="Menú" style="margin-right:8px;">
+    <i class="fas fa-bars"></i>
+  </button>
+
   <a href="/" class="logo">
     <div class="logo-row"><span class="a">Axula</span></div>
     <div class="logo-sub2">C.E. Benito Juárez</div>
   </a>
-
-  <!-- Botón toggle sidebar (tablet/móvil) -->
-  <button class="sidebar-toggle" id="sb-toggle" onclick="toggleSidebar()" title="Menú">
-    <i class="fas fa-bars"></i>
-  </button>
-
-  <div class="nav-links">
-    <a class="nl active" href="#" onclick="showSection('students');return false;"><i class="fas fa-chart-pie"></i> Dashboard</a>
-    {% if current_user and current_user.rol not in ['profesor'] %}
-    <a class="nl" href="/reportes"><i class="fas fa-flag"></i> Reportes</a>
-    {% endif %}
-    {% if current_user and (current_user.es_coord or current_user.es_directora) %}
-    <a class="nl" href="/coordinador"><i class="fas fa-tachometer-alt"></i> Mi Panel</a>
-    {% endif %}
-    {% if current_user and (current_user.es_coord or current_user.es_directora) %}
-    <a class="nl" href="/patrones"><i class="fas fa-brain"></i> Patrones</a>
-    <a class="nl" href="/planificacion"><i class="fas fa-book-open"></i> Planificación</a>
-    {% endif %}
-    {% if current_user and current_user.rol not in ['psicologa_primer_ciclo','psicologa_segundo_ciclo','padre'] %}
-    <button class="nl" onclick="showSection('upload')"><i class="fas fa-upload"></i> Cargar datos</button>
-    {% endif %}
-    {% if current_user and (current_user.es_directora or current_user.rol == 'superusuario') %}
-    <button class="nl" onclick="showSection('usuarios')"><i class="fas fa-users-cog"></i> Usuarios</button>
-    {% endif %}
-    {% if current_user and current_user.rol == 'superusuario' %}
-    <button class="nl" onclick="abrirModalDB()" style="color:#ff9f60;"><i class="fas fa-database"></i> BD</button>
-    {% endif %}
-    {% if current_user and current_user.rol == 'profesor' %}
-    <a class="nl" href="/profesor"><i class="fas fa-clipboard-check"></i> Pase de lista</a>
-    {% endif %}
-    {% if current_user %}
-    <span class="nl" style="font-size:10px;opacity:.5;pointer-events:none;">
-      {{ {'directora':'👑','coordinador_general':'🏛️','coordinador_primer_ciclo':'📚',
-          'coordinador_segundo_ciclo':'🎓','psicologa_primer_ciclo':'🧠',
-          'psicologa_segundo_ciclo':'🧠','profesor':'🏫'}.get(current_user.rol,'') }}
-      {{ current_user.rol | replace('_',' ') | title }}
-    </span>
-    {% endif %}
-  </div>
 
   <div class="nav-right">
     <!-- Avatar con dropdown de perfil -->
@@ -1970,6 +1908,112 @@ tr:hover td{background:var(--hover)}
 
   <!-- ── SIDEBAR ── -->
   <aside class="sidebar">
+
+    <!-- ── CIERRE SIDEBAR EN MÓVIL (X) ── -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 12px 8px;border-bottom:1px solid var(--border);margin-bottom:6px;" class="sb-mobile-header">
+      <span style="font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:var(--accent);">Axula</span>
+      <button onclick="toggleSidebar()" style="background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:4px;line-height:1;" title="Cerrar">
+        <i class="fas fa-xmark"></i>
+      </button>
+    </div>
+
+    <!-- ── NAVEGACIÓN PRINCIPAL ── -->
+    <div class="sb-section">
+      <div class="sb-label"><i class="fas fa-compass" style="margin-right:4px;opacity:.5;"></i>Menú</div>
+
+      <button class="sb-item" id="sb-nav-dashboard" onclick="showSection('students');closeSidebarMobile();" style="font-weight:600;">
+        <i class="fas fa-chart-pie" style="font-size:13px;width:18px;text-align:center;color:var(--accent);"></i>
+        <span style="flex:1;">Dashboard</span>
+      </button>
+
+      {% if current_user and current_user.rol == 'profesor' %}
+      <a class="sb-item" href="/profesor" style="text-decoration:none;">
+        <i class="fas fa-clipboard-check" style="font-size:13px;width:18px;text-align:center;"></i>
+        <span style="flex:1;">Pase de lista</span>
+      </a>
+      {% endif %}
+
+      {% if current_user and current_user.rol not in ['profesor'] %}
+      <a class="sb-item" href="/reportes" style="text-decoration:none;">
+        <i class="fas fa-flag" style="font-size:13px;width:18px;text-align:center;"></i>
+        <span style="flex:1;">Reportes</span>
+      </a>
+      {% endif %}
+
+      {% if current_user and (current_user.es_coord or current_user.es_directora) %}
+      <a class="sb-item" href="/coordinador" style="text-decoration:none;">
+        <i class="fas fa-tachometer-alt" style="font-size:13px;width:18px;text-align:center;"></i>
+        <span style="flex:1;">Mi Panel</span>
+      </a>
+      <a class="sb-item" href="/patrones" style="text-decoration:none;">
+        <i class="fas fa-brain" style="font-size:13px;width:18px;text-align:center;"></i>
+        <span style="flex:1;">Patrones IA</span>
+      </a>
+      <a class="sb-item" href="/planificacion" style="text-decoration:none;">
+        <i class="fas fa-book-open" style="font-size:13px;width:18px;text-align:center;"></i>
+        <span style="flex:1;">Planificación</span>
+      </a>
+      {% endif %}
+
+      {% if current_user and (current_user.es_coord or current_user.es_directora or current_user.es_psicologa) %}
+      <a class="sb-item" href="/casos" style="text-decoration:none;">
+        <i class="fas fa-folder-open" style="font-size:13px;width:18px;text-align:center;"></i>
+        <span style="flex:1;">Casos</span>
+      </a>
+      {% endif %}
+
+      {% if current_user and current_user.rol not in ['psicologa_primer_ciclo','psicologa_segundo_ciclo','padre'] %}
+      <button class="sb-item" onclick="showSection('upload');closeSidebarMobile();">
+        <i class="fas fa-upload" style="font-size:13px;width:18px;text-align:center;"></i>
+        <span style="flex:1;">Cargar datos</span>
+      </button>
+      {% endif %}
+
+      {% if current_user and (current_user.es_directora or current_user.rol == 'superusuario') %}
+      <button class="sb-item" onclick="showSection('usuarios');closeSidebarMobile();">
+        <i class="fas fa-users-cog" style="font-size:13px;width:18px;text-align:center;"></i>
+        <span style="flex:1;">Usuarios</span>
+      </button>
+      {% endif %}
+
+      {% if current_user and current_user.rol == 'superusuario' %}
+      <button class="sb-item" onclick="abrirModalDB();" style="color:var(--warn);">
+        <i class="fas fa-database" style="font-size:13px;width:18px;text-align:center;"></i>
+        <span style="flex:1;">Base de datos</span>
+      </button>
+      {% endif %}
+    </div>
+
+    <div class="sb-sep"></div>
+
+    <!-- ── PORTALES DIRECTOS ── -->
+    {% if current_user and current_user.rol in ('secretaria','secretaria_docente') %}
+    <div class="sb-section">
+      <a class="sb-item" href="/secretaria" style="text-decoration:none;font-weight:600;color:var(--accent);">
+        <i class="fas fa-file-alt" style="font-size:13px;width:18px;text-align:center;"></i>
+        <span style="flex:1;">→ Panel Secretaría</span>
+      </a>
+    </div>
+    {% elif current_user and current_user.rol == 'digitador' %}
+    <div class="sb-section">
+      <a class="sb-item" href="/digitador" style="text-decoration:none;font-weight:600;color:var(--accent);">
+        <i class="fas fa-keyboard" style="font-size:13px;width:18px;text-align:center;"></i>
+        <span style="flex:1;">→ Panel Digitación</span>
+      </a>
+    </div>
+    {% elif current_user and current_user.rol == 'auxiliar_contabilidad' %}
+    <div class="sb-section">
+      <a class="sb-item" href="/finanzas" style="text-decoration:none;font-weight:600;color:var(--accent);">
+        <i class="fas fa-chart-line" style="font-size:13px;width:18px;text-align:center;"></i>
+        <span style="flex:1;">→ Panel Finanzas</span>
+      </a>
+    </div>
+    {% endif %}
+
+    <div class="sb-sep" style="margin-bottom:10px;"></div>
+
+    <!-- ── FILTROS (etiqueta) ── -->
+    <div class="sb-label" style="padding-left:10px;"><i class="fas fa-filter" style="margin-right:4px;opacity:.5;"></i>Filtros</div>
 
     {%- if es_profesor %}
     <!-- Panel del profesor -->
@@ -4944,11 +4988,19 @@ function toggleSidebar() {
   if (ovr) ovr.style.display = isOpen ? 'block' : 'none';
 }
 
+function closeSidebarMobile() {
+  if (window.innerWidth > 1024) return; // solo cerrar en móvil/tablet
+  var sb  = document.querySelector('.sidebar');
+  var ovr = document.getElementById('sb-overlay');
+  if (sb)  sb.classList.remove('open');
+  if (ovr) ovr.style.display = 'none';
+}
+
 // Cerrar sidebar al hacer clic en el overlay
 document.addEventListener('DOMContentLoaded', function() {
   var ovr = document.createElement('div');
   ovr.id = 'sb-overlay';
-  ovr.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:299;';
+  ovr.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:399;cursor:pointer;';
   ovr.addEventListener('click', function() {
     document.querySelector('.sidebar') && document.querySelector('.sidebar').classList.remove('open');
     ovr.style.display = 'none';
@@ -4958,8 +5010,8 @@ document.addEventListener('DOMContentLoaded', function() {
   // Cerrar sidebar al seleccionar un item en móvil
   document.querySelectorAll('.sb-item').forEach(function(item) {
     item.addEventListener('click', function() {
-      if (window.innerWidth < 768) {
-        document.querySelector('.sidebar').classList.remove('open');
+      if (window.innerWidth <= 1024) {
+        document.querySelector('.sidebar') && document.querySelector('.sidebar').classList.remove('open');
         ovr.style.display = 'none';
       }
     });
