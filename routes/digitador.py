@@ -597,3 +597,379 @@ def buscar_estudiante_digitador():
             ORDER BY apellido, nombre LIMIT 30
         """, (f"%{q}%", f"%{q}%", f"%{q}%")).fetchall()
     return jsonify([dict(r) for r in rows])
+
+
+# ── CARGA DE NOTAS POR LISTADO SIMPLE ────────────────────────────────────────
+
+@digitador_bp.route("/api/digitador/plantilla-notas")
+@login_required
+@_digitador_required
+def descargar_plantilla_notas():
+    """
+    Genera un Excel descargable con los estudiantes que NO tienen notas,
+    listo para que el coordinador lo rellene y lo devuelva.
+
+    Parámetros opcionales:
+      ?grado=3ERO   → filtra por grado
+      ?seccion=A    → filtra por sección
+      ?todos=1      → incluye todos los estudiantes (con y sin notas)
+    """
+    import io
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    except ImportError:
+        return jsonify({"error": "openpyxl no disponible"}), 500
+
+    grado   = request.args.get("grado", "").strip().upper()
+    seccion = request.args.get("seccion", "").strip().upper()
+    todos   = request.args.get("todos", "0") == "1"
+
+    with sqlite3.connect(DATABASE, timeout=10) as conn:
+        conn.row_factory = sqlite3.Row
+        q = "SELECT id, nombre, apellido, grado, seccion, mencion FROM estudiantes WHERE 1=1"
+        p = []
+        if grado:
+            q += " AND upper(grado) LIKE upper(?)"
+            p.append(f"%{grado}%")
+        if seccion:
+            q += " AND upper(seccion)=upper(?)"
+            p.append(seccion)
+        if not todos:
+            q += " AND id NOT IN (SELECT DISTINCT estudiante_id FROM materias_calificaciones)"
+        q += " ORDER BY grado, apellido, nombre"
+        estudiantes = conn.execute(q, p).fetchall()
+
+    if not estudiantes:
+        return jsonify({"error": "No hay estudiantes que coincidan con el filtro"}), 404
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Plantilla Notas"
+
+    # ── Estilos ───────────────────────────────────────────────────────────────
+    hdr_font  = Font(bold=True, color="FFFFFF", size=10)
+    hdr_fill  = PatternFill("solid", fgColor="024959")
+    sub_fill  = PatternFill("solid", fgColor="038C8C")
+    sub_font  = Font(bold=True, color="FFFFFF", size=10)
+    inst_fill = PatternFill("solid", fgColor="FFF3CD")
+    inst_font = Font(bold=False, color="856404", size=9, italic=True)
+    center    = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    left      = Alignment(horizontal="left",   vertical="center")
+    thin      = Side(style="thin", color="CCCCCC")
+    border    = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+    # ── Fila de instrucciones ─────────────────────────────────────────────────
+    ws.merge_cells("A1:N1")
+    ws["A1"] = (
+        "INSTRUCCIONES: Completa las columnas P1-P4 para cada materia. "
+        "Una fila por alumno/materia. NO cambies las columnas ID, Nombre ni Grado. "
+        "Guarda como .xlsx y sube al sistema."
+    )
+    ws["A1"].font      = inst_font
+    ws["A1"].fill      = inst_fill
+    ws["A1"].alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
+    ws.row_dimensions[1].height = 30
+
+    # ── Encabezados ───────────────────────────────────────────────────────────
+    headers = [
+        ("ID",       8),  ("Nombre Completo", 28), ("Grado",   8),
+        ("Sección",  8),  ("Mención",         12), ("Materia", 28),
+        ("P1",       7),  ("P2",               7), ("P3",      7),
+        ("P4",       7),  ("Promedio CF",      11),
+    ]
+    for col, (h, w) in enumerate(headers, 1):
+        cell = ws.cell(row=2, column=col, value=h)
+        cell.font      = hdr_font
+        cell.fill      = hdr_fill
+        cell.alignment = center
+        cell.border    = border
+        ws.column_dimensions[cell.column_letter].width = w
+    ws.row_dimensions[2].height = 22
+
+    # ── Materias por defecto según ciclo ─────────────────────────────────────
+    MATS_1ER_CICLO = [
+        "Lengua Española", "Matemática", "Ciencias Naturales",
+        "Ciencias Sociales", "Idioma Inglés", "Educación Física",
+        "FIHR", "Educación Artística",
+    ]
+    MATS_2DO_CICLO_BASE = [
+        "Lengua Española", "Matemática", "Ciencias Naturales",
+        "Ciencias Sociales", "Idioma Inglés", "Idioma Francés",
+        "Educación Física", "FIHR", "Identidad, Cultura y Emprendimiento",
+    ]
+
+    def _materias_para(grado_est, mencion_est):
+        g = str(grado_est or "").upper()
+        if any(x in g for x in ("1ER", "2DO", "3ER")):
+            return MATS_1ER_CICLO
+        m = str(mencion_est or "").upper()
+        base = list(MATS_2DO_CICLO_BASE)
+        if "USIC" in m or "ÚSIC" in m:
+            base += ["Instrumento I", "Canto Coral I", "Lenguaje Musical, Teoría y Entrenamiento"]
+        elif "ATRO" in m:
+            base += ["Entrenamiento Rítmico, Corporal y Vocal I", "Expresión Corporal", "Historia del Teatro"]
+        elif "ISUAL" in m:
+            base += ["Dibujo", "Pintura y Técnicas Mixtas", "Historia del Arte Universal"]
+        else:
+            base += ["Fotografía", "Lenguaje Visual", "Diseño Básico"]
+        return base
+
+    # ── Filas de datos ────────────────────────────────────────────────────────
+    row_num   = 3
+    fill_alt  = PatternFill("solid", fgColor="F0FAFA")
+    fill_norm = PatternFill("solid", fgColor="FFFFFF")
+
+    for i, est in enumerate(estudiantes):
+        nombre_completo = f"{est['nombre']} {est['apellido']}"
+        materias = _materias_para(est['grado'], est['mencion'])
+        alt = (i % 2 == 0)
+
+        for mat in materias:
+            fondo = fill_alt if alt else fill_norm
+            vals = [
+                est['id'], nombre_completo, est['grado'],
+                est['seccion'] or "", est['mencion'] or "", mat,
+                "", "", "", "", "",   # P1-P4, Promedio (vacíos)
+            ]
+            for col, val in enumerate(vals, 1):
+                cell = ws.cell(row=row_num, column=col, value=val)
+                cell.fill      = fondo
+                cell.border    = border
+                cell.alignment = center if col in (1, 3, 4, 7, 8, 9, 10, 11) else left
+                cell.font      = Font(size=9)
+            row_num += 1
+
+    # Fijar encabezados al hacer scroll
+    ws.freeze_panes = "A3"
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+
+    suffix = f"_{grado}" if grado else "_todos"
+    fname  = f"plantilla_notas{suffix}.xlsx"
+    return Response(
+        buf.getvalue(),
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{fname}"'},
+    )
+
+
+@digitador_bp.route("/api/digitador/cargar-notas-listado", methods=["POST"])
+@login_required
+@_digitador_required
+def cargar_notas_listado():
+    """
+    Acepta el Excel de plantilla relleno (generado por /plantilla-notas)
+    o cualquier Excel con columnas: Nombre Completo | Materia | P1 | P2 | P3 | P4
+
+    Fuzzy-matching por nombre (threshold 0.82). Inserta/actualiza
+    materias_calificaciones y recalcula p_acad en estudiantes.
+    """
+    import io, unicodedata, re
+    from difflib import SequenceMatcher
+    try:
+        from openpyxl import load_workbook
+    except ImportError:
+        return jsonify({"ok": False, "error": "openpyxl no disponible"}), 500
+
+    f = request.files.get("file")
+    if not f or not f.filename:
+        return jsonify({"ok": False, "error": "No se recibió archivo"}), 400
+    if not f.filename.lower().endswith((".xlsx", ".xls", ".xlsm")):
+        return jsonify({"ok": False, "error": "Formato no válido. Usa .xlsx"}), 400
+
+    raw = f.read()
+    try:
+        wb = load_workbook(io.BytesIO(raw), data_only=True)
+    except Exception as ex:
+        return jsonify({"ok": False, "error": f"No se pudo leer el Excel: {ex}"}), 400
+
+    ws = wb.active
+
+    # ── Detectar fila de encabezados ──────────────────────────────────────────
+    def _norm(s):
+        s = unicodedata.normalize("NFD", str(s or ""))
+        s = "".join(c for c in s if unicodedata.category(c) != "Mn")
+        return re.sub(r"\s+", " ", s).strip().lower()
+
+    header_row = None
+    col_id = col_nombre = col_materia = col_p1 = col_p2 = col_p3 = col_p4 = col_prom = None
+
+    for ri in range(1, min(6, ws.max_row + 1)):
+        for ci in range(1, ws.max_column + 1):
+            v = _norm(ws.cell(ri, ci).value)
+            if v in ("id", "codigo"):                               col_id      = ci
+            elif "nombre" in v and "completo" in v:                 col_nombre  = ci
+            elif v in ("nombre completo", "alumno", "estudiante"):  col_nombre  = ci
+            elif v in ("materia", "asignatura"):                    col_materia = ci
+            elif v in ("p1", "periodo 1", "pc1"):                   col_p1      = ci
+            elif v in ("p2", "periodo 2", "pc2"):                   col_p2      = ci
+            elif v in ("p3", "periodo 3", "pc3"):                   col_p3      = ci
+            elif v in ("p4", "periodo 4", "pc4"):                   col_p4      = ci
+            elif "prom" in v or "cf" in v:                          col_prom    = ci
+        if col_nombre and col_materia:
+            header_row = ri
+            break
+
+    if not header_row or not col_nombre or not col_materia:
+        return jsonify({
+            "ok": False,
+            "error": "No se encontraron columnas 'Nombre Completo' y 'Materia'. "
+                     "Verifica que el archivo tenga el formato correcto."
+        }), 400
+
+    # ── Leer filas ────────────────────────────────────────────────────────────
+    def _fl(v):
+        try:
+            x = float(v)
+            return round(x, 1) if 0 < x <= 100 else None
+        except Exception:
+            return None
+
+    filas = []
+    for ri in range(header_row + 1, ws.max_row + 1):
+        nombre  = str(ws.cell(ri, col_nombre).value  or "").strip()
+        materia = str(ws.cell(ri, col_materia).value or "").strip()
+        if not nombre or not materia:
+            continue
+        est_id_hint = None
+        if col_id:
+            try:
+                est_id_hint = int(ws.cell(ri, col_id).value)
+            except Exception:
+                pass
+        filas.append({
+            "nombre":       nombre,
+            "materia":      materia,
+            "p1":           _fl(ws.cell(ri, col_p1).value)  if col_p1  else None,
+            "p2":           _fl(ws.cell(ri, col_p2).value)  if col_p2  else None,
+            "p3":           _fl(ws.cell(ri, col_p3).value)  if col_p3  else None,
+            "p4":           _fl(ws.cell(ri, col_p4).value)  if col_p4  else None,
+            "promedio":     _fl(ws.cell(ri, col_prom).value) if col_prom else None,
+            "est_id_hint":  est_id_hint,
+        })
+
+    if not filas:
+        return jsonify({"ok": False, "error": "El archivo no tiene filas de datos"}), 400
+
+    # ── Cargar estudiantes de BD para matching ────────────────────────────────
+    with sqlite3.connect(DATABASE, timeout=15) as conn:
+        conn.row_factory = sqlite3.Row
+        todos_est = conn.execute(
+            "SELECT id, nombre, apellido FROM estudiantes"
+        ).fetchall()
+
+    indice = {r["id"]: f"{r['nombre']} {r['apellido']}" for r in todos_est}
+
+    def _similar(a, b):
+        return SequenceMatcher(None, _norm(a), _norm(b)).ratio()
+
+    def _buscar_id(nombre_xlsx, id_hint=None):
+        if id_hint and id_hint in indice:
+            return id_hint
+        mejor_id, mejor_score = None, 0.0
+        for eid, nombre_bd in indice.items():
+            s = _similar(nombre_xlsx, nombre_bd)
+            if s > mejor_score:
+                mejor_score, mejor_id = s, eid
+        return mejor_id if mejor_score >= 0.82 else None
+
+    # ── Insertar / actualizar ─────────────────────────────────────────────────
+    insertados  = 0
+    actualizados = 0
+    sin_match   = []
+    sin_nota    = 0
+
+    with sqlite3.connect(DATABASE, timeout=15) as conn:
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA journal_mode=WAL")
+
+        for fila in filas:
+            # Ignorar filas donde todos los períodos están vacíos
+            vals = [v for v in [fila["p1"], fila["p2"], fila["p3"], fila["p4"]] if v]
+            if not vals and not fila["promedio"]:
+                sin_nota += 1
+                continue
+
+            est_id = _buscar_id(fila["nombre"], fila["est_id_hint"])
+            if not est_id:
+                sin_match.append(fila["nombre"])
+                continue
+
+            # Calcular promedio si no viene
+            prom = fila["promedio"]
+            if not prom and vals:
+                prom = round(sum(vals) / len(vals), 1)
+
+            existente = conn.execute(
+                "SELECT rowid FROM materias_calificaciones WHERE estudiante_id=? AND LOWER(materia)=LOWER(?)",
+                (est_id, fila["materia"])
+            ).fetchone()
+
+            if existente:
+                # Solo actualiza períodos vacíos (no sobreescribe lo que ya existe)
+                conn.execute("""
+                    UPDATE materias_calificaciones SET
+                        p1      = CASE WHEN (p1 IS NULL OR p1=0) AND ? IS NOT NULL THEN ? ELSE p1 END,
+                        p2      = CASE WHEN (p2 IS NULL OR p2=0) AND ? IS NOT NULL THEN ? ELSE p2 END,
+                        p3      = CASE WHEN (p3 IS NULL OR p3=0) AND ? IS NOT NULL THEN ? ELSE p3 END,
+                        p4      = CASE WHEN (p4 IS NULL OR p4=0) AND ? IS NOT NULL THEN ? ELSE p4 END,
+                        promedio= CASE WHEN (promedio IS NULL OR promedio=0) AND ? IS NOT NULL THEN ? ELSE promedio END
+                    WHERE estudiante_id=? AND LOWER(materia)=LOWER(?)
+                """, (
+                    fila["p1"], fila["p1"],
+                    fila["p2"], fila["p2"],
+                    fila["p3"], fila["p3"],
+                    fila["p4"], fila["p4"],
+                    prom, prom,
+                    est_id, fila["materia"]
+                ))
+                actualizados += 1
+            else:
+                conn.execute("""
+                    INSERT INTO materias_calificaciones
+                        (estudiante_id, materia, tipo, p1, p2, p3, p4, promedio, fecha_carga)
+                    VALUES (?, ?, 'académico', ?, ?, ?, ?, ?, date('now'))
+                """, (est_id, fila["materia"],
+                      fila["p1"], fila["p2"], fila["p3"], fila["p4"], prom))
+                insertados += 1
+
+        # ── Recalcular p_acad para los estudiantes afectados ─────────────────
+        ids_afectados = set()
+        for fila in filas:
+            eid = _buscar_id(fila["nombre"], fila["est_id_hint"])
+            if eid:
+                ids_afectados.add(eid)
+
+        for eid in ids_afectados:
+            proms = [
+                r["promedio"] for r in conn.execute(
+                    "SELECT promedio FROM materias_calificaciones WHERE estudiante_id=? AND promedio>0",
+                    (eid,)
+                ).fetchall()
+            ]
+            if proms:
+                p_acad_nuevo = round(sum(proms) / len(proms), 1)
+                conn.execute(
+                    "UPDATE estudiantes SET p_acad=?, tiene_notas=1 WHERE id=?",
+                    (p_acad_nuevo, eid)
+                )
+
+        conn.commit()
+
+    cache_bust()
+
+    return jsonify({
+        "ok":         True,
+        "insertados": insertados,
+        "actualizados": actualizados,
+        "sin_match":  sin_match[:30],
+        "sin_nota_vacios": sin_nota,
+        "mensaje": (
+            f"{insertados} materias nuevas cargadas, "
+            f"{actualizados} actualizadas. "
+            + (f"{len(sin_match)} nombres sin match en BD." if sin_match else "")
+        ),
+    })

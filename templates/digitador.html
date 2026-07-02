@@ -214,6 +214,47 @@ table{width:100%;border-collapse:collapse;font-size:.85rem}th{text-align:left;pa
       <div id="dig-detail-coord" style="margin-top:6px;font-size:.76rem;color:var(--muted);display:none;"></div>
     </div>
 
+    <!-- Fila 3: Carga por Listado Simple -->
+    <div style="background:rgba(16,124,16,.07);border:2px solid rgba(16,124,16,.35);border-radius:12px;padding:18px;margin-top:16px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+        <i class="fas fa-list-alt" style="color:#22c55e;font-size:18px;"></i>
+        <div>
+          <div style="font-size:.93rem;font-weight:700;color:#22c55e;">Carga por Listado Simple</div>
+          <div style="font-size:.78rem;color:var(--muted);">Descarga la plantilla, el coordinador la llena con las notas y tú la subes de vuelta.</div>
+        </div>
+      </div>
+
+      <!-- Descarga de plantilla -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center;">
+        <span style="font-size:.8rem;color:var(--muted);flex:0 0 auto;">Descargar plantilla para:</span>
+        <select id="pl-grado" style="font-size:.8rem;padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);">
+          <option value="">— Todos sin nota —</option>
+          <option value="1ERO">1ERO</option>
+          <option value="2DO">2DO</option>
+          <option value="3ERO">3ERO</option>
+          <option value="4TO">4TO</option>
+          <option value="5TO">5TO</option>
+          <option value="6TO">6TO</option>
+        </select>
+        <button onclick="descargarPlantilla()" style="font-size:.8rem;padding:6px 14px;border-radius:6px;border:none;background:#22c55e;color:#fff;cursor:pointer;font-weight:600;">
+          <i class="fas fa-download"></i> Descargar plantilla
+        </button>
+        <button onclick="descargarPlantillaTodos()" style="font-size:.78rem;padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;">
+          <i class="fas fa-download"></i> Todos los estudiantes
+        </button>
+      </div>
+
+      <!-- Upload del listado relleno -->
+      <label style="display:block;border:2px dashed rgba(34,197,94,.4);border-radius:8px;padding:18px;text-align:center;cursor:pointer;transition:border-color .15s;background:var(--surface);"
+             onmouseover="this.style.borderColor='#22c55e';this.style.background='rgba(34,197,94,.05)'" onmouseout="this.style.borderColor='rgba(34,197,94,.4)';this.style.background='var(--surface)'">
+        <input type="file" id="dig-file-listado" accept=".xlsx,.xls" style="display:none" onchange="digCargarListado(this)">
+        <div style="font-size:24px;margin-bottom:4px;">📤</div>
+        <div style="font-size:.87rem;font-weight:700;color:#22c55e;">Subir listado relleno</div>
+        <div style="font-size:.75rem;color:var(--muted);margin-top:3px;">El mismo archivo que descargaste, con las notas llenadas por el coordinador</div>
+      </label>
+      <div id="dig-status-listado" style="margin-top:10px;font-size:.82rem;padding:8px 12px;border-radius:6px;display:none;"></div>
+      <div id="dig-detail-listado" style="margin-top:6px;font-size:.76rem;color:var(--muted);display:none;"></div>
+    </div>
 
   </div>
 </div>
@@ -403,6 +444,42 @@ function digCargarCoord(input) {
       input.value = '';
     })
     .catch(function(e) { digSetStatus('dig-status-coord', '✗ Error: ' + e.message, true); });
+}
+
+function descargarPlantilla() {
+  var grado = document.getElementById('pl-grado').value;
+  var url = '/api/digitador/plantilla-notas' + (grado ? '?grado=' + encodeURIComponent(grado) : '');
+  window.location.href = url;
+}
+function descargarPlantillaTodos() {
+  window.location.href = '/api/digitador/plantilla-notas?todos=1';
+}
+
+function digCargarListado(input) {
+  if (!input.files[0]) return;
+  var fd = new FormData();
+  fd.append('file', input.files[0]);
+  digSetStatus('dig-status-listado', '⏳ Procesando listado...', false);
+  document.getElementById('dig-detail-listado').style.display = 'none';
+  fetch('/api/digitador/cargar-notas-listado', { method: 'POST', headers: { 'X-CSRF-Token': CS }, body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.ok) {
+        digSetStatus('dig-status-listado', '✓ ' + (d.mensaje || 'Notas cargadas'), false);
+        var det = document.getElementById('dig-detail-listado');
+        var lines = [];
+        if (d.sin_match && d.sin_match.length) {
+          lines.push('⚠ Sin match (' + d.sin_match.length + '): ' + d.sin_match.slice(0, 5).join(', ') + (d.sin_match.length > 5 ? '...' : ''));
+        }
+        if (d.sin_nota_vacios) lines.push('ℹ ' + d.sin_nota_vacios + ' filas vacías ignoradas');
+        if (lines.length) { det.textContent = lines.join(' | '); det.style.display = 'block'; }
+        LR();
+      } else {
+        digSetStatus('dig-status-listado', '✗ ' + (d.error || 'Error al cargar'), true);
+      }
+      input.value = '';
+    })
+    .catch(function(e) { digSetStatus('dig-status-listado', '✗ Error: ' + e.message, true); });
 }
 
 function digCargarRegistro(input) {
