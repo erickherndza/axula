@@ -1432,12 +1432,12 @@ a:hover { text-decoration: underline; }
   height: 3px;
   border-radius: 12px 12px 0 0;
 }
-.axula-metric-card.accent-teal::before   { background: linear-gradient(90deg, #04407F, #5B8AF7); }
-.axula-metric-card.accent-blue::before   { background: var(--ax-royal, #2661F6); }
-.axula-metric-card.accent-navy::before   { background: var(--ax-navy, #04407F); }
-.axula-metric-card.accent-success::before { background: linear-gradient(90deg, #2661F6, #5B8AF7); }
-.axula-metric-card.accent-danger::before  { background: var(--danger, #d13438); }
-.axula-metric-card.accent-warn::before    { background: var(--warn, #b76e00); }
+.axula-metric-card.accent-teal::before   { background: linear-gradient(90deg, #038C8C, #5BC8C8); }
+.axula-metric-card.accent-blue::before   { background: var(--ax-royal, #2454E0); }
+.axula-metric-card.accent-navy::before   { background: linear-gradient(90deg, #024959, #038C8C); }
+.axula-metric-card.accent-success::before { background: linear-gradient(90deg, #2E9E68, #7ECBA1); }
+.axula-metric-card.accent-danger::before  { background: var(--danger, #C9352B); }
+.axula-metric-card.accent-warn::before    { background: var(--warn, #C48A1E); }
 
 .axula-metric-label {
   font-size: 11px;
@@ -1473,7 +1473,7 @@ a:hover { text-decoration: underline; }
   display: none;
   font-size: 11px;
   font-weight: 700;
-  color: var(--ax-royal, #2661F6);
+  color: var(--accent, #038C8C);
   margin-left: auto;
   opacity: .9;
   white-space: nowrap;
@@ -1608,10 +1608,10 @@ a:hover { text-decoration: underline; }
   display: flex; align-items: center; justify-content: center;
   font-size: 17px;
 }
-[data-theme="light"] .axula-metric-card.accent-teal    .axula-metric-icon { background: rgba(38,97,246,.1);  color: #2661F6; }
-[data-theme="light"] .axula-metric-card.accent-blue    .axula-metric-icon { background: rgba(38,97,246,.12); color: #2661F6; }
-[data-theme="light"] .axula-metric-card.accent-navy    .axula-metric-icon { background: rgba(4,64,127,.1);   color: #04407F; }
-[data-theme="light"] .axula-metric-card.accent-success  .axula-metric-icon { background: rgba(38,97,246,.1); color: #2661F6; }
-[data-theme="light"] .axula-metric-card.accent-danger   .axula-metric-icon { background: rgba(192,43,43,.1); color: #C02B2B; }
-[data-theme="light"] .axula-metric-card.accent-warn     .axula-metric-icon { background: rgba(154,52,18,.1); color: #9A3412; }
+[data-theme="light"] .axula-metric-card.accent-teal    .axula-metric-icon { background: rgba(3,140,140,.12);  color: #038C8C; }
+[data-theme="light"] .axula-metric-card.accent-blue    .axula-metric-icon { background: rgba(36,84,224,.12); color: #2454E0; }
+[data-theme="light"] .axula-metric-card.accent-navy    .axula-metric-icon { background: rgba(2,73,89,.12);   color: #024959; }
+[data-theme="light"] .axula-metric-card.accent-success  .axula-metric-icon { background: rgba(46,158,104,.12); color: #2E9E68; }
+[data-theme="light"] .axula-metric-card.accent-danger   .axula-metric-icon { background: rgba(201,53,43,.12); color: #C9352B; }
+[data-theme="light"] .axula-metric-card.accent-warn     .axula-metric-icon { background: rgba(196,138,30,.12); color: #7A4A00; }
 [data-theme="dark"]  .axula-metric-icon { background: rgba(255,255,255,.07); color: rgba(255,255,255,.5); }

@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Axula — C.E. Benito Juárez</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <link rel="stylesheet" href="/static/theme.css">
 <link rel="stylesheet" href="/static/css/axula-design.css">
@@ -32,7 +33,7 @@
 *{box-sizing:border-box;margin:0;padding:0;}
 body{
   background:var(--bg);color:var(--text);
-  font-family:'DM Sans',sans-serif;
+  font-family:'Manrope','DM Sans',sans-serif;
   display:flex;flex-direction:column;
   min-height:100vh;
 }
@@ -712,7 +713,8 @@ td.td-nombre span{display:block;font-size:10px;color:var(--muted);font-weight:40
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Axula — C.E. Benito Juárez</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <link rel="stylesheet" href="/static/theme.css">
 <style>
@@ -722,7 +724,7 @@ td.td-nombre span{display:block;font-size:10px;color:var(--muted);font-weight:40
 *{box-sizing:border-box;margin:0;padding:0;}
 body{
   background:var(--bg);color:var(--text);
-  font-family:'DM Sans',sans-serif;
+  font-family:'Manrope','DM Sans',sans-serif;
   display:flex;flex-direction:column;
   min-height:100vh;
 }
@@ -1512,23 +1514,35 @@ td.td-nombre span{display:block;font-size:10px;color:var(--muted);font-weight:40
        text-decoration:none;transition:all .18s;box-shadow:0 2px 8px rgba(4,44,83,.15);}
 .wc-go:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(4,44,83,.2);opacity:.92;text-decoration:none;color:#fff;}
 
-/* ── Light mode overrides ── */
-[data-theme="light"] .wc-kpi{box-shadow:0 1px 4px rgba(1,40,64,.06)}
-[data-theme="light"] .kpi-danger .wc-kv{color:#B91C1C}
-[data-theme="light"] .kpi-danger::before{background:#B91C1C}
-[data-theme="light"] .kpi-warn .wc-kv{color:#92400E}
-[data-theme="light"] .kpi-warn::before{background:#92400E}
-[data-theme="light"] .kpi-accent .wc-kv{color:#042C53}
-[data-theme="light"] .kpi-accent::before{background:#037F8C}
-[data-theme="light"] .kpi-ok .wc-kv{color:#042C53}
-[data-theme="light"] .kpi-ok::before{background:#042C53}
-[data-theme="light"] .kpi-info .wc-kv{color:#374B54}
-[data-theme="light"] .wc-alert{border-left-color:#B91C1C}
-[data-theme="light"] .wc-alert-icon,.wc-alert .wc-alert-txt strong{color:#B91C1C}
-[data-theme="light"] .wc-card{background:#fff;border-color:#EAE9E8;box-shadow:0 1px 4px rgba(1,40,64,.06);}
-[data-theme="light"] .wc-card:hover{box-shadow:0 8px 28px rgba(4,44,83,.12);border-color:transparent;}
-[data-theme="light"] .wc-go{background:#185FA5;color:#fff;}
-[data-theme="light"] .wc-go:hover{background:#042C53;}
+/* ── Light mode overrides — warm palette ── */
+[data-theme="light"] .wc-kpi{background:#fff !important;border-color:#E8E1D8 !important;box-shadow:0 1px 4px rgba(32,28,22,.07) !important;}
+[data-theme="light"] .kpi-danger .wc-kv{color:#C9352B !important;}
+[data-theme="light"] .kpi-danger::before{background:#C9352B !important;}
+[data-theme="light"] .kpi-warn .wc-kv{color:#7A4A00 !important;}
+[data-theme="light"] .kpi-warn::before{background:#C48A1E !important;}
+[data-theme="light"] .kpi-accent .wc-kv{color:#024959 !important;}
+[data-theme="light"] .kpi-accent::before{background:#038C8C !important;}
+[data-theme="light"] .kpi-ok .wc-kv{color:#024959 !important;}
+[data-theme="light"] .kpi-ok::before{background:#024959 !important;}
+[data-theme="light"] .kpi-info .wc-kv{color:#6B6355 !important;}
+[data-theme="light"] .wc-alert{background:#FCEAE8 !important;border:1px solid #F5C5C0 !important;border-left:3px solid #C9352B !important;}
+[data-theme="light"] .wc-alert-icon,[data-theme="light"] .wc-alert .wc-alert-txt strong{color:#C9352B !important;}
+[data-theme="light"] .wc-card{background:#fff !important;border-color:#E8E1D8 !important;box-shadow:0 1px 4px rgba(32,28,22,.07) !important;}
+[data-theme="light"] .wc-card:hover{box-shadow:0 8px 28px rgba(32,28,22,.13) !important;border-color:rgba(3,140,140,.25) !important;}
+[data-theme="light"] .wc-ci.ci-blue   {background:#E8F5F5 !important;color:#038C8C !important;}
+[data-theme="light"] .wc-ci.ci-teal   {background:#E8F5F5 !important;color:#024959 !important;}
+[data-theme="light"] .wc-ci.ci-orange {background:#FEF3DC !important;color:#7A4A00 !important;}
+[data-theme="light"] .wc-ci.ci-purple {background:#F0E8FF !important;color:#6B3FA0 !important;}
+[data-theme="light"] .wc-ci.ci-green  {background:#EBF7F2 !important;color:#1B6B45 !important;}
+[data-theme="light"] .wc-ci.ci-navy   {background:#E8F5F5 !important;color:#024959 !important;}
+[data-theme="light"] .wc-ci.ci-red    {background:#FCEAE8 !important;color:#962922 !important;}
+[data-theme="light"] .wc-ci.ci-slate  {background:#F2EDE6 !important;color:#6B6355 !important;}
+[data-theme="light"] .wc-ci.ci-pink   {background:#FEE8F0 !important;color:#9D174D !important;}
+[data-theme="light"] .wc-go{background:#038C8C !important;color:#fff !important;}
+[data-theme="light"] .wc-go:hover{background:#024959 !important;}
+[data-theme="light"] .wc-date{background:#fff !important;border-color:#E8E1D8 !important;box-shadow:0 1px 4px rgba(32,28,22,.06) !important;}
+[data-theme="light"] .wc-greeting span{color:#038C8C !important;}
+[data-theme="light"] .wc-rol{background:#F0EBE3 !important;border-color:#E8E1D8 !important;color:#6B6355 !important;}
 
 
 
@@ -2223,20 +2237,23 @@ tr:hover td{background:var(--hover)}
         </div>
       </div>
 
-      <!-- ALERT STRIP (solo si hay alertas críticas) -->
-      <div class="wc-alert" id="wc-alert-strip">
-        <i class="fas fa-triangle-exclamation wc-alert-icon"></i>
-        <div class="wc-alert-txt">
-          <strong id="wc-alert-txt">Hay estudiantes en alerta crítica.</strong>
-          Requieren atención prioritaria.
-        </div>
-        <a href="javascript:void(0)" onclick="irAListado()" class="wc-alert-link">Ver listado →</a>
-      </div>
+      <!-- PRIORITY ZONE: Alert + KPIs en card contenedora -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:22px;margin-bottom:28px;box-shadow:0 1px 4px rgba(32,28,22,.05);">
 
-      <!-- MÉTRICAS INSTITUCIONALES — Axula Design System -->
-      <div class="axula-section-head">
-        <span class="axula-section-title">Resumen del período</span>
-      </div>
+        <!-- ALERT STRIP (solo si hay alertas críticas) -->
+        <div class="wc-alert" id="wc-alert-strip" style="margin-bottom:18px;">
+          <i class="fas fa-triangle-exclamation wc-alert-icon"></i>
+          <div class="wc-alert-txt">
+            <strong id="wc-alert-txt">Hay estudiantes en alerta crítica.</strong>
+            Requieren atención prioritaria según Ord.04-2023.
+          </div>
+          <a href="javascript:void(0)" onclick="irAListado()" class="wc-alert-link" style="display:flex;align-items:center;gap:4px;">Ver listado <i class="fas fa-arrow-right" style="font-size:10px;"></i></a>
+        </div>
+
+        <!-- MÉTRICAS INSTITUCIONALES — Axula Design System -->
+        <div class="axula-section-head" style="margin-bottom:14px;">
+          <span class="axula-section-title">Resumen del período</span>
+        </div>
 
       <div class="axula-metrics-grid" id="wc-kpis" style="margin-bottom:24px">
         <div class="axula-metric-card accent-teal axula-metric-clickable"
@@ -2306,7 +2323,8 @@ tr:hover td{background:var(--hover)}
             <span class="axula-metric-cta">Ver por mención →</span>
           </div>
         </div>
-      </div>
+      </div><!-- /axula-metrics-grid -->
+      </div><!-- /priority-zone card -->
 
       <!-- ACCIONES -->
       <div class="wc-sec-label">
