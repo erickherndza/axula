@@ -35,9 +35,6 @@ Power BI light mode · Teal: #038C8C, #024959, #012840
 - Generación PDF/Excel
 - Registro de estudiantes MVP
 - **Carga masiva de notas desde PDF** — scripts/cargar_notas_pdf.py (2026-06-27)
-- **Carga de notas desde Excel del Coordinador** — core/excel_notas.py + /api/digitador/cargar-notas-coordinador (2026-06-27)
-- **Módulo de Promoción MINERD** — /api/coordinador/promocion-preview + promocion-ejecutar + tabla promociones (2026-06-27)
-- **Row-Level Security (RLS)** — core/rls.py, 10 endpoints protegidos por ciclo/rol (2026-06-27)
 
 ## Datos cargados en BD (año escolar 2025-2026)
 
@@ -70,7 +67,7 @@ Power BI light mode · Teal: #038C8C, #024959, #012840
 
 | Usuario | Password | Rol |
 |---------|----------|-----|
-| directora | Admin2026! | Directora |
+| directora | 1 | Directora |
 | admin | Admin2026! | Coordinador General |
 | secre01 | Secre2026! | Secretaria Docente |
 | kerlynf | Digit2026! | Digitador |
@@ -89,201 +86,33 @@ Power BI light mode · Teal: #038C8C, #024959, #012840
 
 python3 -c "import app; print('OK')"
 
-## Archivos clave nuevos (2026-06-27)
+## Design System (actualizado 2026-07-02)
 
-| Archivo | Función |
-|---------|---------|
-| `core/excel_notas.py` | Parser .xlsm del coordinador — detecta materia/grado/sección/mención por hoja |
-| `core/rls.py` | Row-Level Security — `verificar_acceso_estudiante()`, `sql_filtro_grado()` |
-| `scripts/cargar_notas_pdf.py` | Carga masiva notas desde PDFs (ya ejecutado) |
-| `core/curriculo.py` | Dispatch unificado de currículo: `get_asignatura(mencion, nombre)`, `formatear_contexto(mencion, nombre)` |
-
-## Parser Excel del Coordinador — core/excel_notas.py
-
-Acepta archivos `XGRADO. GRADO - MATERIA 25-26.xlsm` del coordinador.
-- Cada hoja = una sección/mención (ej: `CF 4TO A MÚSICA`)
-- Detecta PC1-PC4 y CF aunque estén en filas de celdas combinadas (fila 8 ≠ header row)
-- Upload desde dashboard digitador: tarjeta morada "Registro del Coordinador"
-- Endpoint: `POST /api/digitador/cargar-notas-coordinador`
-
-## Módulo de Promoción — Ordenanza 04-2023 MINERD
-
-- 0 reprobadas → PROMOVIDO | 1–2 → CONDICIONADO | 3+ → NO PROMOVIDO
-- `GET /api/coordinador/promocion-preview?grado=4TO` — calcula estados sin modificar BD
-- `POST /api/coordinador/promocion-ejecutar` — mueve estudiantes al siguiente grado
-- Tabla `promociones` en BD con UNIQUE(estudiante_id, anio_escolar)
-- Panel en coordinador.html al final de la página
-
-## Row-Level Security — core/rls.py
-
-Coordinador primer ciclo → solo 1ERO/2DO/3ERO
-Coordinador segundo ciclo → solo 4TO/5TO/6TO
-Padres → solo sus hijos vinculados
-Intentos denegados → log `[RLS] DENEGADO rol=X uid=Y → estudiante Z`
-
-Endpoints protegidos: resumen_calificaciones, boletin_estudiante, boletin_view, boletin_pdf,
-get_recuperaciones, resumen_asistencia, get_asistencia_mensual_est,
-get_evaluaciones_narrativas, casos_del_estudiante, historial_por_estudiante (expediente)
-
-### RLS para profesores — filtro de materias (2026-06-29)
-
-`filtrar_materias_profesor(materias_list)` en `core/rls.py`:
-- Recibe cualquier lista de dicts con clave `materia`
-- Si el usuario en sesión es `profesor`, filtra dejando solo sus asignaturas asignadas
-- Para cualquier otro rol devuelve la lista intacta (sin cambio de comportamiento)
-- Aplicado en: `get_materias_estudiante`, `get_indicadores_materias`, `get_progreso_estudiante`,
-  `resumen_calificaciones`, `boletin_estudiante`
-
-### Separador de asignaturas — PIPE `|` (2026-06-29)
-
-El campo `asignaturas` (y `materia`) usa `|` como separador, NO coma.
-Razón: materias como "Lenguaje Visual, Dibujo y Creación de Personajes" contienen comas.
-
-Ejemplo correcto en BD: `Fotografía|Lenguaje Visual, Dibujo y Creación de Personajes|Diseño Básico y Expresión Visual`
-
-Lugares que hacen split de `asignaturas` — TODOS usan `|`:
-- `core/rls.py` — `filtrar_materias_profesor`
-- `core/helpers.py` — `_validar_materia_profesor`
-- `routes/profesor.py` — filtro de plan curricular
-- `routes/usuarios.py` — importación masiva (extrae primera materia para campo legacy `materia`)
-- `routes/config.py` — importación desde Excel
-- `templates/usuarios.html` — `_setChecks` / `_getMateriasSeleccionadas`
-- `templates/index.html` — ídem (tiene su propio duplicado)
-- `templates/mi_perfil.html` — display de pills
-
-**Nunca usar coma como separador de `asignaturas`.**
-
-`_normalizar_clave_materia(nombre)` en `core/helpers.py`:
-- Strip acentos, lowercase, sinonimos (ej: "FIHR" → "formacion integral humana y religiosa")
-- Centralizada aquí (antes vivía en `routes/estudiantes.py`) — importar desde `core.helpers`
-- NO importar desde `routes/estudiantes` — riesgo de circular import
-
-**Fallback en `listar_calificaciones()`** (`routes/calificaciones.py`):
-- Si el profesor no tiene entradas en `calificaciones_periodo` (carga manual), busca en
-  `materias_calificaciones` (carga masiva desde PDF)
-- Soluciona que profesores como Aybelis Montaño (Matemática) vean sus datos sin haber
-  cargado notas manuales
-
-**`perfil_bp` NO está registrado** — `routes/perfil.py` tiene duplicados de rutas que nunca
-ejecutan. El endpoint activo de `get_progreso_estudiante` es el de `routes/estudiantes.py`.
-No tocar `perfil.py` hasta decidir si se elimina o se registra el blueprint.
-
-## Producción — Render
-
-- URL: https://axula.onrender.com
-- Plan: Starter $7/mes + disco persistente 1 GB ($0.25/mes)
-- DB en disco: `/data/database.db` — sobrevive deploys
-- Gunicorn: `--workers 2 --threads 4 --preload`
-- Deploy: `git push origin main` → Render redeploya automático
-
-### Variables de entorno en Render (configurar en dashboard)
-
-| Variable | Valor |
-|----------|-------|
-| `SECRET_KEY` | generado por Render |
-| `DATABASE_PATH` | `/data/database.db` |
-| `FOTOS_DIR` | `/data/fotos` |
-| `LOG_DIR` | `/data/logs` |
-| `SESSION_COOKIE_SECURE` | `true` |
-| `GROQ_API_KEY` | `gsk_...` (clave real en dashboard) |
-
-### Si la DB se pierde en producción — protocolo de restauración
-
-```bash
-# 1. En Mac — subir la BD local
-cd /Users/erickhernandez/elearning && .venv/bin/python3 upload_db.py
-
-# 2. En Render Shell — mover al disco persistente
-cp /tmp/database_pending.db /data/database.db
-rm -f /data/database.db-shm /data/database.db-wal
-
-# 3. Render dashboard → Manual Deploy
-
-# 4. Render Shell — resetear password admin
-python3
-from core.database import get_db
-from core.auth import _hash
-conn = get_db().__enter__()
-conn.execute("UPDATE usuarios SET password=? WHERE username='admin'", (_hash('Admin2026!'),))
-conn.commit()
-exit()
-```
-
-### Lecciones aprendidas del deploy (2026-06-28)
-
-- `--preload` en gunicorn es obligatorio con SQLite para evitar race condition en init
-- `constants.py` auto-detecta entorno: si `/data` existe → usa `/data/database.db`, si no → `database.db`
-- Env vars en Render dashboard: KEY va en el campo KEY, VALUE va en el campo VALUE (no confundir con Secret Files)
-- `kill -HUP gunicorn` NO funciona con `--preload` para recargar DB — usar Manual Deploy
-- `upload_db.py` guarda en `/tmp/` (siempre escribible), luego `cp` a `/data/`
+- Fuente: **Manrope** (primaria) → DM Sans / Syne (fallback) · DM Mono (mono)
+- Light mode: paleta **warm neutral** — bg `#F7F4EF`, surface `#FFFFFF`, text `#201C16`
+- Accent: **Teal Axula** `#038C8C` (light) / Royal Blue `#2661F6` (dark mode se mantiene)
+- Borders light: `#E8E1D8` (cálido, no azul)
+- Hover light: `#F0EBE3`
+- Semantic: danger `#C9352B`, warn `#C48A1E`, success `#2E9E68`
+- KPI cards: top border gradient teal/verde/coral/ámbar según tipo
+- Todos los overrides centralizados en `static/theme.css` (al final del archivo)
 
 ## Log de sesiones
 
-### 2026-06-29 (sesión 7 — Fix separador asignaturas: coma → pipe)
-- **Bug:** materia "Lenguaje Visual, Dibujo y Creación de Personajes" tiene coma interna → `.split(",")` la partía en 2 piezas rotas
-- **Síntoma:** directora edita asignaturas del profesor, guarda, pero los cambios no se ven en perfil ni en filtros RLS
-- **Fix:** separador cambiado de `,` a `|` en 8 archivos (rls.py, helpers.py, profesor.py, usuarios.py, config.py, index.html, usuarios.html, mi_perfil.html)
-- **BD local** migrada: usuarios id=3 (Erick) e id=12 (prof_artes_qa) al formato `|`
-- **BD producción** migrada via Render Shell con script `/tmp/fix_asig.py`
-- Erick (id=3) tiene: `Fotografía|Lenguaje Visual, Dibujo y Creación de Personajes|Diseño Básico y Expresión Visual`
-- Commit `b34d3b9` → `git push origin main` ✅ — Render redeploya automático
-- QA ejecutado — encontró y se corrigieron `usuarios.py:238` y `config.py:310` (splits adicionales)
+### 2026-07-02
+- Fix KPIs del listado (470 alumnos con materias_calificaciones pero p_acad=0)
+  → script: scripts/recalcular_kpis.py --commit (correr en Render shell)
+- Fix notas vacías (34 filas con promedio=0 y p1>0) → recalculadas
+- Fix prom_modulos música/teatro/artes (accent-safe LIKE patterns en SQL)
+- Feature: "Carga por Listado Simple" en digitador.html — Excel template + upload fuzzy
+  - GET /api/digitador/plantilla-notas → Excel con alumnos sin notas
+  - POST /api/digitador/cargar-notas-listado → fuzzy match ≥0.82, non-destructive
+- Rediseño visual completo (paleta warm neutral + Manrope):
+  - theme.css: light mode → warm neutral, accent teal, Manrope global
+  - axula-design.css: KPI card borders → colores semánticos
+  - index.html: KPI zone en card contenedora, alert strip coral, Manrope
 
-### 2026-06-29 (sesión 6 — RLS profesor: filtro de materias + fallback PDF)
-- **Middleware centralizado**: `filtrar_materias_profesor()` en `core/rls.py`
-  - Un profesor solo ve sus propias materias en perfil de estudiante, progreso, boletín
-  - Reemplaza filtros inline dispersos en 5 endpoints
-- **`_normalizar_clave_materia()`** movida a `core/helpers.py` (eliminado circular import)
-- **Fallback a `materias_calificaciones`** en `listar_calificaciones()`:
-  - Profesores sin entradas manuales ahora ven datos cargados desde PDF
-  - Fix para Aybelis Montaño (Matemática): 711 registros P1 ahora visibles
-- **Bug detectado — no corregido**: `perfil_bp` no está registrado en `routes/__init__.py`
-  - `routes/perfil.py` tiene rutas duplicadas que nunca ejecutan
-  - Pendiente: decidir si se elimina perfil.py o se registra el blueprint
-- Healthcheck producción: `/health` ✅ `{"status":"ok"}` · `/login` ✅ HTTP 200
-- Push a producción: commit `9159f0c` → `git push origin main` ✅
-
-### 2026-06-28 (sesión 5 — Email recovery + limpieza de seguridad)
-- **Email recovery funcionando** en producción — Gmail SMTP configurado en Render
-- `mail.educacion.edu.do` agregado a `DOMINIOS_INSTITUCIONALES` en `core/constants.py`
-- SMTP: Gmail como remitente ("Axula BJ"), entrega a cualquier dominio incluyendo `@mail.educacion.edu.do`
-- MX de `educacion.edu.do` = Microsoft 365 (`educacion-edu-do.mail.protection.outlook.com`) — no se usa como SMTP por riesgo de AUTH desactivado
-- **Seguridad:** eliminado `/db-restore` endpoint temporal + `import hmac` de `app.py`
-- **Seguridad:** eliminado `upload_db.py` — script one-shot ya ejecutado
-- Password `directora` reseteado en producción via Render Shell (`Admin2026!`)
-- Login `directora` verificado y funcionando en https://axula.onrender.com
-
-### 2026-06-28 (sesión 4 — Deploy a producción en Render)
-- **Deploy completo** a https://axula.onrender.com — app en producción
-- Disco persistente `/data` configurado — DB sobrevive redeploys
-- Transferencia BD local → producción via `upload_db.py` (httpx multipart, 6.9 MB)
-- Fix: `core/constants.py` auto-detecta `/data` sin depender de env var DATABASE_PATH
-- Fix: `gunicorn --preload` para evitar race condition SQLite con múltiples workers
-- Fix Excel primer ciclo: regex `(?:\s+(.+))?` — mención opcional para 1ERO–3ERO
-- KPI dashboard cards clickables con filtro por nivel (bajo/básico/destacado)
-- Header perfil.html: 11 botones → dropdown "Acciones ▼" compacto
-- **Groq/IA funcionando** en producción — GROQ_API_KEY configurada en Render dashboard
-
-### 2026-06-27 (sesión 3 — Ponytail audit: limpieza + unificación currículo)
-- **Ponytail instalado**: npm + skill files en `.claude/commands/` y `.claude/skills/`
-- **Archivos eliminados** (~7,000 líneas):
-  - `new/app.py` (6,613 líneas — monolito abandonado pre-modularización)
-  - `app_monolito_backup.py`, `fix_plan.md`, `fixes_applied.md`, `qa_report_auto.md`, `verificar.py`
-- **Currículo unificado**: `core/curriculo.py` — dispatch único para 4 menciones
-  - `get_asignatura(mencion, nombre)` y `formatear_contexto(mencion, nombre)` reemplazan 4 funciones duplicadas
-  - `planificacion.py`: eliminados 2 bloques if/elif + 5 lazy imports dentro de funciones
-- Todos los cambios verificados con `python3 -c "import app; print('OK')"` ✓
-
-### 2026-06-27 (sesión 2 — Excel coordinador + Promoción + Seguridad)
-- Fix parser `core/excel_notas.py`: CF estaba en fila 8 (celda combinada), no en header row → escaneo multi-fila
-- Tarjeta "Registro del Coordinador" (morada) en digitador.html — separada visualmente de Boletín Oficial
-- Fix detección en `/api/cargar-boletin`: si el archivo es formato coordinador, da mensaje específico
-- **Módulo Promoción MINERD**: tabla `promociones` + 2 endpoints + panel en coordinador.html
-- **RLS completo**: `core/rls.py` aplicado a 10 endpoints críticos
-- **CSRF hardening**: `@csrf_protected` en 5 endpoints de usuarios + reset-password + recovery/link
-- Audit log en intento no autorizado a recovery/link
-
-### 2026-06-27 (sesión 1)
+### 2026-06-27
 - Carga masiva de notas 2025-2026 desde 6 PDFs (1ERO–6TO)
 - Script: scripts/cargar_notas_pdf.py — pypdf, regex, fuzzy matching
 - 7,493 registros insertados en materias_calificaciones
