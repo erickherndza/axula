@@ -3830,7 +3830,8 @@ function renderCuadernoPerfil(entradas) {
     if (cntEl) cntEl.textContent = entradas.length ? entradas.length + ' entrada' + (entradas.length > 1 ? 's' : '') : '';
 
     if (!entradas || !entradas.length) {
-        cont.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:12px;"><div style="font-size:24px;margin-bottom:8px;">📓</div>Sin entradas en el cuaderno anecdótico.</div>';
+        var secCA = document.getElementById('seccion-cuaderno');
+        if (secCA) secCA.style.display = 'none';
         return;
     }
 
@@ -3990,7 +3991,8 @@ function renderAsistenciaMensual(meses) {
     if (!cont) return;
     var MESES_NAMES = ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
     if (!meses || !meses.length) {
-        cont.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:12px;"><div style="font-size:24px;margin-bottom:8px;">📅</div>Sin registros de asistencia mensual validados.</div>';
+        var secAsist = document.getElementById('seccion-asistencia-mensual');
+        if (secAsist) secAsist.style.display = 'none';
         return;
     }
     // Agrupar por materia
@@ -4032,7 +4034,8 @@ function renderNarrativasPerfil(narrs) {
     var cont = document.getElementById('narrativas-perfil-cont');
     if (!cont) return;
     if (!narrs || !narrs.length) {
-        cont.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:12px;"><div style="font-size:24px;margin-bottom:8px;">✍️</div>Sin evaluaciones narrativas registradas.</div>';
+        var secNarr = document.getElementById('seccion-narrativas');
+        if (secNarr) secNarr.style.display = 'none';
         return;
     }
     cont.innerHTML = narrs.map(function(n){
@@ -4055,9 +4058,8 @@ async function cargarCasosPerfil() {
         var r    = await fetch('/api/casos/estudiante/' + _PERFIL_EST_ID);
         var data = await r.json();
         if (!data.length) {
-            cont.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:12px;">' +
-                '<i class="fas fa-check-circle" style="color:var(--success);margin-bottom:6px;display:block;font-size:18px"></i>' +
-                'Sin casos registrados para este estudiante.</div>';
+            var secCasos = document.getElementById('seccion-casos');
+            if (secCasos) secCasos.style.display = 'none';
             return;
         }
         var TIPO_EMOJI = {asistencia:'📅',conducta:'⚠️',academico:'📚',familiar:'🏠',emocional:'💛'};
@@ -4115,9 +4117,8 @@ async function cargarArchivosPerfil() {
         }
 
         if (!lista.length) {
-            cont.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:12px;">' +
-                '<i class="fas fa-folder-open" style="font-size:18px;margin-bottom:6px;display:block;opacity:.4"></i>' +
-                'Sin documentos vinculados a este estudiante.</div>';
+            var secArchivos = document.getElementById('seccion-archivos-est');
+            if (secArchivos) secArchivos.style.display = 'none';
             return;
         }
 
