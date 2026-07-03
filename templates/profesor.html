@@ -286,7 +286,9 @@ main{max-width:1200px;margin:0 auto;padding:28px 24px;}
   .logo{font-size:13px;flex-shrink:0;}
   .logo div:last-child{display:none;}     /* oculta subtítulo "C.E. Benito Juárez" */
   .nav-badge{display:none;}
-  .nav-link{display:none;}                /* oculta botón Dashboard */
+  /* Dashboard: solo icono en mobile */
+  .nav-link span.nav-link-txt{display:none;}
+  .nav-link{padding:6px 9px;}
   .nav-r{gap:5px;flex-shrink:0;min-width:0;}
   .nav-user{padding:4px 8px;gap:5px;min-width:0;}
   .nav-user-name{
@@ -551,7 +553,7 @@ main{max-width:1200px;margin:0 auto;padding:28px 24px;}
   </a>
   <span class="nav-badge"><i class="fas fa-chalkboard-teacher" style="margin-right:4px;"></i>Portal Docente</span>
   <div class="nav-r">
-    <a href="/" class="nav-link"><i class="fas fa-table-columns"></i> Dashboard</a>
+    <a href="/" class="nav-link"><i class="fas fa-table-columns"></i><span class="nav-link-txt"> Dashboard</span></a>
     {% if profesor %}
     <div class="nav-user">
       <div class="nav-user-av">{{ (profesor.nombre or '?')[0].upper() }}</div>
