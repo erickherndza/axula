@@ -270,13 +270,108 @@ main{max-width:1200px;margin:0 auto;padding:28px 24px;}
 .est-row.implicito-p{border-left:3px solid rgba(26,107,60,.4);}
 .est-row.implicito-a{border-left:3px solid rgba(192,43,43,.4);}
 
+/* ═══════════════════════════════════════════════════
+   MOBILE — ≤640px
+   ═══════════════════════════════════════════════════ */
 @media(max-width:640px){
+
+  /* Reset overflow global */
+  html,body{overflow-x:hidden;width:100%;}
+
+  /* ── NAV ── */
+  nav{
+    padding:0 12px;gap:6px;height:50px;
+    flex-wrap:nowrap;overflow:hidden;
+  }
+  .logo{font-size:13px;flex-shrink:0;}
+  .logo div:last-child{display:none;}     /* oculta subtítulo "C.E. Benito Juárez" */
+  .nav-badge{display:none;}
+  .nav-link{display:none;}                /* oculta botón Dashboard */
+  .nav-r{gap:5px;flex-shrink:0;min-width:0;}
+  .nav-user{padding:4px 8px;gap:5px;min-width:0;}
+  .nav-user-name{
+    font-size:10px;max-width:80px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .nav-user-role{display:none;}
+  .mt-tbtn{padding:4px 7px;font-size:11px;}
+
+  /* ── MAIN ── */
+  main{padding:14px 12px;}
+
+  /* ── HERO ── */
+  .prof-hero{
+    flex-direction:column;align-items:flex-start;
+    gap:12px;padding:16px;min-width:0;
+  }
+  .prof-hero > div{min-width:0;width:100%;}
+  .prof-avatar{width:44px;height:44px;font-size:18px;border-radius:12px;flex-shrink:0;}
+  .prof-name{font-size:16px;word-break:break-word;}
+  .prof-meta{gap:5px;}
+  .pill{font-size:9px;padding:3px 8px;word-break:break-word;max-width:100%;}
+  .hero-meta-right{
+    width:100%;margin-left:0;text-align:left;
+    padding:8px 10px;font-size:10px;
+  }
+
+  /* ── QUICK GRID ── */
+  .qgrid{grid-template-columns:repeat(2,1fr);gap:10px;}
+  .qcard{padding:14px 12px;}
+  .qcard-icon{width:36px;height:36px;font-size:15px;}
+  .qcard-title{font-size:12px;}
+  .qcard-desc{font-size:10px;}
+
+  /* ── TABS ── */
+  .tabs{overflow-x:auto;-webkit-overflow-scrolling:touch;gap:0;}
+  .tab-btn{padding:8px 12px;font-size:11px;gap:4px;}
+  .tab-btn i{display:none;}               /* oculta iconos en tabs para ahorrar espacio */
+
+  /* ── CARDS ── */
+  .card{padding:14px;border-radius:12px;}
+  .card-title{font-size:10px;}
+
+  /* ── PASE DE LISTA — controles ── */
+  .lista-controls{
+    display:grid;grid-template-columns:1fr 1fr;
+    gap:8px;
+  }
+  .lista-controls .fld{width:100%;}
+  .lista-controls .fld input,
+  .lista-controls .fld select{font-size:12px;padding:8px 10px;width:100%;}
+  /* Botones de acción → fila completa abajo */
+  .lista-controls > div:last-child{
+    grid-column:1/-1;display:flex;gap:8px;
+  }
+  .lista-controls > div:last-child .btn-sec,
+  .lista-controls > div:last-child .btn-primary{
+    flex:1;justify-content:center;
+  }
+
+  /* ── FILAS DE ESTUDIANTES ── */
   .obs-inp{display:none;}
   .est-row{padding:9px 10px;gap:8px;}
-  .asist-btn{padding:6px 10px;font-size:12px;}
-  .lista-controls .fld label{font-size:10px;}
+  .asist-btn{padding:7px 11px;font-size:12px;}
   .est-nombre{font-size:11px;}
-  .est-ini{width:28px;height:28px;font-size:11px;}
+  .est-ini{width:28px;height:28px;font-size:11px;border-radius:7px;}
+  .est-curso{display:none;}               /* oculta grado/sección en la fila (ya está en el selector) */
+
+  /* ── MODO PASE TOGGLE ── */
+  .modo-pase-bar{flex-wrap:wrap;gap:6px;}
+  #modo-hint{width:100%;text-align:center;margin-left:0;}
+
+  /* ── CONTADORES ── */
+  #cnt-sin{display:none;}                 /* oculta "sin marcar" — redundante con el resto */
+
+  /* ── STAT GRID ── */
+  .stat-grid{grid-template-columns:repeat(2,1fr);}
+
+  /* ── TABLAS — scroll horizontal ── */
+  .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .hist-table,.plan-table{min-width:480px;}
+
+  /* ── ALERTA NORMATIVA ── */
+  .alerta-minerd{padding:10px 12px;}
+  .alerta-minerd .al-text{font-size:10px;}
 }
 
 /* ── STAT CARDS ── */
@@ -959,6 +1054,7 @@ main{max-width:1200px;margin:0 auto;padding:28px 24px;}
       <div class="card-title"><i class="fas fa-calendar-days"></i>
         {{ profesor.grado or '4to' }} Grado — Asignaturas y Horas Semanales
       </div>
+      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
       <table class="plan-table">
         <thead>
           <tr>
@@ -995,6 +1091,7 @@ main{max-width:1200px;margin:0 auto;padding:28px 24px;}
           </tr>
         </tbody>
       </table>
+      </div>
 
       <div style="margin-top:20px;padding:14px;background:#111;border-radius:10px;
                   border-left:3px solid var(--warn);">
