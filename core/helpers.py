@@ -68,6 +68,9 @@ __all__ = [
     "analizar_perfil_maestro",
     "calcular_promedio_modulos",
     "calcular_proyeccion",
+    "calcular_motor_conductual",
+    "_semaforo_color",
+    "_semaforo_emoji",
     "limpiar_v",
     "_normalizar_materia",
 ]
@@ -1791,6 +1794,113 @@ def _calcular_indice_conductual(conn, est_id):
             score = max(0.0, score - 4)
 
     return round(max(0.0, min(100.0, score)), 1)
+
+
+# ── MOTOR CONDUCTUAL FASE 1 ──────────────────────────────────────────────────
+
+def calcular_motor_conductual(conn, est_id):
+    """
+    Motor conductual Fase 1 — semáforo de riesgo estudiantil.
+
+    Fórmula base: 40% notas + 35% asistencia + 25% balance_tags
+    Si asistencia no disponible → redistribuye a 62% notas + 38% tags.
+
+    Semáforo:
+      VERDE   > 70
+      AMARILLO  50-70
+      ROJO    < 50
+
+    Retorna dict:
+      { score, semaforo, comp_notas, comp_asistencia, comp_tags,
+        tiene_asistencia, n_positivos, n_negativos }
+    """
+    # ── 1. Componente notas (p_acad de materias_calificaciones) ─────────────
+    row = conn.execute(
+        "SELECT p_acad, asistencia FROM estudiantes WHERE id=?", (est_id,)
+    ).fetchone()
+    p_acad      = float(row["p_acad"] or 0) if row else 0.0
+    asist_est   = float(row["asistencia"] or 0) if row else 0.0
+
+    # Intentar asistencia mensual real (más autoritativa)
+    rows_am = conn.execute(
+        "SELECT porcentaje FROM asistencia_mensual"
+        " WHERE estudiante_id=? AND porcentaje IS NOT NULL AND porcentaje > 0",
+        (est_id,)
+    ).fetchall()
+    if rows_am:
+        pcts = [float(r[0]) for r in rows_am]
+        asist_est = sum(pcts) / len(pcts)
+
+    tiene_asistencia = asist_est > 0
+
+    # ── 2. Componente tags (cuaderno anecdótico) ─────────────────────────────
+    ca_rows = conn.execute(
+        "SELECT polaridad FROM cuaderno_anecdotico"
+        " WHERE estudiante_id=? AND polaridad IN ('positivo','negativo')",
+        (est_id,)
+    ).fetchall()
+    # Manejo de row_factory mixto (Row o tuple)
+    def _pol(r):
+        try:    return r["polaridad"]
+        except: return r[0]
+    n_pos = sum(1 for r in ca_rows if _pol(r) == "positivo")
+    n_neg = sum(1 for r in ca_rows if _pol(r) == "negativo")
+    total_ca = n_pos + n_neg
+    tiene_cuaderno = total_ca > 0
+    if total_ca == 0:
+        tags_score = 70.0          # neutral: sin historial → score medio-alto
+    else:
+        tags_score = (n_pos / total_ca) * 100.0
+
+    # ── 3. Sin datos académicos → semáforo N/D ───────────────────────────────
+    # Solo aplica cuando p_acad=0 Y sin asistencia Y sin cuaderno
+    if p_acad == 0 and not tiene_asistencia and not tiene_cuaderno:
+        return {
+            "score":            None,
+            "semaforo":         "ND",
+            "comp_notas":       0.0,
+            "comp_asistencia":  0.0,
+            "comp_tags":        tags_score,
+            "tiene_asistencia": False,
+            "n_positivos":      0,
+            "n_negativos":      0,
+        }
+
+    # ── 4. Calcular score con pesos según disponibilidad ─────────────────────
+    if tiene_asistencia:
+        score = 0.40 * p_acad + 0.35 * asist_est + 0.25 * tags_score
+    else:
+        # Redistribuir: 40/25 → proporcional: 40+25=65, notas=40/65, tags=25/65
+        score = (40 / 65) * p_acad + (25 / 65) * tags_score
+
+    score = round(max(0.0, min(100.0, score)), 1)
+
+    if score > 70:
+        semaforo = "VERDE"
+    elif score >= 50:
+        semaforo = "AMARILLO"
+    else:
+        semaforo = "ROJO"
+
+    return {
+        "score":            score,
+        "semaforo":         semaforo,
+        "comp_notas":       round(p_acad, 1),
+        "comp_asistencia":  round(asist_est, 1),
+        "comp_tags":        round(tags_score, 1),
+        "tiene_asistencia": tiene_asistencia,
+        "n_positivos":      n_pos,
+        "n_negativos":      n_neg,
+    }
+
+
+def _semaforo_color(semaforo):
+    """Devuelve el color hex del semáforo conductual."""
+    return {"VERDE": "#2E9E68", "AMARILLO": "#C48A1E", "ROJO": "#C9352B"}.get(semaforo, "#888")
+
+
+def _semaforo_emoji(semaforo):
+    return {"VERDE": "🟢", "AMARILLO": "🟡", "ROJO": "🔴"}.get(semaforo, "⚪")
 
 
 def _calcular_bienestar_emocional(conn, est_id):

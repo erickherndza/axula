@@ -2550,6 +2550,18 @@ tr:hover td{background:var(--hover)}
         <div class="kpi-n" id="kpi-sin-notas" style="color:#666;">—</div>
         <div class="kpi-l">Sin notas</div>
       </div>
+      <div class="kpi" style="border-left:2px solid #2E9E68;">
+        <div class="kpi-n" id="kpi-sem-verde" style="color:#2E9E68;">—</div>
+        <div class="kpi-l">🟢 Estable</div>
+      </div>
+      <div class="kpi" style="border-left:2px solid #C48A1E;">
+        <div class="kpi-n" id="kpi-sem-amarillo" style="color:#C48A1E;">—</div>
+        <div class="kpi-l">🟡 Alerta</div>
+      </div>
+      <div class="kpi" style="border-left:2px solid #C9352B;">
+        <div class="kpi-n" id="kpi-sem-rojo" style="color:#C9352B;">—</div>
+        <div class="kpi-l">🔴 Riesgo</div>
+      </div>
     </div>
 
     <!-- ACTIONS BAR -->
@@ -3744,6 +3756,11 @@ function actualizarKPIs() {
   setk('kpi-alertas',    alertas);
   setk('kpi-silenciosos',silenc);
   setk('kpi-sin-notas',  sinNotas);
+
+  // Semáforo conductual (Motor Conductual Fase 1)
+  setk('kpi-sem-verde',    TODOS_DATOS.filter(function(e){ return e.semaforo === 'VERDE';    }).length || '—');
+  setk('kpi-sem-amarillo', TODOS_DATOS.filter(function(e){ return e.semaforo === 'AMARILLO'; }).length || '—');
+  setk('kpi-sem-rojo',     TODOS_DATOS.filter(function(e){ return e.semaforo === 'ROJO';     }).length || '—');
 }
 
 // ── FILTROS ────────────────────────────────────────────────────

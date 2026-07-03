@@ -135,6 +135,17 @@ def coordinador_resumen():
             reportes_sem = conn.execute(rq, rp).fetchone()[0]
         except Exception: reportes_sem = 0
 
+        # Distribución semáforo conductual (Motor Conductual Fase 1)
+        try:
+            sem_q = f"""SELECT semaforo, COUNT(*) as n
+                        FROM estudiantes {base_q}
+                        AND semaforo IS NOT NULL
+                        GROUP BY semaforo"""
+            sem_rows = conn.execute(sem_q, base_p).fetchall()
+            semaforo_dist = {r["semaforo"]: r["n"] for r in sem_rows}
+        except Exception:
+            semaforo_dist = {}
+
     return jsonify({
         "ciclo": filtro_ciclo or "todos",
         "kpis": {
@@ -146,6 +157,7 @@ def coordinador_resumen():
         "en_riesgo":      [dict(r) for r in riesgo_rows],
         "casos_abiertos": [dict(r) for r in casos_rows],
         "por_grado":      [dict(r) for r in dist_rows],
+        "semaforo_dist":  semaforo_dist,
     })
 
 

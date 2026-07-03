@@ -19,6 +19,7 @@ from core.helpers import (
     _anonimizar_estudiante, _calcular_bienestar_emocional,
     _calcular_indice_conductual, _recalcular_indicadores,
     _validar_magic_imagen, _get_profesor,
+    calcular_motor_conductual, _semaforo_color,
 )
 from core.ia import _get_groq_client, construir_prompt
 
@@ -981,6 +982,41 @@ def eliminar_entrada_cuaderno(entrada_id):
         conn.execute("DELETE FROM cuaderno_anecdotico WHERE id=?", (entrada_id,))
         conn.commit()
     return jsonify({"ok": True})
+
+
+# ── MOTOR CONDUCTUAL ─────────────────────────────────────────────────────────
+
+@perfil_bp.route("/api/conductual/<int:est_id>", methods=["GET"])
+@login_required
+def get_motor_conductual(est_id):
+    """
+    Retorna el semáforo conductual del estudiante.
+    Accesible por coordinador, directora, profesor (solo sus alumnos), psicóloga.
+    """
+    u = get_usuario()
+    rol = _normalizar_rol(u.get("rol", ""))
+
+    with sqlite3.connect(DATABASE, timeout=10) as conn:
+        conn.row_factory = sqlite3.Row
+        est = conn.execute(
+            "SELECT id, nombre, apellido, grado FROM estudiantes WHERE id=?", (est_id,)
+        ).fetchone()
+        if not est:
+            return jsonify({"error": "Estudiante no encontrado"}), 404
+
+        if rol == "profesor":
+            acceso = conn.execute(
+                "SELECT 1 FROM calificaciones_periodo WHERE profesor_id=? AND estudiante_id=? LIMIT 1",
+                (u["id"], est_id)
+            ).fetchone()
+            if not acceso:
+                return jsonify({"error": "Sin acceso"}), 403
+
+        resultado = calcular_motor_conductual(conn, est_id)
+        resultado["color"] = _semaforo_color(resultado["semaforo"])
+        resultado["nombre"] = f"{est['nombre']} {est['apellido']}"
+        resultado["grado"] = est["grado"]
+        return jsonify(resultado)
 
 
 # ── PROGRESO DEL ESTUDIANTE ──────────────────────────────────────────────────

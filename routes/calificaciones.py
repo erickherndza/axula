@@ -624,11 +624,14 @@ def boletin_estudiante(est_id):
         """, (est_id,)).fetchall()
 
     from collections import defaultdict
+    import unicodedata as _ud
     # Map de nombres normalizados → nombre canónico (preserva el primero que aparece)
     _canonico = {}
     def _norm(nombre):
-        """Normaliza un nombre de materia para comparación case/space-insensitive."""
-        return (nombre or "").strip().lower().replace("  ", " ")
+        """Normaliza un nombre de materia: lowercase + sin acentos + espacios simples."""
+        s = (nombre or "").strip().lower().replace("  ", " ")
+        # Eliminar acentos para que 'educacion' == 'educación'
+        return _ud.normalize("NFKD", s).encode("ascii", "ignore").decode("ascii")
 
     materias = defaultdict(lambda: {"P1": None, "P2": None, "P3": None, "P4": None, "tipo": "académico"})
 

@@ -308,6 +308,9 @@ COLUMNAS_ESTUDIANTES = [
     ("historia_arte_p1",   "REAL",    0), ("historia_arte_p2",   "REAL", 0),
     ("historia_arte_p3",   "REAL",    0), ("historia_arte_p4",   "REAL", 0),
     ("p_historia_arte",    "REAL",    0),
+    # ── Motor Conductual Fase 1 ──────────────────────────────────────────────
+    ("score_conductual",  "REAL",    "NULL"),
+    ("semaforo",          "TEXT",    "NULL"),   # VERDE / AMARILLO / ROJO
     # ← AGREGA COLUMNAS NUEVAS AQUÍ — se crean solas al reiniciar Flask
 ]
 

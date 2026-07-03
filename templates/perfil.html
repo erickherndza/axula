@@ -968,6 +968,21 @@
 
     </div>    </div>
 
+    <!-- ── SEMÁFORO CONDUCTUAL ── -->
+    <div id="semaforo-hero" style="margin-bottom:16px;">
+        <div id="semaforo-card" style="display:flex;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 16px;border-left:4px solid #888;">
+            <div id="semaforo-dot" style="width:42px;height:42px;border-radius:50%;background:#888;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">⏳</div>
+            <div style="flex:1;min-width:0;">
+                <div style="font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px;font-weight:700;margin-bottom:2px;">Motor Conductual</div>
+                <div style="display:flex;align-items:baseline;gap:8px;">
+                    <span id="semaforo-label" style="font-size:16px;font-weight:800;color:#888;">Calculando…</span>
+                    <span id="semaforo-score" style="font-size:12px;color:var(--text-muted);"></span>
+                </div>
+                <div id="semaforo-detalle" style="font-size:10px;color:var(--text-muted);margin-top:3px;"></div>
+            </div>
+        </div>
+    </div>
+
     <!-- ── EXPEDIENTE: Indicadores en vivo ── -->
     <div id="expediente-hero" style="margin-bottom:20px;">
         <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;font-weight:700;">
@@ -2522,6 +2537,49 @@
         btn.innerHTML = '<i class="fas fa-check"></i> ¡Copiado!';
         setTimeout(() => { btn.innerHTML = '<i class="fas fa-copy"></i> Copiar texto'; }, 2000);
     }
+
+    // ── MOTOR CONDUCTUAL ─────────────────────────────────────────────────────
+    (async function cargarSemaforo() {
+        const EST_ID = {{ e.id }};
+        try {
+            const res  = await fetch('/api/conductual/' + EST_ID);
+            const data = await res.json();
+            const card  = document.getElementById('semaforo-card');
+            const dot   = document.getElementById('semaforo-dot');
+            const label = document.getElementById('semaforo-label');
+            const score = document.getElementById('semaforo-score');
+            const det   = document.getElementById('semaforo-detalle');
+            if (!card) return;
+
+            const colorMap = { VERDE:'#2E9E68', AMARILLO:'#C48A1E', ROJO:'#C9352B', ND:'#888' };
+            const iconMap  = { VERDE:'✅', AMARILLO:'⚠️', ROJO:'🚨', ND:'—' };
+            const c = colorMap[data.semaforo] || '#888';
+
+            card.style.borderLeftColor = c;
+            dot.style.background = c + '22';
+            dot.style.border = '2px solid ' + c;
+            dot.textContent = iconMap[data.semaforo] || '—';
+
+            if (data.semaforo === 'ND') {
+                label.textContent = 'Sin datos';
+                label.style.color = '#888';
+                score.textContent = '';
+                det.textContent = 'Faltan notas o registros para calcular el semáforo.';
+            } else {
+                label.textContent = data.semaforo;
+                label.style.color = c;
+                score.textContent = data.score + ' pts';
+                const partes = [];
+                if (data.comp_notas > 0) partes.push('Notas: ' + data.comp_notas);
+                if (data.tiene_asistencia) partes.push('Asist: ' + data.comp_asistencia + '%');
+                if (data.n_positivos + data.n_negativos > 0)
+                    partes.push('Tags: +' + data.n_positivos + ' / -' + data.n_negativos);
+                det.textContent = partes.join(' · ');
+            }
+        } catch(e) {
+            console.warn('Motor conductual:', e);
+        }
+    })();
 
     // ── MATERIAS DINAMICAS ────────────────────────────────────────────────────
     function cargarMaterias() {
