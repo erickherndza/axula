@@ -73,6 +73,8 @@ __all__ = [
     "_semaforo_emoji",
     "limpiar_v",
     "_normalizar_materia",
+    "obtener_notas_estudiante",
+    "recalcular_kpis_estudiante",
 ]
 
 # Aliases de materias: normaliza variantes de casing/escritura a nombre canónico MINERD
@@ -1960,6 +1962,105 @@ def _calcular_bienestar_emocional(conn, est_id):
     score = sum(v * w for v, w in components) / total_w if components else 100.0
 
     return round(max(0.0, min(100.0, score)), 1)
+
+
+def obtener_notas_estudiante(conn, est_id, anio=None):
+    """
+    Retorna las notas del estudiante desde la fuente canónica (calificaciones_periodo).
+    Para materias sin nota manual, cae en materias_calificaciones (importación PDF).
+
+    Retorna dict: {materia: {p1, p2, p3, p4, promedio}}
+    """
+    from .constants import DATABASE
+    if anio is None:
+        anio = _anio_escolar_actual()
+
+    notas = {}  # {materia: {p1, p2, p3, p4}}
+
+    # ── 1. Fuente canónica: calificaciones_periodo (notas manuales de profesores) ──
+    rows_cp = conn.execute(
+        "SELECT materia, periodo, calificacion FROM calificaciones_periodo "
+        "WHERE estudiante_id=? AND anio_escolar=?",
+        (est_id, anio)
+    ).fetchall()
+    for r in rows_cp:
+        mat  = r["materia"] if hasattr(r, "keys") else r[0]
+        per  = (r["periodo"] if hasattr(r, "keys") else r[1]).upper()
+        nota = float(r["calificacion"] if hasattr(r, "keys") else r[2])
+        if mat not in notas:
+            notas[mat] = {}
+        notas[mat][per.lower()] = nota  # 'p1', 'p2', 'p3', 'p4'
+
+    # ── 2. Fallback: materias_calificaciones (importadas desde PDF) ────────────
+    rows_mc = conn.execute(
+        "SELECT materia, p1, p2, p3, p4 FROM materias_calificaciones "
+        "WHERE estudiante_id=? AND anio_escolar=?",
+        (est_id, anio)
+    ).fetchall()
+    for r in rows_mc:
+        mat = r["materia"] if hasattr(r, "keys") else r[0]
+        if mat in notas:
+            continue  # ya tiene datos manuales → no pisamos
+        p1 = float(r["p1"] if hasattr(r, "keys") else r[1] or 0)
+        p2 = float(r["p2"] if hasattr(r, "keys") else r[2] or 0)
+        p3 = float(r["p3"] if hasattr(r, "keys") else r[3] or 0)
+        p4 = float(r["p4"] if hasattr(r, "keys") else r[4] or 0)
+        notas[mat] = {"p1": p1, "p2": p2, "p3": p3, "p4": p4}
+
+    # ── 3. Calcular promedio por materia ───────────────────────────────────────
+    result = {}
+    for mat, periodos in notas.items():
+        vals = [periodos.get(f"p{i}", 0.0) for i in range(1, 5)]
+        vals_validos = [v for v in vals if v > 0]
+        prom = round(sum(vals_validos) / len(vals_validos), 2) if vals_validos else 0.0
+        result[mat] = {
+            "p1":      periodos.get("p1", 0.0),
+            "p2":      periodos.get("p2", 0.0),
+            "p3":      periodos.get("p3", 0.0),
+            "p4":      periodos.get("p4", 0.0),
+            "promedio": prom,
+        }
+    return result
+
+
+def recalcular_kpis_estudiante(conn, est_id, anio=None):
+    """
+    Recalcula p_acad, acad_p1-p4 del estudiante y los persiste en la tabla estudiantes.
+    Llama a esta función después de cada escritura en calificaciones_periodo.
+    Fuente: obtener_notas_estudiante() (canónica = calificaciones_periodo + fallback PDF).
+    """
+    if anio is None:
+        anio = _anio_escolar_actual()
+
+    notas = obtener_notas_estudiante(conn, est_id, anio)
+    if not notas:
+        return  # sin datos: no sobreescribir ceros
+
+    # Promedio por período (todas las materias)
+    per_sums = {1: [], 2: [], 3: [], 4: []}
+    for mat_data in notas.values():
+        for i in range(1, 5):
+            v = mat_data.get(f"p{i}", 0.0)
+            if v > 0:
+                per_sums[i].append(v)
+
+    acad_p = {}
+    for i in range(1, 5):
+        acad_p[i] = round(sum(per_sums[i]) / len(per_sums[i]), 2) if per_sums[i] else 0.0
+
+    # Promedio general = promedio de promedios por materia
+    promedios = [d["promedio"] for d in notas.values() if d["promedio"] > 0]
+    p_acad = round(sum(promedios) / len(promedios), 2) if promedios else 0.0
+
+    try:
+        conn.execute(
+            "UPDATE estudiantes SET "
+            "p_acad=?, acad_p1=?, acad_p2=?, acad_p3=?, acad_p4=?, tiene_notas=1 "
+            "WHERE id=?",
+            (p_acad, acad_p[1], acad_p[2], acad_p[3], acad_p[4], est_id)
+        )
+    except Exception as _e:
+        logger.warning(f"[KPI] recalcular_kpis_estudiante({est_id}): {_e}")
 
 
 def _recalcular_indicadores(conn, est_id):

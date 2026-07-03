@@ -106,13 +106,8 @@ def _get_tipo_evaluacion(profesor):
 @evaluacion_bp.route("/evaluacion")
 @login_required
 def portal_evaluacion():
-    u = get_usuario()
-    prof = _get_profesor()
-    if not prof:
-        return redirect("/")
-    tipo = _get_tipo_evaluacion(prof)
-    return render_template("evaluacion.html",
-        usuario=u, current_user=u, profesor=prof, tipo_evaluacion=tipo)
+    # H5: redirigir v1 → v2 (portal_evaluacion_panel)
+    return redirect(url_for("evaluacion_bp.portal_evaluacion_panel"))
 
 
 # ── CRUD ACTIVIDADES ─────────────────────────────────────────────────────────
@@ -1032,15 +1027,17 @@ def cerrar_periodo_route(periodo):
     d = request.get_json(silent=True) or {}
     materia     = str(d.get("materia", "")).strip()
     anio_esc_id = int(d.get("anio_escolar_id", 1))
+    forzar      = bool(d.get("forzar", False))
 
     if not materia:
         return jsonify({"error": "Campo 'materia' requerido"}), 400
 
     with sqlite3.connect(DATABASE, timeout=10) as conn:
         conn.row_factory = sqlite3.Row
-        resultado = cerrar_periodo(conn, materia, prof["id"], periodo, anio_esc_id)
+        resultado = cerrar_periodo(conn, materia, prof["id"], periodo, anio_esc_id,
+                                   forzar=forzar)
 
-    if resultado["exitoso"]:
+    if resultado.get("exitoso"):
         _audit(u["id"], "cerrar_periodo",
                f"materia={materia} periodo={periodo} procesados={resultado['procesados']}")
 

@@ -579,7 +579,7 @@ TABLAS_NUEVAS = [
         profesor_id     INTEGER NOT NULL,
         materia         TEXT NOT NULL,
         grado           TEXT NOT NULL,
-        mencion         TEXT NOT NULL DEFAULT 'MULTIMEDIA',
+        mencion         TEXT NOT NULL DEFAULT '',
         tipo            TEXT NOT NULL DEFAULT 'tarea',   -- 'tarea','examen','proyecto'
         titulo          TEXT NOT NULL,
         descripcion     TEXT,
@@ -693,6 +693,46 @@ TABLAS_NUEVAS = [
     )
     """,
     # ← AGREGA CREATE TABLE IF NOT EXISTS DE TABLAS NUEVAS AQUÍ
+    # ── Phase 2: Pesos de evaluación por profesor ─────────────────────────────
+    """
+    CREATE TABLE IF NOT EXISTS config_evaluacion_pesos (
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        profesor_id     INTEGER NOT NULL,
+        materia         TEXT NOT NULL,
+        anio_escolar    TEXT NOT NULL DEFAULT '2025-2026',
+        peso_examen     REAL DEFAULT 50,
+        peso_mascota    REAL DEFAULT 15,
+        peso_participacion REAL DEFAULT 15,
+        peso_asistencia REAL DEFAULT 10,
+        peso_comportamiento REAL DEFAULT 10,
+        creado          TEXT DEFAULT (datetime('now')),
+        actualizado     TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (profesor_id) REFERENCES usuarios(id),
+        UNIQUE(profesor_id, materia, anio_escolar)
+    )
+    """,
+    # ── Phase 2: Notas por componente (5 componentes por período) ────────────
+    """
+    CREATE TABLE IF NOT EXISTS notas_componentes (
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        estudiante_id   INTEGER NOT NULL,
+        profesor_id     INTEGER NOT NULL,
+        materia         TEXT NOT NULL,
+        periodo         TEXT NOT NULL,
+        anio_escolar    TEXT NOT NULL DEFAULT '2025-2026',
+        nota_examen     REAL,
+        nota_mascota    REAL,
+        nota_participacion REAL,
+        nota_asistencia REAL,
+        nota_comportamiento REAL,
+        nota_calculada  REAL,
+        creado          TEXT DEFAULT (datetime('now')),
+        actualizado     TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (estudiante_id) REFERENCES estudiantes(id),
+        FOREIGN KEY (profesor_id)   REFERENCES usuarios(id),
+        UNIQUE(estudiante_id, materia, periodo, anio_escolar)
+    )
+    """,
     # ── CUADERNO ANECDÓTICO ──────────────────────────────────────────────────
     """
     CREATE TABLE IF NOT EXISTS cuaderno_anecdotico (
@@ -1048,6 +1088,10 @@ MIGRACIONES_ESPECIALES = [
     ("Agregar anio_escolar a materias_calificaciones",
      "ALTER TABLE materias_calificaciones ADD COLUMN anio_escolar TEXT DEFAULT '2025-2026'",
      "anio_escolar", "materias_calificaciones"),
+    # ── Phase 2: origen en calificaciones_periodo ─────────────────────────────
+    ("Agregar origen a calificaciones_periodo",
+     "ALTER TABLE calificaciones_periodo ADD COLUMN origen TEXT DEFAULT 'manual'",
+     "origen", "calificaciones_periodo"),
     # ← AGREGA MIGRACIONES PUNTUALES AQUÍ
 ]
 

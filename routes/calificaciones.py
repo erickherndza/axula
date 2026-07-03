@@ -226,6 +226,18 @@ def registrar_calificacion():
 
         conn.commit()
 
+        # ── Phase 2: Recalcular KPIs académicos después de guardar notas ───────
+        # Recalcular una vez por estudiante único en el batch
+        est_ids_procesados = {item.get("estudiante_id") for item in registros if item.get("estudiante_id")}
+        conn.row_factory = sqlite3.Row
+        for _eid in est_ids_procesados:
+            if _eid:
+                try:
+                    recalcular_kpis_estudiante(conn, _eid, anio)
+                except Exception as _ke:
+                    logger.warning(f"[CALIF] recalcular_kpis({_eid}): {_ke}")
+        conn.commit()
+
     return jsonify({"ok": True, "guardados": guardados, "errores": errores})
 
 

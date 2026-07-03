@@ -99,6 +99,35 @@ python3 -c "import app; print('OK')"
 
 ## Log de sesiones
 
+### 2026-07-03 (sesión 4 — fix-axula.md fases 2-4)
+
+**Phase 2 — Fuente canónica de notas** (`core/helpers.py`, `routes/calificaciones.py`, `core/constants.py`):
+- `obtener_notas_estudiante(conn, est_id, anio)`: lee calificaciones_periodo (manual) con fallback a materias_calificaciones (PDF)
+- `recalcular_kpis_estudiante(conn, est_id, anio)`: recalcula p_acad + acad_p1-p4 en estudiantes después de cada escritura
+- `registrar_calificacion()` llama al recalculator automáticamente por cada estudiante en el batch
+- Migración: columna `origen TEXT DEFAULT 'manual'` en calificaciones_periodo
+- Tablas nuevas: `config_evaluacion_pesos` (pesos por profesor) + `notas_componentes` (5 componentes)
+
+**H10 — registro_notas_periodo → canónica** (`core/evaluacion_engine.py`):
+- `cerrar_periodo()` ahora escribe en `calificaciones_periodo` con `origen='actividades'`
+- Precedencia: manual > actividades > importacion (nota manual nunca se pisa)
+- KPIs recalculados automáticamente al cerrar período
+
+**H4 — Cierre de período bloqueante** (`core/evaluacion_engine.py`, `routes/evaluacion.py`):
+- Si hay alumnos sin calificar → retorna `requiere_confirmacion=True` con conteo, no aplica 0 en silencio
+- Route acepta `forzar=true` para confirmar y proceder
+
+**H5 — Redirect evaluacion v1 → v2** (`routes/evaluacion.py`):
+- `/evaluacion` redirige a `/evaluacion/panel` (v2)
+
+**H6 — Desacoplar hardcoded references** (parcial):
+- `routes/finanzas.py`: ambos PDF ahora usan `_get_config_centro()` para el nombre del centro
+- `routes/casos.py`: prompt de IA usa `_get_config_centro()` en lugar de string literal
+- `core/constants.py`: DEFAULT 'MULTIMEDIA' eliminado de tabla `asignaciones`
+
+**Pendiente H3** (motor CE): requiere confirmación del coordinador sobre qué versión
+del registro entregó el distrito para 2025-2026. No implementado hasta confirmar.
+
 ### 2026-07-03 (sesión 3 — Motor Conductual, boletín fixes, mobile UI)
 
 **Motor Conductual Fase 1** (`core/helpers.py`):

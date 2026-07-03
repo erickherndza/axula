@@ -498,8 +498,8 @@ def recibo_pdf(mov_id):
         return jsonify({"error": "Movimiento no encontrado"}), 404
 
     from core.helpers import _get_config_centro
-    cfg = _get_config_centro() if '_get_config_centro' in dir() else {}
-    centro = cfg.get("nombre", "Centro Educativo en Artes Benito Juárez")
+    cfg = _get_config_centro()
+    centro = cfg.get("nombre", "Centro Educativo")
 
     buf = BytesIO()
     c = canvas.Canvas(buf, pagesize=letter)
@@ -1577,8 +1577,11 @@ def pdf_cierre(cierre_id):
     cv = rl_canvas.Canvas(buf, pagesize=letter)
     w, h = letter
 
+    from core.helpers import _get_config_centro as _gcc_fin
+    _cfg_fin = _gcc_fin()
+    _nombre_centro_fin = _cfg_fin.get("nombre", "Centro Educativo")
     cv.setFont("Helvetica-Bold", 16)
-    cv.drawCentredString(w/2, h-0.8*inch, "Centro Educativo en Artes Benito Juárez")
+    cv.drawCentredString(w/2, h-0.8*inch, _nombre_centro_fin)
     cv.setFont("Helvetica-Bold", 13)
     cv.drawCentredString(w/2, h-1.15*inch, f"CIERRE DE PERÍODO — {cierre['periodo']}")
     cv.setFont("Helvetica", 9)

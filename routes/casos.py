@@ -430,6 +430,8 @@ def generar_acuerdo_compromiso():
 
     nombre_est = f"{e.get('nombre','')} {e.get('apellido','')}".strip()
     grado_est  = f"{e.get('grado','')} {e.get('curso','')}"
+    _cfg_caso  = _get_config_centro()
+    _centro_nombre = _cfg_caso.get("nombre", "Centro Educativo")
 
     prompt = f"""Eres un orientador escolar del MINERD (Ministerio de Educación de la República Dominicana).
 Genera un Acuerdo-Compromiso Escolar formal y completo basado en los siguientes datos.
@@ -437,7 +439,7 @@ Genera un Acuerdo-Compromiso Escolar formal y completo basado en los siguientes 
 DATOS DEL ESTUDIANTE:
 - Código: {_anonimizar_estudiante(est_id)}
 - Grado: {grado_est}
-- Centro: Centro Educativo en Artes Benito Juárez
+- Centro: {_centro_nombre}
 
 SITUACIÓN (caso tipo: {caso_tipo or 'general'}):
 {caso_titulo or 'Situación escolar que requiere compromiso'}
