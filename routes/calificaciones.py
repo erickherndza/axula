@@ -627,11 +627,17 @@ def boletin_estudiante(est_id):
     import unicodedata as _ud
     # Map de nombres normalizados → nombre canónico (preserva el primero que aparece)
     _canonico = {}
+    import re as _re
     def _norm(nombre):
         """Normaliza un nombre de materia: lowercase + sin acentos + espacios simples."""
         s = (nombre or "").strip().lower().replace("  ", " ")
         # Eliminar acentos para que 'educacion' == 'educación'
         return _ud.normalize("NFKD", s).encode("ascii", "ignore").decode("ascii")
+
+    def _norm_sin_nivel(nombre):
+        """_norm() + elimina sufijos de nivel romano (I, II, III, IV) al final."""
+        n = _norm(nombre)
+        return _re.sub(r'\s+[iv]{1,4}$', '', n).strip()
 
     materias = defaultdict(lambda: {"P1": None, "P2": None, "P3": None, "P4": None, "tipo": "académico"})
 
@@ -647,12 +653,25 @@ def boletin_estudiante(est_id):
         if r["p4"] is not None: materias[canon]["P4"] = r["p4"]
         materias[canon]["tipo"] = r["tipo"] or "académico"
 
+    # Índice auxiliar: norm-sin-nivel → canon (para resolver "Fotografía" == "Fotografía I")
+    _canon_sin_nivel = {}
+    for key, canon in _canonico.items():
+        ns = _norm_sin_nivel(canon)
+        if ns not in _canon_sin_nivel:
+            _canon_sin_nivel[ns] = canon
+
     # Overlay con calificaciones_periodo (entrada manual — prioridad mayor)
     for r in notas_rows:
-        key = _norm(r["materia"])
-        if key not in _canonico:
+        key     = _norm(r["materia"])
+        key_sin = _norm_sin_nivel(r["materia"])
+        if key in _canonico:
+            canon = _canonico[key]
+        elif key_sin in _canon_sin_nivel:
+            # "Fotografía" en calificaciones_periodo coincide con "Fotografía I" del PDF
+            canon = _canon_sin_nivel[key_sin]
+        else:
             _canonico[key] = r["materia"]
-        canon = _canonico[key]
+            canon = r["materia"]
         materias[canon][r["periodo"]] = r["calificacion"]
 
     # Indexar recuperaciones por materia
