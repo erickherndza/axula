@@ -2251,6 +2251,72 @@ def _dedup_materias(rows):
     return resultado
 
 
+# ── H12: CATÁLOGO DE MATERIAS ────────────────────────────────────────────────
+
+def _norm_materia(nombre):
+    """Normaliza nombre de materia: minúsculas, sin acentos, sin espacios dobles."""
+    import unicodedata
+    s = (nombre or "").strip().lower()
+    s = unicodedata.normalize("NFKD", s).encode("ascii", "ignore").decode("ascii")
+    return " ".join(s.split())
+
+
+def resolver_materia_id(conn, nombre):
+    """
+    Busca en el catálogo `materias` el ID canónico para un nombre dado.
+    Estrategia: exacto por nombre_norm → fuzzy ≥ 0.82 → None (no registrado).
+    Si encuentra por fuzzy, devuelve el id del mejor match.
+    """
+    from difflib import SequenceMatcher
+    norm = _norm_materia(nombre)
+    # 1. Match exacto
+    row = conn.execute(
+        "SELECT id, nombre_canonico FROM materias WHERE nombre_norm=? AND activa=1",
+        (norm,)
+    ).fetchone()
+    if row:
+        return row["id"]
+    # 2. Match fuzzy
+    candidatos = conn.execute(
+        "SELECT id, nombre_canonico, nombre_norm FROM materias WHERE activa=1"
+    ).fetchall()
+    mejor_id, mejor_ratio = None, 0.0
+    for c in candidatos:
+        r = SequenceMatcher(None, norm, c["nombre_norm"]).ratio()
+        if r > mejor_ratio:
+            mejor_ratio, mejor_id = r, c["id"]
+    return mejor_id if mejor_ratio >= 0.82 else None
+
+
+def sembrar_catalogo_materias(conn):
+    """
+    Genera el catálogo inicial de materias desde los nombres distintos ya
+    presentes en materias_calificaciones y calificaciones_periodo.
+    Idempotente: solo inserta si el nombre_norm no existe.
+    """
+    nombres = set()
+    for tabla in ("materias_calificaciones", "calificaciones_periodo"):
+        try:
+            rows = conn.execute(f"SELECT DISTINCT materia FROM {tabla} WHERE materia IS NOT NULL").fetchall()
+            nombres.update(r["materia"].strip() for r in rows if r["materia"] and r["materia"].strip())
+        except Exception:
+            pass
+    insertados = 0
+    for nombre in sorted(nombres):
+        norm = _norm_materia(nombre)
+        if not norm:
+            continue
+        try:
+            conn.execute(
+                "INSERT OR IGNORE INTO materias (nombre_canonico, nombre_norm) VALUES (?, ?)",
+                (nombre, norm)
+            )
+            insertados += 1
+        except Exception:
+            pass
+    return insertados
+
+
 # ── ARRANQUE ─────────────────────────────────────────────────────────────────
 
 

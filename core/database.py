@@ -210,6 +210,20 @@ def migrar_bd():
 
     logger.info("  ── Migración completada ✓")
 
+    # H12: sembrar catálogo de materias si está vacío
+    try:
+        with sqlite3.connect(DATABASE, timeout=10) as _c:
+            _c.row_factory = sqlite3.Row
+            n_mat = _c.execute("SELECT COUNT(*) FROM materias").fetchone()[0]
+            if n_mat == 0:
+                from .helpers import sembrar_catalogo_materias
+                insertados = sembrar_catalogo_materias(_c)
+                _c.commit()
+                if insertados:
+                    logger.info(f"  ✓ Catálogo materias sembrado: {insertados} entradas")
+    except Exception as _e:
+        logger.warning(f"[db] seed catálogo materias: {_e}")
+
 
 def _seed_admin(hash_func):
     """

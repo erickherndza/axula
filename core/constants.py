@@ -359,6 +359,7 @@ TABLAS_NUEVAS = [
         cedula        TEXT,
         materia       TEXT NOT NULL,
         grado         TEXT,
+        anio_escolar  TEXT NOT NULL DEFAULT '2025-2026',
         p1            REAL DEFAULT 0,
         p2            REAL DEFAULT 0,
         p3            REAL DEFAULT 0,
@@ -369,7 +370,7 @@ TABLAS_NUEVAS = [
         fuente        TEXT,
         profesor      TEXT,
         fecha_carga   TEXT DEFAULT (date('now')),
-        UNIQUE(estudiante_id, materia)
+        UNIQUE(estudiante_id, materia, anio_escolar)
     )
     """,
     # — Expedientes históricos (digitalización de archivos físicos 25+ años) —
@@ -938,6 +939,18 @@ TABLAS_NUEVAS = [
         FOREIGN KEY (estudiante_id) REFERENCES estudiantes(id),
         FOREIGN KEY (ejecutado_por) REFERENCES usuarios(id)
     )""",
+    # ── H12: Catálogo canónico de materias ───────────────────────────────────
+    """
+    CREATE TABLE IF NOT EXISTS materias (
+        id                INTEGER PRIMARY KEY AUTOINCREMENT,
+        nombre_canonico   TEXT NOT NULL UNIQUE,
+        nombre_norm       TEXT NOT NULL,          -- lowercase sin acentos para matching
+        area              TEXT DEFAULT '',        -- 'lengua', 'matematica', 'ciencias', etc.
+        tipo              TEXT DEFAULT 'academico', -- 'academico' | 'tecnico' | 'artistica'
+        ciclo             TEXT DEFAULT '',        -- 'primer_ciclo' | 'segundo_ciclo' | ''
+        activa            INTEGER DEFAULT 1
+    )
+    """,
 ]
 
 
@@ -1031,6 +1044,10 @@ MIGRACIONES_ESPECIALES = [
     ("Agregar autor_id a reportes",
      "ALTER TABLE reportes ADD COLUMN autor_id INTEGER",
      "autor_id", "reportes"),
+    # ── H11: año escolar en materias_calificaciones ──────────────────────────
+    ("Agregar anio_escolar a materias_calificaciones",
+     "ALTER TABLE materias_calificaciones ADD COLUMN anio_escolar TEXT DEFAULT '2025-2026'",
+     "anio_escolar", "materias_calificaciones"),
     # ← AGREGA MIGRACIONES PUNTUALES AQUÍ
 ]
 
