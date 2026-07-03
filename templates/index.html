@@ -611,26 +611,47 @@ td.td-nombre span{display:block;font-size:10px;color:var(--muted);font-weight:40
 
 /* ── Móvil (<640px) ─────────────────────────────── */
 @media(max-width:639px){
+  html,body{ overflow-x:hidden; width:100%; }
+
+  /* ── Nav ── */
+  .nav{ padding:0 10px; overflow:hidden; }
+  .logo-sub2{ display:none; }
+  .user-name{ display:none; }
+  .user-badge{ padding:4px 6px; background:transparent; }
+  /* Dropdown notificaciones: centrado, no desborda */
+  #notif-panel{ width:calc(100vw - 20px); right:auto; left:50%; transform:translateX(-50%); }
+
+  /* ── Sidebar ── */
   .sidebar{ width:240px; left:-260px; top:0; }
 
-  /* Cards 1 columna */
+  /* ── Welcome screen ── */
+  #welcome-screen{ padding:24px 0 20px; }
+  .wc-greeting{ font-size:28px; }
+  .wc-sub{ font-size:14px; }
+  .wc-rol{ font-size:12px; padding:5px 12px; margin-bottom:20px; }
+  .wc-stat-row{ grid-template-columns:1fr 1fr; gap:8px; margin-bottom:20px; }
+  .wc-sv{ font-size:28px; }
+  .wc-stat{ padding:14px 10px; }
+  .wc-sl{ font-size:10px; }
+  .wc-cards{ grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px; }
+  .wc-card{ padding:16px 12px 14px; }
+  .wc-ci{ font-size:22px; margin-bottom:6px; }
+  .wc-ct{ font-size:13px; }
+  .wc-cd{ font-size:11px; }
+
+  /* ── Cards lista de estudiantes ── */
   .est-card{ width:100%; min-width:unset; }
 
-  /* KPIs scroll horizontal */
-  .kpi-bar{ flex-wrap:nowrap; overflow-x:auto; padding:8px 12px; }
+  /* ── KPIs scroll horizontal ── */
+  .kpi-bar{ flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch; padding:8px 12px; }
   .kpi{ min-width:90px; flex-shrink:0; }
   .kpi-n{ font-size:16px; }
   .kpi-l{ font-size:9px; }
 
-  /* Toolbar */
+  /* ── Toolbar ── */
   .toolbar{ padding:6px 10px; gap:4px; }
   .sw{ min-width:130px; }
   #ordenar{ display:none; }
-
-  .nav{ padding:0 10px; }
-  .user-name{ display:none; }
-  .user-badge{ padding:4px 6px; background:transparent; }
-  .user-badge{ padding:4px 6px; }
 }
 
 /* Botones de toggle — ocultos por defecto, mostrados por media queries */
@@ -1287,26 +1308,47 @@ td.td-nombre span{display:block;font-size:10px;color:var(--muted);font-weight:40
 
 /* ── Móvil (<640px) ─────────────────────────────── */
 @media(max-width:639px){
+  html,body{ overflow-x:hidden; width:100%; }
+
+  /* ── Nav ── */
+  .nav{ padding:0 10px; overflow:hidden; }
+  .logo-sub2{ display:none; }
+  .user-name{ display:none; }
+  .user-badge{ padding:4px 6px; background:transparent; }
+  /* Dropdown notificaciones: centrado, no desborda */
+  #notif-panel{ width:calc(100vw - 20px); right:auto; left:50%; transform:translateX(-50%); }
+
+  /* ── Sidebar ── */
   .sidebar{ width:240px; left:-260px; top:0; }
 
-  /* Cards 1 columna */
+  /* ── Welcome screen ── */
+  #welcome-screen{ padding:24px 0 20px; }
+  .wc-greeting{ font-size:28px; }
+  .wc-sub{ font-size:14px; }
+  .wc-rol{ font-size:12px; padding:5px 12px; margin-bottom:20px; }
+  .wc-stat-row{ grid-template-columns:1fr 1fr; gap:8px; margin-bottom:20px; }
+  .wc-sv{ font-size:28px; }
+  .wc-stat{ padding:14px 10px; }
+  .wc-sl{ font-size:10px; }
+  .wc-cards{ grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px; }
+  .wc-card{ padding:16px 12px 14px; }
+  .wc-ci{ font-size:22px; margin-bottom:6px; }
+  .wc-ct{ font-size:13px; }
+  .wc-cd{ font-size:11px; }
+
+  /* ── Cards lista de estudiantes ── */
   .est-card{ width:100%; min-width:unset; }
 
-  /* KPIs scroll horizontal */
-  .kpi-bar{ flex-wrap:nowrap; overflow-x:auto; padding:8px 12px; }
+  /* ── KPIs scroll horizontal ── */
+  .kpi-bar{ flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch; padding:8px 12px; }
   .kpi{ min-width:90px; flex-shrink:0; }
   .kpi-n{ font-size:16px; }
   .kpi-l{ font-size:9px; }
 
-  /* Toolbar */
+  /* ── Toolbar ── */
   .toolbar{ padding:6px 10px; gap:4px; }
   .sw{ min-width:130px; }
   #ordenar{ display:none; }
-
-  .nav{ padding:0 10px; }
-  .user-name{ display:none; }
-  .user-badge{ padding:4px 6px; background:transparent; }
-  .user-badge{ padding:4px 6px; }
 }
 
 /* Botones de toggle — ocultos por defecto, mostrados por media queries */
