@@ -182,11 +182,18 @@ def security_headers(response):
 @app.before_request
 def respaldo_diario():
     """Dispara respaldo automático de la DB una vez por día (primer request del día)."""
-    # Solo en GET para no bloquear escrituras; en hilo propio para no agregar latencia
-    if request.method == "GET" and not request.path.startswith("/static/"):
-        import threading
-        from core.backup import hacer_respaldo
-        threading.Thread(target=hacer_respaldo, daemon=True).start()
+    # Solo en GET para no bloquear escrituras
+    if request.method != "GET" or request.path.startswith("/static/"):
+        return
+    # Chequear si ya se hizo el respaldo hoy ANTES de crear el hilo
+    from core.backup import _ultimo_respaldo
+    from datetime import date as _d
+    hoy = _d.today().isoformat()
+    if _ultimo_respaldo == hoy:
+        return
+    import threading
+    from core.backup import hacer_respaldo
+    threading.Thread(target=hacer_respaldo, daemon=True).start()
 
 @app.before_request
 def aislar_roles_operativos():

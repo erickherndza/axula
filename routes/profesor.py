@@ -279,19 +279,38 @@ def portal_profesor():
           conn.row_factory = sqlite3.Row
           estudiantes = [dict(r) for r in conn.execute(q, params).fetchall()]
 
-      grado_key   = grados_prof[0].lower() if grados_prof else "4to"
-      mencion_key = menciones_prof[0].upper() if (filtro_men and menciones_prof) else "MULTIMEDIA"
-      plan_mencion = PLAN_ARTES.get(mencion_key, PLAN_MULTIMEDIA)
-      plan = plan_mencion.get(grado_key, plan_mencion.get("4to", []))
+      # Plan: unión de todos los grados del profesor (multigrado)
+      import unicodedata as _ud
+      def _norm_asig(s):
+          s = (s or "").strip().lower()
+          return _ud.normalize("NFKD", s).encode("ascii", "ignore").decode("ascii")
 
-      # Filtrar plan a solo las asignaturas que imparte el profesor
-      asigs_raw = (prof.get("asignaturas") or prof.get("materia") or "").strip()
-      asigs_prof = {a.strip().lower() for a in asigs_raw.split("|") if a.strip()}
+      plan_set = {}   # nombre_asig → horas (deduplicado)
+      for gk in (grados_prof if grados_prof else ["4to"]):
+          mencion_key = menciones_prof[0].upper() if (filtro_men and menciones_prof) else "MULTIMEDIA"
+          plan_mencion = PLAN_ARTES.get(mencion_key, PLAN_MULTIMEDIA)
+          for asig, horas in plan_mencion.get(gk.lower(), plan_mencion.get("4to", [])):
+              if asig not in plan_set:
+                  plan_set[asig] = horas
+      plan = list(plan_set.items())
+
+      # Filtrar plan a las asignaturas del profesor — coincidencia tolerante (inclusión)
+      asigs_raw  = (prof.get("asignaturas") or prof.get("materia") or "").strip()
+      asigs_prof = [_norm_asig(a) for a in asigs_raw.split("|") if a.strip()]
       if asigs_prof and rol_norm == "profesor":
-          plan_filtrado = [(asig, horas) for asig, horas in plan if asig.strip().lower() in asigs_prof]
-          # Si el filtro no devuelve nada (nombre no coincide), conservar todo el plan
+          def _coincide(nombre_plan):
+              n = _norm_asig(nombre_plan)
+              return any(ap in n or n in ap for ap in asigs_prof)
+          plan_filtrado = [(asig, h) for asig, h in plan if _coincide(asig)]
           if plan_filtrado:
               plan = plan_filtrado
+          else:
+              # Sin coincidencia: avisar en log, mostrar todo el plan
+              logger.warning(
+                  f"[portal_profesor] Profesor id={prof.get('id')} — "
+                  f"asignaturas '{asigs_raw}' no coinciden con el plan {[a for a,_ in plan]}. "
+                  "Se muestra el plan completo."
+              )
 
       from datetime import date as _date
       return render_template(
@@ -304,15 +323,12 @@ def portal_profesor():
       )
     except Exception as _ep:
         import traceback as _tb
-        err_detail = _tb.format_exc()
-        logger.error(f"[portal_profesor] ERROR: {_ep}")
-        logger.info(err_detail)
-        # Return a minimal error page instead of silent redirect
-        return f"""<html><body style='font-family:monospace;background:#111;color:#ef4444;padding:30px'>
-            <h2>Error en Portal Profesor</h2>
-            <pre style='color:#fca5a5;font-size:12px'>{_ep}</pre>
-            <pre style='color:#555;font-size:11px'>{err_detail[:1000]}</pre>
-            <a href='/' style='color:#c8f060'>← Volver al dashboard</a>
+        logger.error(f"[portal_profesor] ERROR: {_ep}\n{_tb.format_exc()}")
+        # Página genérica — sin detalles internos al cliente
+        return """<html><body style='font-family:sans-serif;background:#111;color:#ef4444;padding:30px'>
+            <h2>Error en el Portal Docente</h2>
+            <p style='color:#aaa'>Ocurrió un problema inesperado. Por favor contacta al administrador.</p>
+            <a href='/' style='color:#60b8f0'>← Volver al dashboard</a>
             </body></html>""", 500
 
 

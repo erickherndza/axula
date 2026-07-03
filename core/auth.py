@@ -128,6 +128,9 @@ def login_required(f):
         uid = session.get("user_id")
         if not uid:
             logger.info(f"[AUTH] login_required: NO session for {request.path} | session keys: {list(session.keys())}")
+            # Rutas /api/* → 401 JSON para que el frontend pueda manejarlo
+            if request.path.startswith("/api/"):
+                return jsonify({"error": "no autenticado", "redirect": "/login"}), 401
             return redirect(url_for("auth_bp.login_page"))
         return f(*args, **kwargs)
     return decorated

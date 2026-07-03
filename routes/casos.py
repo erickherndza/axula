@@ -581,9 +581,8 @@ def guardar_firma(acid):
     Body: { token?, rol_firmante, firma_data (data URL base64) }
     """
     d = request.get_json(force=True) or {}
-    token         = d.get("token", "").strip()
-    rol_firmante  = d.get("rol_firmante", "tutor")   # tutor|coordinador|psicologa|director
-    firma_data    = d.get("firma_data", "").strip()
+    token      = d.get("token", "").strip()
+    firma_data = d.get("firma_data", "").strip()
 
     if not firma_data or not firma_data.startswith("data:image/"):
         return jsonify({"ok": False, "error": "Firma inválida"}), 400
@@ -592,20 +591,26 @@ def guardar_firma(acid):
     if len(firma_data) > 400_000:
         return jsonify({"ok": False, "error": "Imagen de firma demasiado grande"}), 400
 
+    # Mapa rol → campo de BD (solo estos 4 son válidos)
     CAMPOS = {
         "tutor":        "firma_tutor",
         "coordinador":  "firma_coordinador",
         "psicologa":    "firma_psicologa",
         "director":     "firma_director",
     }
-    campo = CAMPOS.get(rol_firmante)
-    if not campo:
-        return jsonify({"ok": False, "error": "Rol de firmante inválido"}), 400
+    # Mapa rol de sesión → rol de firmante permitido
+    ROL_SESION_A_FIRMANTE = {
+        "coordinador":         "coordinador",
+        "coordinador_general": "coordinador",
+        "directora":           "director",
+        "psicologa":           "psicologa",
+        "superusuario":        "coordinador",
+    }
 
     with sqlite3.connect(DATABASE, timeout=10) as conn:
         conn.row_factory = sqlite3.Row
 
-        # Verificar token (para padre sin login) o sesión (para staff)
+        # ── Rama token (padre/tutor sin login) ──
         if token:
             ac = conn.execute(
                 "SELECT id, token_firma, firma_tutor FROM acuerdos_compromiso WHERE id=?",
@@ -613,13 +618,28 @@ def guardar_firma(acid):
             ).fetchone()
             if not ac or ac["token_firma"] != token:
                 return jsonify({"ok": False, "error": "Token inválido"}), 403
-            if ac["firma_tutor"] and rol_firmante == "tutor":
+            # Forzar rol en servidor — nunca tomar del body
+            rol_firmante = "tutor"
+            if ac["firma_tutor"]:
                 return jsonify({"ok": False, "error": "Ya fue firmado por el tutor"}), 400
+
+        # ── Rama sesión (staff autenticado) ──
         else:
-            # Verificar sesión de staff
             u = get_usuario()
             if not u:
                 return jsonify({"ok": False, "error": "No autenticado"}), 401
+            from core.auth import _normalizar_rol
+            rol_sesion = _normalizar_rol(u.get("rol", ""))
+            rol_firmante = ROL_SESION_A_FIRMANTE.get(rol_sesion)
+            if not rol_firmante:
+                return jsonify({"ok": False, "error": "Tu rol no puede firmar acuerdos"}), 403
+
+    campo = CAMPOS.get(rol_firmante)
+    if not campo:
+        return jsonify({"ok": False, "error": "Rol de firmante inválido"}), 400
+
+    with sqlite3.connect(DATABASE, timeout=10) as conn:
+        conn.row_factory = sqlite3.Row
 
         # Guardar firma
         conn.execute(
