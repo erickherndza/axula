@@ -99,6 +99,20 @@ python3 -c "import app; print('OK')"
 
 ## Log de sesiones
 
+### 2026-07-02 (sesión 2 — layout mobile-first + bugfixes QA)
+- Rediseño layout mobile-first (estructura, NO colores):
+  - Nav links movidos del topbar al sidebar ("Menú" section al tope)
+  - Topbar simplificado: hamburger + logo + bell + avatar
+  - Sidebar overlay en tablet/mobile (<1025px): position:fixed, left:-240px, z-index:400
+  - Overlay backdrop z-index:399, closeSidebarMobile() al tocar item
+  - sb-mobile-header (logo + X) visible solo en ≤1024px
+- Revert de paleta warm neutral (Erick prefiere azul original) → git revert d01eb56
+- QA flujo de profesor — 4 bugs detectados:
+  - Bug #1 (boletín HTTP 500): INTENCIONAL — solo coordinador/directora genera boletines
+  - Bug #2 fix: RLS en /api/progreso/<est_id> — profesor solo ve sus alumnos via calificaciones_periodo
+  - Bug #3 fix: asistencia lote → reemplazado grado+MULTIMEDIA hardcodeado por curso real del request
+  - Bug #4 fix: reportes — profesor solo ve reportes que él creó (autor_id=?)
+
 ### 2026-07-02
 - Fix KPIs del listado (470 alumnos con materias_calificaciones pero p_acad=0)
   → script: scripts/recalcular_kpis.py --commit (correr en Render shell)
