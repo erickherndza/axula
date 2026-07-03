@@ -59,6 +59,10 @@ def listar_reportes():
     # Psicóloga solo ve reportes del canal conductual
     if "psicologa" in rol:
         q += " AND (r.canal='conductual' OR r.canal IS NULL)"
+    # Profesor solo ve reportes que él mismo creó
+    elif rol == "profesor":
+        q += " AND r.autor_id=?"
+        params.append(u["id"])
 
     if tipo:      q += " AND r.tipo=?";             params.append(tipo)
     if estado:    q += " AND r.estado=?";           params.append(estado)

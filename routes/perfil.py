@@ -994,6 +994,7 @@ def get_progreso_estudiante(est_id):
     """
     u = get_usuario()
     anio_esc = request.args.get("anio_escolar", "2025-2026")
+    rol = _normalizar_rol(u.get("rol", ""))
 
     with sqlite3.connect(DATABASE, timeout=10) as conn:
         conn.row_factory = sqlite3.Row
@@ -1003,6 +1004,15 @@ def get_progreso_estudiante(est_id):
         ).fetchone()
         if not est:
             return jsonify({"error": "Estudiante no encontrado"}), 404
+
+        # RLS: profesor solo puede ver progreso de sus propios estudiantes
+        if rol == "profesor":
+            acceso = conn.execute(
+                "SELECT 1 FROM calificaciones_periodo WHERE profesor_id=? AND estudiante_id=? LIMIT 1",
+                (u["id"], est_id)
+            ).fetchone()
+            if not acceso:
+                return jsonify({"error": "Sin acceso a este estudiante"}), 403
 
         materias = conn.execute("""
             SELECT materia, tipo, p1, p2, p3, p4, promedio, profesor

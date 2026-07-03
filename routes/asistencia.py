@@ -52,7 +52,8 @@ def registrar_asistencia_lote():
     if not fecha or not materia or not registros:
         return jsonify({"error": "fecha, materia y registros son requeridos"}), 400
     prof = _get_profesor()
-    ok, msg = _validar_materia_profesor(materia, grado + " MULTIMEDIA", prof)
+    curso = d.get("curso", grado).strip()
+    ok, msg = _validar_materia_profesor(materia, curso, prof)
     if not ok:
         return jsonify({"error": msg}), 403
     prof_id = session.get("user_id")
