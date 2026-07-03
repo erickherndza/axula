@@ -847,6 +847,14 @@ def boletin_view(est_id):
         'historia del arte universal y teoría de las artes visuales': 'Historia del Arte Universal',
         'historia del arte universal y teoria de las artes visuales': 'Historia del Arte Universal',
         'historia del arte':                        'Historia del Arte Universal',
+        # Multimedia — el PDF usa "Introducción a la Historia del Arte universal y Dominicano"
+        # pero el plan oficial dice "Historia del Arte Universal y la Estética Digital"
+        'introducción a la historia del arte universal y dominicano': 'Historia del Arte Universal y la Estética Digital',
+        'introduccion a la historia del arte universal y dominicano': 'Historia del Arte Universal y la Estética Digital',
+        'intro. a la historia del arte universal y dom.': 'Historia del Arte Universal y la Estética Digital',
+        'historia del arte universal y dominicano':     'Historia del Arte Universal y la Estética Digital',
+        'historia del arte universal y estetica digital': 'Historia del Arte Universal y la Estética Digital',
+        'historia del arte universal y la estetica digital': 'Historia del Arte Universal y la Estética Digital',
         'principios de dibujo, pintura y creatividad': 'Pintura y Técnicas Mixtas',
         'principios de dibujo pintura y creatividad':  'Pintura y Técnicas Mixtas',
         'pintura':                                  'Pintura y Técnicas Mixtas',
@@ -895,8 +903,17 @@ def boletin_view(est_id):
     notas_por_materia = {}
     _norm_to_canon = {}  # norm_key → canonical name actualmente en notas_por_materia
 
+    import re as _re_nm
     def _nm(n):
         return (n or "").strip().lower().rstrip('.')
+
+    def _nm_sin_nivel(n):
+        """_nm() + elimina sufijos I/II/III/IV al final (ej. 'fotografía i' → 'fotografía')."""
+        s = _nm(n)
+        return _re_nm.sub(r'\s+[iv]{1,4}$', '', s).strip()
+
+    # Índice por norm-sin-nivel para resolver "Fotografía" == "Fotografía I"
+    _norm_sin_nivel_to_canon = {}
 
     for m in mats_rows:
         nombre_real = m["materia"]
@@ -912,6 +929,10 @@ def boletin_view(est_id):
                 "p1": None, "p2": None, "p3": None, "p4": None,
                 "promedio": None, "tipo": "académico",
             }
+            # Registrar también en índice sin-nivel para lookup inverso
+            nsn = _nm_sin_nivel(nombre_canon)
+            if nsn not in _norm_sin_nivel_to_canon:
+                _norm_sin_nivel_to_canon[nsn] = nombre_canon
 
         canon = _norm_to_canon[norm_canon]
         ex = notas_por_materia[canon]
@@ -923,13 +944,7 @@ def boletin_view(est_id):
         if m["p4"] not in (None, 0): ex["p4"] = m["p4"]
         if m["promedio"] is not None: ex["promedio"] = m["promedio"]
         ex["tipo"] = m["tipo"] or "académico"
-
-        # Alias de fallback: también indexar bajo el nombre original para el template
-        if nombre_real != canon:
-            notas_por_materia[nombre_real] = ex
-        # Indexar también lowercase por si el template busca así
-        if norm != norm_canon:
-            notas_por_materia[nombre_real.strip()] = ex
+        # NOTA: NO agregar nombre_real como key adicional — causaba duplicados en el boletín
 
     # Overlay con calificaciones_periodo (entrada manual — prioridad mayor sobre Excel)
     for r in notas_periodo_rows:
@@ -939,11 +954,19 @@ def boletin_view(est_id):
         norm_canon = _nm(nombre_canon)
 
         if norm_canon not in _norm_to_canon:
-            _norm_to_canon[norm_canon] = nombre_canon
-            notas_por_materia[nombre_canon] = {
-                "p1": None, "p2": None, "p3": None, "p4": None,
-                "promedio": None, "tipo": "académico",
-            }
+            # Intentar match sin sufijo de nivel: "Fotografía" → "Fotografía I"
+            nsn = _nm_sin_nivel(nombre_canon)
+            if nsn in _norm_sin_nivel_to_canon:
+                # Merge dentro del canon existente (ej. "Fotografía I")
+                nombre_canon = _norm_sin_nivel_to_canon[nsn]
+                norm_canon = _nm(nombre_canon)
+                _norm_to_canon[norm_canon] = nombre_canon
+            else:
+                _norm_to_canon[norm_canon] = nombre_canon
+                notas_por_materia[nombre_canon] = {
+                    "p1": None, "p2": None, "p3": None, "p4": None,
+                    "promedio": None, "tipo": "técnico",
+                }
 
         canon = _norm_to_canon[norm_canon]
         ex = notas_por_materia[canon]
@@ -951,8 +974,6 @@ def boletin_view(est_id):
         cal = r["calificacion"]
         if cal is not None:
             ex[periodo_key.lower()] = cal  # "p1"/"p2"/"p3"/"p4"
-        if nombre_real != canon:
-            notas_por_materia[nombre_real] = ex
 
     # Incorporar materias_extras del estudiante (calculadas en perfil_estudiante)
     # Esto cubre menciones no-Multimedia donde las notas técnicas no van a campos directos
