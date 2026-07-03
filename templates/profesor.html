@@ -248,6 +248,37 @@ main{max-width:1200px;margin:0 auto;padding:28px 24px;}
 .obs-inp:focus{border-color:var(--accent);color:var(--text);}
 [data-theme="light"] .obs-inp{background:#fff;border-color:#D4D2CC;color:#323130;}
 
+/* ── MODO PASE (toggle rápido mobile) ── */
+.modo-pase-bar{
+  display:flex;gap:8px;align-items:center;margin-bottom:14px;
+  padding:10px 12px;border-radius:10px;border:1px solid var(--border);
+  background:var(--hover);
+}
+.modo-pase-bar .modo-label{font-size:11px;color:var(--muted);font-weight:600;margin-right:4px;white-space:nowrap;}
+.modo-btn{
+  flex:1;padding:7px 10px;border-radius:8px;font-size:11px;font-weight:700;
+  cursor:pointer;border:1px solid var(--border);background:var(--hover);color:var(--muted);
+  transition:all .15s;font-family:'DM Sans',sans-serif;text-align:center;
+}
+.modo-btn.activo-ausentes{background:#C02B2B;color:#fff;border-color:#C02B2B;}
+.modo-btn.activo-presentes{background:#1A6B3C;color:#fff;border-color:#1A6B3C;}
+[data-theme="light"] .modo-btn{background:#F9F8F7;border-color:#E8E6E0;color:#555;}
+[data-theme="light"] .modo-btn.activo-ausentes{background:#C02B2B;color:#fff;}
+[data-theme="light"] .modo-btn.activo-presentes{background:#1A6B3C;color:#fff;}
+
+/* Feedback visual implícito en fila */
+.est-row.implicito-p{border-left:3px solid rgba(26,107,60,.4);}
+.est-row.implicito-a{border-left:3px solid rgba(192,43,43,.4);}
+
+@media(max-width:640px){
+  .obs-inp{display:none;}
+  .est-row{padding:9px 10px;gap:8px;}
+  .asist-btn{padding:6px 10px;font-size:12px;}
+  .lista-controls .fld label{font-size:10px;}
+  .est-nombre{font-size:11px;}
+  .est-ini{width:28px;height:28px;font-size:11px;}
+}
+
 /* ── STAT CARDS ── */
 .stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-bottom:20px;}
 .stat-card{
@@ -656,6 +687,20 @@ main{max-width:1200px;margin:0 auto;padding:28px 24px;}
             <i class="fas fa-save"></i> Guardar lista
           </button>
         </div>
+      </div>
+
+      <!-- Toggle modo de marcado rápido -->
+      <div class="modo-pase-bar">
+        <span class="modo-label">Modo rápido:</span>
+        <button class="modo-btn activo-ausentes" id="modo-btn-ausentes" onclick="setModoPase('ausentes')">
+          ✗ Marcar Ausentes
+        </button>
+        <button class="modo-btn" id="modo-btn-presentes" onclick="setModoPase('presentes')">
+          ✔ Marcar Presentes
+        </button>
+        <span id="modo-hint" style="font-size:10px;color:var(--muted);margin-left:4px;flex-shrink:0;">
+          No marcados = Presentes
+        </span>
       </div>
 
       <!-- Contadores en tiempo real -->
@@ -1440,6 +1485,7 @@ main{max-width:1200px;margin:0 auto;padding:28px 24px;}
 var ESTUDIANTES = {{ estudiantes | tojson }};
 var PLAN = {{ plan | tojson }};
 var ESTADOS = {};  // {estudiante_id: {estado, observacion}}
+var MODO_PASE = 'ausentes'; // 'ausentes' | 'presentes'
 
 // ── UTILIDADES ──────────────────────────────────────────────────────────────
 function tk(msg, tipo) {
@@ -1489,7 +1535,7 @@ function showTab(name) {
     document.querySelectorAll('.tab-btn').forEach(function(b){
         var txt = b.textContent.trim().toLowerCase();
         var match = false;
-        if(name==='pase'     && txt.includes('lista'))    match=true;
+        if(name==='pase'     && txt.includes('lista'))  { match=true; setTimeout(function(){ setModoPase(MODO_PASE); },50); }
         if(name==='historial'&& txt.includes('historial'))match=true;
         if(name==='resumen'  && txt.includes('resumen'))  match=true;
         if(name==='notas'    && txt.includes('notas'))    match=true;
@@ -1510,15 +1556,43 @@ function showTab(name) {
 }
 
 // ── PASE DE LISTA ────────────────────────────────────────────────────────────
-function setEstado(btn, estado) {
-    var row = btn.closest('.est-row');
-    var estId = parseInt(row.dataset.id);
-    var obs = row.querySelector('.obs-inp').value;
 
-    // Deselect siblings
+function setModoPase(modo) {
+    MODO_PASE = modo;
+    document.getElementById('modo-btn-ausentes').className  = 'modo-btn' + (modo==='ausentes'  ? ' activo-ausentes'  : '');
+    document.getElementById('modo-btn-presentes').className = 'modo-btn' + (modo==='presentes' ? ' activo-presentes' : '');
+    document.getElementById('modo-hint').textContent =
+        modo === 'ausentes' ? 'No marcados = Presentes' : 'No marcados = Ausentes';
+    // Actualizar feedback visual en filas no marcadas
+    document.querySelectorAll('.est-row').forEach(function(row){
+        var estId = parseInt(row.dataset.id);
+        if (!ESTADOS[estId]) {
+            row.classList.toggle('implicito-p', modo === 'ausentes');
+            row.classList.toggle('implicito-a', modo === 'presentes');
+        }
+    });
+    actualizarContadores();
+}
+
+function setEstado(btn, estado) {
+    var row   = btn.closest('.est-row');
+    var estId = parseInt(row.dataset.id);
+    var obsEl = row.querySelector('.obs-inp');
+    var obs   = obsEl ? obsEl.value : '';
+
+    // Si ya estaba marcado con el mismo estado → desmarcar (vuelve al implícito)
+    if (ESTADOS[estId] && ESTADOS[estId].estado === estado) {
+        delete ESTADOS[estId];
+        row.querySelectorAll('.asist-btn').forEach(function(b){ b.classList.remove('sel'); });
+        row.classList.toggle('implicito-p', MODO_PASE === 'ausentes');
+        row.classList.toggle('implicito-a', MODO_PASE === 'presentes');
+        actualizarContadores();
+        return;
+    }
+
     row.querySelectorAll('.asist-btn').forEach(function(b){ b.classList.remove('sel'); });
     btn.classList.add('sel');
-
+    row.classList.remove('implicito-p','implicito-a');
     ESTADOS[estId] = { estado: estado, observacion: obs };
     actualizarContadores();
 }
@@ -1531,17 +1605,22 @@ function marcarTodos(estado) {
 }
 
 function actualizarContadores() {
-    var counts = {presente:0,tardanza:0,ausente:0,justificado:0};
-    var total = ESTUDIANTES.length;
-    var marcados = Object.keys(ESTADOS).length;
+    var counts    = {presente:0,tardanza:0,ausente:0,justificado:0};
+    var total     = ESTUDIANTES.length;
+    var marcados  = Object.keys(ESTADOS).length;
+    var noMarcados = total - marcados;
 
     Object.values(ESTADOS).forEach(function(e){ if(counts[e.estado]!==undefined) counts[e.estado]++; });
+
+    // Los no marcados cuentan implícitamente según el modo
+    if (MODO_PASE === 'ausentes')  counts.presente  += noMarcados;
+    if (MODO_PASE === 'presentes') counts.ausente   += noMarcados;
 
     document.getElementById('cnt-p').textContent = '✔ '+counts.presente+' presentes';
     document.getElementById('cnt-t').textContent = '⏱ '+counts.tardanza+' tardanzas';
     document.getElementById('cnt-a').textContent = '✗ '+counts.ausente+' ausentes';
     document.getElementById('cnt-j').textContent = '📋 '+counts.justificado+' justificados';
-    document.getElementById('cnt-sin-n').textContent = (total - marcados);
+    document.getElementById('cnt-sin-n').textContent = noMarcados;
 }
 
 async function guardarAsistencia() {
@@ -1552,13 +1631,18 @@ async function guardarAsistencia() {
     var periodo = parseInt(periodoStr.replace('P',''));  // convertir a int: 1,2,3,4
 
     if (!fecha || !materia) { tk('Selecciona fecha y materia', 'warn'); return; }
-    if (Object.keys(ESTADOS).length === 0) { tk('Marca al menos un estudiante', 'warn'); return; }
 
     var btn = document.getElementById('btn-guardar');
     btn.textContent = 'Guardando…'; btn.disabled = true;
 
-    var registros = Object.entries(ESTADOS).map(function(kv){
-        return { estudiante_id: parseInt(kv[0]), estado: kv[1].estado, observacion: kv[1].observacion };
+    // Construir lista completa: marcados explícitos + implícitos del modo
+    var estadoImplicito = MODO_PASE === 'ausentes' ? 'presente' : 'ausente';
+    var marcadosSet = new Set(Object.keys(ESTADOS).map(Number));
+    var registros = ESTUDIANTES.map(function(est){
+        if (marcadosSet.has(est.id)) {
+            return { estudiante_id: est.id, estado: ESTADOS[est.id].estado, observacion: ESTADOS[est.id].observacion };
+        }
+        return { estudiante_id: est.id, estado: estadoImplicito, observacion: '' };
     });
 
     try {
@@ -1571,8 +1655,8 @@ async function guardarAsistencia() {
         if (d.ok) {
             tk('Asistencia guardada: ' + d.registrados + ' registros', 'success');
             ESTADOS = {};
-            actualizarContadores();
             document.querySelectorAll('.asist-btn.sel').forEach(function(b){ b.classList.remove('sel'); });
+            setModoPase(MODO_PASE); // restaura feedback implícito y contadores
         } else {
             tk(d.error || 'Error al guardar', 'error');
         }
