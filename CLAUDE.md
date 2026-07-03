@@ -99,6 +99,43 @@ python3 -c "import app; print('OK')"
 
 ## Log de sesiones
 
+### 2026-07-03 (sesión 3 — Motor Conductual, boletín fixes, mobile UI)
+
+**Motor Conductual Fase 1** (`core/helpers.py`):
+- `calcular_motor_conductual(conn, est_id)`: score = 40% p_acad + 35% asistencia + 25% tags
+- Semáforo VERDE >70 / AMARILLO 50-70 / ROJO <50 / ND (sin datos)
+- Si asistencia=0: redistribuye pesos entre notas y tags (65% notas / 35% tags)
+- API GET `/api/conductual/<est_id>` con RLS para profesor
+- Columnas `score_conductual` + `semaforo` en tabla `estudiantes` (auto-migradas)
+- `scripts/recalcular_conductual.py --commit` — poblar BD en Render shell (pendiente)
+- KPIs VERDE/AMARILLO/ROJO en dashboard index.html
+- Card semáforo en perfil del estudiante (JS async)
+
+**Bugs corregidos**:
+- Bug #2: RLS en `/api/progreso/<est_id>` — profesor solo ve sus alumnos
+- Bug #3: `grado + "MULTIMEDIA"` hardcodeado en asistencia → usa `d.get("curso")`
+- Bug #4: Profesores veían todos los reportes → filtro `autor_id=?`
+
+**Boletín PDF** (`routes/calificaciones.py`):
+- `_norm()` con unicodedata NFKD (normalización de acentos)
+- `_norm_sin_nivel()` + `_norm_sin_nivel_to_canon` — fusiona "Fotografía" con "Fotografía I"
+- `boletin_view` (HTML): misma lógica de merge que `boletin_estudiante` (JSON)
+- Eliminadas líneas 927-932 que duplicaban entradas con alias fallback
+- ALIAS_MATERIAS: "Introducción a la Historia del Arte universal y Dominicano" → nombre canónico
+- "Diseño Básico y Expresión Visual" P1/P2 = None (datos ausentes del PDF, carga manual pendiente)
+
+**Perfil estudiante** (`templates/perfil.html`):
+- 5 secciones se ocultan (display:none) si API devuelve lista vacía:
+  cuaderno anecdótico, asistencia mensual, narrativas, casos, documentos
+
+**Mobile UI** (`templates/profesor.html` + `templates/index.html`):
+- Portal docente: overflow-x:hidden global, nav comprimido, hero columnar,
+  controls de pase en grid 2-col, tabla plan con scroll horizontal
+- Pase de lista: toggle "Marcar Ausentes" / "Marcar Presentes" — no marcados = implícito
+- Dashboard: welcome screen comprimido (44px→28px), notif panel centrado,
+  wc-cards 2 columnas en mobile, overflow-x:hidden en ambos bloques CSS
+- Nav dashboard: icono Dashboard visible en mobile (texto oculto)
+
 ### 2026-07-02 (sesión 2 — layout mobile-first + bugfixes QA)
 - Rediseño layout mobile-first (estructura, NO colores):
   - Nav links movidos del topbar al sidebar ("Menú" section al tope)
