@@ -75,6 +75,9 @@ __all__ = [
     "_normalizar_materia",
     "obtener_notas_estudiante",
     "recalcular_kpis_estudiante",
+    "sembrar_competencias_materia",
+    "calcular_cf_por_ce",
+    "guardar_nota_ce_y_recalcular",
 ]
 
 # Aliases de materias: normaliza variantes de casing/escritura a nombre canónico MINERD
@@ -2061,6 +2064,185 @@ def recalcular_kpis_estudiante(conn, est_id, anio=None):
         )
     except Exception as _e:
         logger.warning(f"[KPI] recalcular_kpis_estudiante({est_id}): {_e}")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  MOTOR DE EVALUACIÓN POR COMPETENCIAS (H3)
+# ══════════════════════════════════════════════════════════════════════════════
+
+def sembrar_competencias_materia(conn, materia, ces, anio=None):
+    """
+    Siembra/actualiza las competencias de una materia.
+    ces: lista de dicts {numero, descripcion, periodo_eval}
+    Idempotente — usa INSERT OR IGNORE.
+    """
+    if anio is None:
+        anio = _anio_escolar_actual()
+    insertados = 0
+    for ce in ces:
+        try:
+            conn.execute(
+                "INSERT OR IGNORE INTO competencias_materia "
+                "(materia, numero, descripcion, periodo_eval, anio_escolar, orden) "
+                "VALUES (?,?,?,?,?,?)",
+                (materia, ce['numero'], ce['descripcion'],
+                 ce['periodo_eval'], anio, ce['numero'])
+            )
+            if conn.execute("SELECT changes()").fetchone()[0]:
+                insertados += 1
+        except Exception as _e:
+            logger.warning(f"[CE] sembrar {materia} CE{ce['numero']}: {_e}")
+    return insertados
+
+
+def calcular_cf_por_ce(conn, est_id, materia, anio=None):
+    """
+    Calcula P1-P4 y CF a partir de notas_competencias_ce.
+
+    Retorna dict:
+    {
+        p1, p2, p3, p4,   # promedio de CEs de ese período (None si sin datos)
+        cf,               # promedio de los períodos con datos
+        cf_completo,      # True si los 4 períodos tienen nota
+        ces: {ce_numero: {nota, periodo_eval}}
+    }
+    """
+    if anio is None:
+        anio = _anio_escolar_actual()
+
+    # Cargar definiciones de CEs para esta materia
+    ce_defs = conn.execute(
+        "SELECT numero, periodo_eval FROM competencias_materia "
+        "WHERE materia=? AND anio_escolar=? AND activa=1",
+        (materia, anio)
+    ).fetchall()
+
+    if not ce_defs:
+        return {"p1": None, "p2": None, "p3": None, "p4": None,
+                "cf": None, "cf_completo": False, "ces": {}}
+
+    # Mapa: ce_numero → periodo_eval
+    ce_map = {}
+    for row in ce_defs:
+        n   = row["numero"] if hasattr(row, "keys") else row[0]
+        per = row["periodo_eval"] if hasattr(row, "keys") else row[1]
+        ce_map[n] = per
+
+    # Cargar notas del estudiante
+    notas = conn.execute(
+        "SELECT ce_numero, nota FROM notas_competencias_ce "
+        "WHERE estudiante_id=? AND materia=? AND anio_escolar=?",
+        (est_id, materia, anio)
+    ).fetchall()
+    ce_notas = {}
+    for row in notas:
+        n    = row["ce_numero"] if hasattr(row, "keys") else row[0]
+        nota = float(row["nota"] if hasattr(row, "keys") else row[1])
+        ce_notas[n] = nota
+
+    # Agrupar notas por período según definición
+    por_periodo = {"P1": [], "P2": [], "P3": [], "P4": []}
+    ces_detalle = {}
+    for ce_num, periodo in ce_map.items():
+        if ce_num in ce_notas:
+            por_periodo[periodo].append(ce_notas[ce_num])
+        ces_detalle[ce_num] = {
+            "nota":         ce_notas.get(ce_num),
+            "periodo_eval": periodo,
+        }
+
+    # Calcular promedio por período
+    def _prom(lst):
+        return round(sum(lst) / len(lst), 2) if lst else None
+
+    p1 = _prom(por_periodo["P1"])
+    p2 = _prom(por_periodo["P2"])
+    p3 = _prom(por_periodo["P3"])
+    p4 = _prom(por_periodo["P4"])
+
+    periodos_con_datos = [v for v in [p1, p2, p3, p4] if v is not None]
+    cf = round(sum(periodos_con_datos) / len(periodos_con_datos), 2) if periodos_con_datos else None
+    cf_completo = all(v is not None for v in [p1, p2, p3, p4])
+
+    return {
+        "p1": p1, "p2": p2, "p3": p3, "p4": p4,
+        "cf": cf, "cf_completo": cf_completo,
+        "ces": ces_detalle,
+    }
+
+
+def guardar_nota_ce_y_recalcular(conn, est_id, prof_id, materia, ce_numero, nota, anio=None):
+    """
+    Guarda la nota de una CE y recalcula P1-P4/CF automáticamente.
+    Escribe la CF en calificaciones_periodo (fuente canónica) con origen='actividades'.
+
+    Retorna dict con el resultado del cálculo.
+    """
+    if anio is None:
+        anio = _anio_escolar_actual()
+
+    # Obtener el período de evaluación de esta CE
+    ce_def = conn.execute(
+        "SELECT periodo_eval FROM competencias_materia "
+        "WHERE materia=? AND numero=? AND anio_escolar=?",
+        (materia, ce_numero, anio)
+    ).fetchone()
+    if not ce_def:
+        raise ValueError(f"CE{ce_numero} no definida para {materia} ({anio})")
+    periodo_ce = ce_def["periodo_eval"] if hasattr(ce_def, "keys") else ce_def[0]
+
+    # Guardar nota de la CE
+    conn.execute(
+        "INSERT INTO notas_competencias_ce "
+        "(estudiante_id, profesor_id, materia, ce_numero, periodo, nota, anio_escolar) "
+        "VALUES (?,?,?,?,?,?,?) "
+        "ON CONFLICT(estudiante_id, materia, ce_numero, anio_escolar) "
+        "DO UPDATE SET nota=excluded.nota, profesor_id=excluded.profesor_id, "
+        "              actualizado=datetime('now')",
+        (est_id, prof_id, materia, ce_numero, periodo_ce, nota, anio)
+    )
+
+    # Recalcular CF
+    resultado = calcular_cf_por_ce(conn, est_id, materia, anio)
+
+    # Escribir en calificaciones_periodo (canónica) si hay CF completo
+    if resultado["cf_completo"] and resultado["cf"] is not None:
+        # Escribir cada período calculado en la canónica
+        for per_key in ("P1", "P2", "P3", "P4"):
+            nota_per = resultado[per_key.lower()]
+            if nota_per is None:
+                continue
+            existing = conn.execute(
+                "SELECT id, origen FROM calificaciones_periodo "
+                "WHERE estudiante_id=? AND materia=? AND periodo=? AND anio_escolar=?",
+                (est_id, materia, per_key, anio)
+            ).fetchone()
+            if existing is None:
+                conn.execute(
+                    "INSERT INTO calificaciones_periodo "
+                    "(estudiante_id, profesor_id, materia, periodo, calificacion, "
+                    " anio_escolar, observacion, origen) "
+                    "VALUES (?,?,?,?,?,?,'Calculado por CEs','actividades')",
+                    (est_id, prof_id, materia, per_key, nota_per, anio)
+                )
+            else:
+                origen = existing["origen"] if hasattr(existing, "keys") else existing[1]
+                if origen != "manual":
+                    conn.execute(
+                        "UPDATE calificaciones_periodo "
+                        "SET calificacion=?, profesor_id=?, origen='actividades', "
+                        "    actualizado=datetime('now') WHERE id=?",
+                        (nota_per, prof_id,
+                         existing["id"] if hasattr(existing, "keys") else existing[0])
+                    )
+
+        # Recalcular KPIs del estudiante
+        try:
+            recalcular_kpis_estudiante(conn, est_id, anio)
+        except Exception as _e:
+            logger.warning(f"[CE] recalcular_kpis({est_id}): {_e}")
+
+    return resultado
 
 
 def _recalcular_indicadores(conn, est_id):

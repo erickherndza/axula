@@ -693,6 +693,38 @@ TABLAS_NUEVAS = [
     )
     """,
     # ← AGREGA CREATE TABLE IF NOT EXISTS DE TABLAS NUEVAS AQUÍ
+    # ── H3: Definición de CEs por materia ────────────────────────────────────────
+    """
+CREATE TABLE IF NOT EXISTS competencias_materia (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    materia         TEXT NOT NULL,
+    numero          INTEGER NOT NULL,
+    descripcion     TEXT NOT NULL,
+    periodo_eval    TEXT NOT NULL DEFAULT 'P1',
+    anio_escolar    TEXT NOT NULL DEFAULT '2025-2026',
+    activa          INTEGER DEFAULT 1,
+    orden           INTEGER DEFAULT 0,
+    UNIQUE(materia, numero, anio_escolar)
+)
+""",
+    # ── H3: Notas por competencia (CE) ───────────────────────────────────────────
+    """
+CREATE TABLE IF NOT EXISTS notas_competencias_ce (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    estudiante_id   INTEGER NOT NULL,
+    profesor_id     INTEGER NOT NULL,
+    materia         TEXT NOT NULL,
+    ce_numero       INTEGER NOT NULL,
+    periodo         TEXT NOT NULL,
+    nota            REAL NOT NULL,
+    anio_escolar    TEXT NOT NULL DEFAULT '2025-2026',
+    creado          TEXT DEFAULT (datetime('now')),
+    actualizado     TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (estudiante_id) REFERENCES estudiantes(id),
+    FOREIGN KEY (profesor_id) REFERENCES usuarios(id),
+    UNIQUE(estudiante_id, materia, ce_numero, anio_escolar)
+)
+""",
     # ── Phase 2: Pesos de evaluación por profesor ─────────────────────────────
     """
     CREATE TABLE IF NOT EXISTS config_evaluacion_pesos (

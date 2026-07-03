@@ -224,6 +224,36 @@ def migrar_bd():
     except Exception as _e:
         logger.warning(f"[db] seed catálogo materias: {_e}")
 
+    # H3: sembrar CEs de Lenguaje Visual si no existen
+    try:
+        with sqlite3.connect(DATABASE, timeout=10) as _c:
+            _c.row_factory = sqlite3.Row
+            n_ce = _c.execute(
+                "SELECT COUNT(*) FROM competencias_materia WHERE materia=?",
+                ("Lenguaje Visual, Dibujo y Creación de Personajes",)
+            ).fetchone()[0]
+            if n_ce == 0:
+                from .helpers import sembrar_competencias_materia
+                _ces_lenguaje_visual = [
+                    {"numero": 1, "descripcion": "Argumenta el rol del lenguaje visual y artesanal y su evolución a través de la historia.", "periodo_eval": "P1"},
+                    {"numero": 2, "descripcion": "Identifica los principales elementos presentes en el lenguaje visual y artesanal como formas, estructuras, colores, texturas, figura-fondo, composición, luz y sombras, tamaños, escalas, equilibrios, unidad, variedad, espacialidades, materiales y formatos.", "periodo_eval": "P2"},
+                    {"numero": 3, "descripcion": "Analiza aspectos connotativos y denotativos de imágenes de diferentes estilos artísticos.", "periodo_eval": "P2"},
+                    {"numero": 4, "descripcion": "Elabora obras artísticas visuales y artesanales haciendo uso de los elementos básicos y técnicas.", "periodo_eval": "P3"},
+                    {"numero": 5, "descripcion": "Describe las características extrínsecas (aspecto físico) e intrínsecas (personalidad) de los personajes ya existentes.", "periodo_eval": "P2"},
+                    {"numero": 6, "descripcion": "Comprende el método de organización de la información para el desarrollo de la personalidad del personaje.", "periodo_eval": "P3"},
+                    {"numero": 7, "descripcion": "Diseña con formas geométricas básicas la estructura interna del personaje.", "periodo_eval": "P3"},
+                    {"numero": 8, "descripcion": "Desarrolla conceptos físicos del personaje, aplica el model sheet.", "periodo_eval": "P4"},
+                    {"numero": 9, "descripcion": "Digitaliza los personajes y sus elementos evidenciando la aplicación del color, texturas, profundidad, perspectiva y detalles realizados con la tableta gráfica dentro de Photoshop.", "periodo_eval": "P4"},
+                ]
+                insertados = sembrar_competencias_materia(
+                    _c, "Lenguaje Visual, Dibujo y Creación de Personajes", _ces_lenguaje_visual
+                )
+                _c.commit()
+                if insertados:
+                    logger.info(f"  ✓ CEs sembradas: Lenguaje Visual ({insertados} competencias)")
+    except Exception as _e:
+        logger.warning(f"[db] seed CE Lenguaje Visual: {_e}")
+
 
 def _seed_admin(hash_func):
     """

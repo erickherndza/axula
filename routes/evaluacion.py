@@ -1042,3 +1042,225 @@ def cerrar_periodo_route(periodo):
                f"materia={materia} periodo={periodo} procesados={resultado['procesados']}")
 
     return jsonify(resultado)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  H3 — Motor de Evaluación por Competencias (CE)
+# ══════════════════════════════════════════════════════════════════════════════
+
+@evaluacion_bp.route("/api/evaluacion/ce/<materia>/competencias")
+@login_required
+def listar_competencias_materia(materia):
+    """GET lista de CEs definidas para una materia."""
+    import urllib.parse
+    materia = urllib.parse.unquote(materia)
+    anio = _anio_escolar_actual()
+    with sqlite3.connect(DATABASE, timeout=10) as conn:
+        conn.row_factory = sqlite3.Row
+        ces = conn.execute(
+            "SELECT numero, descripcion, periodo_eval, activa "
+            "FROM competencias_materia WHERE materia=? AND anio_escolar=? ORDER BY numero",
+            (materia, anio)
+        ).fetchall()
+    return jsonify([dict(r) for r in ces])
+
+
+@evaluacion_bp.route("/api/evaluacion/ce/configurar", methods=["POST"])
+@login_required
+def configurar_competencias():
+    """
+    POST — guarda/actualiza la lista de CEs de una materia.
+    Solo coordinadores y directora.
+    Body: {materia, ces: [{numero, descripcion, periodo_eval}]}
+    """
+    u = get_usuario()
+    from core.auth import _normalizar_rol
+    if _normalizar_rol(u.get("rol", "")) not in ROLES_COORD | {"directora", "superusuario"}:
+        return jsonify({"error": "Sin permisos"}), 403
+
+    d = request.get_json(silent=True) or {}
+    materia = (d.get("materia") or "").strip()
+    ces     = d.get("ces", [])
+    if not materia or not ces:
+        return jsonify({"error": "Campos requeridos: materia, ces"}), 400
+
+    from core.helpers import sembrar_competencias_materia
+    anio = _anio_escolar_actual()
+    with sqlite3.connect(DATABASE, timeout=10) as conn:
+        conn.row_factory = sqlite3.Row
+        # Desactivar las anteriores si se reemplaza
+        conn.execute(
+            "UPDATE competencias_materia SET activa=0 WHERE materia=? AND anio_escolar=?",
+            (materia, anio)
+        )
+        for ce in ces:
+            conn.execute(
+                "INSERT INTO competencias_materia "
+                "(materia, numero, descripcion, periodo_eval, anio_escolar, activa, orden) "
+                "VALUES (?,?,?,?,?,1,?) "
+                "ON CONFLICT(materia, numero, anio_escolar) "
+                "DO UPDATE SET descripcion=excluded.descripcion, "
+                "periodo_eval=excluded.periodo_eval, activa=1",
+                (materia, ce.get("numero"), ce.get("descripcion", ""),
+                 ce.get("periodo_eval", "P1"), anio, ce.get("numero", 0))
+            )
+        conn.commit()
+    return jsonify({"ok": True, "guardadas": len(ces)})
+
+
+@evaluacion_bp.route("/api/evaluacion/ce/nota", methods=["POST"])
+@login_required
+@rate_limited(max_calls=120, window=60)
+def guardar_nota_ce():
+    """
+    POST — guarda la nota de una CE para un estudiante.
+    Body: {estudiante_id, materia, ce_numero, nota, anio_escolar?}
+    o batch: [{...}, {...}]
+    """
+    prof = _get_profesor()
+    if not prof:
+        return jsonify({"error": "No autenticado"}), 401
+
+    data = request.get_json(silent=True) or {}
+    registros = data if isinstance(data, list) else [data]
+    anio = _anio_escolar_actual()
+
+    guardados  = 0
+    errores    = []
+    resultados = []
+
+    with sqlite3.connect(DATABASE, timeout=10) as conn:
+        conn.row_factory = sqlite3.Row
+        for item in registros:
+            est_id    = item.get("estudiante_id")
+            materia   = (item.get("materia") or "").strip()
+            ce_numero = item.get("ce_numero")
+            nota      = item.get("nota")
+            item_anio = item.get("anio_escolar") or anio
+
+            if not all([est_id, materia, ce_numero is not None, nota is not None]):
+                errores.append(f"Datos incompletos: {item}")
+                continue
+            try:
+                nota = float(nota)
+                if not (0 <= nota <= 100):
+                    raise ValueError
+            except (ValueError, TypeError):
+                errores.append(f"Nota inválida: {nota}")
+                continue
+
+            try:
+                from core.helpers import guardar_nota_ce_y_recalcular
+                res = guardar_nota_ce_y_recalcular(
+                    conn, est_id, prof["id"], materia, int(ce_numero), nota, item_anio
+                )
+                conn.commit()
+                guardados += 1
+                resultados.append({"estudiante_id": est_id, "ce": ce_numero, **res})
+            except Exception as _e:
+                errores.append(str(_e))
+
+    return jsonify({"ok": True, "guardados": guardados,
+                    "errores": errores, "resultados": resultados})
+
+
+@evaluacion_bp.route("/api/evaluacion/ce/notas/<int:est_id>/<path:materia>")
+@login_required
+def notas_ce_estudiante(est_id, materia):
+    """GET — todas las CE notas de un estudiante en una materia."""
+    import urllib.parse
+    materia = urllib.parse.unquote(materia)
+    anio = _anio_escolar_actual()
+    with sqlite3.connect(DATABASE, timeout=10) as conn:
+        conn.row_factory = sqlite3.Row
+        notas = conn.execute(
+            "SELECT nc.ce_numero, nc.nota, nc.periodo, cm.descripcion "
+            "FROM notas_competencias_ce nc "
+            "LEFT JOIN competencias_materia cm "
+            "  ON cm.materia=nc.materia AND cm.numero=nc.ce_numero AND cm.anio_escolar=nc.anio_escolar "
+            "WHERE nc.estudiante_id=? AND nc.materia=? AND nc.anio_escolar=?",
+            (est_id, materia, anio)
+        ).fetchall()
+        from core.helpers import calcular_cf_por_ce
+        cf_data = calcular_cf_por_ce(conn, est_id, materia, anio)
+
+    return jsonify({
+        "notas_ce": [dict(r) for r in notas],
+        "calculo": cf_data,
+    })
+
+
+@evaluacion_bp.route("/api/evaluacion/ce/registro/<path:materia>")
+@login_required
+def registro_ce_materia(materia):
+    """
+    GET — vista registro: todos los estudiantes con sus CEs para una materia.
+    Equivalente digital del papel que entrega el profesor a coordinación.
+    Query params: ?grado=4to&mencion=MULTIMEDIA
+    """
+    import urllib.parse
+    materia = urllib.parse.unquote(materia)
+    grado   = request.args.get("grado", "")
+    mencion = request.args.get("mencion", "")
+    anio    = _anio_escolar_actual()
+    prof    = _get_profesor()
+    if not prof:
+        return jsonify({"error": "No autenticado"}), 401
+
+    with sqlite3.connect(DATABASE, timeout=10) as conn:
+        conn.row_factory = sqlite3.Row
+
+        # CEs de la materia
+        ces = conn.execute(
+            "SELECT numero, descripcion, periodo_eval FROM competencias_materia "
+            "WHERE materia=? AND anio_escolar=? AND activa=1 ORDER BY numero",
+            (materia, anio)
+        ).fetchall()
+
+        # Estudiantes del grado/mención
+        q = "SELECT id, nombre, apellido, grado, curso FROM estudiantes WHERE 1=1"
+        params = []
+        if grado:
+            q += " AND LOWER(grado) LIKE ?"
+            params.append(f"%{grado.lower()}%")
+        if mencion:
+            q += " AND UPPER(curso) LIKE ?"
+            params.append(f"%{mencion.upper()}%")
+        q += " ORDER BY apellido, nombre"
+        estudiantes = conn.execute(q, params).fetchall()
+
+        # Notas CE de todos los estudiantes
+        notas_bulk = conn.execute(
+            "SELECT estudiante_id, ce_numero, nota FROM notas_competencias_ce "
+            "WHERE materia=? AND anio_escolar=?",
+            (materia, anio)
+        ).fetchall()
+        notas_idx = {}  # {est_id: {ce_numero: nota}}
+        for r in notas_bulk:
+            eid = r["estudiante_id"]; ce = r["ce_numero"]; nota = r["nota"]
+            notas_idx.setdefault(eid, {})[ce] = nota
+
+        from core.helpers import calcular_cf_por_ce
+        registros = []
+        for est in estudiantes:
+            eid = est["id"]
+            cf_data = calcular_cf_por_ce(conn, eid, materia, anio)
+            registros.append({
+                "id":      eid,
+                "nombre":  f"{est['nombre']} {est['apellido']}",
+                "grado":   est["grado"],
+                "curso":   est["curso"],
+                "ces":     notas_idx.get(eid, {}),
+                "p1":      cf_data["p1"],
+                "p2":      cf_data["p2"],
+                "p3":      cf_data["p3"],
+                "p4":      cf_data["p4"],
+                "cf":      cf_data["cf"],
+                "completo": cf_data["cf_completo"],
+            })
+
+    return jsonify({
+        "materia":      materia,
+        "competencias": [dict(c) for c in ces],
+        "estudiantes":  registros,
+    })
