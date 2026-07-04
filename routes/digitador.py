@@ -580,6 +580,222 @@ def cargar_notas_coordinador():
     })
 
 
+@digitador_bp.route("/api/digitador/preview-notas-coordinador", methods=["POST"])
+@login_required
+@_digitador_required
+def preview_notas_coordinador():
+    """
+    Parsea el archivo del coordinador y devuelve un preview con:
+    - matched: lista de {est_id, nombre, grado, p1_actual..p4_actual, p1_nuevo..p4_nuevo}
+    - unmatched: nombres sin match en BD
+    No escribe nada en la BD.
+    """
+    import tempfile, unicodedata
+    from difflib import SequenceMatcher
+    from core.excel_notas import parsear_registro_coordinador
+
+    f = request.files.get("file")
+    if not f or not f.filename:
+        return jsonify({"ok": False, "error": "No se recibió archivo"}), 400
+
+    ext = os.path.splitext(f.filename)[1].lower()
+    if ext not in (".xlsx", ".xls", ".xlsm"):
+        return jsonify({"ok": False, "error": "Formato no válido. Usa .xlsx o .xlsm"}), 400
+
+    with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
+        f.save(tmp.name)
+        tmp_path = tmp.name
+
+    try:
+        datos = parsear_registro_coordinador(tmp_path)
+    except Exception as e:
+        return jsonify({"ok": False, "error": f"Error al leer el archivo: {e}"}), 400
+    finally:
+        try:
+            os.unlink(tmp_path)
+        except Exception:
+            pass
+
+    if not datos["hojas"]:
+        return jsonify({
+            "ok": False,
+            "error": "No se encontraron hojas con formato reconocido.",
+            "advertencias": datos.get("advertencias", [])
+        }), 400
+
+    def _norm(s):
+        s = unicodedata.normalize("NFD", str(s or ""))
+        s = "".join(c for c in s if unicodedata.category(c) != "Mn")
+        import re
+        return re.sub(r"\s+", " ", s).strip().lower()
+
+    def _similar(a, b):
+        return SequenceMatcher(None, _norm(a), _norm(b)).ratio()
+
+    materia = datos["materia"]
+    anio    = _anio_escolar_actual()
+    matched   = []
+    unmatched = []
+
+    with sqlite3.connect(DATABASE, timeout=15) as conn:
+        conn.row_factory = sqlite3.Row
+
+        for hoja in datos["hojas"]:
+            grado = hoja["grado"]
+
+            rows_bd = conn.execute(
+                "SELECT id, nombre, apellido FROM estudiantes WHERE grado=? AND condicion='ACTIVO'",
+                (grado,)
+            ).fetchall()
+            idx_bd = {_norm(f"{r['nombre']} {r['apellido']}"): r for r in rows_bd}
+
+            for alumno in hoja["alumnos"]:
+                if alumno["estado"] == "RETIRADO":
+                    continue
+
+                clave = _norm(alumno["nombre"])
+                row_bd = idx_bd.get(clave)
+
+                if row_bd is None:
+                    mejor_score = 0
+                    mejor_row   = None
+                    for k, v in idx_bd.items():
+                        s = _similar(k, clave)
+                        if s > mejor_score:
+                            mejor_score = s
+                            mejor_row   = v
+                    if mejor_row and mejor_score >= 0.72:
+                        row_bd = mejor_row
+
+                if row_bd is None:
+                    unmatched.append({"nombre": alumno["nombre"], "grado": grado})
+                    continue
+
+                est_id = row_bd["id"]
+                nombre_bd = f"{row_bd['nombre']} {row_bd['apellido']}"
+
+                # Notas actuales en calificaciones_periodo
+                actuales = {}
+                for p_str in ("P1", "P2", "P3", "P4"):
+                    row_p = conn.execute(
+                        "SELECT calificacion FROM calificaciones_periodo "
+                        "WHERE estudiante_id=? AND materia=? AND periodo=? AND anio_escolar=?",
+                        (est_id, materia, p_str, anio)
+                    ).fetchone()
+                    actuales[p_str.lower()] = float(row_p["calificacion"]) if row_p else None
+
+                matched.append({
+                    "est_id":    est_id,
+                    "nombre_bd": nombre_bd,
+                    "nombre_excel": alumno["nombre"],
+                    "grado":     grado,
+                    "hoja":      hoja["hoja"],
+                    "p1_actual": actuales["p1"],
+                    "p2_actual": actuales["p2"],
+                    "p3_actual": actuales["p3"],
+                    "p4_actual": actuales["p4"],
+                    "p1_nuevo":  alumno["p1"],
+                    "p2_nuevo":  alumno["p2"],
+                    "p3_nuevo":  alumno["p3"],
+                    "p4_nuevo":  alumno["p4"],
+                    "cf_nuevo":  alumno["promedio"],
+                })
+
+    return jsonify({
+        "ok":          True,
+        "materia":     materia,
+        "anio":        anio,
+        "matched":     matched,
+        "unmatched":   unmatched,
+        "advertencias": datos.get("advertencias", []),
+    })
+
+
+@digitador_bp.route("/api/digitador/confirmar-notas-coordinador", methods=["POST"])
+@login_required
+@_digitador_required
+def confirmar_notas_coordinador():
+    """
+    Guarda los registros preview confirmados en calificaciones_periodo (origen='importacion').
+    Solo sobreescribe si no hay nota manual preexistente.
+    Body JSON: {materia, anio, records: [{est_id, p1_nuevo, p2_nuevo, p3_nuevo, p4_nuevo}]}
+    """
+    from core.helpers import recalcular_kpis_estudiante
+
+    d = request.get_json(silent=True) or {}
+    materia = (d.get("materia") or "").strip()
+    anio    = (d.get("anio") or _anio_escolar_actual()).strip()
+    records = d.get("records", [])
+
+    if not materia or not records:
+        return jsonify({"ok": False, "error": "Faltan datos (materia o records)"}), 400
+
+    prof_id = get_usuario().get("id")
+    guardados   = 0
+    omitidos    = 0
+    actualizados = 0
+
+    with sqlite3.connect(DATABASE, timeout=15) as conn:
+        conn.row_factory = sqlite3.Row
+
+        for rec in records:
+            est_id = rec.get("est_id")
+            if not est_id:
+                continue
+
+            for p_num, campo in enumerate(["p1_nuevo", "p2_nuevo", "p3_nuevo", "p4_nuevo"], start=1):
+                nota = rec.get(campo)
+                if nota is None:
+                    continue
+                periodo_str = f"P{p_num}"
+
+                existing = conn.execute(
+                    "SELECT id, origen FROM calificaciones_periodo "
+                    "WHERE estudiante_id=? AND materia=? AND periodo=? AND anio_escolar=?",
+                    (est_id, materia, periodo_str, anio)
+                ).fetchone()
+
+                if existing is None:
+                    conn.execute(
+                        "INSERT INTO calificaciones_periodo "
+                        "(estudiante_id, profesor_id, materia, periodo, calificacion, "
+                        " anio_escolar, observacion, origen) "
+                        "VALUES (?,?,?,?,?,?,'Cargado desde Excel del coordinador','importacion')",
+                        (est_id, prof_id, materia, periodo_str, nota, anio)
+                    )
+                    guardados += 1
+                elif existing["origen"] == "manual":
+                    omitidos += 1  # Nota manual tiene precedencia — no tocar
+                else:
+                    conn.execute(
+                        "UPDATE calificaciones_periodo "
+                        "SET calificacion=?, profesor_id=?, origen='importacion', "
+                        "    actualizado=datetime('now') "
+                        "WHERE id=?",
+                        (nota, prof_id, existing["id"])
+                    )
+                    actualizados += 1
+
+        conn.commit()
+
+        # Recalcular KPIs de todos los estudiantes afectados
+        est_ids = list({rec["est_id"] for rec in records if rec.get("est_id")})
+        for eid in est_ids:
+            try:
+                recalcular_kpis_estudiante(conn, eid, anio)
+            except Exception:
+                pass
+        conn.commit()
+
+    return jsonify({
+        "ok":         True,
+        "mensaje":    f"✓ {materia} — {guardados} nuevos, {actualizados} actualizados, {omitidos} omitidos (nota manual).",
+        "guardados":  guardados,
+        "actualizados": actualizados,
+        "omitidos":   omitidos,
+    })
+
+
 @digitador_bp.route("/api/digitador/buscar-estudiante")
 @login_required
 @_digitador_required

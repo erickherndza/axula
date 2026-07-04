@@ -194,24 +194,80 @@ table{width:100%;border-collapse:collapse;font-size:.85rem}th{text-align:left;pa
 
     </div>
 
-    <!-- Fila 2: Registro del Coordinador — sección propia con header destacado -->
+    <!-- Fila 2: Registro del Coordinador — con preview/confirmación -->
     <div style="background:rgba(167,139,250,.07);border:2px solid rgba(167,139,250,.4);border-radius:12px;padding:18px;">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
         <i class="fas fa-chalkboard-teacher" style="color:#a78bfa;font-size:18px;"></i>
         <div>
           <div style="font-size:.93rem;font-weight:700;color:#a78bfa;">Registro del Coordinador</div>
-          <div style="font-size:.78rem;color:var(--muted);">Para archivos <strong style="color:var(--text)">«XGRADO. GRADO - MATERIA 25-26.xlsm»</strong> que entrega el coordinador — <em>no es el Boletín Oficial</em></div>
+          <div style="font-size:.78rem;color:var(--muted);">Para archivos <strong style="color:var(--text)">«XGRADO. GRADO - MATERIA 25-26.xlsm»</strong> — guarda en la tabla canónica de notas</div>
         </div>
       </div>
-      <label style="display:block;border:2px dashed rgba(167,139,250,.5);border-radius:8px;padding:22px;text-align:center;cursor:pointer;transition:border-color .15s;background:var(--surface);"
-             onmouseover="this.style.borderColor='#a78bfa';this.style.background='rgba(167,139,250,.06)'" onmouseout="this.style.borderColor='rgba(167,139,250,.5)';this.style.background='var(--surface)'">
-        <input type="file" id="dig-file-coord" accept=".xlsx,.xls,.xlsm" style="display:none" onchange="digCargarCoord(this)">
-        <div style="font-size:28px;margin-bottom:6px;">📋</div>
-        <div style="font-size:.88rem;font-weight:700;color:#a78bfa;">Haz clic aquí para subir el Registro del Coordinador</div>
-        <div style="font-size:.76rem;color:var(--muted);margin-top:4px;">4TO. GRADO - IDIOMA INGLÉS 25-26.xlsm · 4TO. GRADO-PRINCIPIOS DE DIBUJO (VISUALES) 25-26.xlsm</div>
-      </label>
-      <div id="dig-status-coord" style="margin-top:10px;font-size:.82rem;padding:8px 12px;border-radius:6px;display:none;"></div>
-      <div id="dig-detail-coord" style="margin-top:6px;font-size:.76rem;color:var(--muted);display:none;"></div>
+
+      <!-- Paso 1: Upload -->
+      <div id="coord-step1">
+        <label id="coord-dropzone" style="display:block;border:2px dashed rgba(167,139,250,.5);border-radius:8px;padding:22px;text-align:center;cursor:pointer;transition:border-color .15s;background:var(--surface);"
+               onmouseover="this.style.borderColor='#a78bfa';this.style.background='rgba(167,139,250,.06)'" onmouseout="this.style.borderColor='rgba(167,139,250,.5)';this.style.background='var(--surface)'">
+          <input type="file" id="dig-file-coord" accept=".xlsx,.xls,.xlsm" style="display:none" onchange="coordPreview(this)">
+          <div style="font-size:28px;margin-bottom:6px;">📋</div>
+          <div style="font-size:.88rem;font-weight:700;color:#a78bfa;">Haz clic aquí para subir el Registro del Coordinador</div>
+          <div style="font-size:.76rem;color:var(--muted);margin-top:4px;">4TO. GRADO - IDIOMA INGLÉS 25-26.xlsm · 4TO. GRADO - LENGUAJE VISUAL (MULT) 25-26.xlsm</div>
+        </label>
+        <div id="dig-status-coord" style="margin-top:10px;font-size:.82rem;padding:8px 12px;border-radius:6px;display:none;"></div>
+      </div>
+
+      <!-- Paso 2: Preview -->
+      <div id="coord-step2" style="display:none;margin-top:12px;">
+        <div id="coord-preview-header" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+          <div>
+            <span style="font-size:.93rem;font-weight:700;color:#a78bfa;" id="coord-materia-label">—</span>
+            <span id="coord-stats" style="font-size:.78rem;color:var(--muted);margin-left:8px;"></span>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button onclick="coordCancelar()" style="font-size:.8rem;padding:6px 14px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;">Cancelar</button>
+            <button id="coord-btn-confirmar" onclick="coordConfirmar()" style="font-size:.8rem;padding:6px 16px;border-radius:6px;border:none;background:#a78bfa;color:#fff;cursor:pointer;font-weight:600;"><i class="fas fa-save"></i> Guardar en sistema</button>
+          </div>
+        </div>
+
+        <!-- Tabla de preview -->
+        <div style="overflow-x:auto;max-height:380px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;">
+          <table style="width:100%;border-collapse:collapse;font-size:.78rem;">
+            <thead style="position:sticky;top:0;background:var(--surface);z-index:1;">
+              <tr style="border-bottom:1px solid var(--border);">
+                <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--muted);">Estudiante</th>
+                <th style="padding:8px 6px;text-align:center;color:var(--muted);">Grado</th>
+                <th style="padding:8px 6px;text-align:center;color:#60b8f0;" colspan="4">Actual (P1–P4)</th>
+                <th style="padding:8px 6px;text-align:center;color:#a78bfa;" colspan="4">Excel (P1–P4)</th>
+                <th style="padding:8px 6px;text-align:center;color:var(--muted);">Estado</th>
+              </tr>
+              <tr style="border-bottom:2px solid var(--border);background:rgba(var(--surface-rgb),.9);">
+                <th></th><th></th>
+                <th style="padding:4px 6px;text-align:center;font-size:.7rem;color:#60b8f0;font-weight:500;">P1</th>
+                <th style="padding:4px 6px;text-align:center;font-size:.7rem;color:#60b8f0;font-weight:500;">P2</th>
+                <th style="padding:4px 6px;text-align:center;font-size:.7rem;color:#60b8f0;font-weight:500;">P3</th>
+                <th style="padding:4px 6px;text-align:center;font-size:.7rem;color:#60b8f0;font-weight:500;">P4</th>
+                <th style="padding:4px 6px;text-align:center;font-size:.7rem;color:#a78bfa;font-weight:500;">P1</th>
+                <th style="padding:4px 6px;text-align:center;font-size:.7rem;color:#a78bfa;font-weight:500;">P2</th>
+                <th style="padding:4px 6px;text-align:center;font-size:.7rem;color:#a78bfa;font-weight:500;">P3</th>
+                <th style="padding:4px 6px;text-align:center;font-size:.7rem;color:#a78bfa;font-weight:500;">P4</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="coord-preview-tbody"></tbody>
+          </table>
+        </div>
+
+        <!-- Sin match -->
+        <div id="coord-unmatched" style="display:none;margin-top:10px;padding:10px 12px;background:rgba(201,53,43,.07);border:1px solid rgba(201,53,43,.3);border-radius:8px;">
+          <div style="font-size:.8rem;font-weight:600;color:var(--danger);margin-bottom:6px;"><i class="fas fa-exclamation-triangle"></i> Sin match en sistema</div>
+          <div id="coord-unmatched-list" style="font-size:.76rem;color:var(--muted);"></div>
+        </div>
+
+        <!-- Advertencias -->
+        <div id="coord-warnings" style="display:none;margin-top:8px;padding:8px 12px;background:rgba(196,138,30,.08);border:1px solid rgba(196,138,30,.3);border-radius:8px;font-size:.76rem;color:var(--warn);"></div>
+
+        <div id="coord-confirm-status" style="margin-top:10px;font-size:.82rem;padding:8px 12px;border-radius:6px;display:none;"></div>
+      </div>
     </div>
 
     <!-- Fila 3: Carga por Listado Simple -->
@@ -421,29 +477,144 @@ function digCargarBoletin(input) {
     .catch(function(e) { digSetStatus('dig-status-boletin', '✗ Error: ' + e.message, true); });
 }
 
-function digCargarCoord(input) {
+// ── Registro del Coordinador: preview → confirmar ──────────────────────────
+var _coordData = null; // guarda el payload del preview para confirmar
+
+function coordPreview(input) {
   if (!input.files[0]) return;
   var fd = new FormData();
   fd.append('file', input.files[0]);
-  digSetStatus('dig-status-coord', '⏳ Procesando registro del coordinador...', false);
-  document.getElementById('dig-detail-coord').style.display = 'none';
-  fetch('/api/digitador/cargar-notas-coordinador', { method: 'POST', headers: { 'X-CSRF-Token': CS }, body: fd })
+  digSetStatus('dig-status-coord', '⏳ Analizando archivo...', false);
+  document.getElementById('dig-status-coord').style.display = 'block';
+
+  fetch('/api/digitador/preview-notas-coordinador', { method: 'POST', headers: { 'X-CSRF-Token': CS }, body: fd })
     .then(function(r) { return r.json(); })
     .then(function(d) {
-      if (d.ok) {
-        digSetStatus('dig-status-coord', '✓ ' + (d.mensaje || 'Registro cargado'), false);
-        var det = document.getElementById('dig-detail-coord');
-        var lines = [];
-        if (d.sin_match && d.sin_match.length) lines.push('⚠ Sin match (' + d.sin_match.length + '): ' + d.sin_match.slice(0,5).join(', ') + (d.sin_match.length > 5 ? '...' : ''));
-        if (d.advertencias && d.advertencias.length) lines.push('ℹ ' + d.advertencias[0]);
-        if (lines.length) { det.textContent = lines.join(' | '); det.style.display = 'block'; }
-        LR();
-      } else {
-        digSetStatus('dig-status-coord', '✗ ' + (d.error || 'Error al cargar'), true);
-      }
       input.value = '';
+      if (!d.ok) {
+        digSetStatus('dig-status-coord', '✗ ' + (d.error || 'Error al leer'), true);
+        return;
+      }
+      document.getElementById('dig-status-coord').style.display = 'none';
+      _coordData = d;
+      coordMostrarPreview(d);
     })
     .catch(function(e) { digSetStatus('dig-status-coord', '✗ Error: ' + e.message, true); });
+}
+
+function coordMostrarPreview(d) {
+  document.getElementById('coord-step2').style.display = 'block';
+  document.getElementById('coord-materia-label').textContent = d.materia || '(sin materia)';
+  document.getElementById('coord-stats').textContent =
+    d.matched.length + ' estudiantes · ' + (d.unmatched.length ? d.unmatched.length + ' sin match' : 'todos identificados');
+
+  // Tabla de matched
+  var tbody = document.getElementById('coord-preview-tbody');
+  tbody.innerHTML = d.matched.map(function(r) {
+    var cambios = [];
+    ['p1','p2','p3','p4'].forEach(function(p) {
+      var act = r[p+'_actual'], nvo = r[p+'_nuevo'];
+      if (nvo > 0 && act !== nvo) cambios.push(p.toUpperCase());
+    });
+    var estadoHtml = cambios.length
+      ? '<span style="color:#a78bfa;font-size:.7rem;font-weight:600;">↑ ' + cambios.join('/') + '</span>'
+      : '<span style="color:var(--muted);font-size:.7rem;">sin cambios</span>';
+
+    function fmt(v) {
+      if (v === null || v === undefined) return '<span style="color:var(--muted)">—</span>';
+      return '<span style="font-weight:600">' + parseFloat(v).toFixed(1) + '</span>';
+    }
+    function fmtNvo(act, nvo) {
+      if (!nvo && nvo !== 0) return '<span style="color:var(--muted)">—</span>';
+      var n = parseFloat(nvo).toFixed(1);
+      var changed = (act !== nvo && nvo > 0);
+      return changed
+        ? '<span style="color:#a78bfa;font-weight:700;">' + n + '</span>'
+        : '<span>' + n + '</span>';
+    }
+    return '<tr style="border-bottom:1px solid var(--border);">' +
+      '<td style="padding:7px 10px;">' + r.nombre_bd + '</td>' +
+      '<td style="padding:7px 6px;text-align:center;color:var(--muted);">' + r.grado + '</td>' +
+      '<td style="padding:7px 6px;text-align:center;">' + fmt(r.p1_actual) + '</td>' +
+      '<td style="padding:7px 6px;text-align:center;">' + fmt(r.p2_actual) + '</td>' +
+      '<td style="padding:7px 6px;text-align:center;">' + fmt(r.p3_actual) + '</td>' +
+      '<td style="padding:7px 6px;text-align:center;">' + fmt(r.p4_actual) + '</td>' +
+      '<td style="padding:7px 6px;text-align:center;">' + fmtNvo(r.p1_actual, r.p1_nuevo) + '</td>' +
+      '<td style="padding:7px 6px;text-align:center;">' + fmtNvo(r.p2_actual, r.p2_nuevo) + '</td>' +
+      '<td style="padding:7px 6px;text-align:center;">' + fmtNvo(r.p3_actual, r.p3_nuevo) + '</td>' +
+      '<td style="padding:7px 6px;text-align:center;">' + fmtNvo(r.p4_actual, r.p4_nuevo) + '</td>' +
+      '<td style="padding:7px 8px;text-align:center;">' + estadoHtml + '</td>' +
+      '</tr>';
+  }).join('');
+
+  // Unmatched
+  var um = document.getElementById('coord-unmatched');
+  if (d.unmatched && d.unmatched.length) {
+    document.getElementById('coord-unmatched-list').innerHTML =
+      d.unmatched.map(function(u) { return u.grado + ': ' + u.nombre; }).join('<br>');
+    um.style.display = 'block';
+  } else {
+    um.style.display = 'none';
+  }
+
+  // Advertencias
+  var wDiv = document.getElementById('coord-warnings');
+  if (d.advertencias && d.advertencias.length) {
+    wDiv.textContent = d.advertencias.join(' · ');
+    wDiv.style.display = 'block';
+  } else {
+    wDiv.style.display = 'none';
+  }
+
+  document.getElementById('coord-confirm-status').style.display = 'none';
+  document.getElementById('coord-btn-confirmar').disabled = false;
+}
+
+function coordCancelar() {
+  _coordData = null;
+  document.getElementById('coord-step2').style.display = 'none';
+  document.getElementById('dig-status-coord').style.display = 'none';
+  document.getElementById('dig-file-coord').value = '';
+}
+
+function coordConfirmar() {
+  if (!_coordData) return;
+  var btn = document.getElementById('coord-btn-confirmar');
+  btn.disabled = true;
+  btn.textContent = '⏳ Guardando...';
+
+  var payload = {
+    materia: _coordData.materia,
+    anio:    _coordData.anio,
+    records: _coordData.matched.map(function(r) {
+      return { est_id: r.est_id, p1_nuevo: r.p1_nuevo, p2_nuevo: r.p2_nuevo, p3_nuevo: r.p3_nuevo, p4_nuevo: r.p4_nuevo };
+    })
+  };
+
+  fetch('/api/digitador/confirmar-notas-coordinador', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CS }, body: JSON.stringify(payload) })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      var el = document.getElementById('coord-confirm-status');
+      if (d.ok) {
+        el.style.cssText = 'display:block;margin-top:10px;font-size:.82rem;padding:10px 14px;border-radius:6px;background:rgba(46,158,104,.12);color:var(--success);border:1px solid rgba(46,158,104,.3);font-weight:600;';
+        el.textContent = d.mensaje;
+        btn.textContent = '✓ Guardado';
+        btn.style.background = 'var(--success)';
+        _coordData = null;
+        LR();
+      } else {
+        el.style.cssText = 'display:block;margin-top:10px;font-size:.82rem;padding:10px 14px;border-radius:6px;background:rgba(201,53,43,.1);color:var(--danger);border:1px solid rgba(201,53,43,.3);';
+        el.textContent = '✗ ' + (d.error || 'Error al guardar');
+        btn.disabled = false;
+        btn.textContent = 'Reintentar';
+      }
+    })
+    .catch(function(e) {
+      document.getElementById('coord-confirm-status').textContent = '✗ Error: ' + e.message;
+      document.getElementById('coord-confirm-status').style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Reintentar';
+    });
 }
 
 function descargarPlantilla() {
