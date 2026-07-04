@@ -1,0 +1,11 @@
+python3 -c "
+import sqlite3
+conn = sqlite3.connect('/data/database.db')
+conn.execute(\"UPDATE usuarios SET asignaturas='Fotografía|Lenguaje Visual, Dibujo y Creación de             
+Personajes|Diseño Básico y Expresión Visual', materia='Fotografía|Lenguaje Visual, Dibujo y Creación de      
+Personajes|Diseño Básico y Expresión Visual' WHERE username='erick.hernandez@educacion.edu.do'\")
+conn.commit()
+
+conn.close()    
+print('OK')
+"
