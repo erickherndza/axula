@@ -73,3 +73,9 @@ templates/Plan_ABP_*
 static/logo-benito.jpg
 static/profesor.html
 static/perfil.css
+
+# Archivos temporales / datos del coordinador
+*.xlsm
+*.xlsx
+fix-axula.md
+python3*
