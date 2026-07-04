@@ -99,6 +99,23 @@ python3 -c "import app; print('OK')"
 
 ## Log de sesiones
 
+### 2026-07-03 (sesión 5 — carga Excel coordinador con preview/confirm)
+
+**UI: Registro del Coordinador** (`routes/digitador.py`, `templates/digitador.html`):
+- `POST /api/digitador/preview-notas-coordinador`: parsea Excel, fuzzy-match (umbral 0.72),
+  retorna matched (con notas actuales vs nuevas) + unmatched. Sin escritura en BD.
+- `POST /api/digitador/confirmar-notas-coordinador`: guarda en `calificaciones_periodo`
+  con `origen='importacion'`; respeta precedencia manual; dispara `recalcular_kpis_estudiante`.
+- UI paso 1→2: archivo → tabla comparativa P1-P4 actual/Excel con cambios en violeta →
+  lista de sin-match → botones Cancelar / Guardar en sistema.
+- Diseño Básico P1/P2 fix pendiente de prueba por coordinador.
+- Flujo: coordinador sube .xlsm → ve preview → confirma → KPIs recalculados.
+
+**Pendientes para coordinador:**
+- Probar carga de Registro del Coordinador desde portal digitador
+- Verificar que P1-P4 de Diseño Básico queden reflejados en boletín
+- Correr en Render shell: `python3 scripts/recalcular_conductual.py --commit`
+
 ### 2026-07-03 (sesión 4 — fix-axula.md fases 2-4)
 
 **Phase 2 — Fuente canónica de notas** (`core/helpers.py`, `routes/calificaciones.py`, `core/constants.py`):
