@@ -99,6 +99,37 @@ python3 -c "import app; print('OK')"
 
 ## Log de sesiones
 
+### 2026-07-10 (sesión 6 — Motor de Promoción MINERD completo)
+
+**Motor de Promoción** (`core/promocion_engine.py` — nuevo):
+- Reglas Ordenanza MINERD: 0 reprobadas → PROMOVIDO · 1-2 → RECUPERACION · 3+ → NO_PROMOVIDO
+- Primer ciclo (1RO-3RO) y segundo ciclo (4TO-5TO): mismas reglas, sin completiva
+- 6TO: nota_final = promedio_anual × 0.80 + nota_completiva × 0.20
+- Asistencia > 20% → reprueba automática esa materia
+- Funciones puras (evaluar) separadas de ejecutores (escriben en BD)
+- Transacción única en lote: si falla 1 → rollback completo
+- 6TO EGRESADO → UPDATE estudiantes SET condicion='EGRESADO'
+
+**Migraciones BD** (`core/constants.py`):
+- 7 columnas nuevas en `promociones` y `recuperaciones_pedagogicas`
+- Tabla nueva `promocion_detalle_materias` — log inmutable por materia
+
+**Blueprint** (`routes/promocion.py` — nuevo, 9 rutas bajo `/api/promocion/`):
+- GET  `/preview` — vista previa por grado sin escribir
+- GET  `/estudiante/<id>` — evaluación individual
+- POST `/ejecutar` — lote con transacción única
+- POST `/ejecutar/<id>` — individual
+- POST `/post-recuperacion/<id>` — re-evalúa tras agosto
+- GET  `/historial` — historial de promociones
+- GET  `/detalle/<prom_id>` — detalle por materia
+- POST `/completiva/<id>` — guarda nota completiva 6TO (80/20 precalculado)
+- POST `/recuperacion/<id>` — guarda nota de recuperación agosto
+
+**UI coordinador** (`templates/coordinador.html`):
+- Panel Promoción: KPIs actualizados (RECUPERACION en lugar de CONDICIONADO, +PENDIENTES)
+- Panel Completiva 6TO: selector de estudiantes, tabla con preview en vivo del cálculo 80/20
+- Panel Recuperación Agosto: busca por grado, inputs por materia, guardar + re-evaluar inline
+
 ### 2026-07-03 (sesión 5 — carga Excel coordinador con preview/confirm)
 
 **UI: Registro del Coordinador** (`routes/digitador.py`, `templates/digitador.html`):

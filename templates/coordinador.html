@@ -496,7 +496,7 @@ main{max-width:1200px;margin:0 auto;padding:24px 20px}
       <div style="flex:1;min-width:140px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);border-radius:8px;padding:10px 14px;text-align:center">
         <div style="font-size:18px;font-weight:800;color:#fbbf24">1-2</div>
         <div style="font-size:10px;color:var(--muted);margin-top:2px">materias reprobadas</div>
-        <div style="font-size:11px;font-weight:700;color:#fbbf24;margin-top:4px">CONDICIONADO</div>
+        <div style="font-size:11px;font-weight:700;color:#fbbf24;margin-top:4px">RECUPERACIÓN</div>
       </div>
       <div style="flex:1;min-width:140px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:10px 14px;text-align:center">
         <div style="font-size:18px;font-weight:800;color:#ef4444">3+</div>
@@ -537,11 +537,15 @@ main{max-width:1200px;margin:0 auto;padding:24px 20px}
       </div>
       <div style="flex:1;min-width:100px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);border-radius:8px;padding:10px;text-align:center">
         <div id="pk-cond" style="font-size:20px;font-weight:800;color:#fbbf24">-</div>
-        <div style="font-size:10px;color:var(--muted)">Condicionados</div>
+        <div style="font-size:10px;color:var(--muted)">Recuperación</div>
       </div>
       <div style="flex:1;min-width:100px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:10px;text-align:center">
         <div id="pk-noprom" style="font-size:20px;font-weight:800;color:#ef4444">-</div>
         <div style="font-size:10px;color:var(--muted)">No promovidos</div>
+      </div>
+      <div style="flex:1;min-width:100px;background:rgba(148,163,184,.08);border:1px solid rgba(148,163,184,.2);border-radius:8px;padding:10px;text-align:center">
+        <div id="pk-pend" style="font-size:20px;font-weight:800;color:var(--muted)">-</div>
+        <div style="font-size:10px;color:var(--muted)">Pendientes</div>
       </div>
     </div>
 
@@ -594,6 +598,130 @@ main{max-width:1200px;margin:0 auto;padding:24px 20px}
         <i class="fas fa-graduation-cap"></i> Ejecutar Promocion
       </button>
       <span id="prom-exec-status" style="font-size:12px;color:var(--muted)"></span>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── PANEL: PRUEBA COMPLETIVA 6TO ──────────────────────────────────────── -->
+<div class="panel" id="completiva" style="margin-top:16px;scroll-margin-top:80px">
+  <div class="panel-head">
+    <span class="panel-title">
+      <i class="fas fa-file-signature" style="color:#a78bfa;margin-right:7px"></i>
+      Prueba Completiva — 6TO Grado
+    </span>
+    <span style="font-size:11px;color:var(--muted)">Fórmula MINERD: Promedio anual × 80% + Completiva × 20%</span>
+  </div>
+  <div style="padding:20px">
+
+    <!-- Info -->
+    <div style="background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.3);border-radius:8px;padding:12px 16px;margin-bottom:18px;font-size:12px;color:var(--text);line-height:1.6">
+      <strong>¿Cómo funciona?</strong> Ingresa la nota de la Prueba Completiva por materia para cada estudiante de 6TO.
+      El motor calcula automáticamente la nota final efectiva. Sin esta nota, el estudiante queda en estado <strong>PENDIENTE</strong> y no puede ser promovido.
+    </div>
+
+    <!-- Selector de estudiante -->
+    <div style="display:flex;gap:10px;align-items:flex-end;margin-bottom:16px;flex-wrap:wrap">
+      <div>
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Estudiante 6TO</label>
+        <select id="comp-est" onchange="compCargarMaterias()"
+                style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;min-width:240px">
+          <option value="">- Cargando estudiantes... -</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Año escolar</label>
+        <input id="comp-anio" type="text" value="2025-2026"
+               style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;width:110px">
+      </div>
+      <button onclick="compCargarMaterias()"
+              style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer">
+        <i class="fas fa-sync-alt"></i> Cargar
+      </button>
+    </div>
+
+    <!-- Tabla de materias -->
+    <div id="comp-wrap" style="display:none;overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead>
+          <tr style="background:var(--surface2)">
+            <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--muted)">Materia</th>
+            <th style="padding:8px 10px;text-align:center;font-weight:600;color:var(--muted)">Prom. Anual</th>
+            <th style="padding:8px 10px;text-align:center;font-weight:600;color:var(--muted)">Completiva (0-100)</th>
+            <th style="padding:8px 10px;text-align:center;font-weight:600;color:var(--muted)">Nota Final (80/20)</th>
+            <th style="padding:8px 10px;text-align:center;font-weight:600;color:var(--muted)">Estado</th>
+          </tr>
+        </thead>
+        <tbody id="comp-tbody"></tbody>
+      </table>
+    </div>
+
+    <!-- Mensajes -->
+    <div id="comp-empty" style="padding:30px;text-align:center;color:var(--muted);font-size:13px">
+      <i class="fas fa-user-graduate" style="font-size:24px;margin-bottom:8px;display:block"></i>
+      Selecciona un estudiante de 6TO para ver sus materias
+    </div>
+
+    <!-- Footer con botón guardar -->
+    <div id="comp-footer" style="display:none;margin-top:16px;padding-top:14px;border-top:1px solid var(--border);display:none;align-items:center;gap:12px">
+      <button onclick="compGuardar()"
+              style="background:#a78bfa;color:#fff;border:none;border-radius:8px;padding:9px 22px;font-size:13px;font-weight:700;cursor:pointer">
+        <i class="fas fa-save"></i> Guardar notas completivas
+      </button>
+      <span id="comp-status" style="font-size:12px;color:var(--muted)"></span>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── PANEL: RECUPERACIÓN DE AGOSTO ─────────────────────────────────────── -->
+<div class="panel" id="recuperacion-agosto" style="margin-top:16px;scroll-margin-top:80px">
+  <div class="panel-head">
+    <span class="panel-title">
+      <i class="fas fa-rotate-right" style="color:#f97316;margin-right:7px"></i>
+      Recuperación de Agosto
+    </span>
+    <span style="font-size:11px;color:var(--muted)">Estudiantes con 1-2 materias reprobadas — examen de recuperación</span>
+  </div>
+  <div style="padding:20px">
+
+    <!-- Info -->
+    <div style="background:rgba(249,115,22,.08);border:1px solid rgba(249,115,22,.3);border-radius:8px;padding:12px 16px;margin-bottom:18px;font-size:12px;color:var(--text);line-height:1.6">
+      <strong>Flujo:</strong> Ingresa la nota del examen de recuperación por materia →
+      Haz clic en <strong>Guardar notas</strong> → Luego <strong>Re-evaluar y promover</strong>
+      para actualizar el estado del estudiante. Si aprueba (≥70), pasa al siguiente grado.
+    </div>
+
+    <!-- Selector grado + año -->
+    <div style="display:flex;gap:10px;align-items:flex-end;margin-bottom:16px;flex-wrap:wrap">
+      <div>
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Grado</label>
+        <select id="rec-grado"
+                style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px">
+          <option value="">- Todos -</option>
+          <option>1ERO</option><option>2DO</option><option>3ERO</option>
+          <option>4TO</option><option>5TO</option><option>6TO</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Año escolar</label>
+        <input id="rec-anio" type="text" value="2025-2026"
+               style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;width:110px">
+      </div>
+      <button onclick="recCargar()"
+              style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer">
+        <i class="fas fa-search"></i> Buscar en recuperación
+      </button>
+    </div>
+
+    <!-- Lista de estudiantes en recuperación -->
+    <div id="rec-lista" style="display:none">
+      <!-- Se llena dinámicamente -->
+    </div>
+
+    <div id="rec-empty" style="padding:30px;text-align:center;color:var(--muted);font-size:13px">
+      <i class="fas fa-rotate-right" style="font-size:24px;margin-bottom:8px;display:block;color:#f97316;opacity:.4"></i>
+      Selecciona un grado y haz clic en "Buscar en recuperación"
     </div>
 
   </div>
@@ -1190,36 +1318,52 @@ function promCargar() {
   ctrlEl.style.display     = 'none';
   footerEl.style.display   = 'none';
 
-  fetch('/api/coordinador/promocion-preview?grado=' + encodeURIComponent(grado) + '&anio_escolar=' + encodeURIComponent(anio))
+  fetch('/api/promocion/preview?grado=' + encodeURIComponent(grado) + '&anio_escolar=' + encodeURIComponent(anio))
     .then(function(r){ return r.json(); })
     .then(function(d) {
       if (!d.ok) { emptyEl.textContent = 'Error: ' + d.error; return; }
       _promData = d.estudiantes;
 
-      document.getElementById('pk-total').textContent   = d.total;
-      document.getElementById('pk-prom').textContent    = d.resumen.promovidos;
-      document.getElementById('pk-cond').textContent    = d.resumen.condicionados;
-      document.getElementById('pk-noprom').textContent  = d.resumen.no_promovidos;
+      var rs = d.resumen;
+      document.getElementById('pk-total').textContent  = rs.total;
+      document.getElementById('pk-prom').textContent   = rs.promovidos;
+      document.getElementById('pk-cond').textContent   = rs.recuperacion;
+      document.getElementById('pk-noprom').textContent = rs.no_promovidos;
+      document.getElementById('pk-pend').textContent   = rs.pendientes;
 
       kpisEl.style.display   = 'flex';
       ctrlEl.style.display   = 'flex';
       footerEl.style.display = 'flex';
 
-      var colors = { PROMOVIDO: '#22c55e', CONDICIONADO: '#fbbf24', NO_PROMOVIDO: '#ef4444' };
-      var labels = { PROMOVIDO: 'PROMOVIDO', CONDICIONADO: 'CONDICIONADO', NO_PROMOVIDO: 'NO PROMOVIDO' };
+      var colors = {
+        PROMOVIDO:    '#22c55e',
+        RECUPERACION: '#fbbf24',
+        NO_PROMOVIDO: '#ef4444',
+        PENDIENTE:    '#94a3b8'
+      };
+      var labels = {
+        PROMOVIDO:    'PROMOVIDO',
+        RECUPERACION: 'RECUPERACIÓN',
+        NO_PROMOVIDO: 'NO PROMOVIDO',
+        PENDIENTE:    'PENDIENTE'
+      };
 
       var html = _promData.map(function(e) {
-        var puede  = e.estado !== 'NO_PROMOVIDO';
-        var badge  = '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;background:' + colors[e.estado] + '22;color:' + colors[e.estado] + ';border:1px solid ' + colors[e.estado] + '44">' + labels[e.estado] + '</span>';
-        var proc   = e.ya_procesado ? '<span style="font-size:9px;color:var(--muted)"> (ya procesado)</span>' : '';
+        var puede  = e.estado === 'PROMOVIDO' || e.estado === 'RECUPERACION';
+        var col    = colors[e.estado] || '#94a3b8';
+        var lbl    = labels[e.estado] || e.estado;
+        var badge  = '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;background:' + col + '22;color:' + col + ';border:1px solid ' + col + '44">' + lbl + '</span>';
+        var proc   = e.ya_procesado ? ' <span style="font-size:9px;color:var(--muted)">(ya procesado)</span>' : '';
+        var mats_r = (e.mats_recuperacion || []);
+        var tooltip = mats_r.length ? ' title="' + mats_r.join(', ') + '"' : '';
         return '<tr style="border-bottom:1px solid var(--border)">' +
-          '<td style="padding:7px 8px"><input type="checkbox" class="prom-chk" data-id="' + e.id + '" ' + (puede ? '' : 'disabled') + (puede ? 'checked' : '') + '></td>' +
-          '<td style="padding:7px 8px;font-weight:600">' + e.apellido + ', ' + e.nombre + proc + '</td>' +
+          '<td style="padding:7px 8px"><input type="checkbox" class="prom-chk" data-id="' + e.est_id + '" ' + (puede ? '' : 'disabled') + (puede ? 'checked' : '') + '></td>' +
+          '<td style="padding:7px 8px;font-weight:600">' + (e.apellido || '') + ', ' + (e.nombre || '') + proc + '</td>' +
           '<td style="padding:7px 8px;text-align:center">' + (e.seccion || '-') + '</td>' +
           '<td style="padding:7px 8px;text-align:center;font-size:11px;color:var(--muted)">' + (e.mencion || '-') + '</td>' +
           '<td style="padding:7px 8px;text-align:center;color:#22c55e;font-weight:700">' + e.mats_aprobadas + '/' + e.mats_total + '</td>' +
           '<td style="padding:7px 8px;text-align:center;color:' + (e.mats_reprobadas > 0 ? '#ef4444' : 'var(--muted)') + ';font-weight:700">' + e.mats_reprobadas + '</td>' +
-          '<td style="padding:7px 8px;font-size:11px;color:#ef4444">' + (e.reprobadas.length ? e.reprobadas.join(', ') : '-') + '</td>' +
+          '<td style="padding:7px 8px;font-size:11px;color:#ef4444"' + tooltip + '>' + (mats_r.length ? mats_r.join(', ') : '-') + '</td>' +
           '<td style="padding:7px 8px;text-align:center">' + badge + '</td>' +
           '</tr>';
       }).join('');
@@ -1247,7 +1391,7 @@ function promEjecutar() {
   var statusEl = document.getElementById('prom-exec-status');
   statusEl.textContent = 'Procesando...';
 
-  fetch('/api/coordinador/promocion-ejecutar', {
+  fetch('/api/promocion/ejecutar', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': (typeof T !== 'undefined' ? T : '') },
     body: JSON.stringify({ grado: grado, anio_escolar: anio, estudiante_ids: ids, observacion: obs })
@@ -1255,16 +1399,303 @@ function promEjecutar() {
   .then(function(r){ return r.json(); })
   .then(function(d) {
     if (d.ok) {
-      statusEl.innerHTML = '<span style="color:#22c55e;font-weight:700">' + d.mensaje + '</span>';
+      var msg = 'Promovidos: ' + d.promovidos + ' · Recuperación: ' + d.recuperacion + ' · No promovidos: ' + d.no_promovidos;
+      statusEl.innerHTML = '<span style="color:#22c55e;font-weight:700">' + msg + '</span>';
       if (d.errores && d.errores.length) {
-        statusEl.innerHTML += '<br><span style="color:#ef4444;font-size:11px">' + d.errores.join(' | ') + '</span>';
+        var errs = d.errores.map(function(e){ return 'ID ' + e.est_id + ': ' + e.error; });
+        statusEl.innerHTML += '<br><span style="color:#ef4444;font-size:11px">' + errs.join(' | ') + '</span>';
       }
       promCargar();
     } else {
-      statusEl.innerHTML = '<span style="color:#ef4444">Error: ' + d.error + '</span>';
+      statusEl.innerHTML = '<span style="color:#ef4444">Error: ' + (d.error || 'desconocido') + '</span>';
     }
   })
   .catch(function(e) { statusEl.textContent = 'Error: ' + e.message; });
+}
+
+// ── PANEL COMPLETIVA 6TO ─────────────────────────────────────────────────────
+
+var _compData = [];  // materias del estudiante seleccionado
+
+function compInicializar() {
+  // Cargar lista de estudiantes de 6TO en el selector
+  fetch('/api/promocion/preview?grado=6TO&anio_escolar=2025-2026')
+    .then(function(r){ return r.json(); })
+    .then(function(d) {
+      if (!d.ok || !d.estudiantes) return;
+      var sel = document.getElementById('comp-est');
+      sel.innerHTML = '<option value="">- Seleccionar estudiante -</option>';
+      d.estudiantes.forEach(function(e) {
+        var op = document.createElement('option');
+        op.value = e.est_id;
+        op.textContent = e.apellido + ', ' + e.nombre + (e.seccion ? ' (' + e.seccion + ')' : '');
+        sel.appendChild(op);
+      });
+    })
+    .catch(function(){});
+}
+
+function compCargarMaterias() {
+  var estId = document.getElementById('comp-est').value;
+  var anio  = document.getElementById('comp-anio').value || '2025-2026';
+  if (!estId) return;
+
+  var wrap    = document.getElementById('comp-wrap');
+  var emptyEl = document.getElementById('comp-empty');
+  var footer  = document.getElementById('comp-footer');
+
+  emptyEl.style.display = 'block';
+  emptyEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cargando materias...';
+  wrap.style.display   = 'none';
+  footer.style.display = 'none';
+
+  // Cargar evaluación del estudiante (contiene detalle por materia)
+  fetch('/api/promocion/estudiante/' + estId + '?anio_escolar=' + encodeURIComponent(anio))
+    .then(function(r){ return r.json(); })
+    .then(function(d) {
+      if (!d.ok) { emptyEl.textContent = 'Error: ' + d.error; return; }
+      if (!d.detalle_materias || !d.detalle_materias.length) {
+        emptyEl.textContent = 'Este estudiante no tiene materias registradas para ' + anio;
+        return;
+      }
+      _compData = d.detalle_materias;
+      var html = _compData.map(function(m, idx) {
+        var prom   = m.promedio_anual != null ? parseFloat(m.promedio_anual).toFixed(1) : '-';
+        var comp   = m.nota_completiva != null ? m.nota_completiva : '';
+        var final_ = (m.nota_completiva != null && m.promedio_anual != null)
+          ? (m.promedio_anual * 0.80 + m.nota_completiva * 0.20).toFixed(1)
+          : '-';
+        var estadoCol = m.estado_materia === 'APROBADA' ? '#22c55e'
+                      : m.estado_materia === 'PENDIENTE' ? '#94a3b8' : '#ef4444';
+        return '<tr style="border-bottom:1px solid var(--border)">' +
+          '<td style="padding:8px 10px;font-weight:500">' + m.materia + '</td>' +
+          '<td style="padding:8px 10px;text-align:center;color:var(--muted)">' + prom + '</td>' +
+          '<td style="padding:8px 10px;text-align:center">' +
+            '<input type="number" min="0" max="100" step="0.1"' +
+            ' class="comp-nota-input" data-idx="' + idx + '" data-materia="' + m.materia + '"' +
+            ' value="' + comp + '"' +
+            ' onchange="compRecalcFila(this,' + idx + ')"' +
+            ' style="width:80px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:5px 8px;font-size:12px;text-align:center">' +
+          '</td>' +
+          '<td id="comp-final-' + idx + '" style="padding:8px 10px;text-align:center;font-weight:700;color:' + estadoCol + '">' + final_ + '</td>' +
+          '<td id="comp-est-' + idx + '" style="padding:8px 10px;text-align:center">' +
+            '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;background:' + estadoCol + '22;color:' + estadoCol + ';border:1px solid ' + estadoCol + '44">' + m.estado_materia + '</span>' +
+          '</td>' +
+          '</tr>';
+      }).join('');
+
+      document.getElementById('comp-tbody').innerHTML = html;
+      wrap.style.display   = 'block';
+      footer.style.display = 'flex';
+      emptyEl.style.display = 'none';
+    })
+    .catch(function(e) { emptyEl.textContent = 'Error: ' + e.message; });
+}
+
+function compRecalcFila(input, idx) {
+  // Recalcula nota final en tiempo real al editar el input
+  var val   = parseFloat(input.value);
+  var prom  = _compData[idx] ? parseFloat(_compData[idx].promedio_anual) : null;
+  var finalEl  = document.getElementById('comp-final-' + idx);
+  var estadoEl = document.getElementById('comp-est-' + idx);
+  if (!finalEl) return;
+
+  if (isNaN(val) || prom == null) {
+    finalEl.textContent = '-';
+    return;
+  }
+  var nota = (prom * 0.80 + val * 0.20);
+  var col  = nota >= 70 ? '#22c55e' : '#ef4444';
+  var lbl  = nota >= 70 ? 'APROBADA' : 'REPROBADA';
+  finalEl.style.color  = col;
+  finalEl.textContent  = nota.toFixed(1);
+  estadoEl.innerHTML   = '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;background:' + col + '22;color:' + col + ';border:1px solid ' + col + '44">' + lbl + '</span>';
+}
+
+function compGuardar() {
+  var estId  = document.getElementById('comp-est').value;
+  var anio   = document.getElementById('comp-anio').value || '2025-2026';
+  var status = document.getElementById('comp-status');
+  if (!estId) return;
+
+  // Recoger notas de todos los inputs
+  var inputs  = document.querySelectorAll('.comp-nota-input');
+  var payload = [];
+  inputs.forEach(function(inp) {
+    var val = inp.value.trim();
+    if (val !== '') {
+      payload.push({ materia: inp.dataset.materia, nota_completiva: parseFloat(val) });
+    }
+  });
+
+  if (!payload.length) { status.textContent = 'No hay notas para guardar.'; return; }
+
+  status.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+
+  fetch('/api/promocion/completiva/' + estId, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': (typeof T !== 'undefined' ? T : '') },
+    body: JSON.stringify({ anio_escolar: anio, notas: payload })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d) {
+    if (d.ok) {
+      status.innerHTML = '<span style="color:#22c55e;font-weight:700">✓ ' + d.guardadas + ' nota(s) guardadas</span>';
+      compCargarMaterias(); // refrescar tabla con nuevos valores
+    } else {
+      status.innerHTML = '<span style="color:#ef4444">Error: ' + (d.error || 'desconocido') + '</span>';
+    }
+  })
+  .catch(function(e) { status.textContent = 'Error: ' + e.message; });
+}
+
+// Cargar estudiantes de 6TO al cargar la página
+document.addEventListener('DOMContentLoaded', function() {
+  compInicializar();
+});
+
+// ── PANEL RECUPERACIÓN AGOSTO ─────────────────────────────────────────────────
+
+function recCargar() {
+  var grado  = document.getElementById('rec-grado').value;
+  var anio   = document.getElementById('rec-anio').value || '2025-2026';
+  var listaEl = document.getElementById('rec-lista');
+  var emptyEl = document.getElementById('rec-empty');
+
+  emptyEl.style.display = 'block';
+  emptyEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Buscando estudiantes en recuperación...';
+  listaEl.style.display = 'none';
+
+  var url = '/api/promocion/historial?anio_escolar=' + encodeURIComponent(anio);
+  if (grado) url += '&grado=' + encodeURIComponent(grado);
+
+  fetch(url)
+    .then(function(r){ return r.json(); })
+    .then(function(d) {
+      if (!d.ok) { emptyEl.textContent = 'Error: ' + d.error; return; }
+
+      // Filtrar solo los que están en RECUPERACION o CONDICIONADO
+      var enRec = d.data.filter(function(p) {
+        return p.estado === 'RECUPERACION' || p.estado === 'CONDICIONADO';
+      });
+
+      if (!enRec.length) {
+        emptyEl.innerHTML = '<i class="fas fa-check-circle" style="color:#22c55e;font-size:24px;margin-bottom:8px;display:block"></i>No hay estudiantes en recuperación para este grado/año';
+        return;
+      }
+
+      var html = enRec.map(function(p) {
+        var mats = [];
+        try { mats = JSON.parse(p.mats_recuperacion || '[]'); } catch(e) {}
+        var matInputs = mats.map(function(mat) {
+          return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">' +
+            '<span style="font-size:12px;min-width:180px;color:var(--text)">' + mat + '</span>' +
+            '<input type="number" min="0" max="100" step="0.1" placeholder="0-100"' +
+            '  class="rec-nota-input" data-est="' + p.estudiante_id + '" data-materia="' + mat + '"' +
+            '  style="width:80px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:5px 8px;font-size:12px;text-align:center">' +
+            '<span class="rec-nota-estado" style="font-size:11px;color:var(--muted)"></span>' +
+          '</div>';
+        }).join('');
+
+        return '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:12px">' +
+          '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:10px">' +
+            '<div>' +
+              '<div style="font-size:13px;font-weight:700">' + p.apellido + ', ' + p.nombre + '</div>' +
+              '<div style="font-size:11px;color:var(--muted);margin-top:2px">' +
+                (p.grado_origen || '') + ' · Sección ' + (p.seccion || '-') + ' · ' + (p.mencion || '') +
+              '</div>' +
+            '</div>' +
+            '<span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:4px;background:#fbbf2422;color:#fbbf24;border:1px solid #fbbf2444">RECUPERACIÓN</span>' +
+          '</div>' +
+          '<div style="margin-bottom:12px">' +
+            '<div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Materias a recuperar</div>' +
+            matInputs +
+          '</div>' +
+          '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">' +
+            '<button onclick="recGuardar(' + p.estudiante_id + ', \'' + anio + '\')" ' +
+            '  style="background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:6px 14px;font-size:12px;cursor:pointer;font-weight:600">' +
+            '  <i class="fas fa-save"></i> Guardar notas' +
+            '</button>' +
+            '<button onclick="recEjecutar(' + p.estudiante_id + ', \'' + anio + '\')" ' +
+            '  style="background:#f97316;color:#fff;border:none;border-radius:7px;padding:6px 14px;font-size:12px;cursor:pointer;font-weight:700">' +
+            '  <i class="fas fa-graduation-cap"></i> Re-evaluar y promover' +
+            '</button>' +
+            '<span id="rec-status-' + p.estudiante_id + '" style="font-size:11px;color:var(--muted)"></span>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+
+      listaEl.innerHTML = html;
+
+      // Colorear inputs en tiempo real
+      listaEl.querySelectorAll('.rec-nota-input').forEach(function(inp) {
+        inp.addEventListener('input', function() {
+          var v = parseFloat(inp.value);
+          var st = inp.nextElementSibling;
+          if (isNaN(v)) { st.textContent = ''; return; }
+          st.style.color = v >= 70 ? '#22c55e' : '#ef4444';
+          st.textContent = v >= 70 ? '✓ Aprueba' : '✗ Reprueba';
+        });
+      });
+
+      listaEl.style.display = 'block';
+      emptyEl.style.display = 'none';
+    })
+    .catch(function(e) { emptyEl.textContent = 'Error: ' + e.message; });
+}
+
+function recGuardar(estId, anio) {
+  var notas = [];
+  document.querySelectorAll('.rec-nota-input[data-est="' + estId + '"]').forEach(function(inp) {
+    var v = inp.value.trim();
+    if (v !== '') notas.push({ materia: inp.dataset.materia, nota_recuperacion: parseFloat(v) });
+  });
+  if (!notas.length) { alert('Ingresa al menos una nota antes de guardar.'); return; }
+
+  var status = document.getElementById('rec-status-' + estId);
+  status.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+  fetch('/api/promocion/recuperacion/' + estId, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': (typeof T !== 'undefined' ? T : '') },
+    body: JSON.stringify({ anio_escolar: anio, notas: notas })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d) {
+    if (d.ok) {
+      status.innerHTML = '<span style="color:#22c55e;font-weight:700">✓ ' + d.guardadas + ' nota(s) guardadas</span>';
+    } else {
+      status.innerHTML = '<span style="color:#ef4444">Error: ' + (d.error || 'desconocido') + '</span>';
+    }
+  })
+  .catch(function(e) { status.textContent = 'Error: ' + e.message; });
+}
+
+function recEjecutar(estId, anio) {
+  if (!confirm('¿Re-evaluar y ejecutar la promoción del estudiante ' + estId + '? Esta acción actualiza su grado si aprobó la recuperación.')) return;
+  var status = document.getElementById('rec-status-' + estId);
+  status.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+
+  fetch('/api/promocion/post-recuperacion/' + estId, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': (typeof T !== 'undefined' ? T : '') },
+    body: JSON.stringify({ anio_escolar: anio, observacion: 'Recuperación agosto' })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d) {
+    if (d.ok) {
+      var col = d.estado === 'PROMOVIDO' ? '#22c55e' : '#ef4444';
+      var lbl = d.estado === 'PROMOVIDO'
+        ? '✓ Promovido a ' + d.grado_destino
+        : '✗ No promovido — reprobó recuperación';
+      status.innerHTML = '<span style="color:' + col + ';font-weight:700">' + lbl + '</span>';
+      // Recargar lista después de 1.5s
+      setTimeout(function() { recCargar(); }, 1500);
+    } else {
+      status.innerHTML = '<span style="color:#ef4444">Error: ' + (d.error || 'desconocido') + '</span>';
+    }
+  })
+  .catch(function(e) { status.textContent = 'Error: ' + e.message; });
 }
 
 </script>

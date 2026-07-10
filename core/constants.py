@@ -1011,6 +1011,26 @@ CREATE TABLE IF NOT EXISTS notas_competencias_ce (
         FOREIGN KEY (estudiante_id) REFERENCES estudiantes(id),
         FOREIGN KEY (ejecutado_por) REFERENCES usuarios(id)
     )""",
+    # ── DETALLE POR MATERIA DE CADA PROMOCIÓN (log inmutable) ───────────────
+    """
+    CREATE TABLE IF NOT EXISTS promocion_detalle_materias (
+        id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+        promocion_id         INTEGER NOT NULL,
+        estudiante_id        INTEGER NOT NULL,
+        materia              TEXT NOT NULL,
+        anio_escolar         TEXT NOT NULL,
+        promedio_anual       REAL,
+        nota_completiva      REAL,
+        nota_final_efectiva  REAL,
+        aprobada             INTEGER DEFAULT 0,
+        reprobada_asistencia INTEGER DEFAULT 0,
+        pct_inasistencia     REAL,
+        estado_materia       TEXT,
+        snapshot_en          TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (promocion_id)  REFERENCES promociones(id),
+        FOREIGN KEY (estudiante_id) REFERENCES estudiantes(id)
+    )
+    """,
     # ── H12: Catálogo canónico de materias ───────────────────────────────────
     """
     CREATE TABLE IF NOT EXISTS materias (
@@ -1124,6 +1144,28 @@ MIGRACIONES_ESPECIALES = [
     ("Agregar origen a calificaciones_periodo",
      "ALTER TABLE calificaciones_periodo ADD COLUMN origen TEXT DEFAULT 'manual'",
      "origen", "calificaciones_periodo"),
+    # ── Motor de Promoción MINERD ─────────────────────────────────────────────
+    ("Agregar tiene_completiva a promociones",
+     "ALTER TABLE promociones ADD COLUMN tiene_completiva INTEGER DEFAULT 0",
+     "tiene_completiva", "promociones"),
+    ("Agregar mats_pendientes a promociones",
+     "ALTER TABLE promociones ADD COLUMN mats_pendientes INTEGER DEFAULT 0",
+     "mats_pendientes", "promociones"),
+    ("Agregar mats_recuperacion a promociones",
+     "ALTER TABLE promociones ADD COLUMN mats_recuperacion TEXT DEFAULT '[]'",
+     "mats_recuperacion", "promociones"),
+    ("Agregar ciclo a promociones",
+     "ALTER TABLE promociones ADD COLUMN ciclo TEXT DEFAULT ''",
+     "ciclo", "promociones"),
+    ("Agregar estado_recuperacion a promociones",
+     "ALTER TABLE promociones ADD COLUMN estado_recuperacion TEXT DEFAULT NULL",
+     "estado_recuperacion", "promociones"),
+    ("Agregar nota_final_completiva a recuperaciones_pedagogicas",
+     "ALTER TABLE recuperaciones_pedagogicas ADD COLUMN nota_final_completiva REAL DEFAULT NULL",
+     "nota_final_completiva", "recuperaciones_pedagogicas"),
+    ("Agregar estado_recuperacion a recuperaciones_pedagogicas",
+     "ALTER TABLE recuperaciones_pedagogicas ADD COLUMN estado_recuperacion TEXT DEFAULT 'PENDIENTE'",
+     "estado_recuperacion", "recuperaciones_pedagogicas"),
     # ← AGREGA MIGRACIONES PUNTUALES AQUÍ
 ]
 

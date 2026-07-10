@@ -29,6 +29,7 @@ from .archivos import archivos_bp
 from .suministros import suministros_bp
 from .asistente import asistente_bp
 from .normativa import normativa_bp
+from .promocion import promocion_bp
 
 ALL_BLUEPRINTS = [
     auth_bp,
@@ -59,4 +60,5 @@ ALL_BLUEPRINTS = [
     suministros_bp,
     asistente_bp,
     normativa_bp,
+    promocion_bp,
 ]
