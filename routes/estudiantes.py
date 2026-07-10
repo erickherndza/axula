@@ -1809,6 +1809,19 @@ def get_materias_estudiante(estudiante_id):
     with sqlite3.connect(DATABASE, timeout=10) as conn:
         conn.row_factory = sqlite3.Row
         anio = _anio_escolar_actual()
+
+        # Si el estudiante fue promovido este año escolar, sus notas actuales
+        # pertenecen al grado que dejó. Devolver vacío hasta que se carguen
+        # las notas del nuevo grado.
+        ya_promovido = conn.execute("""
+            SELECT 1 FROM promociones
+            WHERE estudiante_id = ?
+              AND anio_escolar   = ?
+              AND estado         = 'PROMOVIDO'
+        """, (estudiante_id, anio)).fetchone()
+        if ya_promovido:
+            return jsonify([])
+
         rows = conn.execute("""
             SELECT materia, p1, p2, p3, p4, promedio, fecha_carga, fuente,
                    COALESCE(tipo, 'académico') as tipo,
