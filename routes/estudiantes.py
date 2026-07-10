@@ -777,7 +777,27 @@ def perfil_estudiante(id):
             for campo in _CAMPOS_SENSIBLES:
                 e[campo] = None
 
-        return render_template("perfil.html", e=e, current_user=get_usuario())
+        # Detectar si el estudiante fue promovido (notas del año pertenecen a otro grado)
+        grado_est = (e.get("grado") or "").upper()
+        anio_act  = _anio_escolar_actual()
+        with sqlite3.connect(DATABASE, timeout=10) as _dc:
+            _dc.row_factory = sqlite3.Row
+            _fue_promovido = _dc.execute("""
+                SELECT 1 FROM materias_calificaciones
+                WHERE estudiante_id=? AND anio_escolar=?
+                  AND grado IS NOT NULL AND UPPER(grado) != ?
+                LIMIT 1
+            """, (id, anio_act, grado_est)).fetchone()
+            if not _fue_promovido:
+                _fue_promovido = _dc.execute("""
+                    SELECT 1 FROM promociones
+                    WHERE estudiante_id=? AND anio_escolar=? AND estado='PROMOVIDO'
+                    LIMIT 1
+                """, (id, anio_act)).fetchone()
+
+        return render_template("perfil.html", e=e, current_user=get_usuario(),
+                               fue_promovido=bool(_fue_promovido),
+                               anio_escolar=anio_act)
     return "Estudiante no encontrado", 404
 
 

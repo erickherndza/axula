@@ -1407,10 +1407,18 @@
         </div>
 
         <!-- Loading state -->
+        {% if fue_promovido %}
+        <div style="text-align:center;padding:40px 20px;color:var(--text-muted);">
+            <i class="fas fa-graduation-cap" style="font-size:32px;display:block;margin-bottom:12px;color:var(--accent);"></i>
+            <div style="font-weight:700;font-size:14px;margin-bottom:6px;">Estudiante promovido — {{ e.curso }}</div>
+            <div style="font-size:12px;">Las notas del nuevo grado aparecerán aquí cuando sean cargadas.</div>
+        </div>
+        {% else %}
         <div id="boletin-loading" style="text-align:center;padding:32px;color:#333;">
             <i class="fas fa-spinner fa-spin" style="font-size:20px;margin-bottom:8px;display:block;"></i>
             Cargando boletín…
         </div>
+        {% endif %}
 
         <!-- Error state -->
         <div id="boletin-error" style="display:none;padding:16px;background:rgba(255,77,77,.05);
@@ -1559,6 +1567,7 @@
             return '<td style="text-align:center;padding:6px 8px;vertical-align:middle;">' + parts.join('') + '</td>';
         }
 
+        if (!document.getElementById('boletin-loading')) return; // promovido — no cargar
         fetch('/api/calificaciones/boletin/' + estId + '?_t=' + Date.now(), {cache: 'no-store'})
             .then(function(r) { return r.json(); })
             .then(function(d) {
