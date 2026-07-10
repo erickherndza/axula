@@ -715,6 +715,12 @@ def boletin_estudiante(est_id):
             (est_id, anio)
         ).fetchall()
 
+        # Solo usar registros del año escolar activo y con suficiente volumen.
+        # Con <10 registros el porcentaje es estadísticamente inválido
+        # (ej: 1 ausencia / 1 total = 100% → reprueba injustamente).
+        _anio_parts = (anio or "").split("-")
+        _anio1 = _anio_parts[0] if len(_anio_parts) > 0 else ""
+        _anio2 = _anio_parts[1] if len(_anio_parts) > 1 else ""
         asist_rows = conn.execute("""
             SELECT materia,
                    SUM(horas_clase) AS ht,
@@ -724,8 +730,10 @@ def boletin_estudiante(est_id):
                    COUNT(*) AS total_dias
             FROM asistencia
             WHERE estudiante_id=?
+              AND (strftime('%Y', fecha) = ? OR strftime('%Y', fecha) = ?)
             GROUP BY materia
-        """, (est_id,)).fetchall()
+            HAVING COUNT(*) >= 10
+        """, (est_id, _anio1, _anio2)).fetchall()
 
     from collections import defaultdict
     import unicodedata as _ud
