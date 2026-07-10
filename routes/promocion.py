@@ -77,14 +77,19 @@ def preview_estudiante(est_id: int):
 
     Evaluación individual sin escribir en BD.
     """
-    anio = _anio_param()
-    db   = get_db()
-    res  = evaluar_estudiante(db, est_id, anio)
+    import traceback
+    try:
+        anio = _anio_param()
+        db   = get_db()
+        res  = evaluar_estudiante(db, est_id, anio)
 
-    if "error" in res:
-        return jsonify({"ok": False, "error": res["error"]}), 404
+        if "error" in res:
+            return jsonify({"ok": False, "error": res["error"]}), 404
 
-    return jsonify({"ok": True, **res})
+        return jsonify({"ok": True, **res})
+    except Exception as exc:
+        log.exception("preview_estudiante est_id=%s", est_id)
+        return jsonify({"ok": False, "error": str(exc), "traceback": traceback.format_exc()}), 500
 
 
 @promocion_bp.route("/ejecutar", methods=["POST"])
