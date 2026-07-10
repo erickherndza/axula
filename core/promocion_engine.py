@@ -578,8 +578,16 @@ def ejecutar_promocion_estudiante(
                 (est_id,),
             )
         else:
+            # Actualiza grado y resetea KPIs — el nuevo año empieza desde cero
             db.execute(
-                "UPDATE estudiantes SET grado = ? WHERE id = ?",
+                """UPDATE estudiantes
+                   SET grado     = ?,
+                       p_acad    = NULL,
+                       acad_p1   = NULL,
+                       acad_p2   = NULL,
+                       acad_p3   = NULL,
+                       acad_p4   = NULL
+                   WHERE id = ?""",
                 (sig_grado, est_id),
             )
 

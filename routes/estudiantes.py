@@ -1808,16 +1808,18 @@ def get_materias_estudiante(estudiante_id):
     prof = _get_profesor()
     with sqlite3.connect(DATABASE, timeout=10) as conn:
         conn.row_factory = sqlite3.Row
+        anio = _anio_escolar_actual()
         rows = conn.execute("""
             SELECT materia, p1, p2, p3, p4, promedio, fecha_carga, fuente,
                    COALESCE(tipo, 'académico') as tipo,
                    COALESCE(profesor, '') as profesor
             FROM materias_calificaciones
             WHERE estudiante_id = ?
+              AND (anio_escolar = ? OR anio_escolar IS NULL)
             ORDER BY CASE COALESCE(tipo,'académico')
                           WHEN 'académico' THEN 0 ELSE 1 END,
                      materia
-        """, (estudiante_id,)).fetchall()
+        """, (estudiante_id, anio)).fetchall()
     resultado = _dedup_materias([dict(r) for r in rows])
     resultado.sort(key=lambda r: (0 if r["tipo"] == "académico" else 1, r["materia"].lower()))
     resultado = _rls.filtrar_materias_profesor(resultado)
