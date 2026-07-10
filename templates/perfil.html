@@ -1304,7 +1304,7 @@
                                font-family:var(--font-display); font-weight:600; font-size:12px;
                                cursor:pointer; transition:all .2s;">
                         <i class="fas fa-graduation-cap"></i>
-                        <span id="promo-label">Promover a {{ {'1ERO':'2DO','2DO':'3RO','3RO':'4TO','3ERO':'4TO','4TO':'5TO','5TO':'6TO','6TO':'EGRESADO'}.get((e.grado or '').upper(), '?') }}</span>
+                        <span id="promo-label">{{ 'Candidato a Pruebas Nacionales' if (e.grado or '').upper() == '6TO' else 'Promover a ' + {'1ERO':'2DO','2DO':'3RO','3RO':'4TO','3ERO':'4TO','4TO':'5TO','5TO':'6TO'}.get((e.grado or '').upper(), '?') }}</span>
                     </button>
                 </div>
                 <button onclick="generarCompetencias()"
@@ -2484,7 +2484,7 @@
     // ── MOTOR DE PROMOCIÓN MINERD ─────────────────────────────────────────────
     var _MAPA_SIG = {
         '1ERO':'2DO','2DO':'3RO','3RO':'4TO','3ERO':'4TO',
-        '4TO':'5TO','5TO':'6TO','6TO':'EGRESADO'
+        '4TO':'5TO','5TO':'6TO','6TO':'CANDIDATO_PRUEBAS'
     };
 
     function _sigGrado(g) {
@@ -2513,8 +2513,8 @@
             var msg;
 
             if (estado === 'PROMOVIDO') {
-                msg = sigGrado === 'EGRESADO'
-                    ? '✅ ' + nombre + ' completó todos los requisitos del bachillerato.\n\n¿Registrar como EGRESADO?'
+                msg = sigGrado === 'CANDIDATO_PRUEBAS'
+                    ? '✅ ' + nombre + ' aprobó todas las materias de 6TO.\n\nQueda habilitado como CANDIDATO A PRUEBAS NACIONALES (Ord. 1-2016 MINERD).\n\n¿Confirmar?'
                     : '✅ ' + nombre + ' aprobó todas las materias.\n\n¿Promover a ' + sigGrado + '?';
             } else if (estado === 'RECUPERACION') {
                 var mats = ev.mats_recuperacion && ev.mats_recuperacion.length
@@ -2570,9 +2570,9 @@
 
         if (estado === 'PROMOVIDO') {
             GRADO_ACTUAL = gradoDestino;
-            if (gradoDestino === 'EGRESADO') {
-                gradoTexto.textContent = 'EGRESADO';
-                label.textContent      = 'Egresado ✓';
+            if (gradoDestino === 'CANDIDATO_PRUEBAS') {
+                gradoTexto.textContent = '6TO — Candidato a Pruebas Nacionales';
+                label.textContent      = 'Candidato a Pruebas Nacionales ✓';
             } else {
                 gradoTexto.textContent = gradoDestino;
                 label.textContent      = 'Promovido a ' + gradoDestino + ' ✓';

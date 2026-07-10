@@ -43,7 +43,7 @@ MAPA_SIGUIENTE = {
     "3ERO": "4TO",
     "4TO":  "5TO",
     "5TO":  "6TO",
-    "6TO":  "EGRESADO",
+    "6TO":  "CANDIDATO_PRUEBAS",   # Ord. 1-2016: aprueba materias → candidato a Pruebas Nacionales
 }
 
 # Estados de materia
@@ -87,7 +87,7 @@ def clasificar_grado(grado: str) -> dict:
 
 def siguiente_grado(grado: str) -> str:
     """
-    '5TO' → '6TO' · '6TO' → 'EGRESADO'
+    '5TO' → '6TO' · '6TO' → 'CANDIDATO_PRUEBAS' (Ord. 1-2016 MINERD)
     Acepta minúsculas y variantes ('3ero', '3ERO').
     """
     g = _norm_grado(grado)
@@ -189,19 +189,23 @@ def nota_efectiva_materia(
     es_6to: bool,
 ) -> tuple[Optional[float], str]:
     """
-    Calcula la nota que decide aprobación.
+    Calcula la nota que decide aprobación en el centro.
     Retorna (nota_efectiva, estado_calculo).
 
+    Ord. 1-2016 MINERD:
+      - El centro evalúa si el estudiante aprobó sus materias (≥70) con el promedio anual.
+      - La fórmula 70% nota centro + 30% prueba nacional la calcula el MINERD externamente.
+      - La completiva (si existe) mejora el promedio interno pero NO bloquea la promoción.
+
     estado_calculo:
-      'completiva_aplicada'   → 6to con completiva registrada  (80/20)
-      'pendiente_completiva'  → 6to sin completiva aún
-      'promedio_directo'      → cualquier otro grado
+      'completiva_aplicada' → 6to con completiva registrada (promedio ajustado)
+      'promedio_directo'    → cualquier grado, incluyendo 6to sin completiva
     """
-    if es_6to:
-        if nota_completiva is not None:
-            nota = (promedio_anual or 0) * PESO_ANUAL_6TO + nota_completiva * PESO_COMPLETIVA_6TO
-            return round(nota, 2), "completiva_aplicada"
-        return None, "pendiente_completiva"
+    if es_6to and nota_completiva is not None:
+        # Completiva registrada: ajusta el promedio (dato informativo para el récord)
+        nota = (promedio_anual or 0) * PESO_ANUAL_6TO + nota_completiva * PESO_COMPLETIVA_6TO
+        return round(nota, 2), "completiva_aplicada"
+    # Sin completiva o no es 6to: usar promedio anual directamente
     return promedio_anual, "promedio_directo"
 
 
@@ -547,11 +551,13 @@ def ejecutar_promocion_estudiante(
     else:
         grado_destino = grado_origen  # permanece en el mismo grado
 
-    # Actualizar grado del estudiante
+    # Actualizar grado/condición del estudiante
     if estado == PROM_PROMOVIDO:
-        if sig_grado == "EGRESADO":
+        if sig_grado == "CANDIDATO_PRUEBAS":
+            # 6TO aprobado → candidato a Pruebas Nacionales (Ord. 1-2016 MINERD)
+            # condicion cambia; el grado se mantiene en 6TO hasta que obtenga el título
             db.execute(
-                "UPDATE estudiantes SET condicion = 'EGRESADO' WHERE id = ?",
+                "UPDATE estudiantes SET condicion = 'CANDIDATO_PRUEBAS' WHERE id = ?",
                 (est_id,),
             )
         else:
