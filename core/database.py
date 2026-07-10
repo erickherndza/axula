@@ -208,6 +208,30 @@ def migrar_bd():
     except Exception as _e:
         logger.warning(f"[db] migración reportes.caso_id: {_e}")
 
+    # Fix puntual: sincronizar curso con grado para estudiantes promovidos
+    # con código anterior que solo actualizaba grado pero no curso.
+    # "4TO MULTIMEDIA" con grado=5TO → "5TO MULTIMEDIA"
+    try:
+        with sqlite3.connect(DATABASE, timeout=10) as _c:
+            fixed = _c.execute("""
+                UPDATE estudiantes
+                SET curso = UPPER(grado) ||
+                            CASE WHEN INSTR(curso, ' ') > 0
+                                 THEN SUBSTR(curso, INSTR(curso, ' '))
+                                 ELSE '' END
+                WHERE grado IS NOT NULL
+                  AND curso IS NOT NULL
+                  AND UPPER(grado) != UPPER(
+                        CASE WHEN INSTR(curso, ' ') > 0
+                             THEN SUBSTR(curso, 1, INSTR(curso, ' ') - 1)
+                             ELSE curso END)
+            """).rowcount
+            _c.commit()
+            if fixed:
+                logger.info(f"  ✓ curso sincronizado con grado: {fixed} estudiante(s)")
+    except Exception as _e:
+        logger.warning(f"[db] fix curso/grado: {_e}")
+
     logger.info("  ── Migración completada ✓")
 
     # H12: sembrar catálogo de materias si está vacío
