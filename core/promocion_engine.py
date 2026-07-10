@@ -112,7 +112,7 @@ def calcular_pct_inasistencia_materia(
     # Fuente primaria: asistencia_mensual
     row = db.execute(
         """
-        SELECT SUM(dias_asistio) AS asistio, SUM(dias_clase) AS total
+        SELECT SUM(dias_asistio) AS asistio, SUM(dias_clase_impartidos) AS total
         FROM   asistencia_mensual
         WHERE  estudiante_id = ? AND materia = ? AND anio_escolar = ?
         """,
