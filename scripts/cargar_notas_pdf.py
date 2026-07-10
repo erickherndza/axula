@@ -164,12 +164,12 @@ MATS_TECNICAS = {
             "Medios de Comunicación",
         ],
         "6TO": [
-            "Historia del Arte Digital y Multimedia",
-            "Fotografía III y Edición Avanzada",
+            "Redes Sociales",
             "Producción Audiovisual",
-            "Diseño Web y UX",
-            "Animación 3D",
-            "Emprendimiento Digital",
+            "Videoarte",
+            "Animación",
+            "Edición, Sonido y Musicalización",
+            "Producción de Proyecto Emprendedor",
         ],
     },
 }
