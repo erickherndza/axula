@@ -1307,6 +1307,19 @@
                         <span id="promo-label">{{ 'Candidato a Pruebas Nacionales' if (e.grado or '').upper() == '6TO' else 'Promover a ' + {'1ERO':'2DO','2DO':'3RO','3RO':'4TO','3ERO':'4TO','4TO':'5TO','5TO':'6TO'}.get((e.grado or '').upper(), '?') }}</span>
                     </button>
                 </div>
+                {% if session.get('rol') in ['coordinador_general','coordinador_segundo_ciclo','directora','superusuario'] %}
+                <a href="/api/promocion/record-notas/{{ e.id }}?anio_escolar={{ anio_escolar or '2025-2026' }}"
+                   target="_blank"
+                   style="display:inline-flex; align-items:center; gap:8px;
+                          background:transparent; border:1px solid var(--border);
+                          color:var(--text-muted); padding:10px 16px; border-radius:10px;
+                          font-family:var(--font-display); font-weight:600; font-size:12px;
+                          text-decoration:none; transition:all .2s;"
+                   onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
+                   onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'">
+                    <i class="fas fa-file-pdf"></i> Récord de Notas
+                </a>
+                {% endif %}
                 <button onclick="generarCompetencias()"
                     style="display:inline-flex; align-items:center; gap:8px;
                            background:var(--accent); color:#000; border:none;
