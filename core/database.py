@@ -248,6 +248,35 @@ def migrar_bd():
     except Exception as _e:
         logger.warning(f"[db] seed catálogo materias: {_e}")
 
+    # H13: sembrar materias 5TO/6TO MULTIMEDIA en catálogo (si aún no están)
+    try:
+        with sqlite3.connect(DATABASE, timeout=10) as _c:
+            _c.row_factory = sqlite3.Row
+            from .constants import PLAN_ARTES
+            import unicodedata as _ud
+            def _norm_m(s):
+                s = (s or "").strip().lower()
+                return _ud.normalize("NFKD", s).encode("ascii", "ignore").decode("ascii")
+            _nuevas = []
+            for _mencion, _planes in PLAN_ARTES.items():
+                for _grado_k, _mats in _planes.items():
+                    for _nom, _ in _mats:
+                        _norm = _norm_m(_nom)
+                        existe = _c.execute(
+                            "SELECT 1 FROM materias WHERE nombre_norm=?", (_norm,)
+                        ).fetchone()
+                        if not existe:
+                            _c.execute(
+                                "INSERT OR IGNORE INTO materias (nombre_canonico, nombre_norm) VALUES (?,?)",
+                                (_nom, _norm)
+                            )
+                            _nuevas.append(_nom)
+            _c.commit()
+            if _nuevas:
+                logger.info(f"  ✓ Materias nuevas al catálogo: {', '.join(_nuevas)}")
+    except Exception as _e:
+        logger.warning(f"[db] seed materias PLAN_ARTES: {_e}")
+
     # H3: sembrar CEs de Lenguaje Visual si no existen
     try:
         with sqlite3.connect(DATABASE, timeout=10) as _c:

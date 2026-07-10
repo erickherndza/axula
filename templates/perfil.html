@@ -1406,19 +1406,24 @@
             </div>
         </div>
 
-        <!-- Loading state -->
-        {% if fue_promovido %}
-        <div style="text-align:center;padding:40px 20px;color:var(--text-muted);">
-            <i class="fas fa-graduation-cap" style="font-size:32px;display:block;margin-bottom:12px;color:var(--accent);"></i>
-            <div style="font-weight:700;font-size:14px;margin-bottom:6px;">Estudiante promovido — {{ e.curso }}</div>
-            <div style="font-size:12px;">Las notas del nuevo grado aparecerán aquí cuando sean cargadas.</div>
+        <!-- Banner promovido (oculto hasta que la API confirme) -->
+        <div id="banner-promovido" style="display:none;margin-bottom:14px;padding:12px 16px;
+             background:rgba(3,140,140,.07);border:1px solid rgba(3,140,140,.25);border-radius:10px;
+             display:flex;align-items:center;gap:10px;font-size:12px;color:var(--text);">
+            <i class="fas fa-graduation-cap" style="color:var(--accent);font-size:18px;flex-shrink:0;"></i>
+            <div>
+                <strong>Estudiante promovido</strong> — estas son las materias de
+                <span id="banner-grado-nuevo" style="color:var(--accent);font-weight:700;"></span>.
+                Las notas se agregarán cuando sean cargadas por el digitador.
+                <span id="banner-link-anterior"></span>
+            </div>
         </div>
-        {% else %}
+
+        <!-- Loading state -->
         <div id="boletin-loading" style="text-align:center;padding:32px;color:#333;">
             <i class="fas fa-spinner fa-spin" style="font-size:20px;margin-bottom:8px;display:block;"></i>
             Cargando boletín…
         </div>
-        {% endif %}
 
         <!-- Error state -->
         <div id="boletin-error" style="display:none;padding:16px;background:rgba(255,77,77,.05);
@@ -1567,7 +1572,6 @@
             return '<td style="text-align:center;padding:6px 8px;vertical-align:middle;">' + parts.join('') + '</td>';
         }
 
-        if (!document.getElementById('boletin-loading')) return; // promovido — no cargar
         fetch('/api/calificaciones/boletin/' + estId + '?_t=' + Date.now(), {cache: 'no-store'})
             .then(function(r) { return r.json(); })
             .then(function(d) {
@@ -1576,6 +1580,21 @@
                     document.getElementById('boletin-error').style.display = 'block';
                     document.getElementById('boletin-error').innerHTML = '<i class="fas fa-info-circle"></i> Sin calificaciones registradas aún para este estudiante.';
                     return;
+                }
+
+                // Estudiante promovido: mostrar banner + notas vacías del nuevo grado
+                if (d.promovido) {
+                    var bannerEl = document.getElementById('banner-promovido');
+                    bannerEl.style.display = 'flex';
+                    document.getElementById('banner-grado-nuevo').textContent =
+                        (d.grado_actual || '') + (d.mencion ? ' ' + d.mencion : '');
+                    // Si no hay materias en el catálogo aún, mostrar mensaje
+                    if (!d.materias.length) {
+                        document.getElementById('boletin-error').style.display = 'block';
+                        document.getElementById('boletin-error').innerHTML =
+                            '<i class="fas fa-info-circle"></i> Las materias de este grado aún no están en el catálogo.';
+                        return;
+                    }
                 }
 
                 // Año escolar

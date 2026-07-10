@@ -619,7 +619,49 @@ def boletin_estudiante(est_id):
         fue_promovido = tiene_datos_grado_anterior and not tiene_datos_grado_actual
 
         if fue_promovido:
-            return jsonify({"materias": [], "anio_escolar": anio, "promovido": True})
+            # Devolver las materias del NUEVO grado desde el catálogo PLAN_ARTES
+            # con notas vacías — para que el boletín muestre las casillas en blanco
+            # listas para recibir notas, en vez de mostrar "sin datos".
+            from core.constants import PLAN_ARTES
+            _ACAD = {
+                "lengua española", "inglés", "ingles", "matemática", "matematica",
+                "ciencias sociales", "ciencias de la naturaleza", "ciencias naturales",
+                "formación integral humana y religiosa", "fihr",
+                "educación física", "educacion fisica",
+            }
+            curso_est  = (dict(est).get("curso") or "").strip().upper()
+            partes_c   = curso_est.split(None, 1)
+            mencion_c  = partes_c[1].strip() if len(partes_c) > 1 else ""
+            grado_key  = grado_actual.lower()  # "5to", "6to" ...
+            plan_mencion = PLAN_ARTES.get(mencion_c, {})
+            plan_grado   = plan_mencion.get(grado_key, [])
+            materias_catalog = []
+            for nom, _hrs in plan_grado:
+                es_acad = nom.lower().strip() in _ACAD
+                materias_catalog.append({
+                    "materia": nom,
+                    "tipo": "académico" if es_acad else "técnico",
+                    "P1": None, "P2": None, "P3": None, "P4": None,
+                    "p1": None, "p2": None, "p3": None, "p4": None,
+                    "nota_final_base": None, "nota_final": None, "promedio": None,
+                    "nota_recuperacion": None, "nota_completiva": None,
+                    "nota_extraordinaria": None, "nota_final_ajustada": None,
+                    "requiere_recuperacion": False,
+                    "estado": "pendiente",
+                    "estado_base": "pendiente",
+                    "pct_inasistencia": 0,
+                    "pct_inasistencia_injustificada": 0,
+                    "reprueba_asistencia": False,
+                    "alerta_asistencia": False,
+                    "recup_observacion": None,
+                })
+            return jsonify({
+                "materias":       materias_catalog,
+                "anio_escolar":   anio,
+                "promovido":      True,
+                "grado_actual":   grado_actual,
+                "mencion":        mencion_c,
+            })
 
         # Notas manuales (calificaciones_periodo)
         notas_rows = conn.execute(
