@@ -99,6 +99,45 @@ python3 -c "import app; print('OK')"
 
 ## Log de sesiones
 
+### 2026-07-10 (sesión 7 — Fixes motor promoción + notas 4TO MULTIMEDIA)
+
+**Fixes desplegados en Render (commits cb028a2 → f177343):**
+
+- `core/helpers.py` — `obtener_notas_estudiante()`: merge de notas por **período** en lugar de skip por materia completa. Antes: si CP tenía P3/P4 para una materia, `if mat in notas: continue` saltaba los P1/P2 del PDF. Ahora: CP tiene prioridad por período, períodos faltantes se completan desde MC.
+- `core/promocion_engine.py` — `calcular_pct_inasistencia_materia()`: umbral mínimo **10 registros** en tabla `asistencia` (granular). Con 1-2 pases sueltos el porcentaje era inválido (1 ausencia/1 total = 100% → reprobaba injustamente).
+- `routes/calificaciones.py` — `boletin_estudiante()`: mismo umbral mínimo + filtro por año escolar en query de asistencia. Detección `fue_promovido` reescrita usando DISTINCT grados en MC (más robusta). MC query cambiada a `COALESCE(grado, grado_actual)` para excluir notas de grado anterior.
+- `scripts/cargar_diseno_basico_p12.py` — script para cargar P1/P2 de "Diseño Básico y Expresión Visual" para 4TO MULTIMEDIA desde datos del Excel del coordinador.
+
+**ARQUITECTURA CRÍTICA — dos code paths de notas:**
+```
+boletin_estudiante()       → routes/calificaciones.py  (usado por perfil.html)
+obtener_notas_estudiante() → core/helpers.py            (usado por motor promoción y KPIs)
+```
+Son independientes. Un fix en uno NO afecta al otro. Verificar cuál usa la UI antes de editar.
+
+**FIXES PENDIENTES — Render:**
+
+1. **P1/P2 Diseño Básico** — datos existen en LOCAL pero NO en Render DB. Correr en Render Shell:
+   ```bash
+   cd /opt/render/project/src && python3 scripts/cargar_diseno_basico_p12.py --commit
+   ```
+   29/31 alumnos matcheados. Sin match: Diana Ramirez De La Cruz y Josue Fabre Rodríguez (ingresar manualmente).
+
+2. **Fotografía P1/P2/P3 faltantes** — estado INCIERTO. Verificar en Render Shell si MC tiene p1=0/p2=0/p3=0 para el alumno afectado. Si sí → falta de datos (necesita Excel del profesor de Fotografía). Si MC tiene p1>0 y no aparece en boletín → bug de código en commit cb07274.
+   ```bash
+   python3 -c "
+   import sqlite3; conn=sqlite3.connect('/data/database.db'); conn.row_factory=sqlite3.Row
+   print([dict(r) for r in conn.execute('SELECT materia,p1,p2,p3,p4,grado FROM materias_calificaciones WHERE estudiante_id=<ID> AND materia LIKE \"%otograf%\"').fetchall()])
+   "
+   ```
+
+3. **Promovidos 5TO muestran notas 4TO** — NO CONFIRMADO. Tabla `promociones` vacía en Render (nadie promovido formalmente aún). Probar promoviendo un alumno desde coordinador y verificar que perfil muestre catálogo 5TO vacío. El código ya tiene la detección correcta via DISTINCT grados en MC + tabla promociones con filtro anio_escolar.
+
+4. **recalcular_conductual.py** — pendiente desde sesión anterior. Correr en Render Shell:
+   ```bash
+   python3 scripts/recalcular_conductual.py --commit
+   ```
+
 ### 2026-07-10 (sesión 6 — Motor de Promoción MINERD completo)
 
 **Motor de Promoción** (`core/promocion_engine.py` — nuevo):
