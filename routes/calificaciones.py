@@ -591,12 +591,35 @@ def boletin_estudiante(est_id):
     if not est:
         return jsonify({"error": "Estudiante no encontrado"}), 404
 
-    # Solo mostrar notas del grado actual del estudiante
-    grado_actual = (est.get("grado") if hasattr(est, "get") else est["grado"]) or ""
+    grado_actual = (dict(est).get("grado") or "").strip().upper()
 
     # Llamar directamente la lógica
     with sqlite3.connect(DATABASE, timeout=10) as conn:
         conn.row_factory = sqlite3.Row
+
+        # Detectar estudiante promovido:
+        # tiene datos del AÑO ACTUAL en materias_calificaciones con OTRO grado
+        # pero NINGÚN dato con el grado actual → sus notas pertenecen al grado anterior.
+        tiene_datos_grado_anterior = conn.execute(
+            """SELECT 1 FROM materias_calificaciones
+               WHERE estudiante_id=? AND anio_escolar=?
+                 AND grado IS NOT NULL AND UPPER(grado) != ?
+               LIMIT 1""",
+            (est_id, anio, grado_actual)
+        ).fetchone()
+
+        tiene_datos_grado_actual = conn.execute(
+            """SELECT 1 FROM materias_calificaciones
+               WHERE estudiante_id=? AND anio_escolar=?
+                 AND UPPER(grado) = ?
+               LIMIT 1""",
+            (est_id, anio, grado_actual)
+        ).fetchone()
+
+        fue_promovido = tiene_datos_grado_anterior and not tiene_datos_grado_actual
+
+        if fue_promovido:
+            return jsonify({"materias": [], "anio_escolar": anio, "promovido": True})
 
         # Notas manuales (calificaciones_periodo)
         notas_rows = conn.execute(
@@ -605,7 +628,7 @@ def boletin_estudiante(est_id):
             (est_id, anio)
         ).fetchall()
 
-        # Notas del boletín Excel (materias_calificaciones) — solo grado actual
+        # Notas del boletín PDF/Excel (materias_calificaciones) — solo grado actual
         mat_rows = conn.execute(
             """SELECT materia, tipo,
                       CASE WHEN p1>0 THEN p1 ELSE NULL END as p1,
@@ -614,9 +637,10 @@ def boletin_estudiante(est_id):
                       CASE WHEN p4>0 THEN p4 ELSE NULL END as p4
                FROM materias_calificaciones
                WHERE estudiante_id=?
-                 AND (grado IS NULL OR UPPER(grado) = UPPER(?))
+                 AND anio_escolar=?
+                 AND (grado IS NULL OR UPPER(grado) = ?)
                ORDER BY materia""",
-            (est_id, grado_actual)
+            (est_id, anio, grado_actual)
         ).fetchall()
 
         # Recuperaciones pedagógicas
