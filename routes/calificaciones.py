@@ -591,6 +591,16 @@ def boletin_estudiante(est_id):
     if not est:
         return jsonify({"error": "Estudiante no encontrado"}), 404
 
+    # Si el estudiante fue promovido este año, no mostrar notas del grado anterior
+    with sqlite3.connect(DATABASE, timeout=10) as _chk:
+        _chk.row_factory = sqlite3.Row
+        ya_promovido = _chk.execute(
+            "SELECT 1 FROM promociones WHERE estudiante_id=? AND anio_escolar=? AND estado='PROMOVIDO'",
+            (est_id, anio)
+        ).fetchone()
+    if ya_promovido:
+        return jsonify({"materias": [], "anio_escolar": anio, "promovido": True})
+
     # Llamar directamente la lógica
     with sqlite3.connect(DATABASE, timeout=10) as conn:
         conn.row_factory = sqlite3.Row
