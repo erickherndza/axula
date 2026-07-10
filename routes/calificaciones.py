@@ -193,11 +193,16 @@ def registrar_calificacion():
                     (nota, obs, prof_id, existing[0])
                 )
             else:
+                # Leer grado actual del estudiante para etiquetarlo en el registro
+                _est_grado = conn.execute(
+                    "SELECT UPPER(grado) FROM estudiantes WHERE id=?", (est_id,)
+                ).fetchone()
+                _grado_val = _est_grado[0] if _est_grado else None
                 conn.execute(
                     "INSERT INTO calificaciones_periodo "
-                    "(estudiante_id,profesor_id,materia,periodo,calificacion,anio_escolar,observacion) "
-                    "VALUES (?,?,?,?,?,?,?)",
-                    (est_id, prof_id, materia, periodo, nota, item_anio, obs)
+                    "(estudiante_id,profesor_id,materia,periodo,calificacion,anio_escolar,observacion,grado) "
+                    "VALUES (?,?,?,?,?,?,?,?)",
+                    (est_id, prof_id, materia, periodo, nota, item_anio, obs, _grado_val)
                 )
             guardados += 1
 
@@ -664,10 +669,15 @@ def boletin_estudiante(est_id):
             })
 
         # Notas manuales (calificaciones_periodo)
+        # Filtramos por grado para que las notas de 4TO no se mezclen con las de 5TO
+        # después de una promoción. Si la columna grado tiene NULL (registros viejos),
+        # los incluimos también (comportamiento backward-compatible).
         notas_rows = conn.execute(
             "SELECT materia, periodo, calificacion FROM calificaciones_periodo "
-            "WHERE estudiante_id=? AND anio_escolar=? ORDER BY materia, periodo",
-            (est_id, anio)
+            "WHERE estudiante_id=? AND anio_escolar=? "
+            "  AND (grado IS NULL OR UPPER(grado) = ?) "
+            "ORDER BY materia, periodo",
+            (est_id, anio, grado_actual)
         ).fetchall()
 
         # Notas del boletín PDF/Excel (materias_calificaciones) — solo grado actual

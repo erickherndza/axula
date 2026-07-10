@@ -198,6 +198,47 @@ def migrar_bd():
         except Exception as ex:
             logger.error(f"  ⚠ Error migrando acuerdos_compromiso: {ex}")
 
+    # ── calificaciones_periodo.grado — permite filtrar notas por grado ──────────
+    # Sin esta columna, las notas de 4TO se mezclan con las de 5TO tras
+    # la promoción porque calificaciones_periodo no sabía a qué grado pertenecían.
+    try:
+        cols_cp = [r[1] for r in conn.execute("PRAGMA table_info(calificaciones_periodo)").fetchall()]
+        if "grado" not in cols_cp:
+            conn.execute("ALTER TABLE calificaciones_periodo ADD COLUMN grado TEXT")
+            conn.commit()
+            logger.info("  ✓ calificaciones_periodo.grado agregado")
+            # Backfill: para cada entrada existente, buscar el grado del estudiante
+            # en materias_calificaciones del mismo año — es la fuente más confiable.
+            conn.execute("""
+                UPDATE calificaciones_periodo AS cp
+                SET grado = (
+                    SELECT mc.grado
+                    FROM materias_calificaciones mc
+                    WHERE mc.estudiante_id = cp.estudiante_id
+                      AND mc.anio_escolar  = cp.anio_escolar
+                      AND mc.grado IS NOT NULL
+                    LIMIT 1
+                )
+                WHERE cp.grado IS NULL
+            """)
+            # Para los que aún queden NULL (no tienen materias_calificaciones),
+            # usar el grado actual del estudiante como mejor aproximación.
+            conn.execute("""
+                UPDATE calificaciones_periodo AS cp
+                SET grado = (
+                    SELECT UPPER(e.grado)
+                    FROM estudiantes e
+                    WHERE e.id = cp.estudiante_id
+                      AND e.grado IS NOT NULL
+                    LIMIT 1
+                )
+                WHERE cp.grado IS NULL
+            """)
+            conn.commit()
+            logger.info("  ✓ calificaciones_periodo.grado: backfill completado")
+    except Exception as _e:
+        logger.warning(f"[db] migración calificaciones_periodo.grado: {_e}")
+
     # ── reportes.caso_id (enlace reporte → caso escalado) ────────────────────
     try:
         cols_rep = [r[1] for r in conn.execute("PRAGMA table_info(reportes)").fetchall()]
