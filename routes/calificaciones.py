@@ -623,6 +623,17 @@ def boletin_estudiante(est_id):
 
         fue_promovido = tiene_datos_grado_anterior and not tiene_datos_grado_actual
 
+        # Tercera fuente: tabla promociones (cubre el caso donde
+        # materias_calificaciones no tiene grado poblado para el estudiante,
+        # lo que hace que la detección por mismatch falle aunque haya sido promovido).
+        if not fue_promovido:
+            fue_promovido = bool(conn.execute(
+                """SELECT 1 FROM promociones
+                   WHERE estudiante_id=? AND estado='PROMOVIDO'
+                   LIMIT 1""",
+                (est_id,)
+            ).fetchone())
+
         if fue_promovido:
             # Devolver las materias del NUEVO grado desde el catálogo PLAN_ARTES
             # con notas vacías — para que el boletín muestre las casillas en blanco

@@ -207,35 +207,46 @@ def migrar_bd():
             conn.execute("ALTER TABLE calificaciones_periodo ADD COLUMN grado TEXT")
             conn.commit()
             logger.info("  ✓ calificaciones_periodo.grado agregado")
-            # Backfill: para cada entrada existente, buscar el grado del estudiante
-            # en materias_calificaciones del mismo año — es la fuente más confiable.
-            conn.execute("""
-                UPDATE calificaciones_periodo AS cp
-                SET grado = (
-                    SELECT mc.grado
-                    FROM materias_calificaciones mc
-                    WHERE mc.estudiante_id = cp.estudiante_id
-                      AND mc.anio_escolar  = cp.anio_escolar
-                      AND mc.grado IS NOT NULL
-                    LIMIT 1
-                )
-                WHERE cp.grado IS NULL
-            """)
-            # Para los que aún queden NULL (no tienen materias_calificaciones),
-            # usar el grado actual del estudiante como mejor aproximación.
-            conn.execute("""
-                UPDATE calificaciones_periodo AS cp
-                SET grado = (
-                    SELECT UPPER(e.grado)
-                    FROM estudiantes e
-                    WHERE e.id = cp.estudiante_id
-                      AND e.grado IS NOT NULL
-                    LIMIT 1
-                )
-                WHERE cp.grado IS NULL
-            """)
-            conn.commit()
-            logger.info("  ✓ calificaciones_periodo.grado: backfill completado")
+        # Backfill primario: usar grado de materias_calificaciones (más confiable).
+        # Se corre siempre para cubrir registros nuevos que aún tengan NULL.
+        conn.execute("""
+            UPDATE calificaciones_periodo
+            SET grado = (
+                SELECT mc.grado
+                FROM materias_calificaciones mc
+                WHERE mc.estudiante_id = calificaciones_periodo.estudiante_id
+                  AND mc.anio_escolar  = calificaciones_periodo.anio_escolar
+                  AND mc.grado IS NOT NULL
+                LIMIT 1
+            )
+            WHERE grado IS NULL
+        """)
+        conn.commit()
+        # Corrección del backfill anterior que usaba grado_actual del estudiante:
+        # si un alumno fue promovido, sus calificaciones_periodo deben tener
+        # grado_origen (el grado en que cursó esas materias), NO el grado actual.
+        conn.execute("""
+            UPDATE calificaciones_periodo
+            SET grado = (
+                SELECT UPPER(p.grado_origen)
+                FROM promociones p
+                WHERE p.estudiante_id = calificaciones_periodo.estudiante_id
+                  AND p.estado = 'PROMOVIDO'
+                ORDER BY p.fecha DESC
+                LIMIT 1
+            )
+            WHERE EXISTS (
+                SELECT 1 FROM promociones p
+                WHERE p.estudiante_id = calificaciones_periodo.estudiante_id
+                  AND p.estado = 'PROMOVIDO'
+            )
+            AND UPPER(grado) = (
+                SELECT UPPER(e.grado) FROM estudiantes e
+                WHERE e.id = calificaciones_periodo.estudiante_id LIMIT 1
+            )
+        """)
+        conn.commit()
+        logger.info("  ✓ calificaciones_periodo.grado: backfill + corrección aplicados")
     except Exception as _e:
         logger.warning(f"[db] migración calificaciones_periodo.grado: {_e}")
 
