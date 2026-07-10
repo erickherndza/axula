@@ -98,6 +98,20 @@ def siguiente_grado(grado: str) -> str:
 
 # ── Asistencia ────────────────────────────────────────────────────────────────
 
+def _anios_de_escolar(anio_escolar: str) -> tuple[int, int]:
+    """
+    '2025-2026' → (2025, 2026)
+    Usado para filtrar tablas que guardan anio como INTEGER, no como 'YYYY-YYYY'.
+    """
+    try:
+        partes = (anio_escolar or "").split("-")
+        return int(partes[0]), int(partes[1])
+    except (ValueError, IndexError, AttributeError):
+        import datetime
+        y = datetime.date.today().year
+        return y - 1, y
+
+
 def calcular_pct_inasistencia_materia(
     db,
     est_id: int,
@@ -106,30 +120,37 @@ def calcular_pct_inasistencia_materia(
 ) -> Optional[float]:
     """
     Calcula porcentaje de inasistencia (0.0–1.0) para un estudiante en una materia.
-    Fuente primaria: asistencia_mensual. Fallback: tabla asistencia.
+    Fuente primaria: asistencia_mensual (columnas: anio INT + mes INT, SIN anio_escolar).
+    Fallback: tabla asistencia (columna fecha TEXT 'YYYY-MM-DD', SIN anio_escolar).
     Retorna None si no hay datos suficientes.
     """
-    # Fuente primaria: asistencia_mensual
+    anio1, anio2 = _anios_de_escolar(anio_escolar)
+
+    # Fuente primaria: asistencia_mensual — filtra por anio IN (2025, 2026)
     row = db.execute(
         """
-        SELECT SUM(dias_asistio) AS asistio, SUM(dias_clase_impartidos) AS total
+        SELECT SUM(dias_asistio)          AS asistio,
+               SUM(dias_clase_impartidos) AS total
         FROM   asistencia_mensual
-        WHERE  estudiante_id = ? AND materia = ? AND anio_escolar = ?
+        WHERE  estudiante_id = ? AND materia = ?
+          AND  anio IN (?, ?)
         """,
-        (est_id, materia, anio_escolar),
+        (est_id, materia, anio1, anio2),
     ).fetchone()
 
     if row and row["total"] and row["total"] > 0:
         pct_asistencia = (row["asistio"] or 0) / row["total"]
         return round(1.0 - pct_asistencia, 4)
 
-    # Fallback: tabla asistencia granular
+    # Fallback: tabla asistencia granular — filtra por año dentro de fecha TEXT
+    a1, a2 = str(anio1), str(anio2)
     total = db.execute(
         """
         SELECT COUNT(*) FROM asistencia
-        WHERE estudiante_id = ? AND materia = ? AND anio_escolar = ?
+        WHERE  estudiante_id = ? AND materia = ?
+          AND  (strftime('%Y', fecha) = ? OR strftime('%Y', fecha) = ?)
         """,
-        (est_id, materia, anio_escolar),
+        (est_id, materia, a1, a2),
     ).fetchone()[0]
 
     if not total:
@@ -138,10 +159,10 @@ def calcular_pct_inasistencia_materia(
     ausencias = db.execute(
         """
         SELECT COUNT(*) FROM asistencia
-        WHERE estudiante_id = ? AND materia = ? AND anio_escolar = ?
-          AND estado = 'ausente'
+        WHERE  estudiante_id = ? AND materia = ? AND estado = 'ausente'
+          AND  (strftime('%Y', fecha) = ? OR strftime('%Y', fecha) = ?)
         """,
-        (est_id, materia, anio_escolar),
+        (est_id, materia, a1, a2),
     ).fetchone()[0]
 
     return round(ausencias / total, 4)
