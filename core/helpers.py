@@ -1998,6 +1998,8 @@ def obtener_notas_estudiante(conn, est_id, anio=None):
         notas[mat][per.lower()] = nota  # 'p1', 'p2', 'p3', 'p4'
 
     # ── 2. Fallback: materias_calificaciones (importadas desde PDF) ────────────
+    # Merge por período: CP tiene prioridad, pero si CP solo tiene P3/P4 y MC
+    # tiene P1/P2, se usan los de MC para esos períodos faltantes.
     rows_mc = conn.execute(
         "SELECT materia, p1, p2, p3, p4 FROM materias_calificaciones "
         "WHERE estudiante_id=? AND anio_escolar=?",
@@ -2005,13 +2007,20 @@ def obtener_notas_estudiante(conn, est_id, anio=None):
     ).fetchall()
     for r in rows_mc:
         mat = r["materia"] if hasattr(r, "keys") else r[0]
-        if mat in notas:
-            continue  # ya tiene datos manuales → no pisamos
-        p1 = float(r["p1"] if hasattr(r, "keys") else r[1] or 0)
-        p2 = float(r["p2"] if hasattr(r, "keys") else r[2] or 0)
-        p3 = float(r["p3"] if hasattr(r, "keys") else r[3] or 0)
-        p4 = float(r["p4"] if hasattr(r, "keys") else r[4] or 0)
-        notas[mat] = {"p1": p1, "p2": p2, "p3": p3, "p4": p4}
+        p_mc = {
+            "p1": float(r["p1"] if hasattr(r, "keys") else r[1] or 0),
+            "p2": float(r["p2"] if hasattr(r, "keys") else r[2] or 0),
+            "p3": float(r["p3"] if hasattr(r, "keys") else r[3] or 0),
+            "p4": float(r["p4"] if hasattr(r, "keys") else r[4] or 0),
+        }
+        if mat not in notas:
+            # Sin datos manuales para esta materia → usar MC completo
+            notas[mat] = p_mc
+        else:
+            # Ya hay datos CP para esta materia → completar solo períodos ausentes
+            for p_key in ("p1", "p2", "p3", "p4"):
+                if not notas[mat].get(p_key) and p_mc.get(p_key, 0) > 0:
+                    notas[mat][p_key] = p_mc[p_key]
 
     # ── 3. Calcular promedio por materia ───────────────────────────────────────
     result = {}
