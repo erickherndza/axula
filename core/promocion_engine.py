@@ -155,7 +155,10 @@ def calcular_pct_inasistencia_materia(
         (est_id, materia, a1, a2),
     ).fetchone()[0]
 
-    if not total:
+    # Mínimo de registros para que el cálculo sea estadísticamente válido.
+    # 1-2 pases sueltos dan porcentajes absurdos (ej: 1 ausencia / 1 total = 100%).
+    MIN_REGISTROS = 10
+    if not total or total < MIN_REGISTROS:
         return None
 
     ausencias = db.execute(
