@@ -1810,17 +1810,11 @@ def get_materias_estudiante(estudiante_id):
         conn.row_factory = sqlite3.Row
         anio = _anio_escolar_actual()
 
-        # Si el estudiante fue promovido este año escolar, sus notas actuales
-        # pertenecen al grado que dejó. Devolver vacío hasta que se carguen
-        # las notas del nuevo grado.
-        ya_promovido = conn.execute("""
-            SELECT 1 FROM promociones
-            WHERE estudiante_id = ?
-              AND anio_escolar   = ?
-              AND estado         = 'PROMOVIDO'
-        """, (estudiante_id, anio)).fetchone()
-        if ya_promovido:
-            return jsonify([])
+        # Obtener grado actual del estudiante
+        est_row = conn.execute(
+            "SELECT grado FROM estudiantes WHERE id=?", (estudiante_id,)
+        ).fetchone()
+        grado_actual = (est_row["grado"] if est_row else "") or ""
 
         rows = conn.execute("""
             SELECT materia, p1, p2, p3, p4, promedio, fecha_carga, fuente,
@@ -1829,10 +1823,11 @@ def get_materias_estudiante(estudiante_id):
             FROM materias_calificaciones
             WHERE estudiante_id = ?
               AND (anio_escolar = ? OR anio_escolar IS NULL)
+              AND (grado IS NULL OR UPPER(grado) = UPPER(?))
             ORDER BY CASE COALESCE(tipo,'académico')
                           WHEN 'académico' THEN 0 ELSE 1 END,
                      materia
-        """, (estudiante_id, anio)).fetchall()
+        """, (estudiante_id, anio, grado_actual)).fetchall()
     resultado = _dedup_materias([dict(r) for r in rows])
     resultado.sort(key=lambda r: (0 if r["tipo"] == "académico" else 1, r["materia"].lower()))
     resultado = _rls.filtrar_materias_profesor(resultado)

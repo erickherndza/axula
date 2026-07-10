@@ -591,15 +591,8 @@ def boletin_estudiante(est_id):
     if not est:
         return jsonify({"error": "Estudiante no encontrado"}), 404
 
-    # Si el estudiante fue promovido este año, no mostrar notas del grado anterior
-    with sqlite3.connect(DATABASE, timeout=10) as _chk:
-        _chk.row_factory = sqlite3.Row
-        ya_promovido = _chk.execute(
-            "SELECT 1 FROM promociones WHERE estudiante_id=? AND anio_escolar=? AND estado='PROMOVIDO'",
-            (est_id, anio)
-        ).fetchone()
-    if ya_promovido:
-        return jsonify({"materias": [], "anio_escolar": anio, "promovido": True})
+    # Solo mostrar notas del grado actual del estudiante
+    grado_actual = (est.get("grado") if hasattr(est, "get") else est["grado"]) or ""
 
     # Llamar directamente la lógica
     with sqlite3.connect(DATABASE, timeout=10) as conn:
@@ -612,7 +605,7 @@ def boletin_estudiante(est_id):
             (est_id, anio)
         ).fetchall()
 
-        # Notas del boletín Excel (materias_calificaciones)
+        # Notas del boletín Excel (materias_calificaciones) — solo grado actual
         mat_rows = conn.execute(
             """SELECT materia, tipo,
                       CASE WHEN p1>0 THEN p1 ELSE NULL END as p1,
@@ -620,8 +613,10 @@ def boletin_estudiante(est_id):
                       CASE WHEN p3>0 THEN p3 ELSE NULL END as p3,
                       CASE WHEN p4>0 THEN p4 ELSE NULL END as p4
                FROM materias_calificaciones
-               WHERE estudiante_id=? ORDER BY materia""",
-            (est_id,)
+               WHERE estudiante_id=?
+                 AND (grado IS NULL OR UPPER(grado) = UPPER(?))
+               ORDER BY materia""",
+            (est_id, grado_actual)
         ).fetchall()
 
         # Recuperaciones pedagógicas
