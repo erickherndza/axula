@@ -602,36 +602,30 @@ def boletin_estudiante(est_id):
     with sqlite3.connect(DATABASE, timeout=10) as conn:
         conn.row_factory = sqlite3.Row
 
-        # Detectar estudiante promovido:
-        # tiene datos del AÑO ACTUAL en materias_calificaciones con OTRO grado
-        # pero NINGÚN dato con el grado actual → sus notas pertenecen al grado anterior.
-        tiene_datos_grado_anterior = conn.execute(
-            """SELECT 1 FROM materias_calificaciones
-               WHERE estudiante_id=? AND anio_escolar=?
-                 AND grado IS NOT NULL AND UPPER(grado) != ?
-               LIMIT 1""",
-            (est_id, anio, grado_actual)
-        ).fetchone()
+        # Detectar estudiante promovido — 3 capas de detección:
 
-        tiene_datos_grado_actual = conn.execute(
-            """SELECT 1 FROM materias_calificaciones
-               WHERE estudiante_id=? AND anio_escolar=?
-                 AND UPPER(grado) = ?
-               LIMIT 1""",
-            (est_id, anio, grado_actual)
-        ).fetchone()
+        # Capa 1: MC del año actual tiene datos de un grado DIFERENTE al actual
+        # (ej: grado_actual='5TO' pero MC tiene grado='4TO' → fue promovido)
+        grados_en_mc = conn.execute(
+            """SELECT DISTINCT UPPER(grado) as g
+               FROM materias_calificaciones
+               WHERE estudiante_id=? AND anio_escolar=? AND grado IS NOT NULL""",
+            (est_id, anio)
+        ).fetchall()
+        mc_grado_set = {r["g"] for r in grados_en_mc}
 
-        fue_promovido = tiene_datos_grado_anterior and not tiene_datos_grado_actual
-
-        # Tercera fuente: tabla promociones (cubre el caso donde
-        # materias_calificaciones no tiene grado poblado para el estudiante,
-        # lo que hace que la detección por mismatch falle aunque haya sido promovido).
-        if not fue_promovido:
+        if mc_grado_set:
+            # Hay grados explícitos en MC: promovido si NINGUNO coincide con el actual
+            fue_promovido = grado_actual not in mc_grado_set
+        else:
+            # Sin grados explícitos en MC (grado NULL o sin MC): usar tabla promociones
+            # IMPORTANTE: filtrar por anio_escolar para no confundir con promociones
+            # de años anteriores.
             fue_promovido = bool(conn.execute(
                 """SELECT 1 FROM promociones
-                   WHERE estudiante_id=? AND estado='PROMOVIDO'
+                   WHERE estudiante_id=? AND estado='PROMOVIDO' AND anio_escolar=?
                    LIMIT 1""",
-                (est_id,)
+                (est_id, anio)
             ).fetchone())
 
         if fue_promovido:
@@ -701,9 +695,9 @@ def boletin_estudiante(est_id):
                FROM materias_calificaciones
                WHERE estudiante_id=?
                  AND anio_escolar=?
-                 AND (grado IS NULL OR UPPER(grado) = ?)
+                 AND UPPER(TRIM(COALESCE(grado, ?))) = ?
                ORDER BY materia""",
-            (est_id, anio, grado_actual)
+            (est_id, anio, grado_actual, grado_actual)
         ).fetchall()
 
         # Recuperaciones pedagógicas
