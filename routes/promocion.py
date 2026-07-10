@@ -6,9 +6,14 @@ Auth:     coord_required (coordinador o directora)
 
 Reglas MINERD implementadas en core/promocion_engine.py
 """
+import logging
+import traceback as _tb
+
 from flask import Blueprint, jsonify, request, session
 
 from core.database import get_db
+
+log = logging.getLogger(__name__)
 from core.helpers import _anio_escolar_actual, _audit
 from core.auth import login_required, coord_required
 from core.promocion_engine import (
@@ -77,7 +82,6 @@ def preview_estudiante(est_id: int):
 
     Evaluación individual sin escribir en BD.
     """
-    import traceback
     try:
         anio = _anio_param()
         db   = get_db()
@@ -89,7 +93,7 @@ def preview_estudiante(est_id: int):
         return jsonify({"ok": True, **res})
     except Exception as exc:
         log.exception("preview_estudiante est_id=%s", est_id)
-        return jsonify({"ok": False, "error": str(exc), "traceback": traceback.format_exc()}), 500
+        return jsonify({"ok": False, "error": str(exc), "traceback": _tb.format_exc()}), 500
 
 
 @promocion_bp.route("/ejecutar", methods=["POST"])
