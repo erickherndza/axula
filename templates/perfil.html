@@ -1304,7 +1304,7 @@
                                font-family:var(--font-display); font-weight:600; font-size:12px;
                                cursor:pointer; transition:all .2s;">
                         <i class="fas fa-graduation-cap"></i>
-                        <span id="promo-label">Promover a 5to</span>
+                        <span id="promo-label">Promover a {{ {'1ERO':'2DO','2DO':'3RO','3RO':'4TO','3ERO':'4TO','4TO':'5TO','5TO':'6TO','6TO':'EGRESADO'}.get((e.grado or '').upper(), '?') }}</span>
                     </button>
                 </div>
                 <button onclick="generarCompetencias()"
@@ -2481,32 +2481,126 @@
         alert('Copiado al portapapeles');
     }
 
-    // ── PROMOCIÓN A 5TO ──────────────────────────────────────────────────────
-    function togglePromover() {
-        var esActualmente4to = GRADO_ACTUAL === '4to';
-        var nuevoGrado = esActualmente4to ? '5to' : '4to';
-        var msg = esActualmente4to
-            ? '¿Promover a ' + document.getElementById('nombre-est').textContent + ' a 5to Multimedia?'
-            : '¿Revertir a 4to Multimedia?';
+    // ── MOTOR DE PROMOCIÓN MINERD ─────────────────────────────────────────────
+    var _MAPA_SIG = {
+        '1ERO':'2DO','2DO':'3RO','3RO':'4TO','3ERO':'4TO',
+        '4TO':'5TO','5TO':'6TO','6TO':'EGRESADO'
+    };
 
-        if (!confirm(msg)) return;
+    function _sigGrado(g) {
+        return _MAPA_SIG[(g || '').toUpperCase()] || '?';
+    }
 
-        fetch('/api/promover/' + EST_ID, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ grado: nuevoGrado })
-        })
-        .then(function(r){ return r.json(); })
-        .then(function(data) {
-            if (data.ok) {
-                GRADO_ACTUAL = nuevoGrado;
-                document.getElementById('grado-texto').textContent = nuevoGrado + ' Multimedia';
-                document.getElementById('grado-badge').style.borderColor = nuevoGrado === '5to' ? 'rgba(75,232,122,.4)' : 'var(--border)';
-                document.getElementById('grado-badge').style.color = nuevoGrado === '5to' ? '#4be87a' : 'var(--text-muted)';
-                document.getElementById('promo-label').textContent = nuevoGrado === '5to' ? 'Revertir a 4to' : 'Promover a 5to';
-                document.getElementById('btn-promover').style.borderColor = nuevoGrado === '5to' ? 'rgba(75,232,122,.4)' : 'var(--border)';
+    async function togglePromover() {
+        var btn = document.getElementById('btn-promover');
+        var label = document.getElementById('promo-label');
+        btn.disabled = true;
+        label.textContent = 'Evaluando…';
+
+        try {
+            // 1. Evaluar sin escribir en BD
+            var evRes = await fetch('/api/promocion/estudiante/' + EST_ID, {
+                headers: {'X-CSRF-Token': CSRF_TOKEN}
+            });
+            var ev = await evRes.json();
+
+            if (!ev.ok) {
+                alert('Error al evaluar: ' + (ev.error || 'Inténtalo de nuevo'));
+                return;
             }
-        });
+
+            var estado   = ev.estado;
+            var sigGrado = ev.siguiente_grado;
+            var nombre   = '{{ e.nombre | e }} {{ e.apellido | e }}';
+            var msg;
+
+            if (estado === 'PROMOVIDO') {
+                msg = sigGrado === 'EGRESADO'
+                    ? '✅ ' + nombre + ' completó todos los requisitos del bachillerato.\n\n¿Registrar como EGRESADO?'
+                    : '✅ ' + nombre + ' aprobó todas las materias.\n\n¿Promover a ' + sigGrado + '?';
+            } else if (estado === 'RECUPERACION') {
+                var mats = ev.mats_recuperacion && ev.mats_recuperacion.length
+                    ? ev.mats_recuperacion.join(', ')
+                    : ev.mats_reprobadas + ' materia(s)';
+                msg = '⚠️ ' + nombre + ' pasa a ' + sigGrado + ' pero queda en RECUPERACIÓN.\n\nMaterias pendientes: ' + mats + '\n\n¿Confirmar promoción con recuperación?';
+            } else if (estado === 'NO_PROMOVIDO') {
+                var mats2 = ev.mats_recuperacion && ev.mats_recuperacion.length
+                    ? ev.mats_recuperacion.join(', ')
+                    : ev.mats_reprobadas + ' materias';
+                msg = '❌ ' + nombre + ' reprobó ' + ev.mats_reprobadas + ' materias (' + mats2 + ').\n\nCon 3 o más materias reprobadas el estudiante NO puede ser promovido.\n\n¿Registrar como NO PROMOVIDO (repite ' + GRADO_ACTUAL.toUpperCase() + ')?';
+            } else {
+                // PENDIENTE — hay materias sin calificar
+                alert('⏳ Hay ' + ev.mats_pendientes + ' materia(s) pendiente(s) de calificar.\n\nCompleta todas las notas de P4 antes de ejecutar la promoción.');
+                return;
+            }
+
+            if (!confirm(msg)) return;
+
+            // 2. Ejecutar promoción con el motor
+            var execRes = await fetch('/api/promocion/ejecutar/' + EST_ID, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'X-CSRF-Token': CSRF_TOKEN},
+                body: JSON.stringify({})
+            });
+            var exec = await execRes.json();
+
+            if (!exec.ok) {
+                if (exec.requiere_confirmacion) {
+                    // El motor bloqueó por pendientes — ya manejamos arriba, no debería llegar aquí
+                    alert('⏳ ' + (exec.error || 'Hay materias pendientes'));
+                } else {
+                    alert('Error al ejecutar: ' + (exec.error || 'Inténtalo de nuevo'));
+                }
+                return;
+            }
+
+            // 3. Actualizar UI según el resultado real
+            _actualizarUIPromocion(exec.estado, exec.grado_destino);
+
+        } catch(ex) {
+            alert('Error de conexión: ' + ex.message);
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    function _actualizarUIPromocion(estado, gradoDestino) {
+        var badge      = document.getElementById('grado-badge');
+        var label      = document.getElementById('promo-label');
+        var btn        = document.getElementById('btn-promover');
+        var gradoTexto = document.getElementById('grado-texto');
+
+        if (estado === 'PROMOVIDO') {
+            GRADO_ACTUAL = gradoDestino;
+            if (gradoDestino === 'EGRESADO') {
+                gradoTexto.textContent = 'EGRESADO';
+                label.textContent      = 'Egresado ✓';
+            } else {
+                gradoTexto.textContent = gradoDestino;
+                label.textContent      = 'Promovido a ' + gradoDestino + ' ✓';
+            }
+            badge.style.borderColor = 'rgba(75,232,122,.4)';
+            badge.style.color       = '#4be87a';
+            btn.disabled            = true;
+            btn.style.opacity       = '0.6';
+
+        } else if (estado === 'RECUPERACION') {
+            GRADO_ACTUAL = gradoDestino;
+            gradoTexto.textContent  = gradoDestino + ' (Recuperación)';
+            badge.style.borderColor = 'rgba(255,190,11,.4)';
+            badge.style.color       = '#ffbe0b';
+            label.textContent       = 'Recuperación → ' + gradoDestino;
+            btn.disabled            = true;
+            btn.style.opacity       = '0.6';
+
+        } else if (estado === 'NO_PROMOVIDO') {
+            badge.style.borderColor = 'rgba(201,53,43,.4)';
+            badge.style.color       = '#C9352B';
+            gradoTexto.textContent  = GRADO_ACTUAL.toUpperCase() + ' (Repite)';
+            label.textContent       = 'No Promovido';
+            btn.disabled            = true;
+            btn.style.opacity       = '0.6';
+        }
     }
 
     // Set nombre-est for confirm message
