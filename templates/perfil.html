@@ -2565,13 +2565,20 @@
                 return;
             }
 
-            // 3. Actualizar UI según el resultado real
-            _actualizarUIPromocion(exec.estado, exec.grado_destino);
+            // 3. Recargar para que el servidor refleje grado/curso actualizado
+            if (exec.estado === 'PROMOVIDO') {
+                btn.textContent = '✓ Promovido — recargando…';
+                setTimeout(function(){ location.reload(); }, 1200);
+            } else {
+                _actualizarUIPromocion(exec.estado, exec.grado_destino);
+            }
 
         } catch(ex) {
             alert('Error de conexión: ' + ex.message);
         } finally {
-            btn.disabled = false;
+            if (!['PROMOVIDO'].includes(typeof exec !== 'undefined' ? exec.estado : '')) {
+                btn.disabled = false;
+            }
         }
     }
 
