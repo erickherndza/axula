@@ -1988,8 +1988,11 @@ def obtener_notas_estudiante(conn, est_id, anio=None):
     ).fetchall()
     for r in rows_cp:
         mat  = r["materia"] if hasattr(r, "keys") else r[0]
-        per  = (r["periodo"] if hasattr(r, "keys") else r[1]).upper()
+        per  = (r["periodo"] if hasattr(r, "keys") else r[1]).upper().strip()
         nota = float(r["calificacion"] if hasattr(r, "keys") else r[2])
+        # Normalizar "PP1" → "P1" (calificaciones_periodo guarda con doble P)
+        if per.startswith("PP") and len(per) == 3 and per[2].isdigit():
+            per = "P" + per[2]
         if mat not in notas:
             notas[mat] = {}
         notas[mat][per.lower()] = nota  # 'p1', 'p2', 'p3', 'p4'

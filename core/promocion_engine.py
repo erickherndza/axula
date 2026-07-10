@@ -22,6 +22,8 @@ import json
 import logging
 from typing import Optional
 
+from core.helpers import obtener_notas_estudiante
+
 log = logging.getLogger(__name__)
 
 # ── Constantes ────────────────────────────────────────────────────────────────
@@ -264,16 +266,31 @@ def evaluar_estudiante(
     except ValueError:
         sig_grado = "DESCONOCIDO"
 
-    # 2. Leer materias del año
-    materias_rows = db.execute(
-        """
-        SELECT materia, p1, p2, p3, p4, promedio
-        FROM   materias_calificaciones
-        WHERE  estudiante_id = ? AND anio_escolar = ?
-        ORDER  BY materia
-        """,
-        (est_id, anio_escolar),
-    ).fetchall()
+    # 2. Leer materias del año — fuente canónica: calificaciones_periodo (notas manuales
+    #    de profesores) con fallback a materias_calificaciones (importación PDF).
+    #    Esto garantiza que Diseño Básico u otras materias con notas manuales usen
+    #    los datos reales, no los ceros del PDF.
+    import unicodedata as _ud
+
+    def _norm_mat(s):
+        return _ud.normalize("NFKD", (s or "").lower().strip()) \
+                  .encode("ascii", "ignore").decode("ascii")
+
+    notas_canon = obtener_notas_estudiante(db, est_id, anio_escolar)
+
+    # Deduplicar: misma materia en MAYÚS y Title Case → quedarse con el promedio más alto
+    dedup: dict = {}
+    for mat, d in notas_canon.items():
+        key = _norm_mat(mat)
+        if key not in dedup or (d["promedio"] or 0) > (dedup[key][1]["promedio"] or 0):
+            dedup[key] = (mat, d)
+
+    # Construir lista ordenada, compatible con el resto del motor
+    materias_rows = [
+        {"materia": mat, "p1": d["p1"], "p2": d["p2"],
+         "p3": d["p3"], "p4": d["p4"], "promedio": d["promedio"]}
+        for _, (mat, d) in sorted(dedup.items())
+    ]
 
     if not materias_rows:
         return {
