@@ -781,12 +781,12 @@ tr:hover td{background:var(--hover)}
           </div>
           <div class="flabel" style="margin-bottom:6px">Grados específicos (opcional)</div>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
-            <label class="check-btn"><input type="checkbox" value="1ro" class="chk-grado"> 1ro</label>
-            <label class="check-btn"><input type="checkbox" value="2do" class="chk-grado"> 2do</label>
-            <label class="check-btn"><input type="checkbox" value="3ro" class="chk-grado"> 3ro</label>
-            <label class="check-btn"><input type="checkbox" value="4to" class="chk-grado"> 4to</label>
-            <label class="check-btn"><input type="checkbox" value="5to" class="chk-grado"> 5to</label>
-            <label class="check-btn"><input type="checkbox" value="6to" class="chk-grado"> 6to</label>
+            <label class="check-btn"><input type="checkbox" value="1ro" class="chk-grado" onchange="onGradoChange()"> 1ro</label>
+            <label class="check-btn"><input type="checkbox" value="2do" class="chk-grado" onchange="onGradoChange()"> 2do</label>
+            <label class="check-btn"><input type="checkbox" value="3ro" class="chk-grado" onchange="onGradoChange()"> 3ro</label>
+            <label class="check-btn"><input type="checkbox" value="4to" class="chk-grado" onchange="onGradoChange()"> 4to</label>
+            <label class="check-btn"><input type="checkbox" value="5to" class="chk-grado" onchange="onGradoChange()"> 5to</label>
+            <label class="check-btn"><input type="checkbox" value="6to" class="chk-grado" onchange="onGradoChange()"> 6to</label>
           </div>
         </div>
 
@@ -827,53 +827,103 @@ tr:hover td{background:var(--hover)}
             </div>
           </div>
 
-          <!-- Técnicas por mención (se muestran según selección) -->
+          <!-- Técnicas por mención (se muestran según selección) — FUENTE ÚNICA: index.html → NO duplicar este bloque -->
           <div id="mats-tecnicas-wrap" style="margin-top:10px;display:none">
             <div id="mats-multimedia" class="mats-mencion" style="display:none">
               <div style="font-size:10px;color:#60b8f0;margin-bottom:6px;font-weight:700">🎬 MULTIMEDIA</div>
-              <div style="display:flex;gap:6px;flex-wrap:wrap">
-                <label class="check-btn mat-t"><input type="checkbox" value="Fotografía" class="chk-mat"> Fotografía</label>
-                <label class="check-btn mat-t"><input type="checkbox" value="Lenguaje Visual, Dibujo y Creación de Personajes" class="chk-mat"> Lenguaje Visual</label>
-                <label class="check-btn mat-t"><input type="checkbox" value="Diseño Básico y Expresión Visual" class="chk-mat"> Diseño Básico</label>
-                <label class="check-btn mat-t"><input type="checkbox" value="Historia del Arte Universal y la Estética Digital" class="chk-mat"> Historia del Arte</label>
-                <label class="check-btn mat-t"><input type="checkbox" value="Lenguaje Musical" class="chk-mat"> Lenguaje Musical</label>
-                <label class="check-btn mat-t"><input type="checkbox" value="Lenguaje Danzario y Teatral" class="chk-mat"> Lenguaje Danzario</label>
+              <div id="mats-multimedia-checks" style="display:flex;gap:6px;flex-wrap:wrap">
+                <label class="check-btn mat-t" data-grado="4to"><input type="checkbox" value="Fotografía" class="chk-mat"> Fotografía</label>
+                <label class="check-btn mat-t" data-grado="4to"><input type="checkbox" value="Lenguaje Visual, Dibujo y Creación de Personajes" class="chk-mat"> Lenguaje Visual</label>
+                <label class="check-btn mat-t" data-grado="4to"><input type="checkbox" value="Diseño Básico y Expresión Visual" class="chk-mat"> Diseño Básico</label>
+                <label class="check-btn mat-t" data-grado="4to"><input type="checkbox" value="Historia del Arte Universal y la Estética Digital" class="chk-mat"> Historia del Arte</label>
+                <label class="check-btn mat-t" data-grado="4to"><input type="checkbox" value="Lenguaje Musical" class="chk-mat"> Lenguaje Musical</label>
+                <label class="check-btn mat-t" data-grado="4to"><input type="checkbox" value="Lenguaje Danzario y Teatral" class="chk-mat"> Lenguaje Danzario</label>
+                <label class="check-btn mat-t" data-grado="5to"><input type="checkbox" value="Diseño Web" class="chk-mat"> Diseño Web</label>
+                <label class="check-btn mat-t" data-grado="5to"><input type="checkbox" value="Diseño Gráfico" class="chk-mat"> Diseño Gráfico</label>
+                <label class="check-btn mat-t" data-grado="5to"><input type="checkbox" value="Publicidad y Creatividad" class="chk-mat"> Publicidad y Creatividad</label>
+                <label class="check-btn mat-t" data-grado="5to"><input type="checkbox" value="Operación de Cámara de Video" class="chk-mat"> Operación de Cámara</label>
+                <label class="check-btn mat-t" data-grado="5to"><input type="checkbox" value="Guión" class="chk-mat"> Guión</label>
+                <label class="check-btn mat-t" data-grado="5to"><input type="checkbox" value="Medios de Comunicación" class="chk-mat"> Medios de Comunicación</label>
+                <label class="check-btn mat-t" data-grado="6to"><input type="checkbox" value="Redes Sociales" class="chk-mat"> Redes Sociales</label>
+                <label class="check-btn mat-t" data-grado="6to"><input type="checkbox" value="Producción Audiovisual" class="chk-mat"> Producción Audiovisual</label>
+                <label class="check-btn mat-t" data-grado="6to"><input type="checkbox" value="Videoarte" class="chk-mat"> Videoarte</label>
+                <label class="check-btn mat-t" data-grado="6to"><input type="checkbox" value="Animación" class="chk-mat"> Animación</label>
+                <label class="check-btn mat-t" data-grado="6to"><input type="checkbox" value="Edición, Sonido y Musicalización" class="chk-mat"> Edición y Sonido</label>
+                <label class="check-btn mat-t" data-grado="6to"><input type="checkbox" value="Producción de Proyecto Emprendedor" class="chk-mat"> Proyecto Emprendedor</label>
               </div>
             </div>
             <div id="mats-artes_visuales" class="mats-mencion" style="display:none;margin-top:8px">
               <div style="font-size:10px;color:#f78337;margin-bottom:6px;font-weight:700">🎨 ARTES VISUALES</div>
-              <div style="display:flex;gap:6px;flex-wrap:wrap">
-                <label class="check-btn mat-t"><input type="checkbox" value="Historia del Arte Universal" class="chk-mat"> Historia del Arte</label>
-                <label class="check-btn mat-t"><input type="checkbox" value="Lenguaje Plástico y Visual" class="chk-mat"> Lenguaje Plástico</label>
-                <label class="check-btn mat-t"><input type="checkbox" value="Dibujo Técnico y Artístico" class="chk-mat"> Dibujo Técnico</label>
-                <label class="check-btn mat-t"><input type="checkbox" value="Pintura y Técnicas Mixtas" class="chk-mat"> Pintura</label>
+              <div id="mats-artes_visuales-checks" style="display:flex;gap:6px;flex-wrap:wrap">
+                <label class="check-btn mat-t" data-grado="4to"><input type="checkbox" value="Historia del Arte Universal" class="chk-mat"> Historia del Arte</label>
+                <label class="check-btn mat-t" data-grado="4to"><input type="checkbox" value="Lenguaje Plástico y Visual" class="chk-mat"> Lenguaje Plástico</label>
+                <label class="check-btn mat-t" data-grado="4to"><input type="checkbox" value="Dibujo Técnico y Artístico" class="chk-mat"> Dibujo Técnico</label>
+                <label class="check-btn mat-t" data-grado="4to"><input type="checkbox" value="Pintura y Técnicas Mixtas" class="chk-mat"> Pintura</label>
+                <label class="check-btn mat-t" data-grado="5to"><input type="checkbox" value="Escultura y Cerámica" class="chk-mat"> Escultura y Cerámica</label>
+                <label class="check-btn mat-t" data-grado="5to"><input type="checkbox" value="Grabado y Serigrafía" class="chk-mat"> Grabado y Serigrafía</label>
+                <label class="check-btn mat-t" data-grado="5to"><input type="checkbox" value="Diseño y Comunicación Visual" class="chk-mat"> Diseño y Comunicación</label>
+                <label class="check-btn mat-t" data-grado="5to"><input type="checkbox" value="Fotografía Artística" class="chk-mat"> Fotografía Artística</label>
+                <label class="check-btn mat-t" data-grado="5to"><input type="checkbox" value="Apreciación del Arte Dominicano y del Caribe" class="chk-mat"> Arte Dominicano</label>
+                <label class="check-btn mat-t" data-grado="6to"><input type="checkbox" value="Arte Digital y Multimedia" class="chk-mat"> Arte Digital</label>
+                <label class="check-btn mat-t" data-grado="6to"><input type="checkbox" value="Gestión y Producción Artística" class="chk-mat"> Gestión Artística</label>
+                <label class="check-btn mat-t" data-grado="6to"><input type="checkbox" value="Proyecto de Producción en Artes Visuales" class="chk-mat"> Proyecto Artes Visuales</label>
+                <label class="check-btn mat-t" data-grado="6to"><input type="checkbox" value="Taller de Restauración y Patrimonio" class="chk-mat"> Restauración y Patrimonio</label>
               </div>
             </div>
             <div id="mats-musica" class="mats-mencion" style="display:none;margin-top:8px">
               <div style="font-size:10px;color:#b44be8;margin-bottom:6px;font-weight:700">🎵 MÚSICA</div>
-              <div style="display:flex;gap:6px;flex-wrap:wrap">
-                <label class="check-btn mat-t"><input type="checkbox" value="Historia de la Música Universal" class="chk-mat"> Historia de la Música</label>
-                <label class="check-btn mat-t"><input type="checkbox" value="Teoría y Solfeo" class="chk-mat"> Teoría y Solfeo</label>
-                <label class="check-btn mat-t"><input type="checkbox" value="Instrumento Principal I" class="chk-mat"> Instrumento Principal</label>
-                <label class="check-btn mat-t"><input type="checkbox" value="Coro y Conjunto Musical I" class="chk-mat"> Coro y Conjunto</label>
+              <div id="mats-musica-checks" style="display:flex;gap:6px;flex-wrap:wrap">
+                <label class="check-btn mat-t" data-grado="4to"><input type="checkbox" value="Historia de la Música Universal" class="chk-mat"> Historia de la Música</label>
+                <label class="check-btn mat-t" data-grado="4to"><input type="checkbox" value="Teoría y Solfeo" class="chk-mat"> Teoría y Solfeo</label>
+                <label class="check-btn mat-t" data-grado="4to"><input type="checkbox" value="Instrumento Principal I" class="chk-mat"> Instrumento Principal I</label>
+                <label class="check-btn mat-t" data-grado="4to"><input type="checkbox" value="Coro y Conjunto Musical I" class="chk-mat"> Coro y Conjunto I</label>
+                <label class="check-btn mat-t" data-grado="5to"><input type="checkbox" value="Instrumento Principal II" class="chk-mat"> Instrumento Principal II</label>
+                <label class="check-btn mat-t" data-grado="5to"><input type="checkbox" value="Armonía y Contrapunto" class="chk-mat"> Armonía y Contrapunto</label>
+                <label class="check-btn mat-t" data-grado="5to"><input type="checkbox" value="Coro y Conjunto Musical II" class="chk-mat"> Coro y Conjunto II</label>
+                <label class="check-btn mat-t" data-grado="5to"><input type="checkbox" value="Música Dominicana y del Caribe" class="chk-mat"> Música Dominicana</label>
+                <label class="check-btn mat-t" data-grado="5to"><input type="checkbox" value="Composición y Arreglos Básicos" class="chk-mat"> Composición y Arreglos</label>
+                <label class="check-btn mat-t" data-grado="6to"><input type="checkbox" value="Instrumento Principal III" class="chk-mat"> Instrumento Principal III</label>
+                <label class="check-btn mat-t" data-grado="6to"><input type="checkbox" value="Producción Musical Digital" class="chk-mat"> Producción Musical</label>
+                <label class="check-btn mat-t" data-grado="6to"><input type="checkbox" value="Dirección Coral y Orquestal" class="chk-mat"> Dirección Coral</label>
+                <label class="check-btn mat-t" data-grado="6to"><input type="checkbox" value="Proyecto Musical Emprendedor" class="chk-mat"> Proyecto Musical</label>
+                <label class="check-btn mat-t" data-grado="6to"><input type="checkbox" value="Música de Cámara" class="chk-mat"> Música de Cámara</label>
               </div>
             </div>
             <div id="mats-teatro" class="mats-mencion" style="display:none;margin-top:8px">
               <div style="font-size:10px;color:#f7c948;margin-bottom:6px;font-weight:700">🎭 TEATRO</div>
-              <div style="display:flex;gap:6px;flex-wrap:wrap">
-                <label class="check-btn mat-t"><input type="checkbox" value="Historia del Teatro Universal" class="chk-mat"> Historia del Teatro</label>
-                <label class="check-btn mat-t"><input type="checkbox" value="Expresión Corporal y Movimiento Escénico" class="chk-mat"> Expresión Corporal</label>
-                <label class="check-btn mat-t"><input type="checkbox" value="Técnica Vocal y Dicción" class="chk-mat"> Técnica Vocal</label>
-                <label class="check-btn mat-t"><input type="checkbox" value="Actuación I — Técnicas Básicas" class="chk-mat"> Actuación I</label>
+              <div id="mats-teatro-checks" style="display:flex;gap:6px;flex-wrap:wrap">
+                <label class="check-btn mat-t" data-grado="4to"><input type="checkbox" value="Historia del Teatro Universal" class="chk-mat"> Historia del Teatro</label>
+                <label class="check-btn mat-t" data-grado="4to"><input type="checkbox" value="Expresión Corporal y Movimiento Escénico" class="chk-mat"> Expresión Corporal</label>
+                <label class="check-btn mat-t" data-grado="4to"><input type="checkbox" value="Técnica Vocal y Dicción" class="chk-mat"> Técnica Vocal</label>
+                <label class="check-btn mat-t" data-grado="4to"><input type="checkbox" value="Actuación I — Técnicas Básicas" class="chk-mat"> Actuación I</label>
+                <label class="check-btn mat-t" data-grado="5to"><input type="checkbox" value="Actuación II — Stanislavski y Métodos" class="chk-mat"> Actuación II</label>
+                <label class="check-btn mat-t" data-grado="5to"><input type="checkbox" value="Dramaturgia y Guión Teatral" class="chk-mat"> Dramaturgia</label>
+                <label class="check-btn mat-t" data-grado="5to"><input type="checkbox" value="Escenografía e Iluminación" class="chk-mat"> Escenografía</label>
+                <label class="check-btn mat-t" data-grado="5to"><input type="checkbox" value="Teatro Dominicano y del Caribe" class="chk-mat"> Teatro Dominicano</label>
+                <label class="check-btn mat-t" data-grado="5to"><input type="checkbox" value="Montaje Teatral I" class="chk-mat"> Montaje Teatral I</label>
+                <label class="check-btn mat-t" data-grado="6to"><input type="checkbox" value="Actuación III — Proyecto Escénico" class="chk-mat"> Actuación III</label>
+                <label class="check-btn mat-t" data-grado="6to"><input type="checkbox" value="Dirección Teatral" class="chk-mat"> Dirección Teatral</label>
+                <label class="check-btn mat-t" data-grado="6to"><input type="checkbox" value="Gestión Cultural y Producción Teatral" class="chk-mat"> Gestión Cultural</label>
+                <label class="check-btn mat-t" data-grado="6to"><input type="checkbox" value="Montaje Teatral II — Obra Final" class="chk-mat"> Montaje Teatral II</label>
               </div>
             </div>
             <div id="mats-danza" class="mats-mencion" style="display:none;margin-top:8px">
               <div style="font-size:10px;color:#ff8080;margin-bottom:6px;font-weight:700">💃 DANZA</div>
-              <div style="display:flex;gap:6px;flex-wrap:wrap">
-                <label class="check-btn mat-t"><input type="checkbox" value="Historia de la Danza Universal" class="chk-mat"> Historia de la Danza</label>
-                <label class="check-btn mat-t"><input type="checkbox" value="Técnica de Danza Clásica I" class="chk-mat"> Danza Clásica</label>
-                <label class="check-btn mat-t"><input type="checkbox" value="Técnica de Danza Folklórica Dominicana I" class="chk-mat"> Danza Folklórica</label>
-                <label class="check-btn mat-t"><input type="checkbox" value="Expresión Corporal y Acondicionamiento Físico" class="chk-mat"> Expresión Corporal</label>
+              <div id="mats-danza-checks" style="display:flex;gap:6px;flex-wrap:wrap">
+                <label class="check-btn mat-t" data-grado="4to"><input type="checkbox" value="Historia de la Danza Universal" class="chk-mat"> Historia de la Danza</label>
+                <label class="check-btn mat-t" data-grado="4to"><input type="checkbox" value="Técnica de Danza Clásica I" class="chk-mat"> Danza Clásica I</label>
+                <label class="check-btn mat-t" data-grado="4to"><input type="checkbox" value="Técnica de Danza Folklórica Dominicana I" class="chk-mat"> Danza Folklórica I</label>
+                <label class="check-btn mat-t" data-grado="4to"><input type="checkbox" value="Expresión Corporal y Acondicionamiento Físico" class="chk-mat"> Expresión Corporal</label>
+                <label class="check-btn mat-t" data-grado="5to"><input type="checkbox" value="Técnica de Danza Clásica II" class="chk-mat"> Danza Clásica II</label>
+                <label class="check-btn mat-t" data-grado="5to"><input type="checkbox" value="Técnica de Danza Moderna y Contemporánea" class="chk-mat"> Danza Moderna</label>
+                <label class="check-btn mat-t" data-grado="5to"><input type="checkbox" value="Técnica de Danza Folklórica II" class="chk-mat"> Danza Folklórica II</label>
+                <label class="check-btn mat-t" data-grado="5to"><input type="checkbox" value="Composición Coreográfica I" class="chk-mat"> Composición Coreográfica I</label>
+                <label class="check-btn mat-t" data-grado="5to"><input type="checkbox" value="Música Aplicada a la Danza" class="chk-mat"> Música Aplicada</label>
+                <label class="check-btn mat-t" data-grado="6to"><input type="checkbox" value="Técnica de Danza Clásica III" class="chk-mat"> Danza Clásica III</label>
+                <label class="check-btn mat-t" data-grado="6to"><input type="checkbox" value="Composición Coreográfica II — Proyecto Final" class="chk-mat"> Composición Coreográfica II</label>
+                <label class="check-btn mat-t" data-grado="6to"><input type="checkbox" value="Gestión y Producción en Danza" class="chk-mat"> Gestión en Danza</label>
+                <label class="check-btn mat-t" data-grado="6to"><input type="checkbox" value="Danza Urbana y Contemporánea" class="chk-mat"> Danza Urbana</label>
+                <label class="check-btn mat-t" data-grado="6to"><input type="checkbox" value="Montaje y Puesta en Escena" class="chk-mat"> Montaje y Puesta en Escena</label>
               </div>
             </div>
           </div>
@@ -1202,6 +1252,21 @@ function onMencionChange() {
     var lbl = c.parentElement;
     if (c.checked) lbl.classList.add('sel'); else lbl.classList.remove('sel');
   });
+
+  onGradoChange();
+}
+
+function onGradoChange() {
+  var gradosChecked = Array.from(document.querySelectorAll('.chk-grado:checked')).map(function(c){ return c.value; });
+  document.querySelectorAll('[data-grado]').forEach(function(lbl) {
+    var g = lbl.getAttribute('data-grado');
+    var visible = !gradosChecked.length || gradosChecked.indexOf(g) !== -1;
+    lbl.style.display = visible ? '' : 'none';
+    if (!visible) {
+      var chk = lbl.querySelector('input[type="checkbox"]');
+      if (chk) { chk.checked = false; lbl.classList.remove('sel'); }
+    }
+  });
 }
 
 function _getGradosSeleccionados() {
@@ -1227,7 +1292,7 @@ function _getMateriasSeleccionadas() {
 
 function _setChecks(selector, valoresStr) {
   if (!valoresStr) return;
-  var vals = valoresStr.split('|').map(function(v){ return v.trim(); });
+  var vals = valoresStr.split(/[|,]/).map(function(v){ return v.trim(); });
   document.querySelectorAll(selector).forEach(function(chk) {
     var lbl = chk.parentElement;
     if (vals.includes(chk.value)) {
@@ -1312,6 +1377,7 @@ function abrirEditar(uid) {
     r.parentElement.classList.toggle('sel', r.value === tipoG);
   });
   onMencionChange();
+  onGradoChange();
   onTipoDocencia(tipoG); // Ensure correct panels shown for tipo_docencia
   document.getElementById('u-telefono').value= u.telefono || '';
   document.getElementById('u-fecha-ingreso').value = u.fecha_ingreso || '';
@@ -1344,7 +1410,7 @@ async function guardarUsuario() {
 
   var body = { nombre, username, email, rol, grado, mencion,
                materia, asignaturas: materia, ciclo,
-               tipo_docencia: tipo_doc,
+               tipo_docencia: tipo_doc, telefono,
                fecha_ingreso: fecha, activo };
 
   // Include password in main body for both new and existing users

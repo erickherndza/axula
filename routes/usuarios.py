@@ -121,12 +121,15 @@ def editar_usuario(uid):
     allowed = ["nombre","email","rol","materia","grado","mencion","asignaturas","activo","password","telefono","titulo_academico","departamento","fecha_ingreso","ciclo","tipo_docencia"]
     updates = {k: d[k] for k in allowed if k in d}
 
-    # Validar email si viene
+    # Validar email solo si cambió respecto al valor en DB (grandfathering de correos legacy)
     if "email" in updates and updates["email"]:
         updates["email"] = updates["email"].strip().lower()
-        rol_actual = updates.get("rol") or d.get("rol_actual", "")
-        # Padres pueden usar cualquier correo personal
-        if rol_actual != "padre":
+        with sqlite3.connect(DATABASE, timeout=10) as _conn:
+            _row = _conn.execute("SELECT email, rol FROM usuarios WHERE id=?", (uid,)).fetchone()
+        email_actual = (_row[0] or "").strip().lower() if _row else ""
+        rol_actual = updates.get("rol") or (_row[1] if _row else "") or d.get("rol_actual", "")
+        # Solo validar si el email realmente cambió y no es padre
+        if updates["email"] != email_actual and rol_actual != "padre":
             ok, msg = _validar_email_usuario(updates["email"])
             if not ok:
                 return jsonify({"error": msg}), 400
