@@ -3716,8 +3716,15 @@ window.addEventListener('DOMContentLoaded', function() {
 
 window.addEventListener('DOMContentLoaded', function() {
   if (ES_PROFESOR) {
-    if (PROF_GRADO)   gradosActivos   = [PROF_GRADO.toLowerCase()];
-    if (PROF_MENCION) mencionesActivas = [PROF_MENCION.toUpperCase()];
+    // Multi-grado: PROF_GRADO puede ser '4to,5to' — split para filtrar correctamente
+    if (PROF_GRADO)   gradosActivos   = PROF_GRADO.split(/[,|]/).map(function(g){ return g.trim().toLowerCase(); }).filter(Boolean);
+    // Mención: normalizar slug (artes_visuales → ARTES VISUALES, musica → MÚSICA)
+    if (PROF_MENCION) mencionesActivas = PROF_MENCION.split(/[,|]/).map(function(m){
+      m = m.trim().toUpperCase().replace(/_/g, ' ');
+      if (m === 'MUSICA') m = 'MÚSICA';
+      if (m === 'DANZA')  m = 'DANZA';
+      return m;
+    }).filter(Boolean);
     // Profesores go straight to listado
     irAListado();
   }
@@ -3901,8 +3908,11 @@ function filtrar() {
     if (mencionesActivas.length > 0) {
       var c = (e.curso || '').toUpperCase();
       var match2 = mencionesActivas.some(function(ma) {
-        if (ma === 'VISUAL') return c.includes('VISUAL') || c.includes('ARTES');
-        if (ma === 'MUSICA') return c.includes('MUSICA') || c.includes('MÚSICA');
+        // ma ya está normalizado: slug→canónico (ej: 'ARTES VISUALES', 'MÚSICA')
+        if (ma === 'ARTES VISUALES') return c.includes('ARTES') || c.includes('VISUAL');
+        if (ma === 'VISUAL')  return c.includes('VISUAL') || c.includes('ARTES');
+        if (ma === 'MÚSICA')  return c.includes('MÚSICA') || c.includes('MUSICA');
+        if (ma === 'MUSICA')  return c.includes('MÚSICA') || c.includes('MUSICA');
         return c.includes(ma);
       });
       if (!match2) return false;

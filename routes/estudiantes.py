@@ -345,6 +345,9 @@ def api_datos():
     _usr = _get_profesor()
     es_profesor = False
     cache_key = None
+    _prof_grados = []
+    _prof_menciones = []
+    _prof_filtro_men = False
 
     if _usr:
         rol_n = _normalizar_rol(_usr.get("rol",""))
@@ -352,13 +355,12 @@ def api_datos():
 
         if rol_n == "profesor":
             # Profesor: VER SOLO sus estudiantes — filtro forzado, sin caché
+            # Usa _resolver_alcance_profesor para manejar multi-grado y mención con acento
             es_profesor = True
-            grado_db = (_usr.get("grado") or "").strip()
-            # Ignorar sentinel 'todos' — no es un grado real, produce 0 resultados
-            if grado_db and grado_db.lower() != "todos":
-                grado = grado_db
-            if _usr.get("mencion"):
-                mencion = _usr["mencion"]
+            _alcance_prof = _resolver_alcance_profesor(_usr)
+            _prof_grados   = _alcance_prof["grados"]    # lista de grados canónicos
+            _prof_menciones = _alcance_prof["menciones"] # lista de menciones canónicas
+            _prof_filtro_men = _alcance_prof["filtro_mencion"]
         elif ciclo_usr:
             # Coord/psicóloga de ciclo: restringir a su ciclo
             if not ciclo:
@@ -381,12 +383,22 @@ def api_datos():
 
     query  = "SELECT * FROM estudiantes WHERE 1=1"
     params = []
-    if grado:
-        query  += " AND upper(grado) LIKE upper(?)"
-        params.append(f"%{grado}%")
-    if mencion:
-        query  += " AND upper(curso) LIKE upper(?)"
-        params.append(f"%{mencion}%")
+
+    # Profesores: usar alcance resuelto (multi-grado + mención canónica con acento)
+    if es_profesor:
+        if _prof_grados:
+            query += " AND (" + " OR ".join(["upper(grado) LIKE upper(?)" for _ in _prof_grados]) + ")"
+            params.extend([f"%{g}%" for g in _prof_grados])
+        if _prof_filtro_men and _prof_menciones:
+            query += " AND (" + " OR ".join(["upper(curso) LIKE upper(?)" for _ in _prof_menciones]) + ")"
+            params.extend([f"%{m}%" for m in _prof_menciones])
+    else:
+        if grado:
+            query  += " AND upper(grado) LIKE upper(?)"
+            params.append(f"%{grado}%")
+        if mencion:
+            query  += " AND upper(curso) LIKE upper(?)"
+            params.append(f"%{mencion}%")
     if ciclo:
         query  += " AND ciclo=?"
         params.append(ciclo)
