@@ -99,6 +99,54 @@ python3 -c "import app; print('OK')"
 
 ## Log de sesiones
 
+### 2026-07-11 (sesión 9 — Fix blank de 2 segundos: multi-grado + mención con acento)
+
+**Causa raíz:** Dos bugs sinérgicos que hacían que el dashboard del profesor mostrara "Cargando..." ~2s y quedara en blanco.
+
+**Bug 1 — Backend `api_datos()` (`routes/estudiantes.py`)**:
+- Profesores con `grado='4to,5to'` en DB → query `AND upper(grado) LIKE '%4TO,5TO%'` → ningún estudiante tiene ese literal → devolvía `[]`
+- Profesores con `mencion='musica'` → `LIKE '%MUSICA%'` → `curso='4to MÚSICA'` → no match (acento)
+- Fix: usa `_resolver_alcance_profesor()` → genera OR clauses separadas por grado + mención canónica con acento
+
+**Bug 2 — Frontend `filtrar()` (`templates/index.html`)**:
+- `PROF_GRADO='4to,5to'` → `gradosActivos=['4to,5to']` (string completo, no array) → filter falla
+- `PROF_MENCION='artes_visuales'` → `mencionesActivas=['ARTES_VISUALES']` → `c.includes('ARTES_VISUALES')` falla (underscore vs espacio)
+- Fix: `PROF_GRADO.split(/[,|]/)` → array de grados individuales. Slug normalizado: `artes_visuales→ARTES VISUALES`, `musica→MÚSICA`
+
+**Commits:**
+- `3ec9006` — regresión estudiantes: sentinel 'todos', mención normalization (sesión anterior)
+- `3b98c29` — fix definitivo: multi-grado + mención canónica en api_datos + frontend
+
+**LECCIÓN:** `api_datos()` y `_resolver_alcance_profesor()` son code paths INDEPENDIENTES. Un fix en uno no afecta al otro. Cuando hay un nuevo filtro de profesor, verificar que AMBOS estén alineados.
+
+**Pendiente en Render Shell:**
+```bash
+python3 scripts/reparar_alcance_docente.py --apply   # normaliza 8 menciones en BD
+```
+
+### 2026-07-10 (sesión 8 — Fix asignación docente: 6 bugs modal usuarios)
+
+**Diagnóstico origen:** `MEJORAS/CLAUDE-FIX-asignacion-docente.md` — análisis completo pre-sesión.
+
+**Causa raíz (BUG-1):** `templates/usuarios.html` tenía copia fosilizada del formulario docente:
+solo materias de 4to por mención, sin `data-grado`, sin `onGradoChange()`. La versión correcta
+vivía en `index.html`. Síntoma: "no salen las materias de 5to" — era arquitectónico, no lógico.
+
+**6 fixes en commit `447d71d` (3 archivos):**
+- `usuarios.html`: sección técnicas reemplazada con 4to/5to/6to y `data-grado` para 5 menciones
+- `usuarios.html`: grados con `onchange="onGradoChange()"` + función `onGradoChange()` añadida
+- `usuarios.html`: `_setChecks` usa `split(/[|,]/)` — grados/menciones se re-marcan al reabrir edición
+- `usuarios.html`: `telefono` añadido al body del PATCH (antes se leía pero no se enviaba)
+- `usuarios.html` + `index.html`: `abrirEditar()` y `editarUsuario()` llaman `onGradoChange()` tras `onMencionChange()`
+- `routes/usuarios.py`: `editar_usuario()` consulta email actual en DB y valida solo si cambió → correos legacy no bloquean el PATCH
+
+**BUG-5 (sesión) aceptado como won't-fix v1:** Sesión del profesor muestra datos viejos tras edición por directora.
+Toast recomendado: "El docente debe cerrar sesión y volver a entrar para ver los cambios".
+
+**LECCIÓN:** Cuando un formulario complejo existe en 2 templates, los bugs no son simétricos:
+una copia evoluciona y la otra fosiliza. Diagnosticar "qué ruta sirve qué template" antes de buscar
+el bug dentro del JS.
+
 ### 2026-07-10 (sesión 7 — Fixes motor promoción + notas 4TO MULTIMEDIA)
 
 **Fixes desplegados en Render (commits cb028a2 → f177343):**
