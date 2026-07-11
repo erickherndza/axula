@@ -1272,10 +1272,11 @@ function onGradoChange() {
 function _getGradosSeleccionados() {
   var chks = Array.from(document.querySelectorAll('.chk-grado:checked'));
   if (chks.length === 0) {
-    // Usar todos los del ciclo
+    // Sin chips marcados: devolver '' (el backend resuelve el alcance)
+    // NO devolver 'todos' — ese sentinel rompe los filtros SQL
     if (_cicloActual === 'primer_ciclo') return '1ro,2do,3ro';
     if (_cicloActual === 'segundo_ciclo') return '4to,5to,6to';
-    return 'todos';
+    return '';
   }
   return chks.map(function(c){ return c.value; }).join(',');
 }
@@ -1290,9 +1291,13 @@ function _getMateriasSeleccionadas() {
     .map(function(c){ return c.value; }).join('|');
 }
 
-function _setChecks(selector, valoresStr) {
+// sep='both' → acepta | y , (para grados y menciones que históricamente usaron ambos)
+// sep='pipe' → solo | (para materias — las comas son parte del nombre de la materia)
+function _setChecks(selector, valoresStr, sep) {
   if (!valoresStr) return;
-  var vals = valoresStr.split(/[|,]/).map(function(v){ return v.trim(); });
+  var vals = (sep === 'pipe')
+    ? valoresStr.split('|').map(function(v){ return v.trim(); })
+    : valoresStr.split(/[|,]/).map(function(v){ return v.trim(); });
   document.querySelectorAll(selector).forEach(function(chk) {
     var lbl = chk.parentElement;
     if (vals.includes(chk.value)) {
@@ -1363,12 +1368,12 @@ function abrirEditar(uid) {
     r.checked = (r.value === cicloGuardado);
     r.parentElement.classList.toggle('sel', r.value === cicloGuardado);
   });
-  // Cargar grados (guardados en u.grado separados por coma)
-  _setChecks('.chk-grado', u.grado || '');
-  // Cargar menciones (guardadas en u.mencion separadas por coma)
-  _setChecks('.chk-mencion', u.mencion || '');
-  // Cargar materias (guardadas en u.asignaturas separadas por coma)
-  _setChecks('.chk-mat', u.asignaturas || u.materia || '');
+  // Cargar grados (guardados separados por coma — acepta | y , históricos)
+  _setChecks('.chk-grado', u.grado || '', 'both');
+  // Cargar menciones (guardadas separadas por coma — acepta | y , históricos)
+  _setChecks('.chk-mencion', u.mencion || '', 'both');
+  // Cargar materias — separador SOLO | (las comas son parte del nombre)
+  _setChecks('.chk-mat', u.asignaturas || u.materia || '', 'pipe');
   // Cargar tipo de docencia desde materia o asignaturas
   var tipoG = u.tipo_docencia || 'ambas';
   _tipoDocencia = tipoG;

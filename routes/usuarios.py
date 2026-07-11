@@ -73,6 +73,9 @@ def crear_usuario():
     grado       = d.get("grado","").strip()
     mencion     = d.get("mencion","").strip()
     asignaturas = d.get("asignaturas","").strip()
+    # Sentinel 'todos' no es un grado válido → limpiar antes de persistir
+    if grado.lower() == "todos":
+        grado = ""
 
     if not username or not password or not nombre:
         return jsonify({"error": "username, password y nombre son requeridos"}), 400
@@ -133,6 +136,11 @@ def editar_usuario(uid):
             ok, msg = _validar_email_usuario(updates["email"])
             if not ok:
                 return jsonify({"error": msg}), 400
+
+    # Sanitizar grado: el sentinel 'todos' rompe los filtros SQL → guardar vacío
+    if "grado" in updates and (updates["grado"] or "").strip().lower() == "todos":
+        logger.warning(f"[editar_usuario] grado='todos' sanitizado a '' para uid={uid}")
+        updates["grado"] = ""
 
     # Validar rol si viene
     if "rol" in updates and updates["rol"] not in ROLES_DISPONIBLES:

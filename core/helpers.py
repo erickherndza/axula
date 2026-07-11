@@ -932,23 +932,56 @@ def _resolver_alcance_profesor(profesor):
     ciclo        = (profesor.get("ciclo") or "").strip().lower()
     tipo_doc     = (profesor.get("tipo_docencia") or "basica").strip().lower()
     grado_raw    = (profesor.get("grado") or "").strip()
-    mencion_raw  = (profesor.get("mencion") or "").strip().upper()
+    mencion_raw  = (profesor.get("mencion") or "").strip()
+
+    # Catálogo canónico: slug del form → valor que matchea estudiantes.curso
+    _SLUG_TO_MENCION = {
+        "multimedia":    "MULTIMEDIA",
+        "artes_visuales": "ARTES VISUALES",
+        "artes visuales": "ARTES VISUALES",
+        "musica":        "MÚSICA",
+        "música":        "MÚSICA",
+        "teatro":        "TEATRO",
+        "danza":         "DANZA",
+    }
+
+    def _normalizar_mencion(raw):
+        """Convierte cualquier variante de slug a la forma canónica de estudiantes.curso."""
+        import unicodedata as _ud
+        s = raw.strip().lower()
+        # Quitar emojis/caracteres no-ASCII del inicio
+        s = "".join(c for c in s if c.isalpha() or c in " _")
+        s = s.strip().replace("  ", " ")
+        # Intentar primero lookup directo
+        if s in _SLUG_TO_MENCION:
+            return _SLUG_TO_MENCION[s]
+        # Lookup sin acento (musica/música → MÚSICA)
+        s_ascii = _ud.normalize("NFKD", s).encode("ascii", "ignore").decode("ascii")
+        for key, val in _SLUG_TO_MENCION.items():
+            key_ascii = _ud.normalize("NFKD", key).encode("ascii", "ignore").decode("ascii")
+            if s_ascii == key_ascii:
+                return val
+        # Fallback: upper tal cual (mejor que devolver basura)
+        return raw.strip().upper()
 
     # ── Grados según ciclo ───────────────────────────────────────────
+    SENTINEL_INVALIDOS = {"todos", "all", ""}
     if ciclo == "primer_ciclo":
         grados = ["1ro", "2do", "3ro"]
     elif ciclo == "segundo_ciclo":
         grados = ["4to", "5to", "6to"]
     else:
         # Inferir del campo grado si no hay ciclo explícito
-        grados_raw = [g.strip() for g in grado_raw.split(",") if g.strip()]
+        # Filtrar sentinel 'todos' y vacíos — no son grados reales
+        grados_raw = [g.strip() for g in grado_raw.split(",")
+                      if g.strip() and g.strip().lower() not in SENTINEL_INVALIDOS]
         if grados_raw:
-            primer = {"1ro","2do","3ro","1ero","2do","3er"}
+            primer = {"1ro","2do","3ro","1ero","3er"}
             segundo = {"4to","5to","6to"}
             if any(g.lower() in primer for g in grados_raw):
                 grados = ["1ro","2do","3ro"]
             elif any(g.lower() in segundo for g in grados_raw):
-                grados = ["4to","5to","6to"]
+                grados = grados_raw  # preservar grados específicos (4to, 5to, etc.)
             else:
                 grados = grados_raw
         else:
@@ -960,8 +993,8 @@ def _resolver_alcance_profesor(profesor):
         menciones       = []
         filtro_mencion  = False
     elif tipo_doc == "tecnica":
-        # Solo las menciones asignadas al prof
-        menciones = [m.strip().upper() for m in mencion_raw.split(",") if m.strip()]
+        # Solo las menciones asignadas al prof — normalizadas al formato de curso
+        menciones = [_normalizar_mencion(m) for m in mencion_raw.split(",") if m.strip()]
         if not menciones:
             menciones = ["MULTIMEDIA"]  # fallback
         filtro_mencion = True

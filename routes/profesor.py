@@ -279,6 +279,11 @@ def portal_profesor():
           conn.row_factory = sqlite3.Row
           estudiantes = [dict(r) for r in conn.execute(q, params).fetchall()]
 
+      if not estudiantes:
+          logger.warning(f"[portal_profesor] 0 estudiantes — uid={prof.get('id')} "
+                         f"grado_db={prof.get('grado')!r} mencion_db={prof.get('mencion')!r} "
+                         f"alcance={alcance} query={q!r} params={params}")
+
       # Plan: unión de todos los grados del profesor (multigrado)
       import unicodedata as _ud
       def _norm_asig(s):

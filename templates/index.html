@@ -5332,7 +5332,7 @@ function _getGradosSeleccionados() {
   if (!chks.length) {
     if (_cicloActual_modal === 'primer_ciclo')  return '1ro,2do,3ro';
     if (_cicloActual_modal === 'segundo_ciclo') return '4to,5to,6to';
-    return 'todos';
+    return '';  // NO 'todos' — ese sentinel rompe los filtros SQL
   }
   return chks.map(function(c){ return c.value; }).join(',');
 }

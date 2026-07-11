@@ -353,8 +353,10 @@ def api_datos():
         if rol_n == "profesor":
             # Profesor: VER SOLO sus estudiantes — filtro forzado, sin caché
             es_profesor = True
-            if _usr.get("grado"):
-                grado = _usr["grado"]
+            grado_db = (_usr.get("grado") or "").strip()
+            # Ignorar sentinel 'todos' — no es un grado real, produce 0 resultados
+            if grado_db and grado_db.lower() != "todos":
+                grado = grado_db
             if _usr.get("mencion"):
                 mencion = _usr["mencion"]
         elif ciclo_usr:
