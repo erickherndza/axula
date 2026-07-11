@@ -2924,12 +2924,12 @@ tr:hover td{background:var(--hover)}
           </div>
           <div class="flabel" style="margin-bottom:6px">Grados específicos (opcional)</div>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
-            <label class="check-btn"><input type="checkbox" value="1ro" class="chk-grado"> 1ro</label>
-            <label class="check-btn"><input type="checkbox" value="2do" class="chk-grado"> 2do</label>
-            <label class="check-btn"><input type="checkbox" value="3ro" class="chk-grado"> 3ro</label>
-            <label class="check-btn"><input type="checkbox" value="4to" class="chk-grado"> 4to</label>
-            <label class="check-btn"><input type="checkbox" value="5to" class="chk-grado"> 5to</label>
-            <label class="check-btn"><input type="checkbox" value="6to" class="chk-grado"> 6to</label>
+            <label class="check-btn"><input type="checkbox" value="1ro" class="chk-grado" onchange="onGradoChange()"> 1ro</label>
+            <label class="check-btn"><input type="checkbox" value="2do" class="chk-grado" onchange="onGradoChange()"> 2do</label>
+            <label class="check-btn"><input type="checkbox" value="3ro" class="chk-grado" onchange="onGradoChange()"> 3ro</label>
+            <label class="check-btn"><input type="checkbox" value="4to" class="chk-grado" onchange="onGradoChange()"> 4to</label>
+            <label class="check-btn"><input type="checkbox" value="5to" class="chk-grado" onchange="onGradoChange()"> 5to</label>
+            <label class="check-btn"><input type="checkbox" value="6to" class="chk-grado" onchange="onGradoChange()"> 6to</label>
           </div>
         </div>
 
@@ -2974,7 +2974,7 @@ tr:hover td{background:var(--hover)}
           <div id="mats-tecnicas-wrap" style="margin-top:10px;display:none">
             <div id="mats-multimedia" class="mats-mencion" style="display:none">
               <div style="font-size:10px;color:#60b8f0;margin-bottom:6px;font-weight:700">🎬 MULTIMEDIA</div>
-              <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <div id="mats-multimedia-checks" style="display:flex;gap:6px;flex-wrap:wrap">
                 <label class="check-btn mat-t"><input type="checkbox" value="Fotografía" class="chk-mat"> Fotografía</label>
                 <label class="check-btn mat-t"><input type="checkbox" value="Lenguaje Visual, Dibujo y Creación de Personajes" class="chk-mat"> Lenguaje Visual</label>
                 <label class="check-btn mat-t"><input type="checkbox" value="Diseño Básico y Expresión Visual" class="chk-mat"> Diseño Básico</label>
@@ -2985,7 +2985,7 @@ tr:hover td{background:var(--hover)}
             </div>
             <div id="mats-artes_visuales" class="mats-mencion" style="display:none;margin-top:8px">
               <div style="font-size:10px;color:#f78337;margin-bottom:6px;font-weight:700">🎨 ARTES VISUALES</div>
-              <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <div id="mats-artes_visuales-checks" style="display:flex;gap:6px;flex-wrap:wrap">
                 <label class="check-btn mat-t"><input type="checkbox" value="Historia del Arte Universal" class="chk-mat"> Historia del Arte</label>
                 <label class="check-btn mat-t"><input type="checkbox" value="Lenguaje Plástico y Visual" class="chk-mat"> Lenguaje Plástico</label>
                 <label class="check-btn mat-t"><input type="checkbox" value="Dibujo Técnico y Artístico" class="chk-mat"> Dibujo Técnico</label>
@@ -2994,7 +2994,7 @@ tr:hover td{background:var(--hover)}
             </div>
             <div id="mats-musica" class="mats-mencion" style="display:none;margin-top:8px">
               <div style="font-size:10px;color:#b44be8;margin-bottom:6px;font-weight:700">🎵 MÚSICA</div>
-              <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <div id="mats-musica-checks" style="display:flex;gap:6px;flex-wrap:wrap">
                 <label class="check-btn mat-t"><input type="checkbox" value="Historia de la Música Universal" class="chk-mat"> Historia de la Música</label>
                 <label class="check-btn mat-t"><input type="checkbox" value="Teoría y Solfeo" class="chk-mat"> Teoría y Solfeo</label>
                 <label class="check-btn mat-t"><input type="checkbox" value="Instrumento Principal I" class="chk-mat"> Instrumento Principal</label>
@@ -3003,7 +3003,7 @@ tr:hover td{background:var(--hover)}
             </div>
             <div id="mats-teatro" class="mats-mencion" style="display:none;margin-top:8px">
               <div style="font-size:10px;color:#f7c948;margin-bottom:6px;font-weight:700">🎭 TEATRO</div>
-              <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <div id="mats-teatro-checks" style="display:flex;gap:6px;flex-wrap:wrap">
                 <label class="check-btn mat-t"><input type="checkbox" value="Historia del Teatro Universal" class="chk-mat"> Historia del Teatro</label>
                 <label class="check-btn mat-t"><input type="checkbox" value="Expresión Corporal y Movimiento Escénico" class="chk-mat"> Expresión Corporal</label>
                 <label class="check-btn mat-t"><input type="checkbox" value="Técnica Vocal y Dicción" class="chk-mat"> Técnica Vocal</label>
@@ -3012,7 +3012,7 @@ tr:hover td{background:var(--hover)}
             </div>
             <div id="mats-danza" class="mats-mencion" style="display:none;margin-top:8px">
               <div style="font-size:10px;color:#ff8080;margin-bottom:6px;font-weight:700">💃 DANZA</div>
-              <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <div id="mats-danza-checks" style="display:flex;gap:6px;flex-wrap:wrap">
                 <label class="check-btn mat-t"><input type="checkbox" value="Historia de la Danza Universal" class="chk-mat"> Historia de la Danza</label>
                 <label class="check-btn mat-t"><input type="checkbox" value="Técnica de Danza Clásica I" class="chk-mat"> Danza Clásica</label>
                 <label class="check-btn mat-t"><input type="checkbox" value="Técnica de Danza Folklórica Dominicana I" class="chk-mat"> Danza Folklórica</label>
@@ -5353,6 +5353,69 @@ function onMencionChange() {
   }
   document.querySelectorAll('.mats-mencion').forEach(function(el) {
     el.style.display = checked.includes(el.id.replace('mats-', '')) ? 'block' : 'none';
+  });
+  onGradoChange();
+}
+
+var _COMUNES_KW = ['lengua española','inglés','matemática','ciencias sociales',
+    'ciencias de la naturaleza','formación integral','educación física',
+    'identidad, cultura','idioma francés','educación artística'];
+
+var _MENCION_API_MAP = {
+  'multimedia': 'MULTIMEDIA',
+  'artes_visuales': 'ARTES VISUALES',
+  'musica': 'MÚSICA',
+  'teatro': 'TEATRO',
+  'danza': 'DANZA'
+};
+
+function _esTecnicaMat(nombre) {
+  var n = (nombre || '').toLowerCase();
+  return !_COMUNES_KW.some(function(c){ return n.indexOf(c) !== -1; });
+}
+
+function onGradoChange() {
+  var gradosChecked = Array.from(document.querySelectorAll('.chk-grado:checked')).map(function(c){ return c.value; });
+  var mencionesChecked = Array.from(document.querySelectorAll('.chk-mencion:checked')).map(function(c){ return c.value; });
+  if (!gradosChecked.length || !mencionesChecked.length) return;
+
+  mencionesChecked.forEach(function(men) {
+    var checksDiv = document.getElementById('mats-' + men + '-checks');
+    if (!checksDiv) return;
+    var apiMen = _MENCION_API_MAP[men] || men.toUpperCase();
+    var prevChecked = Array.from(checksDiv.querySelectorAll('.chk-mat:checked')).map(function(c){ return c.value; });
+
+    var promises = gradosChecked.map(function(g) {
+      return fetch('/api/plan-estudio?grado=' + encodeURIComponent(g) + '&mencion=' + encodeURIComponent(apiMen))
+        .then(function(r){ return r.json(); })
+        .then(function(data){ return (data.asignaturas || []).filter(function(a){ return _esTecnicaMat(a.nombre); }); })
+        .catch(function(){ return []; });
+    });
+
+    Promise.all(promises).then(function(results) {
+      var seen = {}, merged = [];
+      results.forEach(function(list) {
+        list.forEach(function(a) {
+          if (!seen[a.nombre]) { seen[a.nombre] = true; merged.push(a); }
+        });
+      });
+      if (!merged.length) return;
+
+      checksDiv.innerHTML = merged.map(function(a) {
+        var isChecked = prevChecked.indexOf(a.nombre) !== -1;
+        var words = a.nombre.split(' ');
+        var lbl = words.length > 4 ? words.slice(0, 3).join(' ') + '\u2026' : a.nombre;
+        return '<label class="check-btn mat-t' + (isChecked ? ' sel' : '') + '">' +
+          '<input type="checkbox" value="' + escHtml(a.nombre) + '" class="chk-mat"' + (isChecked ? ' checked' : '') + '> ' +
+          escHtml(lbl) + '</label>';
+      }).join('');
+
+      checksDiv.querySelectorAll('.chk-mat').forEach(function(chk) {
+        chk.addEventListener('change', function() {
+          this.parentElement.classList.toggle('sel', this.checked);
+        });
+      });
+    });
   });
 }
 </script>
