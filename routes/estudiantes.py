@@ -394,10 +394,14 @@ def api_datos():
 
     query += " ORDER BY apellido, nombre"
 
+    import time as _t
+    _t0 = _t.time()
+    logger.info(f"[api_datos] inicio — query: {query!r} params: {params}")
     with sqlite3.connect(DATABASE, timeout=10) as conn:
         conn.row_factory = sqlite3.Row
         try:
             rows = conn.execute(query, params).fetchall()
+            logger.info(f"[api_datos] estudiantes: {len(rows)} ({_t.time()-_t0:.2f}s)")
 
             # IDs con materias dinamicas cargadas
             ids_con_materias = set(
@@ -405,6 +409,7 @@ def api_datos():
                     "SELECT DISTINCT estudiante_id FROM materias_calificaciones"
                 ).fetchall()
             )
+            logger.info(f"[api_datos] ids_con_materias: {len(ids_con_materias)} ({_t.time()-_t0:.2f}s)")
 
             resultado = []
             for r in rows:

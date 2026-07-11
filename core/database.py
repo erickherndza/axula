@@ -82,6 +82,7 @@ def migrar_bd():
             "CREATE INDEX IF NOT EXISTS idx_cuaderno_est ON cuaderno_anecdotico(estudiante_id)",
             "CREATE INDEX IF NOT EXISTS idx_reportes_est ON reportes(estudiante_id, estado)",
             "CREATE INDEX IF NOT EXISTS idx_ausencias_sem ON ausencias_semanales(estudiante_id, semana)",
+            "CREATE INDEX IF NOT EXISTS idx_matcal_est ON materias_calificaciones(estudiante_id)",
         ]:
             try:
                 conn.execute(_idx)
