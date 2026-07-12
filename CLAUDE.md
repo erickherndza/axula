@@ -99,6 +99,36 @@ python3 -c "import app; print('OK')"
 
 ## Log de sesiones
 
+### 2026-07-11 (sesión 10 — Limpieza materias_calificaciones: cross-mención + duplicados)
+
+**Problema:** Estudiantes de 4TO MULTIMEDIA tenían materias de TEATRO y MÚSICA asignadas por error,
+y duplicados uppercase/proper-case (ej: "CIENCIAS NATURALES" + "Ciencias Naturales").
+
+**Causa raíz:** `scripts/cargar_notas_pdf.py` (sesión 2026-06-27) procesó PDFs que contenían
+todas las secciones de 4TO juntas (MULTIMEDIA+TEATRO+MÚSICA+AV+DANZA). El fuzzy-match asignó
+materias de otras menciones a estudiantes MULTIMEDIA. No fue introducido por código de esta sesión
+— mis fixes de api_datos() solo hicieron los perfiles accesibles, exponiendo datos sucios preexistentes.
+
+**Script creado:** `scripts/limpiar_materias.py` (dry-run por defecto, `--apply` para escribir)
+- Paso 1: Elimina materias técnicas de otra mención por keywords (TEATRO→'danzario','teatral','puesta en escena','caracterizaci'; MÚSICA→'canto coral','instrumental grupal','lenguaje musical, teoria')
+- Paso 2: Deduplica por nombre normalizado (unicodedata NFKD + regex roman numerals), conserva el que tiene más datos y prefer proper-case sobre UPPERCASE
+
+**Resultados en Render:**
+- `limpiar_materias.py --apply` → 3283 filas eliminadas (170 cross-mención + 3113 dupes)
+- Alias cleanup manual → 449 filas más (FIHR, INTRO., Lenguaje Danzario corto, Visual Artesanal)
+- Total eliminado: 3732 filas. MC quedó en ~8682 registros limpios.
+
+**LECCIÓN:** Los PDFs de 4TO contenían TODAS las secciones (todas las menciones). El script de carga
+asignó materias de TEATRO/MÚSICA a alumnos MULTIMEDIA porque no filtraba por mención del estudiante.
+Si se vuelven a cargar PDFs de 4TO-6TO, agregar filtro por `e.curso` antes de insertar en MC.
+
+**Pendiente en Render Shell (Diseño Básico):**
+```bash
+python3 scripts/cargar_diseno_basico_p12.py --commit
+```
+Los datos ESTÁN en `calificaciones_periodo` local y Render (cargados previamente).
+Sin match: Diana Ramirez De La Cruz y Josue Fabre Rodríguez (ingresar manualmente).
+
 ### 2026-07-11 (sesión 9 — Fix blank de 2 segundos: multi-grado + mención con acento)
 
 **Causa raíz:** Dos bugs sinérgicos que hacían que el dashboard del profesor mostrara "Cargando..." ~2s y quedara en blanco.
