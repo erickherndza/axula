@@ -22,7 +22,7 @@ import json
 import logging
 from typing import Optional
 
-from core.helpers import obtener_notas_estudiante
+from core.helpers import obtener_notas_estudiante, _normalizar_clave_materia
 
 log = logging.getLogger(__name__)
 
@@ -273,20 +273,32 @@ def evaluar_estudiante(
     #    de profesores) con fallback a materias_calificaciones (importación PDF).
     #    Esto garantiza que Diseño Básico u otras materias con notas manuales usen
     #    los datos reales, no los ceros del PDF.
-    import unicodedata as _ud
-
-    def _norm_mat(s):
-        return _ud.normalize("NFKD", (s or "").lower().strip()) \
-                  .encode("ascii", "ignore").decode("ascii")
-
     notas_canon = obtener_notas_estudiante(db, est_id, anio_escolar)
 
-    # Deduplicar: misma materia en MAYÚS y Title Case → quedarse con el promedio más alto
-    dedup: dict = {}
+    # Deduplicar usando _normalizar_clave_materia (consulta _MATERIA_SINONIMOS):
+    # · MAYÚS vs Title Case del mismo nombre → misma clave
+    # · Alias cross-mención (ej: "HISTORIA DEL ARTE UNIVERSAL Y ESTÉTICA DIGITAL"
+    #   vs "Introducción a la Historia del Arte...") → misma clave canónica
+    # Regla de merge: conservar la entrada con promedio más alto; para períodos
+    # individuales faltantes, completar con la otra entrada.
+    dedup: dict = {}   # {clave_canon: (nombre_display, datos)}
     for mat, d in notas_canon.items():
-        key = _norm_mat(mat)
-        if key not in dedup or (d["promedio"] or 0) > (dedup[key][1]["promedio"] or 0):
-            dedup[key] = (mat, d)
+        key = _normalizar_clave_materia(mat)
+        if key not in dedup:
+            dedup[key] = (mat, dict(d))
+        else:
+            prev_mat, prev_d = dedup[key]
+            # Completar períodos faltantes con la entrada alternativa
+            merged = dict(prev_d)
+            for p in ("p1", "p2", "p3", "p4"):
+                if not (merged.get(p) and merged[p] > 0) and (d.get(p) and d[p] > 0):
+                    merged[p] = d[p]
+            # Recalcular promedio con todos los períodos disponibles
+            vals = [merged[p] for p in ("p1", "p2", "p3", "p4") if merged.get(p) and merged[p] > 0]
+            merged["promedio"] = round(sum(vals) / len(vals), 2) if vals else 0.0
+            # Preferir nombre Proper Case sobre TODO MAYÚSCULAS
+            nombre_display = prev_mat if prev_mat != prev_mat.upper() else mat
+            dedup[key] = (nombre_display, merged)
 
     # Construir lista ordenada, compatible con el resto del motor
     materias_rows = [

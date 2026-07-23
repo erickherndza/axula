@@ -2544,8 +2544,11 @@ _MATERIA_SINONIMOS = {
     "lenguaje musical":                                  "lenguaje musical teoria y entrenamiento",
     "lenguaje musical, teoria y entrenamiento":          "lenguaje musical teoria y entrenamiento",
     "lenguaje musical, teoria y entrenamineto":          "lenguaje musical teoria y entrenamiento",
-    "intro. a la historia del arte universal y dom":     "introduccion a la historia del arte universal y dominicano",
-    "historia del arte universal y dominicano":          "introduccion a la historia del arte universal y dominicano",
+    "intro. a la historia del arte universal y dom":          "introduccion a la historia del arte universal y dominicano",
+    "historia del arte universal y dominicano":               "introduccion a la historia del arte universal y dominicano",
+    # Contaminación cross-mención: materia de TEATRO asignada a alumnos MULTIMEDIA/MÚSICA
+    "historia del arte universal y estetica digital":         "introduccion a la historia del arte universal y dominicano",
+    "historia del arte universal y estetica digital i":       "introduccion a la historia del arte universal y dominicano",
     "idioma ingles":                                     "ingles",
     "ingles":                                            "ingles",
 }
