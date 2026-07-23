@@ -2,7 +2,7 @@
 """Paquete core — re-exporta los componentes principales."""
 
 from .constants import *
-from .database import get_db, cache_get, cache_set, cache_bust, migrar_bd, _seed_admin
+from .database import get_db, cache_get, cache_set, cache_bust, cache_delete, migrar_bd, _seed_admin
 from .auth import (
     _hash, _check_password, _normalizar_rol, _ciclo_del_rol,
     login_required, coord_required, admin_required, directora_required,

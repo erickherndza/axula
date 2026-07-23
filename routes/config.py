@@ -15,7 +15,7 @@ from flask import (
 )
 
 from core.constants import *
-from core.database import get_db, cache_get, cache_set, cache_bust, _CACHE
+from core.database import get_db, cache_get, cache_set, cache_bust, cache_delete, _CACHE
 from core.auth import (
     _hash, _check_password, _normalizar_rol, _ciclo_del_rol,
     login_required, coord_required, admin_required, directora_required,
@@ -220,7 +220,7 @@ def db_purgar():
             except Exception as ex:
                 errores.append(f"{tabla}: {str(ex)}")
         conn.commit()
-    cache_bust()
+    cache_delete("api_datos_all")
     return jsonify({
         "ok": True,
         "purgadas": purgadas,
@@ -247,7 +247,7 @@ def db_purgar_todo():
             except Exception as _e:
                 logger.warning(f"[config] Excepción silenciada")
         conn.commit()
-    cache_bust()
+    cache_delete("api_datos_all")
     return jsonify({
         "ok": True,
         "mensaje": "Base de datos reseteada. Usuarios conservados."
@@ -519,7 +519,7 @@ def recalcular_promedios():
                 logger.warning(f"[config] {type(ex).__name__}: {ex}")
         
         conn.commit()
-    cache_bust()
+    cache_delete("api_datos_all")
     return jsonify({"ok": True, "actualizados": actualizados,
                     "mensaje": f"Promedios recalculados para {actualizados} estudiantes."})
 
@@ -569,7 +569,7 @@ def dedup_estudiantes():
                         logger.warning(f"[config] {type(_ex).__name__}: {_ex}")
         conn.commit()
 
-    cache_bust()
+    cache_delete("api_datos_all")
     return jsonify({"ok": True, "eliminados": len(eliminados), "detalle": eliminados[:20]})
 
 

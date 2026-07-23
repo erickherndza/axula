@@ -15,7 +15,7 @@ from flask import (
 )
 
 from core.auth import get_usuario, login_required, _normalizar_rol, rate_limited
-from core.database import get_db, cache_bust
+from core.database import get_db, cache_bust, cache_delete
 from core.ocr import escanear_documento, TIPOS_DOCUMENTO
 from core.helpers import _validar_magic_imagen
 
@@ -881,5 +881,5 @@ def api_eliminar_escaneo(escaneo_id):
                 return jsonify({"error": "Sin permisos"}), 403
         db.execute("DELETE FROM escaneos_documentos WHERE id = ?", (escaneo_id,))
         db.commit()
-    cache_bust()
+    cache_bust, cache_delete()
     return jsonify({"ok": True})

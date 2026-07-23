@@ -13,7 +13,7 @@ from flask import (
 )
 
 from core.constants import *
-from core.database import get_db, cache_get, cache_set, cache_bust
+from core.database import get_db, cache_get, cache_set, cache_bust, cache_delete
 from core.auth import (
     _normalizar_rol, login_required, get_usuario,
     _csrf_token, _csrf_check, rate_limited,
@@ -310,7 +310,7 @@ def guardar_notas_actividad(act_id):
                 guardadas += 1
 
         conn.commit()
-        cache_bust()
+        cache_delete("api_datos_all")
 
     return jsonify({"ok": True, "guardadas": guardadas})
 
@@ -916,7 +916,7 @@ def calificar_actividad_post(actividad_id):
             guardadas += 1
 
         conn.commit()
-        cache_bust()
+        cache_delete("api_datos_all")
 
     return jsonify({"ok": True, "guardadas": guardadas})
 

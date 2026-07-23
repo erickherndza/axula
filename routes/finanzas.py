@@ -12,7 +12,7 @@ from flask import (
 )
 
 from core.constants import *
-from core.database import get_db, cache_get, cache_set, cache_bust
+from core.database import get_db, cache_get, cache_set, cache_bust, cache_delete
 from core.auth import (
     _normalizar_rol, login_required, get_usuario,
     _csrf_token, _csrf_check, rate_limited,
@@ -154,7 +154,7 @@ def crear_movimiento():
         ))
         mov_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
         conn.commit()
-        cache_bust()
+        cache_delete("api_datos_all")
 
     _audit("movimiento_creado", f"{tipo}: {concepto} RD${monto:,.2f}",
            "movimientos_financieros", mov_id)
@@ -170,7 +170,7 @@ def anular_movimiento(mov_id):
             "UPDATE movimientos_financieros SET estado='anulado' WHERE id=?",
             (mov_id,))
         conn.commit()
-        cache_bust()
+        cache_delete("api_datos_all")
     _audit("movimiento_anulado", f"Movimiento #{mov_id} anulado",
            "movimientos_financieros", mov_id)
     return jsonify({"ok": True})
@@ -648,7 +648,7 @@ def registrar_pago_inscripcion(insc_id):
                   monto, u["id"], f"INSC-{insc_id}"))
 
         conn.commit()
-        cache_bust()
+        cache_delete("api_datos_all")
 
     _audit("pago_inscripcion", f"Pago inscripción {nombre_est} RD${monto:,.2f}",
            "inscripciones", insc_id)
@@ -844,7 +844,7 @@ def importar_excel():
                 errores.append(f"Fila {i}: dato inválido o formato incorrecto")
 
         conn.commit()
-        cache_bust()
+        cache_delete("api_datos_all")
 
     return jsonify({"ok": True, "importados": importados, "errores": errores[:10]})
 
@@ -1231,7 +1231,7 @@ def cobrar_cuenta(cc_id):
         """, (cat["id"] if cat else None, cc["concepto"], cc["monto"],
               u["id"], d.get("comprobante","")))
         conn.commit()
-        cache_bust()
+        cache_delete("api_datos_all")
     return jsonify({"ok": True})
 
 
@@ -1295,7 +1295,7 @@ def crear_nomina():
                   f"Salario {emp['nombre'] if emp else ''} — {periodo}",
                   neto, d.get("fecha_pago", date.today().isoformat()), u["id"]))
         conn.commit()
-        cache_bust()
+        cache_delete("api_datos_all")
     return jsonify({"ok": True, "id": nom_id})
 
 
@@ -1486,7 +1486,7 @@ def importar_nomina():
             except Exception as e:
                 errores.append(f"Fila {i}: {str(e)[:80]}")
         conn.commit()
-        cache_bust()
+        cache_delete("api_datos_all")
 
     return jsonify({"ok": True, "importados": importados, "errores": errores[:10]})
 

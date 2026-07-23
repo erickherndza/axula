@@ -321,15 +321,24 @@ def error_excepcion(e):
 # ── HEALTH CHECK (Render / uptime monitors) ──────────────────────────────────
 @app.route("/health")
 def health():
-    """Health check que verifica conectividad real a la BD."""
+    """Health check que verifica conectividad real a la BD y estado del backup."""
     import sqlite3 as _sqlite3
+    from core.backup import estado_backup as _estado_backup
     try:
         with _sqlite3.connect(DATABASE, timeout=3) as _c:
             _c.execute("SELECT 1").fetchone()
-        return {"status": "ok", "app": "axula"}, 200
     except Exception as _e:
         logger.error(f"[HEALTH] BD no responde: {_e}")
         return {"status": "error", "detail": "database unavailable"}, 503
+
+    bk = _estado_backup()
+    return {
+        "status":   "ok",
+        "app":      "axula",
+        "backup":   bk["ultimo_respaldo"],
+        "backup_ok": bk["ok"],
+        **({"backup_error": bk["ultimo_error"]} if not bk["ok"] else {}),
+    }, 200
 
 
 # ── ARRANQUE ─────────────────────────────────────────────────────────────────

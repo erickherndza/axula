@@ -15,7 +15,7 @@ from flask import (
 )
 
 from core.constants import *
-from core.database import get_db, cache_get, cache_set, cache_bust, _CACHE
+from core.database import get_db, cache_get, cache_set, cache_bust, cache_delete, _CACHE
 from core.auth import (
     _hash, _check_password, _normalizar_rol, _ciclo_del_rol,
     login_required, coord_required, admin_required, directora_required,
@@ -426,7 +426,7 @@ def validar_asistencia_mensual():
              WHERE profesor_id=? AND materia=? AND mes=? AND anio=?
         """, (_dt.datetime.now().isoformat(), u["id"], materia, mes, anio))
         conn.commit()
-    cache_bust()
+    cache_bust, cache_delete()
     return jsonify({"ok": True, "mensaje": f"Asistencia de {mes}/{anio} validada"})
 
 

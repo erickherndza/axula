@@ -22,7 +22,17 @@ _BACKUP_MAX_DIAS = int(os.environ.get("BACKUP_MAX_DIAS", "30"))  # retener 30 d�
 _DB_PATH         = os.environ.get("DATABASE_PATH", "/data/database.db" if os.path.isdir("/data") else "database.db")
 
 _ultimo_respaldo: str | None = None   # fecha ISO del último respaldo en esta sesión
+_ultimo_error: str | None   = None   # descripción del último error para exponer en /health
 _lock = threading.Lock()
+
+
+def estado_backup() -> dict:
+    """Retorna el estado del sistema de respaldo para /health y dashboard."""
+    return {
+        "ultimo_respaldo": _ultimo_respaldo,
+        "ultimo_error":    _ultimo_error,
+        "ok":              _ultimo_error is None,
+    }
 
 
 def _hoy() -> str:
@@ -89,14 +99,18 @@ def hacer_respaldo(forzar: bool = False) -> bool:
             src.close()
             dest.close()
 
+            global _ultimo_error
             tam = destino.stat().st_size / 1024  # KB
             logger.info(f"[BACKUP] Respaldo creado: {destino.name} ({tam:.1f} KB)")
 
             _limpiar_antiguos(backup_dir)
             _ultimo_respaldo = hoy
+            _ultimo_error    = None  # limpiar error previo si el backup fue exitoso
             return True
 
         except Exception as e:
+            global _ultimo_error
+            _ultimo_error = f"{_hoy()} — {e}"
             logger.error(f"[BACKUP] Error al crear respaldo: {e}")
             # Si el archivo quedó parcial, eliminarlo
             if destino.exists():

@@ -3,6 +3,7 @@
 
 import os
 import sqlite3
+import threading as _threading
 import time as _time
 import logging
 
@@ -17,6 +18,7 @@ __all__ = [
     "_CACHE",
     "_seed_admin",
     "cache_bust",
+    "cache_delete",
     "cache_get",
     "cache_set",
     "get_db",
@@ -45,20 +47,34 @@ def get_db():
     return g.db
 
 # ── CACHÉ SIMPLE EN MEMORIA ──────────────────────────────────────────────────
-_CACHE = {}
+_CACHE: dict = {}
+_CACHE_LOCK = _threading.Lock()  # protege accesos concurrentes bajo gunicorn --threads
+
 
 def cache_get(key):
-    entry = _CACHE.get(key)
-    if entry and (_time.time() - entry['ts']) < _CACHE_TTL:
-        return entry['val']
+    with _CACHE_LOCK:
+        entry = _CACHE.get(key)
+    if entry and (_time.time() - entry["ts"]) < _CACHE_TTL:
+        return entry["val"]
     return None
 
+
 def cache_set(key, val):
-    _CACHE[key] = {'val': val, 'ts': _time.time()}
+    with _CACHE_LOCK:
+        _CACHE[key] = {"val": val, "ts": _time.time()}
+
+
+def cache_delete(key):
+    """Invalida una clave específica. Preferir sobre cache_bust() cuando el cambio
+    solo afecta a una entidad (p.ej. actualizar un estudiante → cache_delete('api_datos_all'))."""
+    with _CACHE_LOCK:
+        _CACHE.pop(key, None)
+
 
 def cache_bust():
-    """Llama esto después de cualquier escritura a la BD."""
-    _CACHE.clear()
+    """Limpia todo el caché. Usar solo cuando un cambio afecta múltiples claves."""
+    with _CACHE_LOCK:
+        _CACHE.clear()
 
 
 # ── MIGRACIÓN DE BD ──────────────────────────────────────────────────────────
