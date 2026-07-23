@@ -69,7 +69,7 @@ def hacer_respaldo(forzar: bool = False) -> bool:
     Parámetros:
         forzar: si True, siempre hace respaldo ignorando si ya existe uno hoy.
     """
-    global _ultimo_respaldo
+    global _ultimo_respaldo, _ultimo_error
 
     hoy = _hoy()
 
@@ -99,7 +99,6 @@ def hacer_respaldo(forzar: bool = False) -> bool:
             src.close()
             dest.close()
 
-            global _ultimo_error
             tam = destino.stat().st_size / 1024  # KB
             logger.info(f"[BACKUP] Respaldo creado: {destino.name} ({tam:.1f} KB)")
 
@@ -109,7 +108,6 @@ def hacer_respaldo(forzar: bool = False) -> bool:
             return True
 
         except Exception as e:
-            global _ultimo_error
             _ultimo_error = f"{_hoy()} — {e}"
             logger.error(f"[BACKUP] Error al crear respaldo: {e}")
             # Si el archivo quedó parcial, eliminarlo
