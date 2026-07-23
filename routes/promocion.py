@@ -151,19 +151,25 @@ def ejecutar_individual(est_id: int):
       "observacion": ""
     }
     """
-    d     = request.get_json(silent=True) or {}
-    anio  = d.get("anio_escolar") or _anio_escolar_actual()
-    forzar = bool(d.get("forzar", False))
-    obs   = d.get("observacion", "")
+    d               = request.get_json(silent=True) or {}
+    anio            = d.get("anio_escolar") or _anio_escolar_actual()
+    forzar          = bool(d.get("forzar", False))
+    forzar_promovido = bool(d.get("forzar_promovido", False))
+    obs             = d.get("observacion", "")
+
+    if forzar_promovido and not obs:
+        return jsonify({"ok": False, "error": "Se requiere justificación para la promoción manual"}), 400
 
     db  = get_db()
     res = ejecutar_promocion_estudiante(
-        db, est_id, anio, _uid(), forzar=forzar, observacion=obs
+        db, est_id, anio, _uid(),
+        forzar=forzar, forzar_promovido=forzar_promovido, observacion=obs
     )
 
     if res.get("ok"):
-        _audit(db, _uid(), "promocion_individual",
-               f"est_id={est_id} anio={anio} estado={res['estado']}")
+        accion = "promocion_manual" if forzar_promovido else "promocion_individual"
+        _audit(db, _uid(), accion,
+               f"est_id={est_id} anio={anio} estado={res['estado']} obs={obs}")
         db.commit()
         return jsonify(res)
 

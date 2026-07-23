@@ -547,6 +547,10 @@ main{max-width:1200px;margin:0 auto;padding:24px 20px}
         <div id="pk-pend" style="font-size:20px;font-weight:800;color:var(--muted)">-</div>
         <div style="font-size:10px;color:var(--muted)">Pendientes</div>
       </div>
+      <div style="flex:1;min-width:100px;background:rgba(100,116,139,.06);border:1px solid rgba(100,116,139,.15);border-radius:8px;padding:10px;text-align:center">
+        <div id="pk-ret" style="font-size:20px;font-weight:800;color:#64748b">-</div>
+        <div style="font-size:10px;color:var(--muted)">Retirados</div>
+      </div>
     </div>
 
     <!-- Controles de tabla -->
@@ -558,7 +562,7 @@ main{max-width:1200px;margin:0 auto;padding:24px 20px}
         Limpiar seleccion
       </button>
       <span style="font-size:11px;color:var(--muted);margin-left:4px">
-        Solo PROMOVIDO y CONDICIONADO pueden ejecutarse
+        Usa los botones de accion en cada fila para ejecutar individualmente
       </span>
     </div>
 
@@ -575,6 +579,7 @@ main{max-width:1200px;margin:0 auto;padding:24px 20px}
             <th style="padding:8px;text-align:center;font-weight:600;color:var(--muted)">Reprobadas</th>
             <th style="padding:8px;text-align:left;font-weight:600;color:var(--muted)">Materias reprobadas</th>
             <th style="padding:8px;text-align:center;font-weight:600;color:var(--muted)">Estado</th>
+            <th style="padding:8px;text-align:center;font-weight:600;color:var(--muted)">Accion</th>
           </tr>
         </thead>
         <tbody id="prom-tbody"></tbody>
@@ -1339,32 +1344,50 @@ function promCargar() {
         PROMOVIDO:    '#22c55e',
         RECUPERACION: '#fbbf24',
         NO_PROMOVIDO: '#ef4444',
-        PENDIENTE:    '#94a3b8'
+        PENDIENTE:    '#94a3b8',
+        RETIRADO:     '#64748b'
       };
       var labels = {
         PROMOVIDO:    'PROMOVIDO',
         RECUPERACION: 'RECUPERACIÓN',
         NO_PROMOVIDO: 'NO PROMOVIDO',
-        PENDIENTE:    'PENDIENTE'
+        PENDIENTE:    'PENDIENTE',
+        RETIRADO:     'RETIRADO'
       };
+
+      document.getElementById('pk-ret').textContent = d.resumen.retirados || 0;
 
       var html = _promData.map(function(e) {
         var puede  = e.estado === 'PROMOVIDO' || e.estado === 'RECUPERACION';
+        var esRet  = e.estado === 'RETIRADO';
         var col    = colors[e.estado] || '#94a3b8';
         var lbl    = labels[e.estado] || e.estado;
         var badge  = '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;background:' + col + '22;color:' + col + ';border:1px solid ' + col + '44">' + lbl + '</span>';
         var proc   = e.ya_procesado ? ' <span style="font-size:9px;color:var(--muted)">(ya procesado)</span>' : '';
         var mats_r = (e.mats_recuperacion || []);
         var tooltip = mats_r.length ? ' title="' + mats_r.join(', ') + '"' : '';
-        return '<tr style="border-bottom:1px solid var(--border)">' +
+
+        // Botón de acción individual
+        var btnAccion = '';
+        if (!esRet) {
+          if (e.estado === 'PROMOVIDO') {
+            btnAccion = '<button onclick="promEjecutarUno(' + e.est_id + ',false)" style="background:#22c55e;color:#000;border:none;border-radius:5px;padding:3px 10px;font-size:10px;font-weight:700;cursor:pointer">✓ Promover</button>';
+          } else if (e.estado === 'RECUPERACION' || e.estado === 'NO_PROMOVIDO') {
+            btnAccion = '<button onclick="promForzarUno(' + e.est_id + ',\'' + (e.apellido||'') + ', ' + (e.nombre||'') + '\')" style="background:#f59e0b;color:#000;border:none;border-radius:5px;padding:3px 10px;font-size:10px;font-weight:700;cursor:pointer">↑ Forzar</button>';
+          }
+        }
+
+        var rowStyle = esRet ? 'opacity:.5;' : '';
+        return '<tr style="border-bottom:1px solid var(--border);' + rowStyle + '">' +
           '<td style="padding:7px 8px"><input type="checkbox" class="prom-chk" data-id="' + e.est_id + '" ' + (puede ? '' : 'disabled') + (puede ? 'checked' : '') + '></td>' +
           '<td style="padding:7px 8px;font-weight:600">' + (e.apellido || '') + ', ' + (e.nombre || '') + proc + '</td>' +
           '<td style="padding:7px 8px;text-align:center">' + (e.seccion || '-') + '</td>' +
           '<td style="padding:7px 8px;text-align:center;font-size:11px;color:var(--muted)">' + (e.mencion || '-') + '</td>' +
-          '<td style="padding:7px 8px;text-align:center;color:#22c55e;font-weight:700">' + e.mats_aprobadas + '/' + e.mats_total + '</td>' +
-          '<td style="padding:7px 8px;text-align:center;color:' + (e.mats_reprobadas > 0 ? '#ef4444' : 'var(--muted)') + ';font-weight:700">' + e.mats_reprobadas + '</td>' +
+          '<td style="padding:7px 8px;text-align:center;color:#22c55e;font-weight:700">' + (esRet ? '-' : e.mats_aprobadas + '/' + e.mats_total) + '</td>' +
+          '<td style="padding:7px 8px;text-align:center;color:' + (e.mats_reprobadas > 0 ? '#ef4444' : 'var(--muted)') + ';font-weight:700">' + (esRet ? '-' : e.mats_reprobadas) + '</td>' +
           '<td style="padding:7px 8px;font-size:11px;color:#ef4444"' + tooltip + '>' + (mats_r.length ? mats_r.join(', ') : '-') + '</td>' +
           '<td style="padding:7px 8px;text-align:center">' + badge + '</td>' +
+          '<td style="padding:7px 8px;text-align:center">' + btnAccion + '</td>' +
           '</tr>';
       }).join('');
 
@@ -1411,6 +1434,41 @@ function promEjecutar() {
     }
   })
   .catch(function(e) { statusEl.textContent = 'Error: ' + e.message; });
+}
+
+function promEjecutarUno(estId, forzarPromovido) {
+  var anio = document.getElementById('prom-anio').value;
+  var obs  = '';
+  if (!confirm('¿Ejecutar promoción individual del estudiante #' + estId + '?\nEsta acción actualiza su grado.')) return;
+  _promCallEjecutarUno(estId, anio, false, forzarPromovido, obs);
+}
+
+function promForzarUno(estId, nombre) {
+  var anio = document.getElementById('prom-anio').value;
+  var obs  = prompt('Justificación para la promoción manual de ' + nombre + ':\n(Requerida — quedará registrada en auditoría)', '');
+  if (obs === null) return; // canceló
+  if (!obs.trim()) { alert('La justificación es obligatoria para la promoción manual.'); return; }
+  if (!confirm('¿Confirmar promoción manual de ' + nombre + '?\nJustificación: ' + obs)) return;
+  _promCallEjecutarUno(estId, anio, true, true, obs);
+}
+
+function _promCallEjecutarUno(estId, anio, forzar, forzarPromovido, obs) {
+  fetch('/api/promocion/ejecutar/' + estId, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': (typeof T !== 'undefined' ? T : '') },
+    body: JSON.stringify({ anio_escolar: anio, forzar: forzar, forzar_promovido: forzarPromovido, observacion: obs })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d) {
+    if (d.ok) {
+      var dest = d.grado_destino || d.siguiente_grado || '';
+      alert('✓ Completado. Grado destino: ' + dest);
+      promCargar();
+    } else {
+      alert('Error: ' + (d.error || 'Desconocido'));
+    }
+  })
+  .catch(function(e) { alert('Error de red: ' + e.message); });
 }
 
 // ── PANEL COMPLETIVA 6TO ─────────────────────────────────────────────────────

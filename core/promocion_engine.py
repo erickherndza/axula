@@ -409,6 +409,9 @@ def evaluar_estudiante(
     }
 
 
+PROM_RETIRADO = "RETIRADO"
+
+
 def evaluar_grado(
     db,
     grado: str,
@@ -417,22 +420,54 @@ def evaluar_grado(
 ) -> list[dict]:
     """
     Evalúa a todos los estudiantes de un grado.
+    Incluye estudiantes RETIRADOS como fila informativa (estado='RETIRADO'),
+    sin evaluarlos académicamente.
     Añade ya_procesado y estado_previo a cada resultado.
     """
-    cond = "condicion = 'ACTIVO' AND " if solo_activos else ""
     grado_norm = _norm_grado(grado)
 
-    estudiantes = db.execute(
-        f"""
-        SELECT id FROM estudiantes
-        WHERE {cond}UPPER(TRIM(grado)) = ?
-        ORDER BY apellido, nombre
+    # Traer TODOS — los RETIRADOS se muestran pero no se evalúan
+    todos = db.execute(
+        """
+        SELECT id, condicion, nombre, apellido, seccion, mencion
+        FROM   estudiantes
+        WHERE  UPPER(TRIM(grado)) = ?
+        ORDER  BY apellido, nombre
         """,
         (grado_norm,),
     ).fetchall()
 
     resultados = []
-    for est in estudiantes:
+    info_grado = clasificar_grado(grado_norm)
+
+    for est in todos:
+        condicion = (est["condicion"] or "").upper()
+
+        if condicion not in ("ACTIVO", ""):
+            # RETIRADO u otra condición inactiva — se muestra pero no se evalúa
+            resultados.append({
+                "est_id":           est["id"],
+                "nombre":           est["nombre"],
+                "apellido":         est["apellido"],
+                "seccion":          est["seccion"] or "-",
+                "mencion":          est["mencion"] or "-",
+                "grado":            grado_norm,
+                "ciclo":            info_grado["ciclo"],
+                "tiene_completiva": False,
+                "siguiente_grado":  None,
+                "estado":           PROM_RETIRADO,
+                "mats_total":       0,
+                "mats_aprobadas":   0,
+                "mats_reprobadas":  0,
+                "mats_pendientes":  0,
+                "mats_recuperacion": [],
+                "detalle_materias": [],
+                "razon":            f"Condición: {condicion}",
+                "ya_procesado":     False,
+                "estado_previo":    None,
+            })
+            continue
+
         res = evaluar_estudiante(db, est["id"], anio_escolar)
 
         # Verificar si ya fue procesado este año
@@ -450,14 +485,19 @@ def evaluar_grado(
 
 def resumen_grado(resultados: list[dict]) -> dict:
     """Agrega conteos de evaluar_grado() — función pura."""
-    conteo = {PROM_PROMOVIDO: 0, PROM_RECUPERACION: 0, PROM_NO_PROMOVIDO: 0, PROM_PENDIENTE: 0}
+    conteo = {
+        PROM_PROMOVIDO: 0, PROM_RECUPERACION: 0,
+        PROM_NO_PROMOVIDO: 0, PROM_PENDIENTE: 0, PROM_RETIRADO: 0,
+    }
     for r in resultados:
-        conteo[r.get("estado", PROM_PENDIENTE)] = conteo.get(r.get("estado", PROM_PENDIENTE), 0) + 1
+        estado = r.get("estado", PROM_PENDIENTE)
+        conteo[estado] = conteo.get(estado, 0) + 1
     return {
         "promovidos":    conteo[PROM_PROMOVIDO],
         "recuperacion":  conteo[PROM_RECUPERACION],
         "no_promovidos": conteo[PROM_NO_PROMOVIDO],
         "pendientes":    conteo[PROM_PENDIENTE],
+        "retirados":     conteo[PROM_RETIRADO],
         "total":         len(resultados),
     }
 
@@ -535,6 +575,7 @@ def ejecutar_promocion_estudiante(
     ejecutado_por: int,
     post_recuperacion: bool = False,
     forzar: bool = False,
+    forzar_promovido: bool = False,
     observacion: str = "",
 ) -> dict:
     """
@@ -542,6 +583,9 @@ def ejecutar_promocion_estudiante(
 
     post_recuperacion=True → usa evaluar_post_recuperacion()
     forzar=True            → procede aunque haya materias PENDIENTES (con advertencia)
+    forzar_promovido=True  → override manual: mueve al estudiante al siguiente grado
+                             aunque el motor lo clasifique RECUPERACION/NO_PROMOVIDO.
+                             Requiere justificación (observacion) por auditoría.
     """
     if post_recuperacion:
         ev = evaluar_post_recuperacion(db, est_id, anio_escolar)
@@ -566,13 +610,18 @@ def ejecutar_promocion_estudiante(
         }
 
     # Determinar grado_destino
-    if estado == PROM_PROMOVIDO:
+    promover_fisicamente = estado == PROM_PROMOVIDO or forzar_promovido
+    if promover_fisicamente:
         grado_destino = sig_grado
     else:
         grado_destino = grado_origen  # permanece en el mismo grado
 
+    # Si se fuerza la promoción, registrar estado real pero mover al siguiente grado
+    if forzar_promovido and estado != PROM_PROMOVIDO:
+        observacion = f"[PROMOCIÓN MANUAL] {observacion}".strip()
+
     # Actualizar grado/condición del estudiante
-    if estado == PROM_PROMOVIDO:
+    if promover_fisicamente:
         if sig_grado == "CANDIDATO_PRUEBAS":
             # 6TO aprobado → candidato a Pruebas Nacionales (Ord. 1-2016 MINERD)
             # condicion cambia; el grado se mantiene en 6TO hasta que obtenga el título
