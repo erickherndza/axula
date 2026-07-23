@@ -300,14 +300,37 @@ table{width:100%;border-collapse:collapse;font-size:.85rem}th{text-align:left;pa
         </button>
       </div>
 
+      <!-- Año escolar (para récords históricos) -->
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+        <span style="font-size:.8rem;color:var(--muted);flex:0 0 auto;">Año escolar:</span>
+        <select id="pl-anio" style="font-size:.8rem;padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);">
+          <option value="2025-2026">2025-2026 (actual)</option>
+          <option value="2024-2025">2024-2025</option>
+          <option value="2023-2024">2023-2024</option>
+          <option value="2022-2023">2022-2023</option>
+          <option value="2021-2022">2021-2022</option>
+        </select>
+        <span style="font-size:.75rem;color:var(--muted);">Para cargar récords de años anteriores, selecciona el año correspondiente.</span>
+      </div>
+
       <!-- Upload del listado relleno -->
-      <label style="display:block;border:2px dashed rgba(34,197,94,.4);border-radius:8px;padding:18px;text-align:center;cursor:pointer;transition:border-color .15s;background:var(--surface);"
+      <label id="dig-label-listado" style="display:block;border:2px dashed rgba(34,197,94,.4);border-radius:8px;padding:18px;text-align:center;cursor:pointer;transition:border-color .15s;background:var(--surface);"
              onmouseover="this.style.borderColor='#22c55e';this.style.background='rgba(34,197,94,.05)'" onmouseout="this.style.borderColor='rgba(34,197,94,.4)';this.style.background='var(--surface)'">
         <input type="file" id="dig-file-listado" accept=".xlsx,.xls" style="display:none" onchange="digCargarListado(this)">
         <div style="font-size:24px;margin-bottom:4px;">📤</div>
         <div style="font-size:.87rem;font-weight:700;color:#22c55e;">Subir listado relleno</div>
         <div style="font-size:.75rem;color:var(--muted);margin-top:3px;">El mismo archivo que descargaste, con las notas llenadas por el coordinador</div>
       </label>
+      <!-- Barra de progreso (oculta hasta que inicia la carga) -->
+      <div id="dig-progress-wrap" style="display:none;margin-top:10px;">
+        <div style="display:flex;justify-content:space-between;font-size:.76rem;color:var(--muted);margin-bottom:4px;">
+          <span id="dig-progress-label">Procesando…</span>
+          <span id="dig-progress-pct">0%</span>
+        </div>
+        <div style="background:var(--surface2);border-radius:999px;height:8px;overflow:hidden;border:1px solid var(--border);">
+          <div id="dig-progress-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#22c55e,#16a34a);border-radius:999px;transition:width .4s ease;"></div>
+        </div>
+      </div>
       <div id="dig-status-listado" style="margin-top:10px;font-size:.82rem;padding:8px 12px;border-radius:6px;display:none;"></div>
       <div id="dig-detail-listado" style="margin-top:6px;font-size:.76rem;color:var(--muted);display:none;"></div>
     </div>
@@ -630,27 +653,103 @@ function digCargarListado(input) {
   if (!input.files[0]) return;
   var fd = new FormData();
   fd.append('file', input.files[0]);
-  digSetStatus('dig-status-listado', '⏳ Procesando listado...', false);
+  var anio = document.getElementById('pl-anio') ? document.getElementById('pl-anio').value : '';
+  if (anio) fd.append('anio_escolar', anio);
+
+  // Deshabilitar label durante la carga
+  var lbl = document.getElementById('dig-label-listado');
+  if (lbl) { lbl.style.pointerEvents = 'none'; lbl.style.opacity = '.5'; }
+
   document.getElementById('dig-detail-listado').style.display = 'none';
+  document.getElementById('dig-status-listado').style.display = 'none';
+  _digMostrarProgreso(0, 'Enviando archivo…');
+
   fetch('/api/digitador/cargar-notas-listado', { method: 'POST', headers: { 'X-CSRF-Token': CS }, body: fd })
     .then(function(r) { return r.json(); })
     .then(function(d) {
-      if (d.ok) {
+      if (!d.ok || !d.task_id) {
+        _digOcultarProgreso();
+        digSetStatus('dig-status-listado', '✗ ' + (d.error || 'Error al iniciar la carga'), true);
+        _digRestaurarLabel();
+        input.value = '';
+        return;
+      }
+      // Empezar polling
+      _digMostrarProgreso(5, 'Procesando notas en segundo plano…');
+      _digPoll(d.task_id, input);
+    })
+    .catch(function(e) {
+      _digOcultarProgreso();
+      digSetStatus('dig-status-listado', '✗ Error de red: ' + e.message, true);
+      _digRestaurarLabel();
+      input.value = '';
+    });
+}
+
+function _digPoll(taskId, input) {
+  setTimeout(function() {
+    fetch('/api/digitador/tarea/' + taskId, { headers: { 'X-CSRF-Token': CS } })
+      .then(function(r) { return r.json(); })
+      .then(function(t) {
+        if (!t) {
+          _digOcultarProgreso();
+          digSetStatus('dig-status-listado', '✗ Tarea no encontrada', true);
+          _digRestaurarLabel();
+          input.value = '';
+          return;
+        }
+        if (t.status === 'pending' || t.status === 'running') {
+          var pct = t.progreso || 0;
+          var msg = pct < 20 ? 'Leyendo archivo…' : pct < 85 ? 'Procesando estudiantes (' + pct + '%)…' : 'Guardando en base de datos…';
+          _digMostrarProgreso(pct, msg);
+          _digPoll(taskId, input); // continúa polling
+          return;
+        }
+        // done o error
+        _digOcultarProgreso();
+        _digRestaurarLabel();
+        input.value = '';
+        if (t.status === 'error') {
+          digSetStatus('dig-status-listado', '✗ ' + (t.error || 'Error al procesar'), true);
+          return;
+        }
+        var d = t.resultado || {};
         digSetStatus('dig-status-listado', '✓ ' + (d.mensaje || 'Notas cargadas'), false);
         var det = document.getElementById('dig-detail-listado');
         var lines = [];
+        if (d.insertados) lines.push('✓ ' + d.insertados + ' notas nuevas');
+        if (d.actualizados) lines.push('↺ ' + d.actualizados + ' actualizadas');
         if (d.sin_match && d.sin_match.length) {
-          lines.push('⚠ Sin match (' + d.sin_match.length + '): ' + d.sin_match.slice(0, 5).join(', ') + (d.sin_match.length > 5 ? '...' : ''));
+          lines.push('⚠ Sin match (' + d.sin_match.length + '): ' + d.sin_match.slice(0, 5).join(', ') + (d.sin_match.length > 5 ? '…' : ''));
         }
         if (d.sin_nota_vacios) lines.push('ℹ ' + d.sin_nota_vacios + ' filas vacías ignoradas');
         if (lines.length) { det.textContent = lines.join(' | '); det.style.display = 'block'; }
         LR();
-      } else {
-        digSetStatus('dig-status-listado', '✗ ' + (d.error || 'Error al cargar'), true);
-      }
-      input.value = '';
-    })
-    .catch(function(e) { digSetStatus('dig-status-listado', '✗ Error: ' + e.message, true); });
+      })
+      .catch(function() { _digPoll(taskId, input); }); // reintenta en error de red
+  }, 1500);
+}
+
+function _digMostrarProgreso(pct, label) {
+  var wrap = document.getElementById('dig-progress-wrap');
+  var bar  = document.getElementById('dig-progress-bar');
+  var pctEl = document.getElementById('dig-progress-pct');
+  var lblEl = document.getElementById('dig-progress-label');
+  if (!wrap) return;
+  wrap.style.display = 'block';
+  bar.style.width = pct + '%';
+  pctEl.textContent = pct + '%';
+  lblEl.textContent = label || 'Procesando…';
+}
+
+function _digOcultarProgreso() {
+  var wrap = document.getElementById('dig-progress-wrap');
+  if (wrap) wrap.style.display = 'none';
+}
+
+function _digRestaurarLabel() {
+  var lbl = document.getElementById('dig-label-listado');
+  if (lbl) { lbl.style.pointerEvents = ''; lbl.style.opacity = ''; }
 }
 
 function digCargarRegistro(input) {
