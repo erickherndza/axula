@@ -812,8 +812,95 @@
         </div>
     </div>
 
-    <!-- ══ BANNER DE ALERTA ══════════════════════════════════════════════ -->
-    {% set p_calc = e.p_acad or 0 %}
+    <!-- ══ BANNER RESULTADO MOTOR ══════════════════════════════════════════ -->
+    {% set rm = resultado_motor or {} %}
+    {% set rm_estado = rm.get('estado', '') %}
+    {% set p_calc    = e.p_acad or 0 %}
+
+    {% if rm_estado == 'NO_PROMOVIDO' %}
+    {# ── AÑO CERRADO: el estudiante REPITE ────────────────────────────────── #}
+    <div style="margin-bottom:20px;padding:18px 22px;border-radius:14px;
+                background:rgba(239,68,68,.13);border:2px solid rgba(239,68,68,.5);
+                display:flex;align-items:flex-start;gap:16px;">
+        <div style="font-size:34px;line-height:1;flex-shrink:0;">🔴</div>
+        <div style="flex:1">
+            <div style="font-size:15px;font-weight:900;color:#ef4444;margin-bottom:4px;
+                        letter-spacing:.04em;text-transform:uppercase;">
+                Repite el grado — {{ rm.get('grado','') or e.grado }}
+            </div>
+            <div style="font-size:12px;color:#fca5a5;line-height:1.7;margin-bottom:8px;">
+                Motor de reglas (Ordenanza 04-2023 MINERD):
+                <strong style="color:#ef4444">{{ rm.get('mats_reprobadas', 0) }} materia(s) con promedio bajo 70 pts</strong>
+                — umbral de reprobación superado.
+                El estudiante quedará en <strong>{{ rm.get('grado','') or e.grado }}</strong> el próximo año escolar.
+            </div>
+            {% if rm.get('mats_recuperacion') %}
+            <div style="font-size:11px;color:#fca5a5;margin-bottom:8px;">
+                Materias reprobadas:
+                {% for m in rm.get('mats_recuperacion', []) %}
+                <span style="display:inline-block;background:rgba(239,68,68,.18);border-radius:4px;padding:1px 7px;margin:1px;">{{ m }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+            <div style="font-size:10px;color:rgba(239,68,68,.7);margin-top:4px;">
+                <i class="fas fa-info-circle"></i>
+                Para resetear los KPIs al nuevo año escolar: el coordinador debe ejecutar
+                <strong>Cierre de Año</strong> desde el panel de coordinador.
+            </div>
+        </div>
+    </div>
+
+    {% elif rm_estado == 'PROMOVIDO' %}
+    {# ── AÑO CERRADO: el estudiante PASA ──────────────────────────────────── #}
+    <div style="margin-bottom:20px;padding:18px 22px;border-radius:14px;
+                background:rgba(34,197,94,.1);border:2px solid rgba(34,197,94,.4);
+                display:flex;align-items:flex-start;gap:16px;">
+        <div style="font-size:34px;line-height:1;flex-shrink:0;">🟢</div>
+        <div>
+            <div style="font-size:15px;font-weight:900;color:#22c55e;margin-bottom:4px;
+                        letter-spacing:.04em;text-transform:uppercase;">
+                Promovido
+                {% if rm.get('grado_destino') %} → {{ rm.grado_destino }}{% endif %}
+            </div>
+            <div style="font-size:12px;color:#86efac;line-height:1.6;">
+                Motor de reglas (Ord. 04-2023): aprobó todas las materias con
+                promedio ≥ 70 pts. Pasa al siguiente grado el próximo año escolar.
+            </div>
+        </div>
+    </div>
+
+    {% elif rm_estado == 'RECUPERACION' %}
+    {# ── EN RECUPERACIÓN PEDAGÓGICA ────────────────────────────────────────── #}
+    <div style="margin-bottom:20px;padding:16px 20px;border-radius:14px;
+                background:rgba(245,158,11,.1);border:2px solid rgba(245,158,11,.4);
+                display:flex;align-items:flex-start;gap:14px;">
+        <div style="font-size:30px;line-height:1;flex-shrink:0;">🟡</div>
+        <div style="flex:1">
+            <div style="font-size:14px;font-weight:900;color:#f59e0b;margin-bottom:4px;
+                        letter-spacing:.04em;text-transform:uppercase;">
+                En recuperación pedagógica
+            </div>
+            <div style="font-size:12px;color:#fde68a;line-height:1.6;margin-bottom:6px;">
+                Motor de reglas: <strong style="color:#f59e0b">{{ rm.get('mats_reprobadas',0) }} materia(s)</strong>
+                con promedio bajo 70 pts — requiere recuperación antes de definir promoción.
+            </div>
+            {% if rm.get('mats_recuperacion') %}
+            <div style="font-size:11px;color:#fde68a;">
+                {% for m in rm.get('mats_recuperacion', []) %}
+                <span style="display:inline-block;background:rgba(245,158,11,.2);border-radius:4px;padding:1px 7px;margin:1px;">{{ m }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% if rm.get('caso_limite') %}
+            <div style="font-size:10px;color:rgba(245,158,11,.8);margin-top:6px;">
+                <i class="fas fa-exclamation-triangle"></i> Caso límite: hay materias entre 65 y 69 pts — requiere revisión del comité docente.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% else %}
+    {# ── Fallback: alertas del año en curso (año no cerrado / motor sin datos) #}
     {% if p_calc > 0 and p_calc < 70 %}
     <div style="margin-bottom:20px;padding:16px 20px;border-radius:12px;
                 background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.4);
@@ -852,6 +939,7 @@
             </div>
         </div>
     </div>
+    {% endif %}
     {% endif %}
 
     <!-- ── FILA 1: Académico · Autoestima · Conducta ── -->

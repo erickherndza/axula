@@ -814,9 +814,20 @@ def perfil_estudiante(id):
                     LIMIT 1
                 """, (id, anio_act)).fetchone()
 
+        # ── Resultado del motor de promoción (determinístico, nunca LLM) ──────
+        resultado_motor: dict = {}
+        try:
+            from core.promocion_engine import evaluar_estudiante as _eval_est
+            with sqlite3.connect(DATABASE, timeout=10) as _mdb:
+                _mdb.row_factory = sqlite3.Row
+                resultado_motor = _eval_est(_mdb, id, anio_act) or {}
+        except Exception as _ex:
+            log.warning(f"[perfil] evaluar_estudiante falló para {id}: {_ex}")
+
         return render_template("perfil.html", e=e, current_user=get_usuario(),
                                fue_promovido=bool(_fue_promovido),
-                               anio_escolar=anio_act)
+                               anio_escolar=anio_act,
+                               resultado_motor=resultado_motor)
     return "Estudiante no encontrado", 404
 
 
