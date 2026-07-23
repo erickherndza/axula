@@ -61,7 +61,7 @@ except ImportError:
     pass
 
 # ── Flask app ────────────────────────────────────────────────────────────────
-from flask import Flask, request, jsonify, session, redirect, url_for, render_template
+from flask import Flask, request, jsonify, session, redirect, url_for, render_template, g
 from flask_cors import CORS
 from core.security.headers import init_security_headers
 
@@ -136,6 +136,17 @@ app.jinja_env.globals['url_for'] = _compat_url_for
 
 # ── Hooks globales ───────────────────────────────────────────────────────────
 from core.auth import _csrf_check, _csrf_token, get_usuario
+
+
+@app.teardown_appcontext
+def close_db(error):
+    """Cierra la conexión SQLite al finalizar cada request, incluso si hubo error."""
+    db = g.pop("db", None)
+    if db is not None:
+        if error:
+            db.rollback()
+        db.close()
+
 
 @app.after_request
 def security_headers(response):
@@ -310,7 +321,15 @@ def error_excepcion(e):
 # ── HEALTH CHECK (Render / uptime monitors) ──────────────────────────────────
 @app.route("/health")
 def health():
-    return {"status": "ok", "app": "axula"}, 200
+    """Health check que verifica conectividad real a la BD."""
+    import sqlite3 as _sqlite3
+    try:
+        with _sqlite3.connect(DATABASE, timeout=3) as _c:
+            _c.execute("SELECT 1").fetchone()
+        return {"status": "ok", "app": "axula"}, 200
+    except Exception as _e:
+        logger.error(f"[HEALTH] BD no responde: {_e}")
+        return {"status": "error", "detail": "database unavailable"}, 503
 
 
 # ── ARRANQUE ─────────────────────────────────────────────────────────────────

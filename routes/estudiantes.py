@@ -2779,7 +2779,8 @@ def subir_foto(id):
     path     = os.path.join(FOTOS_DIR, filename)
     with open(path, "wb") as _fh:
         _fh.write(datos)
-    url = f"/static/fotos/{filename}"
+    # URL autenticada — funciona en Render (/data/fotos) y en local (static/fotos)
+    url = f"/api/foto/{id}"
     with sqlite3.connect(DATABASE, timeout=10) as conn:
         conn.execute("UPDATE estudiantes SET foto_path=? WHERE id=?", (url, id))
         conn.commit()

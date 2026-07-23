@@ -327,12 +327,12 @@ def recovery_request():
             logger.error(f"[RECOVERY] Error enviando email a {email}: {err}")
         return jsonify({"ok": True, "msg": _MSG_GENERICO})
 
-    # Sin SMTP: devolver el enlace directo al cliente (sistema interno)
-    reset_url = f"{request.host_url.rstrip('/')}/reset-password/{token}"
+    # Sin SMTP: el admin debe usar /api/recovery/link/<uid> (requiere autenticación)
     logger.warning(
-        f"[RECOVERY] SMTP no configurado. Reset link para '{u['username']}' (id={u['id']}): {reset_url}"
+        f"[RECOVERY] SMTP no configurado. Token generado para uid={u['id']} ({u['username']}). "
+        f"Usa POST /api/recovery/link/{u['id']} (autenticado) para obtener el enlace."
     )
-    return jsonify({"ok": True, "msg": _MSG_GENERICO, "reset_url": reset_url})
+    return jsonify({"ok": True, "msg": _MSG_GENERICO})
 
 
 @auth_bp.route("/reset-password/<token>", methods=["GET"])

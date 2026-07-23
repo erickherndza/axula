@@ -27,13 +27,22 @@ __all__ = [
 # ── Conexión a BD ────────────────────────────────────────────────────────────
 
 def get_db():
-    conn = sqlite3.connect(DATABASE, timeout=10)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA synchronous=NORMAL")
-    conn.execute("PRAGMA cache_size=2000")
-    conn.execute("PRAGMA temp_store=MEMORY")
-    return conn
+    """
+    Devuelve la conexión SQLite del request actual.
+    Reutiliza la misma conexión si ya fue abierta en este request (via Flask g).
+    La conexión se cierra automáticamente al finalizar el request
+    gracias al teardown_appcontext registrado en app.py.
+    """
+    from flask import g
+    if "db" not in g:
+        conn = sqlite3.connect(DATABASE, timeout=10)
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA synchronous=NORMAL")
+        conn.execute("PRAGMA cache_size=2000")
+        conn.execute("PRAGMA temp_store=MEMORY")
+        g.db = conn
+    return g.db
 
 # ── CACHÉ SIMPLE EN MEMORIA ──────────────────────────────────────────────────
 _CACHE = {}
@@ -83,6 +92,8 @@ def migrar_bd():
             "CREATE INDEX IF NOT EXISTS idx_reportes_est ON reportes(estudiante_id, estado)",
             "CREATE INDEX IF NOT EXISTS idx_ausencias_sem ON ausencias_semanales(estudiante_id, semana)",
             "CREATE INDEX IF NOT EXISTS idx_matcal_est ON materias_calificaciones(estudiante_id)",
+            "CREATE INDEX IF NOT EXISTS idx_matcal_est_anio ON materias_calificaciones(estudiante_id, anio_escolar)",
+            "CREATE INDEX IF NOT EXISTS idx_matcal_anio_est ON materias_calificaciones(anio_escolar, estudiante_id)",
         ]:
             try:
                 conn.execute(_idx)

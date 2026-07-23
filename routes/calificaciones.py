@@ -1545,7 +1545,7 @@ def boletin_pdf(est_id):
             _logo_b   = RLImage(_iob.BytesIO(_b64b.b64decode(_raw_b)), width=2*cm, height=2*cm)
             _logo_b.hAlign = "CENTER"
         except Exception as _e:
-            logger.warning(f"[calificaciones] Excepción silenciada")
+            logger.warning(f"[calificaciones] Error al decodificar logo institucional: {_e}")
 
     _centro_col = [
         Paragraph("REPÚBLICA DOMINICANA — MINISTERIO DE EDUCACIÓN — MINERD",
@@ -1828,23 +1828,37 @@ def promocion_preview():
             ORDER BY apellido, nombre
         """, (grado,)).fetchall()
 
+        # Pre-fetch materias y promociones de todos los estudiantes del grado
+        # en 2 queries en lugar de 2×N (elimina N+1)
+        ids_grado = [e["id"] for e in estudiantes]
+        placeholders = ",".join("?" * len(ids_grado))
+
+        mc_rows = conn.execute(f"""
+            SELECT estudiante_id, materia, promedio, tipo
+            FROM materias_calificaciones
+            WHERE estudiante_id IN ({placeholders}) AND anio_escolar = ?
+        """, ids_grado + [anio]).fetchall() if ids_grado else []
+
+        prom_rows = conn.execute(f"""
+            SELECT estudiante_id, estado
+            FROM promociones
+            WHERE estudiante_id IN ({placeholders}) AND anio_escolar = ?
+        """, ids_grado + [anio]).fetchall() if ids_grado else []
+
+        # Indexar por estudiante_id para lookup O(1)
+        mc_map: dict = {}
+        for r in mc_rows:
+            mc_map.setdefault(r["estudiante_id"], []).append(r)
+        prom_map = {r["estudiante_id"]: r["estado"] for r in prom_rows}
+
         resultado = []
         for est in estudiantes:
-            materias = conn.execute("""
-                SELECT materia, promedio, tipo
-                FROM materias_calificaciones
-                WHERE estudiante_id = ? AND anio_escolar = ?
-            """, (est["id"], anio)).fetchall()
-
+            materias = mc_map.get(est["id"], [])
             total = len(materias)
             reprobadas = [m for m in materias if (m["promedio"] or 0) < 70]
             n_repr = len(reprobadas)
             estado = _calcular_estado_promocion(n_repr)
-
-            prom_existente = conn.execute(
-                "SELECT estado FROM promociones WHERE estudiante_id=? AND anio_escolar=?",
-                (est["id"], anio)
-            ).fetchone()
+            estado_previo = prom_map.get(est["id"])
 
             resultado.append({
                 "id":              est["id"],
@@ -1857,8 +1871,8 @@ def promocion_preview():
                 "mats_reprobadas": n_repr,
                 "reprobadas":      [m["materia"] for m in reprobadas],
                 "estado":          estado,
-                "ya_procesado":    prom_existente is not None,
-                "estado_previo":   prom_existente["estado"] if prom_existente else None,
+                "ya_procesado":    estado_previo is not None,
+                "estado_previo":   estado_previo,
             })
 
     return jsonify({

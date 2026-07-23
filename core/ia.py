@@ -44,7 +44,7 @@ def _get_groq_client():
         raise RuntimeError(
             "GROQ_API_KEY no configurado. Agrégalo en el archivo .env y reinicia el servidor."
         )
-    return Groq(api_key=api_key)
+    return Groq(api_key=api_key, timeout=30.0)
 
 
 def construir_prompt(e):

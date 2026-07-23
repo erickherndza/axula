@@ -123,13 +123,17 @@ def ejecutar_lote():
     if not ids:
         return jsonify({"ok": False, "error": "Campo 'estudiante_ids' requerido"}), 400
 
-    db  = get_db()
-    res = ejecutar_promocion_lote(db, grado, anio, ids, _uid(), observacion=obs)
-
-    _audit(db, _uid(), "promocion_lote",
-           f"grado={grado} anio={anio} promovidos={res.get('promovidos',0)} "
-           f"recuperacion={res.get('recuperacion',0)} no_promovidos={res.get('no_promovidos',0)}")
-    db.commit()
+    db = get_db()
+    try:
+        res = ejecutar_promocion_lote(db, grado, anio, ids, _uid(), observacion=obs)
+        _audit(db, _uid(), "promocion_lote",
+               f"grado={grado} anio={anio} promovidos={res.get('promovidos',0)} "
+               f"recuperacion={res.get('recuperacion',0)} no_promovidos={res.get('no_promovidos',0)}")
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        log.exception("ejecutar_lote grado=%s anio=%s", grado, anio)
+        return jsonify({"ok": False, "error": str(exc)}), 500
 
     return jsonify(res), 200 if res["ok"] else 500
 

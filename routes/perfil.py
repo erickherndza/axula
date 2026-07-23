@@ -7,7 +7,7 @@ import os
 from datetime import date
 from flask import (
     Blueprint, render_template, request, jsonify, session,
-    redirect,
+    redirect, send_file, abort,
 )
 
 from core.constants import *
@@ -22,6 +22,7 @@ from core.helpers import (
     calcular_motor_conductual, _semaforo_color,
 )
 from core.ia import _get_groq_client, construir_prompt
+from core import rls as _rls
 
 logger = logging.getLogger("axula")
 
@@ -622,10 +623,54 @@ Usa lenguaje técnico-pedagógico. Sé preciso con los datos. Máximo 380 palabr
 
 # ── FOTO DE PERFIL ───────────────────────────────────────────────────────────
 
+@perfil_bp.route("/api/foto/<int:id>", methods=["GET"])
+@login_required
+def servir_foto(id):
+    """
+    Sirve la foto de perfil de forma autenticada.
+    Protege datos de menores — la imagen nunca se expone desde /static directamente.
+    Funciona tanto en local (static/fotos/) como en Render (/data/fotos/).
+    """
+    with sqlite3.connect(DATABASE, timeout=10) as conn:
+        _rls.verificar_acceso_estudiante(conn, id)
+        row = conn.execute(
+            "SELECT foto_path FROM estudiantes WHERE id=?", (id,)
+        ).fetchone()
+
+    if not row or not row[0]:
+        abort(404)
+
+    stored = row[0]
+    # Soporta rutas antiguas (/static/fotos/est_1.jpg) y nuevas (/api/foto/<id>)
+    filename = os.path.basename(stored)
+    file_path = os.path.join(FOTOS_DIR, filename)
+
+    if not os.path.isfile(file_path):
+        abort(404)
+
+    return send_file(file_path, max_age=3600)
+
+
+@perfil_bp.route("/api/foto/<int:id>", methods=["POST"])
+@login_required
+def subir_foto_alias(id):
+    """Alias de /api/estudiante/<id>/foto POST — compatibilidad con perfil.js."""
+    return subir_foto(id)
+
+
+@perfil_bp.route("/api/foto/<int:id>", methods=["DELETE"])
+@login_required
+def borrar_foto_alias(id):
+    """Alias de /api/estudiante/<id>/foto DELETE — compatibilidad con perfil.js."""
+    return borrar_foto(id)
+
+
 @perfil_bp.route("/api/estudiante/<int:id>/foto", methods=["POST"])
 @login_required
 def subir_foto(id):
     """Sube foto de perfil de un estudiante."""
+    with sqlite3.connect(DATABASE, timeout=10) as conn:
+        _rls.verificar_acceso_estudiante(conn, id)  # 403 si no tiene permiso
     f = request.files.get("foto")
     if not f or not f.filename:
         return jsonify({"error": "No se recibió archivo"}), 400
@@ -641,7 +686,8 @@ def subir_foto(id):
     path     = os.path.join(FOTOS_DIR, filename)
     with open(path, "wb") as _fh:
         _fh.write(datos)
-    url = f"/static/fotos/{filename}"
+    # URL autenticada — funciona en Render (/data/fotos) y en local (static/fotos)
+    url = f"/api/foto/{id}"
     with sqlite3.connect(DATABASE, timeout=10) as conn:
         conn.execute("UPDATE estudiantes SET foto_path=? WHERE id=?", (url, id))
         conn.commit()
@@ -652,6 +698,7 @@ def subir_foto(id):
 @login_required
 def borrar_foto(id):
     with sqlite3.connect(DATABASE, timeout=10) as conn:
+        _rls.verificar_acceso_estudiante(conn, id)  # 403 si no tiene permiso
         conn.row_factory = sqlite3.Row
         row = conn.execute("SELECT foto_path FROM estudiantes WHERE id=?", (id,)).fetchone()
         if row and row["foto_path"]:
