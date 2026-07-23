@@ -633,6 +633,17 @@ main{max-width:1200px;margin:0 auto;padding:24px 20px}
       </div>
     </div>
 
+    <!-- Paso previo: asignar mención a 3RO → 4TO -->
+    <div id="cierre-mencion-wrap" style="margin-bottom:18px;">
+        <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:10px">
+            <i class="fas fa-tag" style="color:#a78bfa"></i>
+            Paso previo — Asignar mención a estudiantes de 3ERO que pasan a 4TO
+        </div>
+        <div id="cierre-mencion-lista" style="font-size:12px;color:var(--text-muted)">
+            <i class="fas fa-spinner fa-spin"></i> Verificando...
+        </div>
+    </div>
+
     <!-- Advertencia -->
     <div style="background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.25);border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:12px;color:var(--text);line-height:1.7">
       <strong style="color:#ef4444"><i class="fas fa-exclamation-triangle"></i> Operación irreversible:</strong>
@@ -1622,9 +1633,68 @@ function compInicializar() {
     .then(function(d) {
       var el = document.getElementById('cierre-anio-actual');
       if (el) el.textContent = d.anio_escolar_activo || '—';
+      // Cargar 3ERO pendientes de mención usando el año que acaba de cargar
+      var anioVal = (d.anio_escolar_activo || '').trim();
+      _cierreCargarPendientesMencion(anioVal);
     })
     .catch(function(){});
 })();
+
+function _cierreCargarPendientesMencion(anio) {
+  var listaEl = document.getElementById('cierre-mencion-lista');
+  if (!listaEl) return;
+  if (!anio) { listaEl.innerHTML = ''; return; }
+  fetch('/api/promocion/pendientes-mencion?anio_escolar=' + encodeURIComponent(anio))
+  .then(function(r){ return r.json(); })
+  .then(function(d) {
+    var ests = (d.estudiantes || []);
+    if (!ests.length) {
+      listaEl.innerHTML = '<span style="color:#22c55e"><i class="fas fa-check-circle"></i> Todos los estudiantes de 3ERO ya tienen mención asignada (o no hay promovidos aún).</span>';
+      return;
+    }
+    var MENCIONES = ['MULTIMEDIA','TEATRO','MÚSICA','ARTES VISUALES','DANZA'];
+    var html = '<div style="background:rgba(167,139,250,.07);border:1px solid rgba(167,139,250,.3);border-radius:8px;padding:12px">';
+    html += '<div style="font-size:11px;color:#a78bfa;font-weight:700;margin-bottom:10px"><i class="fas fa-exclamation-circle"></i> ' + ests.length + ' estudiante(s) de 3ERO promovidos a 4TO — asígnales la mención antes de cerrar el año:</div>';
+    ests.forEach(function(e) {
+      var cursoUp = (e.curso || '').toUpperCase();
+      html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap">';
+      html += '<span style="min-width:200px;font-size:12px">' + e.apellido + ', ' + e.nombre + '</span>';
+      html += '<select id="men-' + e.id + '" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:4px 8px;font-size:12px">';
+      html += '<option value="">- Mención -</option>';
+      MENCIONES.forEach(function(m) {
+        var sel = cursoUp.includes(m) ? ' selected' : '';
+        html += '<option value="' + m + '"' + sel + '>' + m + '</option>';
+      });
+      html += '</select>';
+      html += '<button onclick="cierreAsignarMencion(' + e.id + ')" style="background:rgba(167,139,250,.15);border:1px solid rgba(167,139,250,.4);color:#a78bfa;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer">Guardar</button>';
+      html += '<span id="men-status-' + e.id + '" style="font-size:11px;color:var(--muted)"></span>';
+      html += '</div>';
+    });
+    html += '</div>';
+    listaEl.innerHTML = html;
+  })
+  .catch(function(){ listaEl.innerHTML = '<span style="color:var(--muted);font-size:11px;">Sin datos de pendientes.</span>'; });
+}
+
+function cierreAsignarMencion(estId) {
+  var sel      = document.getElementById('men-' + estId);
+  var statusEl = document.getElementById('men-status-' + estId);
+  if (!sel || !sel.value) { if(statusEl) statusEl.textContent = '⚠ Selecciona una mención'; return; }
+  fetch('/api/estudiantes/' + estId + '/mencion', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': (typeof T !== 'undefined' ? T : '') },
+    body: JSON.stringify({ mencion: sel.value })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d) {
+    if (d.ok) {
+      if(statusEl) statusEl.innerHTML = '<span style="color:#22c55e">✓ ' + d.nuevo_curso + '</span>';
+    } else {
+      if(statusEl) statusEl.textContent = '✗ ' + (d.error || 'Error');
+    }
+  })
+  .catch(function(){ if(statusEl) statusEl.textContent = '✗ Error de red'; });
+}
 
 function cierreEjecutar() {
   var nuevoAnio = (document.getElementById('cierre-nuevo-anio').value || '').trim();

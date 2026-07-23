@@ -748,6 +748,23 @@ def cerrar_anio_escolar():
                     "total": len(estudiantes),
                 }
 
+            # Reset KPIs and attendance for ALL active non-promoted students
+            # (they repeat but start the new year with a clean slate)
+            conn.execute("""
+                UPDATE estudiantes
+                SET p_acad        = NULL,
+                    acad_p1       = NULL,
+                    acad_p2       = NULL,
+                    acad_p3       = NULL,
+                    acad_p4       = NULL,
+                    asistencia_p1 = NULL,
+                    asistencia_p2 = NULL,
+                    asistencia_p3 = NULL,
+                    asistencia_p4 = NULL,
+                    tiene_notas   = 0
+                WHERE condicion = 'ACTIVO'
+            """)
+
             # Actualizar el año escolar activo
             conn.execute(
                 """UPDATE configuracion_centro
@@ -790,6 +807,56 @@ def cerrar_anio_escolar():
             f"El sistema ahora opera en {nuevo_anio}."
         ),
     })
+
+
+@config_bp.route("/api/promocion/pendientes-mencion")
+@coord_required
+def pendientes_mencion():
+    anio = request.args.get("anio_escolar") or _anio_escolar_actual()
+    with sqlite3.connect(DATABASE, timeout=10) as conn:
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute("""
+            SELECT e.id, e.nombre, e.apellido, e.curso, e.seccion,
+                   p.estado
+            FROM estudiantes e
+            JOIN promociones p ON p.estudiante_id = e.id
+              AND p.anio_escolar = ?
+              AND p.estado = 'PROMOVIDO'
+            WHERE UPPER(e.grado) IN ('3RO','3ERO')
+              AND e.condicion = 'ACTIVO'
+            ORDER BY e.apellido, e.nombre
+        """, (anio,)).fetchall()
+    return jsonify({"ok": True, "estudiantes": [dict(r) for r in rows]})
+
+
+@config_bp.route("/api/estudiantes/<int:est_id>/mencion", methods=["POST"])
+@coord_required
+def asignar_mencion(est_id):
+    u = get_usuario()
+    d = request.get_json(silent=True) or {}
+    mencion = (d.get("mencion") or "").strip().upper()
+    MENCIONES_VALIDAS = {"MULTIMEDIA", "TEATRO", "MÚSICA", "MUSICA", "ARTES VISUALES", "DANZA"}
+    if mencion not in MENCIONES_VALIDAS:
+        return jsonify({"error": f"Mención inválida: {mencion}"}), 400
+    # Normalize: MUSICA → MÚSICA
+    if mencion == "MUSICA":
+        mencion = "MÚSICA"
+    with sqlite3.connect(DATABASE, timeout=10) as conn:
+        conn.row_factory = sqlite3.Row
+        est = conn.execute("SELECT grado, curso FROM estudiantes WHERE id=?", (est_id,)).fetchone()
+        if not est:
+            return jsonify({"error": "Estudiante no encontrado"}), 404
+        grado = (est["grado"] or "").strip().upper()
+        nuevo_curso = f"{grado} {mencion}".strip()
+        conn.execute("UPDATE estudiantes SET curso=? WHERE id=?", (nuevo_curso, est_id))
+        try:
+            conn.execute("""INSERT INTO audit_log (usuario_id, accion, entidad, entidad_id, detalle, creado)
+                           VALUES (?, 'asignar_mencion', 'estudiantes', ?, ?, datetime('now'))""",
+                        (u["id"], est_id, _json.dumps({"mencion": mencion, "nuevo_curso": nuevo_curso})))
+        except Exception:
+            pass
+        conn.commit()
+    return jsonify({"ok": True, "nuevo_curso": nuevo_curso})
 
 
 @config_bp.route("/api/config/anio-escolar-activo", methods=["GET"])
