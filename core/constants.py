@@ -1166,6 +1166,10 @@ MIGRACIONES_ESPECIALES = [
     ("Agregar estado_recuperacion a recuperaciones_pedagogicas",
      "ALTER TABLE recuperaciones_pedagogicas ADD COLUMN estado_recuperacion TEXT DEFAULT 'PENDIENTE'",
      "estado_recuperacion", "recuperaciones_pedagogicas"),
+    # ── Año escolar activo (administrable por director/coordinador) ──────────────
+    ("Agregar anio_escolar_activo a configuracion_centro",
+     "ALTER TABLE configuracion_centro ADD COLUMN anio_escolar_activo TEXT",
+     "anio_escolar_activo", "configuracion_centro"),
     # ← AGREGA MIGRACIONES PUNTUALES AQUÍ
 ]
 

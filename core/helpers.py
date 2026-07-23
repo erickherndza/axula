@@ -1270,11 +1270,23 @@ def _notificar_reporte_nuevo(conn, estudiante_id, reporte_id, tipo_reporte, seve
 
 
 def _anio_escolar_actual():
-    """Detecta automáticamente el año escolar según la fecha.
-    El año escolar dominicano comienza en agosto.
-    Si estamos en agosto-diciembre → 'YYYY-(YYY+1)'
-    Si estamos en enero-julio  → '(YYYY-1)-YYYY'
+    """Retorna el año escolar activo.
+    Prioridad:
+      1. Valor configurado en configuracion_centro.anio_escolar_activo (admin puede cambiar)
+      2. Cálculo automático por fecha (agosto = inicio de nuevo año escolar dominicano)
     """
+    try:
+        from core.constants import DATABASE as _DB
+        import sqlite3 as _sqlite3
+        with _sqlite3.connect(_DB, timeout=3) as _c:
+            _row = _c.execute(
+                "SELECT anio_escolar_activo FROM configuracion_centro WHERE id=1"
+            ).fetchone()
+            if _row and _row[0]:
+                return _row[0]
+    except Exception:
+        pass
+    # Fallback: cálculo por fecha
     from datetime import date
     hoy = date.today()
     if hoy.month >= 8:

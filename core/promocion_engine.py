@@ -604,9 +604,12 @@ def ejecutar_promocion_estudiante(
     else:
         grado_destino = grado_origen  # permanece en el mismo grado
 
-    # Si se fuerza la promoción, registrar estado real pero mover al siguiente grado
+    # Cuando se fuerza la promoción manual: el estado registrado en la tabla
+    # promociones es PROMOVIDO (para que boletin_estudiante() lo detecte correctamente).
+    # La observación documenta que fue una decisión manual.
     if forzar_promovido and estado != PROM_PROMOVIDO:
         observacion = f"[PROMOCIÓN MANUAL] {observacion}".strip()
+        estado = PROM_PROMOVIDO  # override: se registra como PROMOVIDO en BD
 
     # Actualizar grado/condición del estudiante
     if promover_fisicamente:
@@ -627,16 +630,20 @@ def ejecutar_promocion_estudiante(
             mencion = partes[1] if len(partes) > 1 else ""
             nuevo_curso = f"{sig_grado} {mencion}".strip() if mencion else sig_grado
 
-            # Actualiza grado, curso y resetea KPIs — el nuevo año empieza desde cero
+            # Actualiza grado, curso y resetea KPIs y asistencia — nuevo año desde cero
             db.execute(
                 """UPDATE estudiantes
-                   SET grado     = ?,
-                       curso     = ?,
-                       p_acad    = NULL,
-                       acad_p1   = NULL,
-                       acad_p2   = NULL,
-                       acad_p3   = NULL,
-                       acad_p4   = NULL
+                   SET grado          = ?,
+                       curso          = ?,
+                       p_acad         = NULL,
+                       acad_p1        = NULL,
+                       acad_p2        = NULL,
+                       acad_p3        = NULL,
+                       acad_p4        = NULL,
+                       asistencia_p1  = NULL,
+                       asistencia_p2  = NULL,
+                       asistencia_p3  = NULL,
+                       asistencia_p4  = NULL
                    WHERE id = ?""",
                 (sig_grado, nuevo_curso, est_id),
             )

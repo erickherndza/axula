@@ -613,6 +613,79 @@ main{max-width:1200px;margin:0 auto;padding:24px 20px}
   </div>
 </div>
 
+<!-- ── PANEL: CIERRE DE AÑO ESCOLAR ──────────────────────────────────────── -->
+<div class="panel" id="cierre-anio" style="margin-top:16px;scroll-margin-top:80px">
+  <div class="panel-head">
+    <span class="panel-title">
+      <i class="fas fa-calendar-check" style="color:#f59e0b;margin-right:7px"></i>
+      Cierre de Año Escolar
+    </span>
+    <span style="font-size:11px;color:var(--muted)">Promueve todos los estudiantes elegibles e inicia el nuevo año</span>
+  </div>
+  <div style="padding:20px">
+
+    <!-- Año actual -->
+    <div id="cierre-anio-actual-wrap" style="background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.3);border-radius:10px;padding:14px 18px;margin-bottom:18px;display:flex;align-items:center;gap:12px">
+      <i class="fas fa-info-circle" style="color:#f59e0b;font-size:18px"></i>
+      <div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:2px">Año escolar activo</div>
+        <div id="cierre-anio-actual" style="font-size:18px;font-weight:800;color:var(--text)">...</div>
+      </div>
+    </div>
+
+    <!-- Advertencia -->
+    <div style="background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.25);border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:12px;color:var(--text);line-height:1.7">
+      <strong style="color:#ef4444"><i class="fas fa-exclamation-triangle"></i> Operación irreversible:</strong>
+      Al cerrar el año, el sistema auto-promueve a <strong>todos los estudiantes con estado PROMOVIDO</strong> de todos los grados.
+      Los que están en RECUPERACIÓN o NO_PROMOVIDO quedan en su grado actual para el nuevo año.
+      Los KPIs y la asistencia de los promovidos se resetean a cero.
+    </div>
+
+    <!-- Formulario -->
+    <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:16px">
+      <div>
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Nuevo año escolar</label>
+        <input id="cierre-nuevo-anio" type="text" placeholder="ej: 2026-2027"
+               style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 14px;font-size:14px;width:150px;font-weight:700">
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Observación</label>
+        <input id="cierre-obs" type="text" placeholder="Ej: Cierre año escolar ordinario 2025-2026"
+               style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 14px;font-size:13px;width:300px">
+      </div>
+      <button onclick="cierreEjecutar()" id="cierre-btn"
+              style="background:#f59e0b;color:#000;border:none;border-radius:8px;padding:9px 22px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">
+        <i class="fas fa-lock"></i> Cerrar Año Escolar
+      </button>
+    </div>
+
+    <!-- También: cambiar año sin promover -->
+    <details style="margin-top:8px">
+      <summary style="font-size:12px;color:var(--muted);cursor:pointer;user-select:none">
+        <i class="fas fa-wrench"></i> Solo cambiar año activo (sin promover estudiantes)
+      </summary>
+      <div style="margin-top:12px;display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+        <div>
+          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Año escolar</label>
+          <input id="cierre-solo-anio" type="text" placeholder="ej: 2026-2027"
+                 style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;width:140px">
+        </div>
+        <button onclick="cierreSetAnio()"
+                style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer">
+          <i class="fas fa-save"></i> Guardar
+        </button>
+      </div>
+    </details>
+
+    <!-- Resultado -->
+    <div id="cierre-resultado" style="display:none;margin-top:18px;border-radius:10px;overflow:hidden;border:1px solid var(--border)">
+      <div id="cierre-resultado-header" style="padding:12px 16px;font-size:13px;font-weight:700"></div>
+      <div id="cierre-resultado-body" style="padding:12px 16px;font-size:12px;color:var(--text)"></div>
+    </div>
+
+  </div>
+</div>
+
 <!-- ── PANEL: PRUEBA COMPLETIVA 6TO ──────────────────────────────────────── -->
 <div class="panel" id="completiva" style="margin-top:16px;scroll-margin-top:80px">
   <div class="panel-head">
@@ -1540,6 +1613,124 @@ function compInicializar() {
     })
     .catch(function(){});
 }
+
+// ── Cierre de año escolar ─────────────────────────────────────────────────────
+
+(function cierreInit() {
+  fetch('/api/config/anio-escolar-activo')
+    .then(function(r){ return r.json(); })
+    .then(function(d) {
+      var el = document.getElementById('cierre-anio-actual');
+      if (el) el.textContent = d.anio_escolar_activo || '—';
+    })
+    .catch(function(){});
+})();
+
+function cierreEjecutar() {
+  var nuevoAnio = (document.getElementById('cierre-nuevo-anio').value || '').trim();
+  var obs       = (document.getElementById('cierre-obs').value || '').trim() || 'Cierre de año escolar';
+
+  if (!nuevoAnio) { alert('Ingresa el nuevo año escolar (ej: 2026-2027)'); return; }
+  if (!/^\d{4}-\d{4}$/.test(nuevoAnio)) { alert('Formato inválido. Usa XXXX-XXXX'); return; }
+
+  var anioActual = (document.getElementById('cierre-anio-actual') || {}).textContent || '';
+  if (!confirm(
+    'CERRAR AÑO ESCOLAR\n\n' +
+    'Año actual: ' + anioActual + '\n' +
+    'Nuevo año: ' + nuevoAnio + '\n\n' +
+    'Esta acción auto-promoverá a todos los estudiantes elegibles (PROMOVIDO).\n' +
+    'Los estudiantes en RECUPERACIÓN o NO_PROMOVIDO quedan en su grado.\n\n' +
+    '¿Confirmar cierre?'
+  )) return;
+
+  var btn = document.getElementById('cierre-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+
+  fetch('/api/config/cerrar-anio-escolar', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': (typeof T !== 'undefined' ? T : '') },
+    body: JSON.stringify({ nuevo_anio: nuevoAnio, observacion: obs })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d) {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-lock"></i> Cerrar Año Escolar';
+
+    var resEl   = document.getElementById('cierre-resultado');
+    var headEl  = document.getElementById('cierre-resultado-header');
+    var bodyEl  = document.getElementById('cierre-resultado-body');
+    resEl.style.display = 'block';
+
+    if (d.ok) {
+      headEl.style.background = 'rgba(34,197,94,.12)';
+      headEl.style.color      = '#16a34a';
+      headEl.innerHTML = '<i class="fas fa-check-circle"></i> ' + d.mensaje;
+
+      // actualizar año mostrado
+      var anioEl = document.getElementById('cierre-anio-actual');
+      if (anioEl) anioEl.textContent = d.nuevo_anio;
+
+      // tabla resumen por grado
+      var rows = '';
+      var rs   = d.resumen_por_grado || {};
+      Object.keys(rs).forEach(function(g) {
+        var gr = rs[g];
+        rows += '<tr>' +
+          '<td style="padding:5px 10px;font-weight:700">' + g + '</td>' +
+          '<td style="padding:5px 10px;text-align:center;color:#16a34a">' + gr.promovidos + '</td>' +
+          '<td style="padding:5px 10px;text-align:center;color:var(--muted)">' + gr.no_promovidos_skipped + '</td>' +
+          '<td style="padding:5px 10px;text-align:center;color:#ef4444">' + (gr.errores ? gr.errores.length : 0) + '</td>' +
+          '</tr>';
+      });
+      bodyEl.innerHTML = (rows
+        ? '<table style="width:100%;border-collapse:collapse;font-size:12px">' +
+          '<thead><tr style="border-bottom:1px solid var(--border)">' +
+          '<th style="padding:5px 10px;text-align:left">Grado</th>' +
+          '<th style="padding:5px 10px">Promovidos</th>' +
+          '<th style="padding:5px 10px">Skipped</th>' +
+          '<th style="padding:5px 10px">Errores</th></tr></thead>' +
+          '<tbody>' + rows + '</tbody></table>'
+        : '');
+    } else {
+      headEl.style.background = 'rgba(239,68,68,.1)';
+      headEl.style.color      = '#dc2626';
+      headEl.innerHTML = '<i class="fas fa-times-circle"></i> Error: ' + (d.error || 'Desconocido');
+      bodyEl.innerHTML = '';
+    }
+  })
+  .catch(function(e) {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-lock"></i> Cerrar Año Escolar';
+    alert('Error de red: ' + e.message);
+  });
+}
+
+function cierreSetAnio() {
+  var anio = (document.getElementById('cierre-solo-anio').value || '').trim();
+  if (!anio) { alert('Ingresa el año escolar'); return; }
+  if (!/^\d{4}-\d{4}$/.test(anio)) { alert('Formato inválido. Usa XXXX-XXXX'); return; }
+  if (!confirm('Cambiar año activo a ' + anio + ' (sin promover estudiantes)?')) return;
+
+  fetch('/api/config/anio-escolar-activo', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': (typeof T !== 'undefined' ? T : '') },
+    body: JSON.stringify({ anio_escolar: anio })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d) {
+    if (d.ok) {
+      var el = document.getElementById('cierre-anio-actual');
+      if (el) el.textContent = d.anio_escolar_activo;
+      alert('✓ ' + d.mensaje);
+    } else {
+      alert('Error: ' + (d.error || 'Desconocido'));
+    }
+  })
+  .catch(function(e){ alert('Error: ' + e.message); });
+}
+
+// ── Prueba Completiva 6TO ─────────────────────────────────────────────────────
 
 function compCargarMaterias() {
   var estId = document.getElementById('comp-est').value;

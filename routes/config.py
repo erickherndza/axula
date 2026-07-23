@@ -668,3 +668,170 @@ def desbloquear_periodo():
     })
 
 
+# ── CIERRE / INICIO DE AÑO ESCOLAR ──────────────────────────────────────────
+
+
+@config_bp.route("/api/config/cerrar-anio-escolar", methods=["POST"])
+@coord_required
+def cerrar_anio_escolar():
+    """
+    Cierra el año escolar activo:
+      1. Auto-promueve todos los estudiantes PROMOVIDO de todos los grados.
+      2. Registra el nuevo año escolar en configuracion_centro.anio_escolar_activo.
+
+    Body JSON:
+      { "nuevo_anio": "2026-2027", "observacion": "Cierre año escolar ordinario" }
+
+    Solo coordinador y directora pueden ejecutar esto.
+    """
+    from core.promocion_engine import evaluar_grado, ejecutar_promocion_estudiante
+
+    u     = get_usuario()
+    rol_n = _normalizar_rol(u.get("rol", ""))
+    if rol_n not in ROLES_COORD and not u.get("es_directora"):
+        return jsonify({"error": "Solo coordinadores y directora pueden cerrar el año escolar"}), 403
+
+    d         = request.get_json(silent=True) or {}
+    nuevo_anio = (d.get("nuevo_anio") or "").strip()
+    observacion = (d.get("observacion") or "Cierre de año escolar").strip()
+
+    if not nuevo_anio:
+        return jsonify({"error": "Debes indicar el nuevo año escolar (ej: 2026-2027)"}), 400
+
+    # Validar formato XXXX-XXXX
+    import re as _re
+    if not _re.match(r"^\d{4}-\d{4}$", nuevo_anio):
+        return jsonify({"error": "Formato inválido. Usa XXXX-XXXX (ej: 2026-2027)"}), 400
+
+    anio_actual = _anio_escolar_actual()
+
+    GRADOS = ["1ERO", "2DO", "3RO", "4TO", "5TO", "6TO"]
+    resumen = {}   # {grado: {promovidos, skipped, errores}}
+    total_promovidos = 0
+
+    try:
+        with sqlite3.connect(DATABASE, timeout=30) as conn:
+            conn.row_factory = sqlite3.Row
+            conn.execute("PRAGMA journal_mode=WAL")
+
+            for grado in GRADOS:
+                rs = evaluar_grado(conn, grado, anio_actual)
+                estudiantes = rs.get("estudiantes", [])
+                g_prom = 0
+                g_skip = 0
+                g_err  = []
+
+                for est in estudiantes:
+                    if est["estado"] != "PROMOVIDO":
+                        g_skip += 1
+                        continue
+                    try:
+                        res = ejecutar_promocion_estudiante(
+                            conn,
+                            est["id"],
+                            anio_actual,
+                            u["id"],
+                            observacion=observacion,
+                        )
+                        if res.get("ok"):
+                            g_prom += 1
+                            total_promovidos += 1
+                        else:
+                            g_err.append({"id": est["id"], "nombre": est["nombre"], "error": res.get("error")})
+                    except Exception as ex:
+                        g_err.append({"id": est["id"], "nombre": est.get("nombre", "?"), "error": str(ex)})
+
+                resumen[grado] = {
+                    "promovidos": g_prom,
+                    "no_promovidos_skipped": g_skip,
+                    "errores": g_err,
+                    "total": len(estudiantes),
+                }
+
+            # Actualizar el año escolar activo
+            conn.execute(
+                """UPDATE configuracion_centro
+                   SET anio_escolar_activo = ?
+                   WHERE id = 1""",
+                (nuevo_anio,)
+            )
+            conn.commit()
+
+    except Exception as ex:
+        logger.error(f"[cerrar_anio_escolar] Error: {ex}")
+        return jsonify({"ok": False, "error": f"Error interno: {ex}"}), 500
+
+    # Registrar en auditoría
+    try:
+        with sqlite3.connect(DATABASE, timeout=10) as conn:
+            conn.execute(
+                """INSERT INTO audit_log (usuario_id, accion, entidad, detalle, creado)
+                   VALUES (?, 'cerrar_anio_escolar', 'configuracion_centro',
+                           ?, datetime('now'))""",
+                (u["id"], _json.dumps({
+                    "anio_anterior": anio_actual,
+                    "nuevo_anio": nuevo_anio,
+                    "total_promovidos": total_promovidos,
+                    "observacion": observacion,
+                }, ensure_ascii=False))
+            )
+            conn.commit()
+    except Exception:
+        pass
+
+    return jsonify({
+        "ok": True,
+        "anio_anterior": anio_actual,
+        "nuevo_anio": nuevo_anio,
+        "total_promovidos": total_promovidos,
+        "resumen_por_grado": resumen,
+        "mensaje": (
+            f"Año escolar cerrado. {total_promovidos} estudiante(s) promovido(s). "
+            f"El sistema ahora opera en {nuevo_anio}."
+        ),
+    })
+
+
+@config_bp.route("/api/config/anio-escolar-activo", methods=["GET"])
+@login_required
+def get_anio_escolar_activo():
+    """Retorna el año escolar activo configurado."""
+    anio = _anio_escolar_actual()
+    return jsonify({"ok": True, "anio_escolar_activo": anio})
+
+
+@config_bp.route("/api/config/anio-escolar-activo", methods=["POST"])
+@coord_required
+def set_anio_escolar_activo():
+    """
+    Cambia el año escolar activo sin promover estudiantes.
+    Útil para correcciones o para iniciar el año sin auto-promover.
+
+    Body JSON: { "anio_escolar": "2026-2027" }
+    """
+    u     = get_usuario()
+    rol_n = _normalizar_rol(u.get("rol", ""))
+    if rol_n not in ROLES_COORD and not u.get("es_directora"):
+        return jsonify({"error": "Sin permisos"}), 403
+
+    d    = request.get_json(silent=True) or {}
+    anio = (d.get("anio_escolar") or "").strip()
+
+    import re as _re
+    if not _re.match(r"^\d{4}-\d{4}$", anio):
+        return jsonify({"error": "Formato inválido. Usa XXXX-XXXX (ej: 2026-2027)"}), 400
+
+    try:
+        with sqlite3.connect(DATABASE, timeout=10) as conn:
+            conn.execute(
+                "UPDATE configuracion_centro SET anio_escolar_activo = ? WHERE id = 1",
+                (anio,)
+            )
+            conn.commit()
+    except Exception as ex:
+        return jsonify({"ok": False, "error": str(ex)}), 500
+
+    return jsonify({"ok": True, "anio_escolar_activo": anio,
+                    "mensaje": f"Año escolar activo actualizado a {anio}."})
+
+
