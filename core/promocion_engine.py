@@ -369,43 +369,104 @@ def evaluar_estudiante(
             "estado_materia":       estado_mat,
         })
 
-    total       = len(materias_rows)
-    n_aprobadas = conteo[EST_APROBADA]
+    total        = len(materias_rows)
+    n_aprobadas  = conteo[EST_APROBADA]
     n_reprobadas = conteo[EST_REPROBADA] + conteo[EST_REPROBADA_ASISTENCIA]
     n_pendientes = conteo[EST_PENDIENTE]
 
-    # 5. Determinar estado global
+    # 5. Leer criterios del nivel desde BD (con fallback a constantes)
+    #    Permite que el coordinador los ajuste por ordenanza sin tocar código.
+    _nota_minima   = NOTA_MINIMA
+    _max_recup     = MAX_MATS_RECUP
+    _umbral_limite = 65  # por debajo de nota_minima hasta aquí → caso límite
+    try:
+        _crit = db.execute("""
+            SELECT nota_minima, max_areas_aplazado, umbral_caso_limite_inferior
+            FROM   criterios_promocion
+            WHERE  nivel IN ('secundario_academico','primario')
+              AND  activo = 1
+            ORDER BY vigente_desde DESC LIMIT 1
+        """).fetchone()
+        if _crit:
+            _nota_minima   = _crit["nota_minima"]
+            _max_recup     = _crit["max_areas_aplazado"]
+            _umbral_limite = _crit["umbral_caso_limite_inferior"]
+    except Exception:
+        pass
+
+    # 5b. Verificar perfil inclusivo — criterios diferenciados
+    _nota_minima_efec = _nota_minima
+    _perfil_inclusivo = None
+    try:
+        _pi = db.execute("""
+            SELECT nota_minima_diferenciada, asistencia_minima_diferenciada,
+                   perfil, plan_adaptacion_json
+            FROM   estudiante_perfil_inclusivo
+            WHERE  estudiante_id = ? AND activo = 1
+            LIMIT  1
+        """, (est_id,)).fetchone()
+        if _pi:
+            _perfil_inclusivo = dict(_pi)
+            if _pi["nota_minima_diferenciada"] is not None:
+                _nota_minima_efec = _pi["nota_minima_diferenciada"]
+    except Exception:
+        pass
+
+    # 5c. Detectar caso límite: alguna materia reprobada tiene promedio entre
+    #     umbral_caso_limite_inferior y nota_minima_efectiva − 1
+    mats_caso_limite = [
+        d["materia"] for d in detalle
+        if d["estado_materia"] in (EST_REPROBADA,)
+        and d["nota_final_efectiva"] is not None
+        and _umbral_limite <= d["nota_final_efectiva"] < _nota_minima_efec
+    ]
+    caso_limite = len(mats_caso_limite) > 0
+
+    # 5d. Determinar estado global
     if n_pendientes > 0:
         estado  = PROM_PENDIENTE
         razon   = f"{n_pendientes} materia(s) pendiente(s) (sin completiva o datos incompletos)"
     elif n_reprobadas == 0:
         estado  = PROM_PROMOVIDO
         razon   = "Todas las materias aprobadas"
-    elif n_reprobadas <= MAX_MATS_RECUP:
+    elif n_reprobadas <= _max_recup:
         estado  = PROM_RECUPERACION
         razon   = f"{n_reprobadas} materia(s) en recuperación: {', '.join(mats_reprobadas_nombres)}"
     else:
         estado  = PROM_NO_PROMOVIDO
-        razon   = f"{n_reprobadas} materias reprobadas (límite es {MAX_MATS_RECUP})"
+        razon   = f"{n_reprobadas} materias reprobadas (límite: {_max_recup})"
+
+    requiere_revision = caso_limite or (_perfil_inclusivo is not None)
 
     return {
-        "est_id":            est_id,
-        "nombre":            est["nombre"],
-        "apellido":          est["apellido"],
-        "seccion":           est["seccion"],
-        "mencion":           est["mencion"],
-        "grado":             grado_norm,
-        "ciclo":             info_grado["ciclo"],
-        "tiene_completiva":  es_6to,
-        "siguiente_grado":   sig_grado,
-        "estado":            estado,
-        "mats_total":        total,
-        "mats_aprobadas":    n_aprobadas,
-        "mats_reprobadas":   n_reprobadas,
-        "mats_pendientes":   n_pendientes,
-        "mats_recuperacion": mats_reprobadas_nombres,
-        "detalle_materias":  detalle,
-        "razon":             razon,
+        "est_id":                 est_id,
+        "nombre":                 est["nombre"],
+        "apellido":               est["apellido"],
+        "seccion":                est["seccion"],
+        "mencion":                est["mencion"],
+        "grado":                  grado_norm,
+        "ciclo":                  info_grado["ciclo"],
+        "tiene_completiva":       es_6to,
+        "siguiente_grado":        sig_grado,
+        "estado":                 estado,
+        "mats_total":             total,
+        "mats_aprobadas":         n_aprobadas,
+        "mats_reprobadas":        n_reprobadas,
+        "mats_pendientes":        n_pendientes,
+        "mats_recuperacion":      mats_reprobadas_nombres,
+        "detalle_materias":       detalle,
+        "razon":                  razon,
+        # Nuevos campos — sistemanotas.md
+        "caso_limite":            caso_limite,
+        "mats_caso_limite":       mats_caso_limite,
+        "requiere_revision_humana": requiere_revision,
+        "perfil_inclusivo":       _perfil_inclusivo,
+        "criterios_aplicados": {
+            "nota_minima": _nota_minima_efec,
+            "max_areas_aplazado": _max_recup,
+            "umbral_caso_limite": _umbral_limite,
+            "diferenciados": _perfil_inclusivo is not None,
+        },
     }
 
 
@@ -654,21 +715,24 @@ def ejecutar_promocion_estudiante(
         INSERT INTO promociones
             (estudiante_id, grado_origen, grado_destino, anio_escolar,
              estado, mats_reprobadas, mats_total, ejecutado_por, observacion,
-             tiene_completiva, mats_pendientes, mats_recuperacion, ciclo)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             tiene_completiva, mats_pendientes, mats_recuperacion, ciclo,
+             caso_limite, requiere_revision_humana)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(estudiante_id, anio_escolar) DO UPDATE SET
-            grado_origen      = excluded.grado_origen,
-            grado_destino     = excluded.grado_destino,
-            estado            = excluded.estado,
-            mats_reprobadas   = excluded.mats_reprobadas,
-            mats_total        = excluded.mats_total,
-            ejecutado_por     = excluded.ejecutado_por,
-            observacion       = excluded.observacion,
-            tiene_completiva  = excluded.tiene_completiva,
-            mats_pendientes   = excluded.mats_pendientes,
-            mats_recuperacion = excluded.mats_recuperacion,
-            ciclo             = excluded.ciclo,
-            fecha             = datetime('now')
+            grado_origen              = excluded.grado_origen,
+            grado_destino             = excluded.grado_destino,
+            estado                    = excluded.estado,
+            mats_reprobadas           = excluded.mats_reprobadas,
+            mats_total                = excluded.mats_total,
+            ejecutado_por             = excluded.ejecutado_por,
+            observacion               = excluded.observacion,
+            tiene_completiva          = excluded.tiene_completiva,
+            mats_pendientes           = excluded.mats_pendientes,
+            mats_recuperacion         = excluded.mats_recuperacion,
+            ciclo                     = excluded.ciclo,
+            caso_limite               = excluded.caso_limite,
+            requiere_revision_humana  = excluded.requiere_revision_humana,
+            fecha                     = datetime('now')
         """,
         (
             est_id, grado_origen, grado_destino, anio_escolar,
@@ -678,6 +742,8 @@ def ejecutar_promocion_estudiante(
             ev["mats_pendientes"],
             json.dumps(ev["mats_recuperacion"], ensure_ascii=False),
             ev["ciclo"],
+            1 if ev.get("caso_limite") else 0,
+            1 if ev.get("requiere_revision_humana") else 0,
         ),
     )
 

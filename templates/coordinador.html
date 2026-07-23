@@ -821,6 +821,136 @@ main{max-width:1200px;margin:0 auto;padding:24px 20px}
   </div>
 </div>
 
+<!-- ── PANEL: CASOS LÍMITE (65-69 pts) ───────────────────────────────────── -->
+<div class="panel" id="casos-limite" style="margin-top:16px;scroll-margin-top:80px">
+  <div class="panel-head">
+    <span class="panel-title">
+      <i class="fas fa-exclamation-circle" style="color:#f59e0b;margin-right:7px"></i>
+      Casos Límite — Revisión Humana Requerida
+    </span>
+    <span style="font-size:11px;color:var(--muted)">Materias entre 65–69 pts (a 5 pts del umbral MINERD 70)</span>
+  </div>
+  <div style="padding:20px">
+
+    <div style="background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.25);border-radius:8px;padding:11px 15px;margin-bottom:16px;font-size:12px;color:var(--text);line-height:1.6">
+      <strong style="color:#d97706"><i class="fas fa-info-circle"></i> ¿Qué es un caso límite?</strong>
+      Un estudiante tiene al menos una materia con promedio entre <strong>65 y 69</strong> puntos —
+      dentro de los 5 puntos del umbral mínimo de 70 (Ordenanza 04-2023).
+      El motor de reglas ya calculó un resultado, pero estos casos requieren revisión del comité docente antes de finalizar.
+    </div>
+
+    <!-- Filtros -->
+    <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px">
+      <div>
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px">Año escolar</label>
+        <input id="cl-anio" type="text" value="2025-2026"
+               style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:7px 11px;font-size:12px;width:120px">
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px">Grado (opcional)</label>
+        <select id="cl-grado" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:7px 11px;font-size:12px">
+          <option value="">Todos</option>
+          <option>1RO</option><option>2DO</option><option>3RO</option>
+          <option>4TO</option><option>5TO</option><option>6TO</option>
+        </select>
+      </div>
+      <button onclick="clCargar()"
+              style="background:var(--accent);color:#fff;border:none;border-radius:7px;padding:8px 18px;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:1px">
+        <i class="fas fa-search"></i> Buscar
+      </button>
+    </div>
+
+    <!-- Tabla resultados -->
+    <div id="cl-empty" style="font-size:12px;color:var(--muted);padding:16px 0">
+      Haz clic en "Buscar" para cargar los casos límite del año escolar.
+    </div>
+    <div id="cl-wrap" style="display:none;overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:12px" id="cl-tabla">
+        <thead>
+          <tr style="border-bottom:1px solid var(--border)">
+            <th style="padding:7px 10px;text-align:left;font-size:11px;color:var(--muted)">Estudiante</th>
+            <th style="padding:7px 10px;text-align:left;font-size:11px;color:var(--muted)">Grado</th>
+            <th style="padding:7px 10px;text-align:left;font-size:11px;color:var(--muted)">Materias límite</th>
+            <th style="padding:7px 10px;text-align:center;font-size:11px;color:var(--muted)">Estado motor</th>
+            <th style="padding:7px 10px;text-align:center;font-size:11px;color:var(--muted)">Acción</th>
+          </tr>
+        </thead>
+        <tbody id="cl-tbody"></tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── PANEL: NARRATIVA IA (Groq — solo explica) ─────────────────────────── -->
+<div class="panel" id="narrativa-ia" style="margin-top:16px;scroll-margin-top:80px">
+  <div class="panel-head">
+    <span class="panel-title">
+      <i class="fas fa-comment-dots" style="color:#a78bfa;margin-right:7px"></i>
+      Explicación Narrativa IA (Groq)
+    </span>
+    <span style="font-size:11px;color:var(--muted)">La IA explica el resultado del motor de reglas — nunca decide</span>
+  </div>
+  <div style="padding:20px">
+
+    <div style="background:rgba(167,139,250,.07);border:1px solid rgba(167,139,250,.25);border-radius:8px;padding:11px 15px;margin-bottom:18px;font-size:12px;color:var(--text);line-height:1.6">
+      <strong style="color:#7c3aed"><i class="fas fa-robot"></i> Principio de diseño:</strong>
+      Groq (LLaMA) <strong>nunca decide</strong> una promoción. El motor determinístico (Python puro, Ordenanza 04-2023) ya calculó el resultado.
+      Groq solo redacta una explicación en lenguaje natural para padres o para el comité docente.
+    </div>
+
+    <!-- Formulario -->
+    <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:16px">
+      <div>
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px">ID del estudiante</label>
+        <input id="nar-est-id" type="number" placeholder="ej: 147"
+               style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:7px 11px;font-size:13px;width:110px">
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px">Año escolar</label>
+        <input id="nar-anio" type="text" value="2025-2026"
+               style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:7px 11px;font-size:12px;width:120px">
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px">Destinatario</label>
+        <select id="nar-dest" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:7px 11px;font-size:12px">
+          <option value="padres">Padres/Tutores</option>
+          <option value="comite">Comité docente</option>
+        </select>
+      </div>
+      <button onclick="narGenerar()" id="nar-btn"
+              style="background:#a78bfa;color:#fff;border:none;border-radius:7px;padding:8px 20px;font-size:13px;font-weight:700;cursor:pointer">
+        <i class="fas fa-magic"></i> Generar narrativa
+      </button>
+    </div>
+
+    <!-- Resultado -->
+    <div id="nar-empty" style="font-size:12px;color:var(--muted);padding:8px 0">
+      Ingresa el ID del estudiante y haz clic en "Generar narrativa".
+    </div>
+    <div id="nar-result" style="display:none">
+      <!-- Contexto determinístico -->
+      <div id="nar-motor-ctx" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 15px;margin-bottom:12px;font-size:12px;color:var(--text)"></div>
+      <!-- Texto generado -->
+      <div style="background:rgba(167,139,250,.05);border:1px solid rgba(167,139,250,.25);border-radius:8px;padding:14px 16px">
+        <div style="font-size:10px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">
+          <i class="fas fa-robot"></i> Narrativa generada por Groq LLaMA — solo explicación, sin veredicto
+        </div>
+        <div id="nar-texto" style="font-size:13px;color:var(--text);line-height:1.75;white-space:pre-wrap"></div>
+      </div>
+      <!-- Acciones -->
+      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+        <button onclick="narCopiar()"
+                style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:6px 14px;font-size:12px;cursor:pointer">
+          <i class="fas fa-copy"></i> Copiar texto
+        </button>
+        <span id="nar-copy-ok" style="font-size:12px;color:#22c55e;display:none;align-self:center">✓ Copiado</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
 </main>
 
 <script>
@@ -2063,6 +2193,146 @@ function recEjecutar(estId, anio) {
     }
   })
   .catch(function(e) { status.textContent = 'Error: ' + e.message; });
+}
+
+// ── Casos Límite ──────────────────────────────────────────────────────────────
+
+function clCargar() {
+  var anio  = (document.getElementById('cl-anio').value || '').trim() || '2025-2026';
+  var grado = (document.getElementById('cl-grado').value || '').trim();
+  var emptyEl = document.getElementById('cl-empty');
+  var wrapEl  = document.getElementById('cl-wrap');
+  var tbody   = document.getElementById('cl-tbody');
+
+  emptyEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cargando casos límite...';
+  emptyEl.style.display = 'block';
+  wrapEl.style.display  = 'none';
+
+  var url = '/api/promocion/casos-limite?anio_escolar=' + encodeURIComponent(anio);
+  if (grado) url += '&grado=' + encodeURIComponent(grado);
+
+  fetch(url)
+    .then(function(r){ return r.json(); })
+    .then(function(d) {
+      if (d.error) { emptyEl.textContent = 'Error: ' + d.error; return; }
+      var lista = d.data || d.casos || [];
+      if (!lista.length) {
+        emptyEl.textContent = 'Sin casos límite para ' + anio + (grado ? ' · ' + grado : '') + '. ¡Bien!';
+        return;
+      }
+
+      tbody.innerHTML = lista.map(function(c) {
+        var mats = (c.mats_caso_limite || []).map(function(m) {
+          return '<span style="display:inline-block;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.35);border-radius:4px;padding:1px 7px;margin:1px;font-size:11px;white-space:nowrap">' +
+            m.materia + ' <strong>' + m.promedio + '</strong></span>';
+        }).join('');
+
+        var estadoColor = c.estado === 'PROMOVIDO' ? '#22c55e'
+                        : c.estado === 'RECUPERACION' ? '#f59e0b' : '#ef4444';
+
+        return '<tr style="border-bottom:1px solid var(--border)">' +
+          '<td style="padding:8px 10px"><a href="/estudiante/' + c.estudiante_id + '" target="_blank" style="color:var(--accent);text-decoration:none;font-weight:600">' + (c.nombre || 'ID ' + c.estudiante_id) + '</a></td>' +
+          '<td style="padding:8px 10px;color:var(--muted)">' + (c.grado || '—') + '</td>' +
+          '<td style="padding:8px 10px">' + mats + '</td>' +
+          '<td style="padding:8px 10px;text-align:center"><span style="color:' + estadoColor + ';font-weight:700;font-size:11px">' + (c.estado || '—') + '</span></td>' +
+          '<td style="padding:8px 10px;text-align:center">' +
+            '<button onclick="narAbrirDesde(' + c.estudiante_id + ')" ' +
+              'style="background:rgba(167,139,250,.15);border:1px solid rgba(167,139,250,.35);color:#7c3aed;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;white-space:nowrap">' +
+              '<i class="fas fa-comment-dots"></i> Narrativa IA</button>' +
+          '</td>' +
+          '</tr>';
+      }).join('');
+
+      emptyEl.style.display = 'none';
+      wrapEl.style.display  = 'block';
+    })
+    .catch(function(e) { emptyEl.textContent = 'Error: ' + e.message; });
+}
+
+// ── Narrativa IA ─────────────────────────────────────────────────────────────
+
+function narAbrirDesde(estId) {
+  document.getElementById('nar-est-id').value = estId;
+  var el = document.getElementById('narrativa-ia');
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function narGenerar() {
+  var estId = parseInt(document.getElementById('nar-est-id').value || '0', 10);
+  var anio  = (document.getElementById('nar-anio').value || '').trim() || '2025-2026';
+  var dest  = document.getElementById('nar-dest').value || 'padres';
+
+  if (!estId) { alert('Ingresa el ID del estudiante'); return; }
+
+  var btn     = document.getElementById('nar-btn');
+  var emptyEl = document.getElementById('nar-empty');
+  var resEl   = document.getElementById('nar-result');
+  var ctxEl   = document.getElementById('nar-motor-ctx');
+  var textoEl = document.getElementById('nar-texto');
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando...';
+  emptyEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Consultando motor de reglas y Groq...';
+  emptyEl.style.display = 'block';
+  resEl.style.display   = 'none';
+
+  fetch('/api/promocion/narrativa/' + estId, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': (typeof T !== 'undefined' ? T : '') },
+    body: JSON.stringify({ anio_escolar: anio, destinatario: dest })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d) {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-magic"></i> Generar narrativa';
+
+    if (d.error) {
+      emptyEl.textContent = 'Error: ' + d.error;
+      return;
+    }
+
+    // Contexto determinístico (lo que el motor calculó, no la IA)
+    var estado = d.estado || '—';
+    var estadoColor = estado === 'PROMOVIDO' ? '#22c55e'
+                    : estado === 'RECUPERACION' ? '#f59e0b' : '#ef4444';
+    ctxEl.innerHTML =
+      '<strong>Resultado del motor (determinístico):</strong> ' +
+      '<span style="color:' + estadoColor + ';font-weight:700">' + estado + '</span>' +
+      (d.caso_limite
+        ? ' &nbsp;·&nbsp; <span style="color:#d97706"><i class="fas fa-exclamation-triangle"></i> Caso límite</span>'
+        : '') +
+      (d.requiere_revision_humana
+        ? ' &nbsp;·&nbsp; <span style="color:#a78bfa"><i class="fas fa-user-check"></i> Requiere revisión</span>'
+        : '') +
+      '<br><span style="font-size:11px;color:var(--muted)">Criterios: Ord. 04-2023 MINERD · mínimo 70 pts · asistencia ≥80%</span>';
+
+    textoEl.textContent = d.narrativa || '';
+    emptyEl.style.display = 'none';
+    resEl.style.display   = 'block';
+  })
+  .catch(function(e) {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-magic"></i> Generar narrativa';
+    emptyEl.textContent = 'Error de red: ' + e.message;
+  });
+}
+
+function narCopiar() {
+  var texto = (document.getElementById('nar-texto').textContent || '').trim();
+  if (!texto) return;
+  navigator.clipboard.writeText(texto).then(function() {
+    var ok = document.getElementById('nar-copy-ok');
+    ok.style.display = 'inline';
+    setTimeout(function(){ ok.style.display = 'none'; }, 2000);
+  }).catch(function() {
+    // fallback para navegadores sin clipboard API
+    var ta = document.createElement('textarea');
+    ta.value = texto;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  });
 }
 
 </script>

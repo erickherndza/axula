@@ -441,6 +441,174 @@ def guardar_recuperacion(est_id: int):
     return jsonify({"ok": True, "guardadas": guardadas})
 
 
+# ── Narrativa IA (Groq) — SOLO EXPLICA, NUNCA DECIDE ────────────────────────
+
+@promocion_bp.route("/narrativa/<int:est_id>", methods=["POST"])
+@login_required
+@coord_required
+def generar_narrativa(est_id: int):
+    """
+    POST /api/promocion/narrativa/123
+    Body JSON: { "anio_escolar": "2025-2026", "destinatario": "padres|comite" }
+
+    La IA (Groq/LLaMA) SOLO narra y explica el resultado del motor de reglas.
+    NUNCA emite un veredicto — el resultado ya fue calculado determinísticamente.
+
+    Flujo (sistemanotas.md §5):
+      motor de reglas → resultado fijo → Groq redacta explicación → se guarda en BD
+    """
+    import sqlite3 as _sqlite3
+    from core.constants import DATABASE
+    from core.ia import _get_groq_client, _sanitizar_campo
+
+    d           = request.get_json(silent=True) or {}
+    anio        = (d.get("anio_escolar") or _anio_param()).strip()
+    destinatario = (d.get("destinatario") or "padres").strip().lower()
+
+    db = get_db()
+
+    # 1. Obtener resultado determinístico del motor
+    ev = evaluar_estudiante(db, est_id, anio)
+    if "error" in ev:
+        return jsonify({"ok": False, "error": ev["error"]}), 404
+
+    # 2. Construir contexto para el prompt
+    nombre_completo = f"{ev.get('nombre','')} {ev.get('apellido','')}".strip()
+    grado       = ev.get("grado", "")
+    estado      = ev.get("estado", "")
+    razon       = ev.get("razon", "")
+    mats_repr   = ev.get("mats_recuperacion", [])
+    mats_limite = ev.get("mats_caso_limite", [])
+    tiene_perfil = ev.get("perfil_inclusivo") is not None
+
+    # Tabla de materias (sanitizada)
+    detalle_txt = ""
+    for m in ev.get("detalle_materias", [])[:20]:  # máx 20 materias en el prompt
+        nota = m.get("nota_final_efectiva")
+        nota_str = f"{nota:.1f}" if nota is not None else "pendiente"
+        detalle_txt += f"  • {_sanitizar_campo(m['materia'],60)}: {nota_str} pts — {m['estado_materia']}\n"
+
+    ESTADO_LABELS = {
+        "PROMOVIDO":     "PROMOVIDO AL SIGUIENTE GRADO",
+        "RECUPERACION":  "EN RECUPERACIÓN PEDAGÓGICA (pendiente prueba extraordinaria de agosto)",
+        "NO_PROMOVIDO":  "NO PROMOVIDO — REPITE EL GRADO",
+        "PENDIENTE":     "PENDIENTE (faltan datos o completivas)",
+    }
+    estado_label = ESTADO_LABELS.get(estado, estado)
+
+    if destinatario == "comite":
+        prompt_texto = (
+            f"Estudiante: {nombre_completo} | Grado: {grado} | Año escolar: {anio}\n"
+            f"DECISIÓN DEL MOTOR DE REGLAS: {estado_label}\n"
+            f"Razón del motor: {razon}\n"
+            + (f"Materias en zona límite (65-69 pts): {', '.join(mats_limite)}\n" if mats_limite else "")
+            + (f"Tiene perfil inclusivo/NEAE activo: SÍ\n" if tiene_perfil else "")
+            + f"\nDetalle por materia:\n{detalle_txt}\n"
+            "---\n"
+            "Redacta un resumen ejecutivo para el COMITÉ DOCENTE de revisión. "
+            "Incluye: contexto del caso, materias en zona gris, factores de riesgo relevantes, "
+            "y preguntas concretas que el comité debe responder. "
+            "Máximo 250 palabras. No emitas veredicto ni sugieras cambiar la decisión del motor."
+        )
+    else:
+        prompt_texto = (
+            f"Estudiante: {nombre_completo} | Grado: {grado} | Año escolar: {anio}\n"
+            f"RESULTADO OFICIAL DEL SISTEMA: {estado_label}\n"
+            + (f"Materias que requieren recuperación: {', '.join(mats_repr)}\n" if mats_repr else "")
+            + f"\nDetalle de calificaciones:\n{detalle_txt}\n"
+            "---\n"
+            "Redacta una explicación clara y respetuosa para los PADRES/TUTORES del estudiante. "
+            "Usa lenguaje sencillo (sin tecnicismos). Explica qué significa el resultado, "
+            "qué sigue (próximos pasos), y cómo pueden apoyar al estudiante en casa. "
+            "Cita el criterio aplicado (Ordenanza 04-2023 MINERD, mínimo 70 puntos). "
+            "Máximo 200 palabras. NO cambies ni cuestiones el resultado del sistema."
+        )
+
+    # 3. Llamar a Groq
+    try:
+        client = _get_groq_client()
+        completion = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "Eres el orientador pedagógico del Centro Educativo en Artes Benito Juárez (República Dominicana). "
+                        "Tu único rol es REDACTAR explicaciones de decisiones ya tomadas por el sistema de evaluación. "
+                        "NUNCA cambias ni cuestionas el resultado — solo lo explicas en lenguaje humano. "
+                        "Siempre escribes en español dominicano formal."
+                    ),
+                },
+                {"role": "user", "content": prompt_texto},
+            ],
+            temperature=0.4,
+            max_tokens=400,
+        )
+        narrativa = completion.choices[0].message.content.strip()
+    except Exception as ex:
+        log.error(f"[narrativa_ia] Groq error: {ex}")
+        return jsonify({"ok": False, "error": f"Error al generar la narrativa: {ex}"}), 502
+
+    # 4. Guardar en promociones.explicacion_ia (si ya existe el registro)
+    try:
+        with _sqlite3.connect(DATABASE, timeout=10) as _c:
+            _c.execute(
+                """UPDATE promociones
+                   SET explicacion_ia = ?
+                   WHERE estudiante_id = ? AND anio_escolar = ?""",
+                (narrativa, est_id, anio)
+            )
+            _c.commit()
+    except Exception:
+        pass
+
+    return jsonify({
+        "ok":          True,
+        "narrativa":   narrativa,
+        "estado":      estado,
+        "destinatario": destinatario,
+        "caso_limite": ev.get("caso_limite", False),
+        "requiere_revision_humana": ev.get("requiere_revision_humana", False),
+    })
+
+
+# ── Lista de casos límite para revisión ─────────────────────────────────────
+
+@promocion_bp.route("/casos-limite")
+@login_required
+@coord_required
+def casos_limite():
+    """
+    GET /api/promocion/casos-limite?anio_escolar=2025-2026&grado=4TO
+
+    Retorna estudiantes marcados como caso_limite=1 en tabla promociones.
+    Estos son candidatos a revisión por el comité docente.
+    """
+    anio  = _anio_param()
+    grado = _norm_grado(request.args.get("grado", ""))
+
+    db = get_db()
+    where = "WHERE p.anio_escolar=? AND p.caso_limite=1"
+    params: list = [anio]
+    if grado:
+        where += " AND UPPER(p.grado_origen)=?"
+        params.append(grado)
+
+    rows = db.execute(f"""
+        SELECT p.*, e.nombre, e.apellido, e.seccion, e.curso, e.grado
+        FROM   promociones p
+        JOIN   estudiantes e ON e.id = p.estudiante_id
+        {where}
+        ORDER  BY e.grado, e.apellido, e.nombre
+    """, params).fetchall()
+
+    return jsonify({
+        "ok":    True,
+        "total": len(rows),
+        "data":  [dict(r) for r in rows],
+    })
+
+
 # ── Récord de Notas ───────────────────────────────────────────────────────────
 
 @promocion_bp.route("/record-notas/<int:est_id>")

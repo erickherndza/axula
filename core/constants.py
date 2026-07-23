@@ -1043,6 +1043,43 @@ CREATE TABLE IF NOT EXISTS notas_competencias_ce (
         activa            INTEGER DEFAULT 1
     )
     """,
+    # ── Criterios de promoción versionados por ordenanza ─────────────────────
+    """
+    CREATE TABLE IF NOT EXISTS criterios_promocion (
+        id                          INTEGER PRIMARY KEY AUTOINCREMENT,
+        ordenanza                   TEXT    NOT NULL DEFAULT '04-2023',
+        nivel                       TEXT    NOT NULL,   -- primario | secundario_academico | secundario_tecnico | adultos | especial
+        grado                       TEXT    DEFAULT '', -- '' = aplica a todo el nivel
+        nota_minima                 INTEGER NOT NULL DEFAULT 70,
+        max_areas_aplazado          INTEGER DEFAULT 2,  -- hasta X reprobadas → recuperación
+        max_areas_reprueba          INTEGER DEFAULT 4,  -- X o más → repite grado
+        asistencia_minima_pct       INTEGER DEFAULT 80, -- % mínimo para no reprobar por asistencia
+        umbral_caso_limite_inferior INTEGER DEFAULT 65, -- nota entre este y nota_minima → caso límite
+        vigente_desde               TEXT    DEFAULT '2023-2024',
+        vigente_hasta               TEXT    DEFAULT '',
+        activo                      INTEGER DEFAULT 1,
+        notas_contexto              TEXT    DEFAULT '' -- observaciones de aplicación
+    )
+    """,
+    # ── Perfil inclusivo (TDAH / TEA / NEAE) ─────────────────────────────────
+    """
+    CREATE TABLE IF NOT EXISTS estudiante_perfil_inclusivo (
+        id                          INTEGER PRIMARY KEY AUTOINCREMENT,
+        estudiante_id               INTEGER NOT NULL REFERENCES estudiantes(id) ON DELETE CASCADE,
+        perfil                      TEXT    NOT NULL DEFAULT 'neae', -- tdah | tea | neae | otro
+        diagnostico                 TEXT    DEFAULT '',
+        fecha_diagnostico           TEXT    DEFAULT '',
+        tiene_plan_adaptacion       INTEGER DEFAULT 0,
+        plan_adaptacion_json        TEXT    DEFAULT '{}', -- criterios diferenciados en JSON
+        nota_minima_diferenciada    INTEGER DEFAULT NULL, -- si NULL, usa el estándar del nivel
+        asistencia_minima_diferenciada INTEGER DEFAULT NULL,
+        observaciones               TEXT    DEFAULT '',
+        registrado_por              INTEGER REFERENCES usuarios(id),
+        creado_en                   TEXT    DEFAULT (datetime('now')),
+        actualizado_en              TEXT    DEFAULT (datetime('now')),
+        activo                      INTEGER DEFAULT 1
+    )
+    """,
 ]
 
 
@@ -1170,6 +1207,16 @@ MIGRACIONES_ESPECIALES = [
     ("Agregar anio_escolar_activo a configuracion_centro",
      "ALTER TABLE configuracion_centro ADD COLUMN anio_escolar_activo TEXT",
      "anio_escolar_activo", "configuracion_centro"),
+    # ── Motor promoción — narrativa IA y casos límite ─────────────────────────
+    ("Agregar explicacion_ia a promociones",
+     "ALTER TABLE promociones ADD COLUMN explicacion_ia TEXT",
+     "explicacion_ia", "promociones"),
+    ("Agregar requiere_revision_humana a promociones",
+     "ALTER TABLE promociones ADD COLUMN requiere_revision_humana INTEGER DEFAULT 0",
+     "requiere_revision_humana", "promociones"),
+    ("Agregar caso_limite a promociones",
+     "ALTER TABLE promociones ADD COLUMN caso_limite INTEGER DEFAULT 0",
+     "caso_limite", "promociones"),
     # ← AGREGA MIGRACIONES PUNTUALES AQUÍ
 ]
 

@@ -387,6 +387,53 @@ def migrar_bd():
     except Exception as _e:
         logger.warning(f"[db] seed CE Lenguaje Visual: {_e}")
 
+    # Seed: criterios de promoción Ordenanza 04-2023 MINERD
+    try:
+        with sqlite3.connect(DATABASE, timeout=10) as _c:
+            n_crit = _c.execute("SELECT COUNT(*) FROM criterios_promocion").fetchone()[0]
+            if n_crit == 0:
+                _criterios = [
+                    # Ordenanza 04-2023 — Nivel Primario (1RO–8VO)
+                    # umbral 70 pts, 80% asistencia mínima confirmados por 04-2023.
+                    # max_areas_aplazado/reprueba: pendiente confirmar con dirección CBJ;
+                    # se mantiene estructura de 1'96 (2 → aplazado, 4 → reprueba) como
+                    # valor provisional hasta validación oficial.
+                    ("04-2023", "primario", "", 70, 2, 4, 80, 65,
+                     "2023-2024", "",
+                     "Umbral 70/80% confirmados (04-2023 Art.XX). "
+                     "max_areas_aplazado/reprueba PENDIENTE CONFIRMAR con dirección CBJ."),
+                    # Ordenanza 04-2023 — Nivel Secundario Modalidad Académica (1RO–6TO)
+                    # Umbral 70 confirmado. Estructura completiva 6TO según Ord. 1-2016.
+                    # max_areas estructural de 1'96 no actualizado explícitamente en 04-2023.
+                    ("04-2023", "secundario_academico", "", 70, 2, 4, 80, 65,
+                     "2023-2024", "",
+                     "Umbral 70/80% confirmados (04-2023). "
+                     "Completiva 6TO según Ord. 1-2016 (80/20). "
+                     "max_areas_aplazado/reprueba PENDIENTE CONFIRMAR con dirección CBJ."),
+                    # Ordenanza 1'96 — Modalidad Técnico-Profesional (referencia histórica)
+                    ("1'96", "secundario_tecnico", "", 65, 3, 4, 80, 60,
+                     "1996-1997", "2022-2023",
+                     "Art. 81–85 Ord. 1'96. nota_min=65 para práctica. "
+                     "Revisar si la 04-2023 actualizó este régimen."),
+                    # Ordenanza 1'96 — Educación de Adultos (referencia histórica)
+                    ("1'96", "adultos", "", 65, 3, 4, 75, 60,
+                     "1996-1997", "",
+                     "Art. 102–106 Ord. 1'96. Confirmar si Ord. 04-2024 aplica."),
+                ]
+                for row in _criterios:
+                    _c.execute("""
+                        INSERT INTO criterios_promocion
+                          (ordenanza, nivel, grado, nota_minima, max_areas_aplazado,
+                           max_areas_reprueba, asistencia_minima_pct,
+                           umbral_caso_limite_inferior, vigente_desde, vigente_hasta,
+                           notas_contexto)
+                        VALUES (?,?,?,?,?,?,?,?,?,?,?)
+                    """, row)
+                _c.commit()
+                logger.info("  ✓ criterios_promocion sembrados (Ord. 04-2023 + historial)")
+    except Exception as _e:
+        logger.warning(f"[db] seed criterios_promocion: {_e}")
+
 
 def _seed_admin(hash_func):
     """
