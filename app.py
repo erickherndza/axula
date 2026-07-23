@@ -190,13 +190,31 @@ def security_headers(response):
             response.cache_control.public = True
     return response
 
+_ultima_limpieza_tareas: float = 0.0  # timestamp Unix de la última limpieza
+
 @app.before_request
 def respaldo_diario():
-    """Dispara respaldo automático de la DB una vez por día (primer request del día)."""
+    """Dispara respaldo automático de la DB y limpieza de tareas periódicamente."""
+    global _ultima_limpieza_tareas
     # Solo en GET para no bloquear escrituras
     if request.method != "GET" or request.path.startswith("/static/"):
         return
-    # Chequear si ya se hizo el respaldo hoy ANTES de crear el hilo
+
+    import time as _time
+
+    # Limpieza de tareas expiradas — cada hora como máximo
+    _ahora = _time.time()
+    if _ahora - _ultima_limpieza_tareas > 3600:
+        _ultima_limpieza_tareas = _ahora
+        try:
+            from core.tasks import limpiar_tareas_viejas
+            n = limpiar_tareas_viejas()
+            if n:
+                logger.info("[TASKS] %d tarea(s) expirada(s) eliminada(s)", n)
+        except Exception:
+            pass  # nunca bloquear un request por limpieza
+
+    # Respaldo diario
     from core.backup import _ultimo_respaldo
     from datetime import date as _d
     hoy = _d.today().isoformat()
