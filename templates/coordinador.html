@@ -672,6 +672,15 @@ main{max-width:1200px;margin:0 auto;padding:24px 20px}
       </button>
     </div>
 
+    <!-- Nota: acceso a datos del año cerrado -->
+    <div style="background:rgba(96,184,240,.07);border:1px solid rgba(96,184,240,.25);border-radius:8px;padding:11px 15px;margin-bottom:14px;font-size:12px;color:var(--text);line-height:1.6">
+      <strong style="color:#60b8f0"><i class="fas fa-info-circle"></i> Después del cierre:</strong>
+      Las notas del año 2025-2026 quedan guardadas permanentemente en la base de datos.
+      Si la directora o el coordinador necesita corregir o cargar notas del año cerrado,
+      puede usar la opción de abajo <em>"Solo cambiar año activo"</em> para volver temporalmente
+      a ese año, hacer las correcciones, y luego regresar al año nuevo.
+    </div>
+
     <!-- También: cambiar año sin promover -->
     <details style="margin-top:8px">
       <summary style="font-size:12px;color:var(--muted);cursor:pointer;user-select:none">
@@ -1763,11 +1772,24 @@ function compInicializar() {
   fetch('/api/config/anio-escolar-activo')
     .then(function(r){ return r.json(); })
     .then(function(d) {
+      var anioActualVal = (d.anio_escolar_activo || '').trim();
       var el = document.getElementById('cierre-anio-actual');
-      if (el) el.textContent = d.anio_escolar_activo || '—';
-      // Cargar 3ERO pendientes de mención usando el año que acaba de cargar
-      var anioVal = (d.anio_escolar_activo || '').trim();
-      _cierreCargarPendientesMencion(anioVal);
+      if (el) el.textContent = anioActualVal || '—';
+
+      // Pre-rellenar "Nuevo año" con el año SIGUIENTE si el campo está vacío o igual al actual
+      var inputNuevo = document.getElementById('cierre-nuevo-anio');
+      if (inputNuevo && anioActualVal && anioActualVal !== '—') {
+        var partes = anioActualVal.split('-');
+        var finActual = parseInt(partes[1] || partes[0], 10);
+        var sugerido = finActual + '-' + (finActual + 1);
+        // Siempre poner el siguiente año si el campo está en blanco o muestra el año actual
+        if (!inputNuevo.value || inputNuevo.value === anioActualVal) {
+          inputNuevo.value = sugerido;
+        }
+      }
+
+      // Cargar 3ERO pendientes de mención
+      _cierreCargarPendientesMencion(anioActualVal);
     })
     .catch(function(){});
 })();
