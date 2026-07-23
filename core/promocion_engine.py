@@ -409,9 +409,6 @@ def evaluar_estudiante(
     }
 
 
-PROM_RETIRADO = "RETIRADO"
-
-
 def evaluar_grado(
     db,
     grado: str,
@@ -419,55 +416,26 @@ def evaluar_grado(
     solo_activos: bool = True,
 ) -> list[dict]:
     """
-    Evalúa a todos los estudiantes de un grado.
-    Incluye estudiantes RETIRADOS como fila informativa (estado='RETIRADO'),
-    sin evaluarlos académicamente.
+    Evalúa a todos los estudiantes ACTIVOS de un grado.
+    Los estudiantes RETIRADOS se excluyen del listado — sus datos permanecen
+    en la BD pero no participan en el proceso de promoción.
     Añade ya_procesado y estado_previo a cada resultado.
     """
     grado_norm = _norm_grado(grado)
+    # Solo ACTIVOS — retirados quedan excluidos del listado de promoción
+    cond = "condicion = 'ACTIVO' AND " if solo_activos else ""
 
-    # Traer TODOS — los RETIRADOS se muestran pero no se evalúan
-    todos = db.execute(
-        """
-        SELECT id, condicion, nombre, apellido, seccion, mencion
-        FROM   estudiantes
-        WHERE  UPPER(TRIM(grado)) = ?
+    estudiantes = db.execute(
+        f"""
+        SELECT id FROM estudiantes
+        WHERE  {cond}UPPER(TRIM(grado)) = ?
         ORDER  BY apellido, nombre
         """,
         (grado_norm,),
     ).fetchall()
 
     resultados = []
-    info_grado = clasificar_grado(grado_norm)
-
-    for est in todos:
-        condicion = (est["condicion"] or "").upper()
-
-        if condicion not in ("ACTIVO", ""):
-            # RETIRADO u otra condición inactiva — se muestra pero no se evalúa
-            resultados.append({
-                "est_id":           est["id"],
-                "nombre":           est["nombre"],
-                "apellido":         est["apellido"],
-                "seccion":          est["seccion"] or "-",
-                "mencion":          est["mencion"] or "-",
-                "grado":            grado_norm,
-                "ciclo":            info_grado["ciclo"],
-                "tiene_completiva": False,
-                "siguiente_grado":  None,
-                "estado":           PROM_RETIRADO,
-                "mats_total":       0,
-                "mats_aprobadas":   0,
-                "mats_reprobadas":  0,
-                "mats_pendientes":  0,
-                "mats_recuperacion": [],
-                "detalle_materias": [],
-                "razon":            f"Condición: {condicion}",
-                "ya_procesado":     False,
-                "estado_previo":    None,
-            })
-            continue
-
+    for est in estudiantes:
         res = evaluar_estudiante(db, est["id"], anio_escolar)
 
         # Verificar si ya fue procesado este año
@@ -485,20 +453,40 @@ def evaluar_grado(
 
 def resumen_grado(resultados: list[dict]) -> dict:
     """Agrega conteos de evaluar_grado() — función pura."""
-    conteo = {
-        PROM_PROMOVIDO: 0, PROM_RECUPERACION: 0,
-        PROM_NO_PROMOVIDO: 0, PROM_PENDIENTE: 0, PROM_RETIRADO: 0,
-    }
+    conteo = {PROM_PROMOVIDO: 0, PROM_RECUPERACION: 0, PROM_NO_PROMOVIDO: 0, PROM_PENDIENTE: 0}
     for r in resultados:
         estado = r.get("estado", PROM_PENDIENTE)
         conteo[estado] = conteo.get(estado, 0) + 1
+
+    # Determinar etapa del flujo de promoción
+    # Etapa 1: hay pendientes → el año aún no completó los 4 períodos
+    # Etapa 2: sin pendientes, hay promovidos/recuperacion sin procesar → listo para ejecutar
+    # Etapa 3: promovidos ejecutados, quedan recuperacion por extraordinario
+    # Etapa 4: todo procesado
+    total      = len(resultados)
+    pendientes = conteo[PROM_PENDIENTE]
+    ya_proc    = sum(1 for r in resultados if r.get("ya_procesado"))
+    recuperacion_sin_proc = sum(
+        1 for r in resultados
+        if r.get("estado") == PROM_RECUPERACION and not r.get("ya_procesado")
+    )
+
+    if pendientes > 0:
+        etapa = 1  # Año incompleto
+    elif ya_proc == 0:
+        etapa = 2  # Año completo, listo para ejecutar primera ronda
+    elif recuperacion_sin_proc > 0:
+        etapa = 3  # Promovidos ejecutados, quedan en recuperación
+    else:
+        etapa = 4  # Proceso finalizado
+
     return {
         "promovidos":    conteo[PROM_PROMOVIDO],
         "recuperacion":  conteo[PROM_RECUPERACION],
         "no_promovidos": conteo[PROM_NO_PROMOVIDO],
-        "pendientes":    conteo[PROM_PENDIENTE],
-        "retirados":     conteo[PROM_RETIRADO],
-        "total":         len(resultados),
+        "pendientes":    pendientes,
+        "total":         total,
+        "etapa":         etapa,
     }
 
 
