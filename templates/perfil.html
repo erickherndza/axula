@@ -1383,16 +1383,36 @@
                 Evaluación por Competencias
             </h2>
             <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-                <!-- Botón promoción -->
+                <!-- Botón promoción — label refleja el resultado del motor -->
+                {% set _grado_up = (e.grado or '').upper() %}
+                {% set _sig_map  = {'1ERO':'2DO','2DO':'3RO','3RO':'4TO','3ERO':'4TO','4TO':'5TO','5TO':'6TO'} %}
+                {% set _sig      = _sig_map.get(_grado_up, '?') %}
+                {% set _rm_est   = (resultado_motor or {}).get('estado','') %}
+                {% if _rm_est == 'NO_PROMOVIDO' %}
+                  {% set _btn_label = 'Registrar Repitiente — ' + _grado_up %}
+                  {% set _btn_style = 'background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.4);color:#ef4444;' %}
+                  {% set _btn_icon  = 'fa-rotate-left' %}
+                {% elif _rm_est == 'RECUPERACION' %}
+                  {% set _btn_label = 'Registrar Recuperación → ' + _sig %}
+                  {% set _btn_style = 'background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.4);color:#f59e0b;' %}
+                  {% set _btn_icon  = 'fa-clock-rotate-left' %}
+                {% elif _rm_est == 'PROMOVIDO' %}
+                  {% set _btn_label = ('Candidato a Pruebas Nacionales' if _grado_up == '6TO' else 'Promover a ' + _sig) %}
+                  {% set _btn_style = 'background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.4);color:#22c55e;' %}
+                  {% set _btn_icon  = 'fa-graduation-cap' %}
+                {% else %}
+                  {% set _btn_label = ('Candidato a Pruebas Nacionales' if _grado_up == '6TO' else 'Evaluar y Promover a ' + _sig) %}
+                  {% set _btn_style = 'background:transparent;border:1px solid var(--border);color:var(--text-muted);' %}
+                  {% set _btn_icon  = 'fa-graduation-cap' %}
+                {% endif %}
                 <div id="promo-container">
                     <button id="btn-promover" onclick="togglePromover()"
                         style="display:inline-flex; align-items:center; gap:8px;
-                               background:transparent; border:1px solid var(--border);
-                               color:var(--text-muted); padding:10px 16px; border-radius:10px;
+                               {{ _btn_style }} padding:10px 16px; border-radius:10px;
                                font-family:var(--font-display); font-weight:600; font-size:12px;
                                cursor:pointer; transition:all .2s;">
-                        <i class="fas fa-graduation-cap"></i>
-                        <span id="promo-label">{{ 'Candidato a Pruebas Nacionales' if (e.grado or '').upper() == '6TO' else 'Promover a ' + {'1ERO':'2DO','2DO':'3RO','3RO':'4TO','3ERO':'4TO','4TO':'5TO','5TO':'6TO'}.get((e.grado or '').upper(), '?') }}</span>
+                        <i class="fas {{ _btn_icon }}"></i>
+                        <span id="promo-label">{{ _btn_label }}</span>
                     </button>
                 </div>
                 {% if session.get('rol') in ['coordinador_general','coordinador_segundo_ciclo','directora','superusuario'] %}
