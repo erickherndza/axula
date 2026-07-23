@@ -18,6 +18,7 @@ from core.auth import (
     _csrf_token, _csrf_check,
 )
 from core.helpers import *
+from core.tasks import encolar_tarea, obtener_tarea, actualizar_progreso
 from core.helpers import _anio_escolar_actual, _periodo_actual, _audit, _nota_estado, _color_nota
 
 logger = logging.getLogger("axula")
@@ -972,43 +973,32 @@ def descargar_plantilla_notas():
     )
 
 
-@digitador_bp.route("/api/digitador/cargar-notas-listado", methods=["POST"])
-@login_required
-@_digitador_required
-def cargar_notas_listado():
+def _procesar_excel_notas(raw: bytes, anio_escolar: str, task_id: str) -> dict:
     """
-    Acepta el Excel de plantilla relleno (generado por /plantilla-notas)
-    o cualquier Excel con columnas: Nombre Completo | Materia | P1 | P2 | P3 | P4
-
-    Fuzzy-matching por nombre (threshold 0.82). Inserta/actualiza
-    materias_calificaciones y recalcula p_acad en estudiantes.
+    Función pura que corre en background thread.
+    NO usa Flask g ni get_db() — crea su propia conexión.
+    Retorna el dict de resultado que queda en la tarea.
     """
     import io, unicodedata, re
     from difflib import SequenceMatcher
-    try:
-        from openpyxl import load_workbook
-    except ImportError:
-        return jsonify({"ok": False, "error": "openpyxl no disponible"}), 500
+    from openpyxl import load_workbook
 
-    f = request.files.get("file")
-    if not f or not f.filename:
-        return jsonify({"ok": False, "error": "No se recibió archivo"}), 400
-    if not f.filename.lower().endswith((".xlsx", ".xls", ".xlsm")):
-        return jsonify({"ok": False, "error": "Formato no válido. Usa .xlsx"}), 400
-
-    raw = f.read()
-    try:
-        wb = load_workbook(io.BytesIO(raw), data_only=True)
-    except Exception as ex:
-        return jsonify({"ok": False, "error": f"No se pudo leer el Excel: {ex}"}), 400
-
-    ws = wb.active
-
-    # ── Detectar fila de encabezados ──────────────────────────────────────────
     def _norm(s):
         s = unicodedata.normalize("NFD", str(s or ""))
         s = "".join(c for c in s if unicodedata.category(c) != "Mn")
         return re.sub(r"\s+", " ", s).strip().lower()
+
+    def _fl(v):
+        try:
+            x = float(v)
+            return round(x, 1) if 0 < x <= 100 else None
+        except Exception:
+            return None
+
+    # ── 1. Parsear Excel ─────────────────────────────────────────────────────
+    actualizar_progreso(task_id, 5)
+    wb = load_workbook(io.BytesIO(raw), data_only=True)
+    ws = wb.active
 
     header_row = None
     col_id = col_nombre = col_materia = col_p1 = col_p2 = col_p3 = col_p4 = col_prom = None
@@ -1030,19 +1020,10 @@ def cargar_notas_listado():
             break
 
     if not header_row or not col_nombre or not col_materia:
-        return jsonify({
-            "ok": False,
-            "error": "No se encontraron columnas 'Nombre Completo' y 'Materia'. "
-                     "Verifica que el archivo tenga el formato correcto."
-        }), 400
-
-    # ── Leer filas ────────────────────────────────────────────────────────────
-    def _fl(v):
-        try:
-            x = float(v)
-            return round(x, 1) if 0 < x <= 100 else None
-        except Exception:
-            return None
+        raise ValueError(
+            "No se encontraron columnas 'Nombre Completo' y 'Materia'. "
+            "Verifica que el archivo tenga el formato correcto."
+        )
 
     filas = []
     for ri in range(header_row + 1, ws.max_row + 1):
@@ -1057,20 +1038,22 @@ def cargar_notas_listado():
             except Exception:
                 pass
         filas.append({
-            "nombre":       nombre,
-            "materia":      materia,
-            "p1":           _fl(ws.cell(ri, col_p1).value)  if col_p1  else None,
-            "p2":           _fl(ws.cell(ri, col_p2).value)  if col_p2  else None,
-            "p3":           _fl(ws.cell(ri, col_p3).value)  if col_p3  else None,
-            "p4":           _fl(ws.cell(ri, col_p4).value)  if col_p4  else None,
-            "promedio":     _fl(ws.cell(ri, col_prom).value) if col_prom else None,
-            "est_id_hint":  est_id_hint,
+            "nombre":      nombre,
+            "materia":     materia,
+            "p1":          _fl(ws.cell(ri, col_p1).value)   if col_p1   else None,
+            "p2":          _fl(ws.cell(ri, col_p2).value)   if col_p2   else None,
+            "p3":          _fl(ws.cell(ri, col_p3).value)   if col_p3   else None,
+            "p4":          _fl(ws.cell(ri, col_p4).value)   if col_p4   else None,
+            "promedio":    _fl(ws.cell(ri, col_prom).value) if col_prom else None,
+            "est_id_hint": est_id_hint,
         })
 
     if not filas:
-        return jsonify({"ok": False, "error": "El archivo no tiene filas de datos"}), 400
+        raise ValueError("El archivo no tiene filas de datos")
 
-    # ── Cargar estudiantes de BD para matching ────────────────────────────────
+    actualizar_progreso(task_id, 15)
+
+    # ── 2. Cargar índice de estudiantes ──────────────────────────────────────
     with sqlite3.connect(DATABASE, timeout=15) as conn:
         conn.row_factory = sqlite3.Row
         todos_est = conn.execute(
@@ -1092,18 +1075,25 @@ def cargar_notas_listado():
                 mejor_score, mejor_id = s, eid
         return mejor_id if mejor_score >= 0.82 else None
 
-    # ── Insertar / actualizar ─────────────────────────────────────────────────
-    insertados  = 0
+    # ── 3. Insertar / actualizar (con progreso) ──────────────────────────────
+    insertados   = 0
     actualizados = 0
-    sin_match   = []
-    sin_nota    = 0
+    sin_match    = []
+    sin_nota     = 0
+    ids_afectados: set[int] = set()
+    total = len(filas)
 
-    with sqlite3.connect(DATABASE, timeout=15) as conn:
+    with sqlite3.connect(DATABASE, timeout=30) as conn:
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA synchronous=NORMAL")
 
-        for fila in filas:
-            # Ignorar filas donde todos los períodos están vacíos
+        for i, fila in enumerate(filas):
+            # Progreso: de 20% a 85%
+            if i % 50 == 0:
+                pct = 20 + int((i / total) * 65)
+                actualizar_progreso(task_id, pct)
+
             vals = [v for v in [fila["p1"], fila["p2"], fila["p3"], fila["p4"]] if v]
             if not vals and not fila["promedio"]:
                 sin_nota += 1
@@ -1114,18 +1104,16 @@ def cargar_notas_listado():
                 sin_match.append(fila["nombre"])
                 continue
 
-            # Calcular promedio si no viene
-            prom = fila["promedio"]
-            if not prom and vals:
-                prom = round(sum(vals) / len(vals), 1)
+            ids_afectados.add(est_id)
+            prom = fila["promedio"] or (round(sum(vals) / len(vals), 1) if vals else None)
 
             existente = conn.execute(
-                "SELECT rowid FROM materias_calificaciones WHERE estudiante_id=? AND LOWER(materia)=LOWER(?)",
-                (est_id, fila["materia"])
+                "SELECT rowid FROM materias_calificaciones "
+                "WHERE estudiante_id=? AND LOWER(materia)=LOWER(?) AND anio_escolar=?",
+                (est_id, fila["materia"], anio_escolar)
             ).fetchone()
 
             if existente:
-                # Solo actualiza períodos vacíos (no sobreescribe lo que ya existe)
                 conn.execute("""
                     UPDATE materias_calificaciones SET
                         p1      = CASE WHEN (p1 IS NULL OR p1=0) AND ? IS NOT NULL THEN ? ELSE p1 END,
@@ -1133,37 +1121,32 @@ def cargar_notas_listado():
                         p3      = CASE WHEN (p3 IS NULL OR p3=0) AND ? IS NOT NULL THEN ? ELSE p3 END,
                         p4      = CASE WHEN (p4 IS NULL OR p4=0) AND ? IS NOT NULL THEN ? ELSE p4 END,
                         promedio= CASE WHEN (promedio IS NULL OR promedio=0) AND ? IS NOT NULL THEN ? ELSE promedio END
-                    WHERE estudiante_id=? AND LOWER(materia)=LOWER(?)
+                    WHERE estudiante_id=? AND LOWER(materia)=LOWER(?) AND anio_escolar=?
                 """, (
-                    fila["p1"], fila["p1"],
-                    fila["p2"], fila["p2"],
-                    fila["p3"], fila["p3"],
-                    fila["p4"], fila["p4"],
-                    prom, prom,
-                    est_id, fila["materia"]
+                    fila["p1"], fila["p1"], fila["p2"], fila["p2"],
+                    fila["p3"], fila["p3"], fila["p4"], fila["p4"],
+                    prom, prom, est_id, fila["materia"], anio_escolar,
                 ))
                 actualizados += 1
             else:
                 conn.execute("""
                     INSERT INTO materias_calificaciones
-                        (estudiante_id, materia, tipo, p1, p2, p3, p4, promedio, fecha_carga)
-                    VALUES (?, ?, 'académico', ?, ?, ?, ?, ?, date('now'))
+                        (estudiante_id, materia, tipo, p1, p2, p3, p4, promedio,
+                         anio_escolar, fecha_carga)
+                    VALUES (?, ?, 'académico', ?, ?, ?, ?, ?, ?, date('now'))
                 """, (est_id, fila["materia"],
-                      fila["p1"], fila["p2"], fila["p3"], fila["p4"], prom))
+                      fila["p1"], fila["p2"], fila["p3"], fila["p4"],
+                      prom, anio_escolar))
                 insertados += 1
 
-        # ── Recalcular p_acad para los estudiantes afectados ─────────────────
-        ids_afectados = set()
-        for fila in filas:
-            eid = _buscar_id(fila["nombre"], fila["est_id_hint"])
-            if eid:
-                ids_afectados.add(eid)
-
+        # ── 4. Recalcular p_acad ─────────────────────────────────────────────
+        actualizar_progreso(task_id, 88)
         for eid in ids_afectados:
             proms = [
                 r["promedio"] for r in conn.execute(
-                    "SELECT promedio FROM materias_calificaciones WHERE estudiante_id=? AND promedio>0",
-                    (eid,)
+                    "SELECT promedio FROM materias_calificaciones "
+                    "WHERE estudiante_id=? AND anio_escolar=? AND promedio>0",
+                    (eid, anio_escolar)
                 ).fetchall()
             ]
             if proms:
@@ -1176,16 +1159,76 @@ def cargar_notas_listado():
         conn.commit()
 
     cache_bust()
+    actualizar_progreso(task_id, 99)
 
-    return jsonify({
-        "ok":         True,
-        "insertados": insertados,
-        "actualizados": actualizados,
-        "sin_match":  sin_match[:30],
+    return {
+        "ok":              True,
+        "anio_escolar":    anio_escolar,
+        "insertados":      insertados,
+        "actualizados":    actualizados,
+        "sin_match":       sin_match[:50],
+        "sin_match_total": len(sin_match),
         "sin_nota_vacios": sin_nota,
+        "filas_totales":   total,
         "mensaje": (
-            f"{insertados} materias nuevas cargadas, "
-            f"{actualizados} actualizadas. "
-            + (f"{len(sin_match)} nombres sin match en BD." if sin_match else "")
+            f"{insertados} materias nuevas · {actualizados} actualizadas"
+            + (f" · {len(sin_match)} sin match" if sin_match else "")
         ),
+    }
+
+
+@digitador_bp.route("/api/digitador/cargar-notas-listado", methods=["POST"])
+@login_required
+@_digitador_required
+def cargar_notas_listado():
+    """
+    Acepta el Excel con columnas: Nombre Completo | Materia | P1 | P2 | P3 | P4
+    Parámetro opcional: anio_escolar (default = año escolar actual)
+
+    El procesamiento corre en background — devuelve task_id para polling.
+    Sondear: GET /api/digitador/tarea/<task_id>
+    """
+    try:
+        from openpyxl import load_workbook as _lw  # noqa: F401 — verificar disponibilidad
+    except ImportError:
+        return jsonify({"ok": False, "error": "openpyxl no disponible"}), 500
+
+    f = request.files.get("file")
+    if not f or not f.filename:
+        return jsonify({"ok": False, "error": "No se recibió archivo"}), 400
+    if not f.filename.lower().endswith((".xlsx", ".xls", ".xlsm")):
+        return jsonify({"ok": False, "error": "Formato no válido. Usa .xlsx"}), 400
+
+    # Leer bytes en el contexto del request (antes de pasar al thread)
+    raw = f.read()
+    if len(raw) > 20 * 1024 * 1024:
+        return jsonify({"ok": False, "error": "Archivo demasiado grande (máx 20 MB)"}), 413
+
+    anio_escolar = (
+        request.form.get("anio_escolar")
+        or request.args.get("anio_escolar")
+        or _anio_escolar_actual()
+    )
+
+    task_id = encolar_tarea(_procesar_excel_notas, raw, anio_escolar)
+    return jsonify({
+        "ok":          True,
+        "task_id":     task_id,
+        "anio_escolar": anio_escolar,
+        "mensaje":     "Procesamiento iniciado. Sondea /api/digitador/tarea/<task_id> para el resultado.",
     })
+
+
+@digitador_bp.route("/api/digitador/tarea/<task_id>")
+@login_required
+@_digitador_required
+def estado_tarea(task_id: str):
+    """
+    GET /api/digitador/tarea/<task_id>
+    Polling endpoint para tareas de carga de Excel.
+    Retorna: {status, progreso, resultado, error}
+    """
+    tarea = obtener_tarea(task_id)
+    if not tarea:
+        return jsonify({"ok": False, "error": "Tarea no encontrada o expirada"}), 404
+    return jsonify({"ok": True, **tarea})
