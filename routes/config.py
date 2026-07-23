@@ -731,20 +731,22 @@ def cerrar_anio_escolar():
             conn.execute("PRAGMA journal_mode=WAL")
 
             for grado in GRADOS:
-                rs = evaluar_grado(conn, grado, anio_actual)
-                estudiantes = rs.get("estudiantes", [])
+                # evaluar_grado() retorna list[dict] — cada dict es el resultado
+                # de evaluar_estudiante() + ya_procesado + estado_previo
+                estudiantes = evaluar_grado(conn, grado, anio_actual)
                 g_prom = 0
                 g_skip = 0
                 g_err  = []
 
                 for est in estudiantes:
-                    if est["estado"] != "PROMOVIDO":
+                    if est.get("estado") != "PROMOVIDO":
                         g_skip += 1
                         continue
+                    est_id_val = est.get("est_id") or est.get("id")
                     try:
                         res = ejecutar_promocion_estudiante(
                             conn,
-                            est["id"],
+                            est_id_val,
                             anio_actual,
                             u["id"],
                             observacion=observacion,
@@ -753,9 +755,9 @@ def cerrar_anio_escolar():
                             g_prom += 1
                             total_promovidos += 1
                         else:
-                            g_err.append({"id": est["id"], "nombre": est["nombre"], "error": res.get("error")})
+                            g_err.append({"id": est_id_val, "nombre": est.get("nombre", "?"), "error": res.get("error")})
                     except Exception as ex:
-                        g_err.append({"id": est["id"], "nombre": est.get("nombre", "?"), "error": str(ex)})
+                        g_err.append({"id": est_id_val, "nombre": est.get("nombre", "?"), "error": str(ex)})
 
                 resumen[grado] = {
                     "promovidos": g_prom,
