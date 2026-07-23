@@ -101,6 +101,75 @@ python3 -c "import app; print('OK')"
 
 ## Log de sesiones
 
+### 2026-07-23 (sesión 12 — Fix motor dedup cross-mención + cierre de año)
+
+**Problema reportado:** El usuario intentó cerrar el año escolar 2025-2026 y recibió:
+`Error: Error interno: 'list' object has no attribute 'get'`
+
+**Bug A — `cerrar_anio_escolar()` en `routes/config.py`** (commit `2be15c2`):
+- `evaluar_grado()` siempre retornó `list[dict]` — cada dict es el resultado de `evaluar_estudiante()`
+- Pero el código hacía `rs.get("estudiantes", [])` como si fuera un dict → error inmediato
+- Además `est["id"]` estaba mal — la clave correcta es `est["est_id"]` (o `est.get("est_id")`)
+- Fix: `estudiantes = evaluar_grado(...)` directo + `est.get("est_id") or est.get("id")`
+
+**Bug B — Motor dedup incompleto** (commit `922152e`, descubierto en sesión anterior):
+- `evaluar_estudiante()` usaba su propio `_norm_mat()` (ASCII only, sin consultar `_MATERIA_SINONIMOS`)
+- "HISTORIA DEL ARTE UNIVERSAL Y ESTÉTICA DIGITAL" (materia de TEATRO asignada a alumnos MULTIMEDIA
+  por contaminación cross-mención del script de carga PDF) no se unificaba con
+  "Introducción a la Historia del Arte universal y Dominicano" → motor veía 2 materias separadas
+  → la primera con P3=59/P4=61 (prom 68.75) causaba RECUPERACION incorrecto en estudiante 537
+- Fix 1: `_MATERIA_SINONIMOS` en `core/helpers.py` — agrega alias
+  `"historia del arte universal y estetica digital"` → canónico Historia del Arte
+- Fix 2: `evaluar_estudiante()` ahora usa `_normalizar_clave_materia()` (que consulta `_MATERIA_SINONIMOS`)
+  + merge de períodos entre entradas duplicadas + prefiere Proper Case sobre MAYÚSCULAS
+- Resultado probado localmente: est 537 pasa de RECUPERACION → PROMOVIDO (13 materias, todas ≥70)
+
+**Script nuevo:** `scripts/recalcular_kpis_notas0.py`
+- Corrige estudiantes con MC rows pero `p_acad=0`/`tiene_notas=0` (16 casos detectados)
+- Usa `obtener_notas_estudiante()` — misma función que el motor, no lógica paralela
+- Correr en Render Shell: `python3 scripts/recalcular_kpis_notas0.py --commit`
+
+**ARQUITECTURA CRÍTICA — cómo funciona la dedup de materias:**
+```
+obtener_notas_estudiante()    → devuelve dict {materia: {p1,p2,p3,p4,promedio}} SIN dedup
+                                Lee CP (manual) primero, MC (PDF) como fallback por período
+evaluar_estudiante()          → llama obtener_notas_estudiante(), luego deduplica via
+                                _normalizar_clave_materia() que consulta _MATERIA_SINONIMOS
+_MATERIA_SINONIMOS            → dict en core/helpers.py línea ~2538
+                                clave = nombre normalizado sin acentos, sin puntuación
+                                valor = nombre canónico para comparación
+_normalizar_clave_materia()   → normaliza + aplica sinónimos en una sola llamada
+```
+
+**LECCIÓN CLAVE — evaluar_grado() retorna list, no dict:**
+```python
+# CORRECTO
+estudiantes = evaluar_grado(conn, grado, anio_actual)   # list[dict]
+for est in estudiantes:
+    est_id = est.get("est_id")                           # clave correcta
+
+# INCORRECTO (bug original)
+rs = evaluar_grado(...)
+estudiantes = rs.get("estudiantes", [])    # ← AttributeError: list has no .get()
+est["id"]                                  # ← KeyError: clave es "est_id"
+```
+
+**Pendientes en Render Shell (después del deploy ~5-10 min):**
+```bash
+# Fix 16 estudiantes con p_acad=0 a pesar de tener notas
+python3 scripts/recalcular_kpis_notas0.py --commit
+
+# Pendiente desde sesión anterior
+python3 scripts/recalcular_conductual.py --commit
+```
+
+**Pendientes de código:**
+- Render Shell: `python3 scripts/cargar_diseno_basico_p12.py --commit` (P1/P2 Diseño Básico)
+- CRUD UI para `estudiante_perfil_inclusivo` (tabla creada, sin UI)
+- Confirmar con dirección CBJ: `max_areas_aplazado=2` y `max_areas_reprueba=4` bajo Ord. 04-2023
+
+---
+
 ### 2026-07-23 (sesión 11 — Motor promoción MINERD + banner perfil) ⚠️ SESIÓN INCOMPLETA
 
 **Lo que se implementó (commits ae30342, 5fb83d5, d63a95d):**
@@ -114,18 +183,12 @@ python3 -c "import app; print('OK')"
 - Botón "Promover" ahora dice "Registrar Repitiente — XGRADO" en rojo cuando motor = NO_PROMOVIDO
 - 2 paneles nuevos en `coordinador.html`: Casos Límite + Narrativa IA
 
-**⚠️ PROBLEMA DE SESIÓN:** El usuario no vio ningún cambio porque Render no había completado el deploy cuando verificó. Se gastó casi todo el cupo de tokens. El usuario vio la misma pantalla todo el tiempo.
+**⚠️ PROBLEMA DE SESIÓN:** El usuario no vio ningún cambio porque Render no había completado el deploy cuando verificó.
 
-**REGLA PARA PRÓXIMA SESIÓN:**
+**REGLA PERMANENTE:**
 - Verificar que el usuario confirme que ve el deploy de la sesión anterior ANTES de escribir código nuevo
 - Implementar de a un cambio → push → esperar confirmación del usuario → siguiente cambio
 - Hard refresh: Cmd+Shift+R en el browser del usuario después de ~5 min del push
-
-**Pendientes confirmados:**
-- Render Shell: `python3 scripts/cargar_diseno_basico_p12.py --commit` (P1/P2 Diseño Básico)
-- Render Shell: `python3 scripts/recalcular_conductual.py --commit`
-- CRUD UI para `estudiante_perfil_inclusivo` (tabla creada, sin UI)
-- Confirmar con dirección CBJ: `max_areas_aplazado=2` y `max_areas_reprueba=4` bajo Ord. 04-2023
 
 ### 2026-07-11 (sesión 10 — Limpieza materias_calificaciones: cross-mención + duplicados)
 
