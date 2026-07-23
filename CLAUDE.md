@@ -8,8 +8,10 @@
 
 - Flask + SQLite (WAL mode) + Python 3 + ReportLab + openpyxl + Groq API
 - Arquitectura Blueprint: /core/ + /routes/ (20 blueprints) + app.py factory
-- Iniciar: cd /Users/erickhernandez/elearning && python3 app.py
-- DB: database.db
+- Iniciar local: cd /Users/erickhernandez/elearning && python3 app.py
+- DB local: database.db
+- **Deploy: git push origin main → Render auto-deploya (~5-10 min) → hard refresh en browser**
+- **NO es PythonAnywhere** — ese es el otro proyecto (plantillas-web)
 
 ## Patrones críticos — nunca romper
 
@@ -98,6 +100,32 @@ python3 -c "import app; print('OK')"
 - Todos los overrides centralizados en `static/theme.css` (al final del archivo)
 
 ## Log de sesiones
+
+### 2026-07-23 (sesión 11 — Motor promoción MINERD + banner perfil) ⚠️ SESIÓN INCOMPLETA
+
+**Lo que se implementó (commits ae30342, 5fb83d5, d63a95d):**
+- `criterios_promocion`: tabla versionada por ordenanza — Ord. 04-2023 (70 pts / 80% asist) como seed automático
+- `estudiante_perfil_inclusivo`: criterios diferenciados TDAH/TEA/NEAE; motor los usa si hay plan_adaptación activo
+- `evaluar_estudiante()` extendido: lee criterios desde BD, detecta `caso_limite` (65-69 pts), retorna `requiere_revision_humana`
+- `POST /api/promocion/narrativa/<est_id>`: Groq redacta para padres o comité, nunca decide — guarda en `promociones.explicacion_ia`
+- `GET /api/promocion/casos-limite`: filtra por `caso_limite=1`
+- `perfil_estudiante()` ahora llama `evaluar_estudiante()` y pasa `resultado_motor` al template
+- Banner en `perfil.html`: 🔴 REPITE / 🟢 PROMOVIDO / 🟡 RECUPERACIÓN según motor
+- Botón "Promover" ahora dice "Registrar Repitiente — XGRADO" en rojo cuando motor = NO_PROMOVIDO
+- 2 paneles nuevos en `coordinador.html`: Casos Límite + Narrativa IA
+
+**⚠️ PROBLEMA DE SESIÓN:** El usuario no vio ningún cambio porque Render no había completado el deploy cuando verificó. Se gastó casi todo el cupo de tokens. El usuario vio la misma pantalla todo el tiempo.
+
+**REGLA PARA PRÓXIMA SESIÓN:**
+- Verificar que el usuario confirme que ve el deploy de la sesión anterior ANTES de escribir código nuevo
+- Implementar de a un cambio → push → esperar confirmación del usuario → siguiente cambio
+- Hard refresh: Cmd+Shift+R en el browser del usuario después de ~5 min del push
+
+**Pendientes confirmados:**
+- Render Shell: `python3 scripts/cargar_diseno_basico_p12.py --commit` (P1/P2 Diseño Básico)
+- Render Shell: `python3 scripts/recalcular_conductual.py --commit`
+- CRUD UI para `estudiante_perfil_inclusivo` (tabla creada, sin UI)
+- Confirmar con dirección CBJ: `max_areas_aplazado=2` y `max_areas_reprueba=4` bajo Ord. 04-2023
 
 ### 2026-07-11 (sesión 10 — Limpieza materias_calificaciones: cross-mención + duplicados)
 
