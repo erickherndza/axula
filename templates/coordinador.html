@@ -656,7 +656,9 @@ main{max-width:1200px;margin:0 auto;padding:24px 20px}
     <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:16px">
       <div>
         <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Nuevo año escolar</label>
-        <input id="cierre-nuevo-anio" type="text" placeholder="ej: 2026-2027"
+        <input id="cierre-nuevo-anio" type="text"
+               value="{{ anio_proximo or '' }}"
+               placeholder="ej: 2026-2027"
                style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 14px;font-size:14px;width:150px;font-weight:700">
       </div>
       <div>
@@ -1834,6 +1836,16 @@ function cierreEjecutar() {
   if (!/^\d{4}-\d{4}$/.test(nuevoAnio)) { alert('Formato inválido. Usa XXXX-XXXX'); return; }
 
   var anioActual = (document.getElementById('cierre-anio-actual') || {}).textContent || '';
+  if (nuevoAnio === anioActual.trim()) {
+    alert('❌ El nuevo año no puede ser igual al año actual (' + anioActual.trim() + ').\n\nIngresa el AÑO SIGUIENTE, por ejemplo: ' + (function(a){ try{ var p=parseInt(a.split("-")[1]); return p+"-"+(p+1); }catch(e){ return "2026-2027"; } })(anioActual));
+    return;
+  }
+  var partsN = nuevoAnio.split("-").map(Number);
+  var partsA = (anioActual.trim()).split("-").map(Number);
+  if (partsN[0] < partsA[0]) {
+    alert('❌ El nuevo año (' + nuevoAnio + ') es anterior al año actual (' + anioActual.trim() + ').\nNo se puede retroceder el año escolar.');
+    return;
+  }
   if (!confirm(
     'CERRAR AÑO ESCOLAR\n\n' +
     'Año actual: ' + anioActual + '\n' +

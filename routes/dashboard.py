@@ -66,7 +66,14 @@ def coordinador_page():
     if rol_n not in ROLES_COORD and not u.get("es_directora"):
         return redirect("/")
     ciclo = _ciclo_del_rol(rol_n) or "segundo_ciclo"
-    return render_template("coordinador.html", current_user=u, ciclo=ciclo)
+    from core.helpers import _anio_escolar_actual, _anio_escolar_proximo
+    return render_template(
+        "coordinador.html",
+        current_user=u,
+        ciclo=ciclo,
+        anio_actual=_anio_escolar_actual(),
+        anio_proximo=_anio_escolar_proximo(),
+    )
 
 
 @dashboard_bp.route("/api/coordinador/resumen")

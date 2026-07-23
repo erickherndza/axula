@@ -705,6 +705,22 @@ def cerrar_anio_escolar():
 
     anio_actual = _anio_escolar_actual()
 
+    # No permitir cerrar al mismo año ni a un año anterior
+    if nuevo_anio == anio_actual:
+        return jsonify({
+            "error": f"El nuevo año ({nuevo_anio}) no puede ser igual al año actual. "
+                     f"Ingresa el año siguiente, ej: {nuevo_anio.split('-')[1]}-{int(nuevo_anio.split('-')[1])+1}"
+        }), 400
+    try:
+        _p_actual = int(anio_actual.split("-")[0])
+        _p_nuevo  = int(nuevo_anio.split("-")[0])
+        if _p_nuevo < _p_actual:
+            return jsonify({
+                "error": f"No se puede retroceder el año escolar ({nuevo_anio} < {anio_actual})."
+            }), 400
+    except Exception:
+        pass
+
     GRADOS = ["1ERO", "2DO", "3RO", "4TO", "5TO", "6TO"]
     resumen = {}   # {grado: {promovidos, skipped, errores}}
     total_promovidos = 0

@@ -1270,10 +1270,21 @@ def _notificar_reporte_nuevo(conn, estudiante_id, reporte_id, tipo_reporte, seve
 
 
 def _anio_escolar_actual():
-    """Retorna el año escolar activo.
+    """Retorna el año escolar activo (o el más recientemente cerrado).
+
     Prioridad:
-      1. Valor configurado en configuracion_centro.anio_escolar_activo (admin puede cambiar)
-      2. Cálculo automático por fecha (agosto = inicio de nuevo año escolar dominicano)
+      1. configuracion_centro.anio_escolar_activo — lo que el coordinador configuró
+      2. Cálculo automático por fecha, según calendario MINERD RD:
+         - Año escolar: primer lunes de agosto → última semana de junio
+         - Julio (mes 7): período de transición — el año anterior TERMINÓ en junio,
+           el nuevo NO ha comenzado aún (empieza en agosto).
+           → Se devuelve el año que acaba de cerrar (ej: julio 2026 → "2025-2026")
+         - Agosto–diciembre (meses 8-12): nuevo año en curso
+           → f"{año}-{año+1}"
+         - Enero–junio (meses 1-6): mitad del año en curso
+           → f"{año-1}-{año}"
+
+    Fuente normativa: Calendario Escolar MINERD / Resolución 02-2022 y posteriores.
     """
     try:
         from core.constants import DATABASE as _DB
@@ -1286,13 +1297,33 @@ def _anio_escolar_actual():
                 return _row[0]
     except Exception:
         pass
-    # Fallback: cálculo por fecha
+    # Fallback: cálculo automático por fecha
     from datetime import date
     hoy = date.today()
     if hoy.month >= 8:
+        # Nuevo año escolar empezó en agosto
         return f"{hoy.year}-{hoy.year + 1}"
     else:
+        # Meses 1-7: pertenecen al año escolar que inició el agosto ANTERIOR
+        # (julio es transición: el año terminó en junio, pero los datos siguen siendo del año anterior)
         return f"{hoy.year - 1}-{hoy.year}"
+
+
+def _anio_escolar_proximo():
+    """Retorna el año escolar siguiente al actual.
+    Usado para pre-rellenar el campo 'Nuevo año' en el panel de Cierre.
+
+    En julio 2026: actual = "2025-2026" → próximo = "2026-2027"
+    En agosto 2026: actual = "2026-2027" → próximo = "2027-2028"
+    """
+    actual = _anio_escolar_actual()
+    try:
+        fin = int(actual.split("-")[1])
+        return f"{fin}-{fin + 1}"
+    except Exception:
+        from datetime import date
+        a = date.today().year
+        return f"{a}-{a + 1}"
 
 
 def _periodo_actual():
