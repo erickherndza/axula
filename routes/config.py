@@ -775,20 +775,16 @@ def cerrar_anio_escolar():
                     "total": len(plan[grado]),
                 }
 
-            # Reset KPIs and attendance for ALL active non-promoted students
-            # (they repeat but start the new year with a clean slate)
+            # Resetear asistencia de repitientes (ACTIVO) para el nuevo año.
+            # NO se borran KPIs de notas — los repitientes mantienen su historial
+            # visible hasta que el digitador registre las del nuevo año.
+            # Los KPIs de promovidos ya se resetean en ejecutar_promocion_estudiante().
             conn.execute("""
                 UPDATE estudiantes
-                SET p_acad        = NULL,
-                    acad_p1       = NULL,
-                    acad_p2       = NULL,
-                    acad_p3       = NULL,
-                    acad_p4       = NULL,
-                    asistencia_p1 = NULL,
+                SET asistencia_p1 = NULL,
                     asistencia_p2 = NULL,
                     asistencia_p3 = NULL,
-                    asistencia_p4 = NULL,
-                    tiene_notas   = 0
+                    asistencia_p4 = NULL
                 WHERE condicion = 'ACTIVO'
             """)
 

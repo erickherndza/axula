@@ -151,16 +151,23 @@ def _revertir_estudiante(conn, est_id: int, grado_correcto: str,
         (grado_correcto, nuevo_curso, est_id),
     )
 
-    # 2. Revertir fila en promociones (marcar como corregido)
-    conn.execute(
-        """UPDATE promociones
-           SET grado_destino = ?,
-               estado        = 'PROMOVIDO',
-               observacion   = COALESCE(observacion, '') ||
-                               ' [CORREGIDO: cascada doble-promoción revertida a ' || ? || ']'
-           WHERE estudiante_id = ? AND anio_escolar = ?""",
-        (grado_correcto, grado_correcto, est_id, ANIO_AFECTADO),
-    )
+    # 2. Eliminar fila de promociones + detalle del año afectado.
+    #    El cierre fue inválido (cascade bug) — la BD debe quedar como si
+    #    el año NO se hubiera cerrado todavía, para que el boletín muestre
+    #    las notas reales del grado correcto en vez de un template vacío.
+    prom_row = conn.execute(
+        "SELECT id FROM promociones WHERE estudiante_id = ? AND anio_escolar = ?",
+        (est_id, ANIO_AFECTADO),
+    ).fetchone()
+    if prom_row:
+        conn.execute(
+            "DELETE FROM promocion_detalle_materias WHERE promocion_id = ?",
+            (prom_row["id"],),
+        )
+        conn.execute(
+            "DELETE FROM promociones WHERE id = ?",
+            (prom_row["id"],),
+        )
 
     # 3. Recalcular KPIs (fueron NULEados durante la cascada)
     kpis = _recalcular_kpis(conn, est_id)
