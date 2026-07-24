@@ -730,15 +730,24 @@ def cerrar_anio_escolar():
             conn.row_factory = sqlite3.Row
             conn.execute("PRAGMA journal_mode=WAL")
 
+            # ── FASE 1: evaluar todos los grados SIN escribir ─────────────────
+            # CRÍTICO: evaluar primero, ejecutar después.
+            # Si evaluamos y ejecutamos grado por grado en orden ascendente,
+            # un alumno promovido de 4TO→5TO aparece en el loop de 5TO y se
+            # promueve de nuevo a 6TO (efecto dominó).
+            # La fase 1 captura el estado real de TODOS los alumnos antes de
+            # que cualquier promoción cambie su grado en la BD.
+            plan: dict[str, list[dict]] = {}   # {grado: [resultados evaluar_grado]}
             for grado in GRADOS:
-                # evaluar_grado() retorna list[dict] — cada dict es el resultado
-                # de evaluar_estudiante() + ya_procesado + estado_previo
-                estudiantes = evaluar_grado(conn, grado, anio_actual)
+                plan[grado] = evaluar_grado(conn, grado, anio_actual)
+
+            # ── FASE 2: ejecutar promociones con el plan ya fijo ──────────────
+            for grado in GRADOS:
                 g_prom = 0
                 g_skip = 0
                 g_err  = []
 
-                for est in estudiantes:
+                for est in plan[grado]:
                     if est.get("estado") != "PROMOVIDO":
                         g_skip += 1
                         continue
@@ -763,7 +772,7 @@ def cerrar_anio_escolar():
                     "promovidos": g_prom,
                     "no_promovidos_skipped": g_skip,
                     "errores": g_err,
-                    "total": len(estudiantes),
+                    "total": len(plan[grado]),
                 }
 
             # Reset KPIs and attendance for ALL active non-promoted students
