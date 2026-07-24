@@ -1408,9 +1408,19 @@
                   {% set _btn_style = 'background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.4);color:#22c55e;' %}
                   {% set _btn_icon  = 'fa-graduation-cap' %}
                 {% else %}
-                  {% set _btn_label = ('Candidato a Pruebas Nacionales' if _grado_up == '6TO' else 'Evaluar y Promover a ' + _sig) %}
-                  {% set _btn_style = 'background:transparent;border:1px solid var(--border);color:var(--text-muted);' %}
-                  {% set _btn_icon  = 'fa-graduation-cap' %}
+                  {% if p_calc > 0 and p_calc < 70 %}
+                    {% set _btn_label = 'Repitente — ' + _grado_up %}
+                    {% set _btn_style = 'background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);color:#ef4444;' %}
+                    {% set _btn_icon  = 'fa-rotate-left' %}
+                  {% elif _grado_up == '6TO' %}
+                    {% set _btn_label = 'Candidato a Pruebas Nacionales' %}
+                    {% set _btn_style = 'background:transparent;border:1px solid var(--border);color:var(--text-muted);' %}
+                    {% set _btn_icon  = 'fa-graduation-cap' %}
+                  {% else %}
+                    {% set _btn_label = 'Evaluar y Promover a ' + _sig %}
+                    {% set _btn_style = 'background:transparent;border:1px solid var(--border);color:var(--text-muted);' %}
+                    {% set _btn_icon  = 'fa-graduation-cap' %}
+                  {% endif %}
                 {% endif %}
                 <div id="promo-container">
                     <button id="btn-promover" onclick="togglePromover()"
