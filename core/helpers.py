@@ -2048,13 +2048,21 @@ def obtener_notas_estudiante(conn, est_id, anio=None):
     Retorna las notas del estudiante desde la fuente canónica (calificaciones_periodo).
     Para materias sin nota manual, cae en materias_calificaciones (importación PDF).
 
+    Aplica deduplicación via _normalizar_clave_materia() / _MATERIA_SINONIMOS:
+      · MAYÚS vs Proper Case del mismo nombre → se unifica
+      · Alias cross-mención (ej: "HISTORIA DEL ARTE UNIVERSAL Y ESTÉTICA DIGITAL"
+        vs "Introducción a la Historia del Arte...") → se unifica al de mayor promedio
+      · Períodos faltantes en una entrada se completan desde la otra
+      · Nombre de display: prefiere Proper Case sobre TODO MAYÚSCULAS
+
     Retorna dict: {materia: {p1, p2, p3, p4, promedio}}
+    Todos los callers reciben datos ya deduplicados — no es necesario deduplicar
+    de nuevo en evaluar_estudiante() ni en recalcular_kpis_estudiante().
     """
-    from .constants import DATABASE
     if anio is None:
         anio = _anio_escolar_actual()
 
-    notas = {}  # {materia: {p1, p2, p3, p4}}
+    notas = {}  # {materia_raw: {p1, p2, p3, p4}}
 
     # ── 1. Fuente canónica: calificaciones_periodo (notas manuales de profesores) ──
     rows_cp = conn.execute(
@@ -2074,8 +2082,7 @@ def obtener_notas_estudiante(conn, est_id, anio=None):
         notas[mat][per.lower()] = nota  # 'p1', 'p2', 'p3', 'p4'
 
     # ── 2. Fallback: materias_calificaciones (importadas desde PDF) ────────────
-    # Merge por período: CP tiene prioridad, pero si CP solo tiene P3/P4 y MC
-    # tiene P1/P2, se usan los de MC para esos períodos faltantes.
+    # Merge por período: CP tiene prioridad; períodos faltantes se completan desde MC.
     rows_mc = conn.execute(
         "SELECT materia, p1, p2, p3, p4 FROM materias_calificaciones "
         "WHERE estudiante_id=? AND anio_escolar=?",
@@ -2090,7 +2097,6 @@ def obtener_notas_estudiante(conn, est_id, anio=None):
             "p4": float(r["p4"] if hasattr(r, "keys") else r[4] or 0),
         }
         if mat not in notas:
-            # Sin datos manuales para esta materia → usar MC completo
             notas[mat] = p_mc
         else:
             # Ya hay datos CP para esta materia → completar solo períodos ausentes
@@ -2099,19 +2105,42 @@ def obtener_notas_estudiante(conn, est_id, anio=None):
                     notas[mat][p_key] = p_mc[p_key]
 
     # ── 3. Calcular promedio por materia ───────────────────────────────────────
-    result = {}
+    raw: dict = {}
     for mat, periodos in notas.items():
-        vals = [periodos.get(f"p{i}", 0.0) for i in range(1, 5)]
-        vals_validos = [v for v in vals if v > 0]
-        prom = round(sum(vals_validos) / len(vals_validos), 2) if vals_validos else 0.0
-        result[mat] = {
+        vals_validos = [periodos.get(f"p{i}", 0.0) for i in range(1, 5) if periodos.get(f"p{i}", 0.0) > 0]
+        raw[mat] = {
             "p1":      periodos.get("p1", 0.0),
             "p2":      periodos.get("p2", 0.0),
             "p3":      periodos.get("p3", 0.0),
             "p4":      periodos.get("p4", 0.0),
-            "promedio": prom,
+            "promedio": round(sum(vals_validos) / len(vals_validos), 2) if vals_validos else 0.0,
         }
-    return result
+
+    # ── 4. Deduplicar via _MATERIA_SINONIMOS ──────────────────────────────────
+    # Unifica nombres distintos que mapean al mismo sujeto (alias cross-mención,
+    # MAYÚS vs Proper Case, typos conocidos).
+    # Regla de merge:
+    #   · Conserva la entrada con promedio más alto
+    #   · Completa períodos faltantes desde la entrada alternativa
+    #   · Prefiere Proper Case sobre TODO MAYÚSCULAS para el nombre de display
+    dedup: dict = {}  # {clave_canon: (nombre_display, datos)}
+    for mat, d in raw.items():
+        key = _normalizar_clave_materia(mat)
+        if key not in dedup:
+            dedup[key] = (mat, dict(d))
+        else:
+            prev_mat, prev_d = dedup[key]
+            merged = dict(prev_d)
+            for p in ("p1", "p2", "p3", "p4"):
+                if not (merged.get(p) and merged[p] > 0) and (d.get(p) and d[p] > 0):
+                    merged[p] = d[p]
+            vals = [merged[p] for p in ("p1", "p2", "p3", "p4") if merged.get(p) and merged[p] > 0]
+            merged["promedio"] = round(sum(vals) / len(vals), 2) if vals else 0.0
+            # Preferir Proper Case sobre MAYÚSCULAS
+            nombre_display = prev_mat if prev_mat != prev_mat.upper() else mat
+            dedup[key] = (nombre_display, merged)
+
+    return {mat: d for _, (mat, d) in dedup.items()}
 
 
 def recalcular_kpis_estudiante(conn, est_id, anio=None):
