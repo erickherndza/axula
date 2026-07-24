@@ -2196,8 +2196,8 @@ tr:hover td{background:var(--hover)}
 
     <div class="sb-sep"></div>
 
-    <!-- ESPECIALIDAD / MENCIONES -->
-    <div class="sb-section">
+    <!-- ESPECIALIDAD / MENCIONES — solo aplica a 2do ciclo (4to, 5to, 6to) -->
+    <div class="sb-section" id="sb-especialidad-section">
       <div class="sb-label"><i class="fas fa-palette" style="margin-right:4px;opacity:.5;"></i>Especialidad</div>
 
       {%- set pm = prof_mencion | lower -%}
@@ -4207,6 +4207,7 @@ function sbSetGrado(g) {
   } else {
     filtroCiclo = '';
   }
+  _sbActualizarEspecialidad(filtroCiclo);
   // Actualizar indicador de ciclo activo en sidebar
   document.querySelectorAll('[id^="sb-ciclo-"]').forEach(function(b){ b.classList.remove('active'); });
   var cicloMap = {'primer_ciclo':'sb-ciclo-primero','segundo_ciclo':'sb-ciclo-segundo','':'sb-ciclo-todos'};
@@ -4222,6 +4223,21 @@ function sbSetGrado(g) {
   filtrar();
 }
 
+function _sbActualizarEspecialidad(ciclo) {
+  // El bloque "Especialidad" solo aplica a 2do ciclo (4to, 5to, 6to)
+  var sec = document.getElementById('sb-especialidad-section');
+  if (!sec) return;
+  var esPrimero = (ciclo === 'primer_ciclo');
+  sec.style.display = esPrimero ? 'none' : '';
+  if (esPrimero) {
+    // Limpiar filtro de mención si estaba activo
+    mencionesActivas = [];
+    document.querySelectorAll('[id^="sb-all-m"],[id^="sb-multimedia"],[id^="sb-teatro"],[id^="sb-musica"],[id^="sb-visual"]').forEach(function(b){ b.classList.remove('active'); });
+    var allM = document.getElementById('sb-all-m');
+    if (allM) allM.classList.add('active');
+  }
+}
+
 function sbSetCiclo(ciclo) {
   filtroCiclo = ciclo;
   document.querySelectorAll('[id^="sb-ciclo-"]').forEach(function(b){b.classList.remove('active');});
@@ -4234,6 +4250,7 @@ function sbSetCiclo(ciclo) {
   if(todosEl) todosEl.classList.add('active');
   var secTodas = document.getElementById('sb-sec-todas');
   if(secTodas) secTodas.classList.add('active');
+  _sbActualizarEspecialidad(ciclo);
   filtrar();
 }
 

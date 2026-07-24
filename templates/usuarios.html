@@ -1234,6 +1234,18 @@ function onCicloChange(ciclo) {
     else if (ciclo === 'segundo_ciclo') lbl.style.display = !esPrimero ? '' : 'none';
     else lbl.style.display = '';
   });
+  // Menciones solo existen en 2do ciclo (4TO y 5TO)
+  var bloqueMencion = document.getElementById('bloque-mencion');
+  if (bloqueMencion) {
+    bloqueMencion.style.display = (ciclo === 'primer_ciclo') ? 'none' : '';
+  }
+  if (ciclo === 'primer_ciclo') {
+    document.querySelectorAll('.chk-mencion:checked').forEach(function(c) {
+      c.checked = false;
+      c.parentElement.classList.remove('sel');
+    });
+    onMencionChange();
+  }
 }
 
 function onMencionChange() {
