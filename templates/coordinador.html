@@ -1600,9 +1600,13 @@ function promCargar() {
         if (!e.ya_procesado) {
           if (e.estado === 'PROMOVIDO') {
             btnAccion = '<button onclick="promEjecutarUno(' + e.est_id + ')" style="background:#22c55e;color:#000;border:none;border-radius:5px;padding:3px 10px;font-size:10px;font-weight:700;cursor:pointer">✓ Promover</button>';
-          } else if (e.estado === 'RECUPERACION' || e.estado === 'NO_PROMOVIDO') {
+          } else if (e.estado === 'RECUPERACION') {
+            // 1-2 materias → registrar estado de recuperación (NO se fuerza promoción)
+            btnAccion = '<button onclick="promRegistrarRecuperacion(' + e.est_id + ')" style="background:#f59e0b;color:#000;border:none;border-radius:5px;padding:3px 10px;font-size:10px;font-weight:700;cursor:pointer">🟡 Registrar</button>';
+          } else if (e.estado === 'NO_PROMOVIDO') {
+            // 3+ materias → solo forzar manual con justificación
             var nomEsc = (e.apellido||'').replace(/'/g,"\\'") + ', ' + (e.nombre||'').replace(/'/g,"\\'");
-            btnAccion = '<button onclick="promForzarUno(' + e.est_id + ',\'' + nomEsc + '\')" style="background:#f59e0b;color:#000;border:none;border-radius:5px;padding:3px 10px;font-size:10px;font-weight:700;cursor:pointer">↑ Forzar</button>';
+            btnAccion = '<button onclick="promForzarUno(' + e.est_id + ',\'' + nomEsc + '\')" style="background:#ef4444;color:#fff;border:none;border-radius:5px;padding:3px 10px;font-size:10px;font-weight:700;cursor:pointer">❌ Forzar</button>';
           }
         }
 
@@ -1668,6 +1672,19 @@ function promEjecutarUno(estId) {
   var anio = document.getElementById('prom-anio').value;
   if (!confirm('¿Ejecutar promoción del estudiante #' + estId + '?\nSu grado se actualizará al siguiente nivel.')) return;
   _promCallEjecutarUno(estId, anio, false, false, '');
+}
+
+function promRegistrarRecuperacion(estId) {
+  var anio = document.getElementById('prom-anio').value;
+  if (!confirm(
+    '¿Registrar estudiante #' + estId + ' en RECUPERACIÓN PEDAGÓGICA?\n\n' +
+    'El estudiante permanece en su grado actual.\n' +
+    'Deberá rendir examen extraordinario en agosto.\n\n' +
+    'Si aprueba el examen → se promueve al siguiente grado.\n' +
+    'Si reprueba → repite el grado.\n\n' +
+    'Podrás ingresar la nota en el panel "Recuperación de Agosto".'
+  )) return;
+  _promCallEjecutarUno(estId, anio, false, false, 'Recuperación pedagógica agosto');
 }
 
 function promForzarUno(estId, nombre) {

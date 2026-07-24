@@ -896,6 +896,13 @@
                 <i class="fas fa-exclamation-triangle"></i> Caso límite: hay materias entre 65 y 69 pts — requiere revisión del comité docente.
             </div>
             {% endif %}
+            <div style="margin-top:10px;padding:8px 12px;background:rgba(245,158,11,.15);border-radius:8px;font-size:11px;color:#fde68a;line-height:1.6;">
+                <strong style="color:#f59e0b">Próximo paso:</strong>
+                Usa el botón <em>"Registrar Recuperación"</em> para registrar este estado.
+                Luego, en el portal del Coordinador → panel <em>"Recuperación de Agosto"</em>,
+                ingresa la nota del examen extraordinario y ejecuta "Post-recuperación" para la resolución final.
+                <br><span style="font-size:10px;opacity:.8">Regla MINERD Ord. 04-2023: 1-2 materias → examen agosto · 3+ materias → repite</span>
+            </div>
         </div>
     </div>
 
@@ -2754,7 +2761,13 @@
                 var mats = ev.mats_recuperacion && ev.mats_recuperacion.length
                     ? ev.mats_recuperacion.join(', ')
                     : ev.mats_reprobadas + ' materia(s)';
-                msg = '⚠️ ' + nombre + ' pasa a ' + sigGrado + ' pero queda en RECUPERACIÓN.\n\nMaterias pendientes: ' + mats + '\n\n¿Confirmar promoción con recuperación?';
+                msg = '🟡 ' + nombre + ' queda en RECUPERACIÓN PEDAGÓGICA.\n\n' +
+                    'Materias reprobadas: ' + mats + '\n\n' +
+                    'El estudiante PERMANECE en ' + GRADO_ACTUAL.toUpperCase() + ' y deberá\n' +
+                    'rendir examen extraordinario en agosto.\n\n' +
+                    '• Si aprueba el examen → se promueve a ' + sigGrado + '\n' +
+                    '• Si reprueba → repite el grado\n\n' +
+                    '¿Registrar estado de recuperación?';
             } else if (estado === 'NO_PROMOVIDO') {
                 var mats2 = ev.mats_recuperacion && ev.mats_recuperacion.length
                     ? ev.mats_recuperacion.join(', ')
@@ -2824,11 +2837,10 @@
             btn.style.opacity       = '0.6';
 
         } else if (estado === 'RECUPERACION') {
-            GRADO_ACTUAL = gradoDestino;
-            gradoTexto.textContent  = gradoDestino + ' (Recuperación)';
+            gradoTexto.textContent  = GRADO_ACTUAL.toUpperCase() + ' (En Recuperación)';
             badge.style.borderColor = 'rgba(255,190,11,.4)';
             badge.style.color       = '#ffbe0b';
-            label.textContent       = 'Recuperación → ' + gradoDestino;
+            label.textContent       = '🟡 Recuperación registrada — examen agosto pendiente';
             btn.disabled            = true;
             btn.style.opacity       = '0.6';
 
