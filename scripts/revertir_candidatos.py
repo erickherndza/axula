@@ -272,6 +272,72 @@ def modo_fix_mencion(conn, mencion: str, grado_correcto: str, commit: bool):
         print(f"\n(Dry-run) Se revertirían {reparados} estudiantes. Agrega --commit para aplicar.")
 
 
+def modo_fix_segundo_ciclo(conn, commit: bool):
+    """
+    Revierte TODOS los CANDIDATO_PRUEBAS del segundo ciclo (4TO-6TO) a 5TO ACTIVO.
+    Detecta la mención desde e.mencion o extrayendo la segunda palabra de e.curso.
+    Los estudiantes que legitimamente completaron 6TO se re-promueven manualmente desde la UI.
+    """
+    # Menciones conocidas del segundo ciclo
+    MENCIONES_SEGUNDO_CICLO = [
+        "MULTIMEDIA", "MÚSICA", "MUSICA", "TEATRO",
+        "ARTES VISUALES", "DANZA",
+    ]
+
+    # Construir cláusula LIKE para cualquier mención
+    like_clauses = " OR ".join(
+        [f"upper(e.curso) LIKE '%{m}%'" for m in MENCIONES_SEGUNDO_CICLO]
+        + ["upper(e.mencion) IN ('MULTIMEDIA','MÚSICA','MUSICA','TEATRO','ARTES VISUALES','DANZA')"]
+    )
+
+    rows = conn.execute(
+        f"""
+        SELECT  e.id, e.nombre, e.apellido, e.grado, e.curso, e.condicion,
+                COALESCE(e.mencion, '') AS mencion
+        FROM    estudiantes e
+        WHERE   e.condicion = 'CANDIDATO_PRUEBAS'
+          AND   ({like_clauses})
+        ORDER   BY e.curso, e.apellido, e.nombre
+        """,
+    ).fetchall()
+
+    print(f"\nSEGUNDO CICLO (todas las menciones) — CANDIDATO_PRUEBAS: {len(rows)}")
+    print("Todos serán revertidos a 5TO <MENCIÓN> ACTIVO.\n")
+
+    # Contar por mención
+    conteo: dict[str, int] = {}
+    for r in rows:
+        # Extraer mención del campo curso si e.mencion está vacío
+        mencion = r["mencion"].strip()
+        if not mencion:
+            partes = (r["curso"] or "").split(None, 1)
+            mencion = partes[1] if len(partes) > 1 else ""
+        conteo[mencion] = conteo.get(mencion, 0) + 1
+
+    for m, c in sorted(conteo.items()):
+        print(f"  {m:<20} → {c} alumnos")
+    print()
+
+    reparados = 0
+    for r in rows:
+        mencion = r["mencion"].strip()
+        if not mencion:
+            partes = (r["curso"] or "").split(None, 1)
+            mencion = partes[1] if len(partes) > 1 else ""
+
+        ok = _revertir_estudiante(conn, r["id"], "5TO", mencion, commit)
+        if ok:
+            reparados += 1
+
+    if commit:
+        conn.commit()
+        print(f"\n✅ {reparados} estudiantes revertidos a 5TO ACTIVO (por mención).")
+        print("→ Reinicia la app en Render.")
+        print("→ Luego re-promueve via UI a los estudiantes que sí completaron 6TO.")
+    else:
+        print(f"\n(Dry-run) Se revertirían {reparados} estudiantes. Agrega --commit para aplicar.")
+
+
 def modo_from_csv(conn, csv_path: str, commit: bool):
     if not os.path.exists(csv_path):
         print(f"ERROR: archivo no encontrado: {csv_path}")
@@ -326,6 +392,9 @@ def main():
     elif args[0] == "--fix-multimedia":
         modo_fix_multimedia(conn, commit)
 
+    elif args[0] == "--fix-segundo-ciclo":
+        modo_fix_segundo_ciclo(conn, commit)
+
     elif args[0] == "--fix-mencion" and len(args) >= 3:
         mencion       = args[1]
         grado_correcto = args[2].upper()
@@ -337,6 +406,7 @@ def main():
     else:
         print("Uso:")
         print("  python3 scripts/revertir_candidatos.py")
+        print("  python3 scripts/revertir_candidatos.py --fix-segundo-ciclo [--commit]")
         print("  python3 scripts/revertir_candidatos.py --fix-multimedia [--commit]")
         print("  python3 scripts/revertir_candidatos.py --fix-mencion MÚSICA 5TO [--commit]")
         print("  python3 scripts/revertir_candidatos.py --from-csv fixes.csv [--commit]")
