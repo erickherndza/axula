@@ -101,6 +101,39 @@ python3 -c "import app; print('OK')"
 
 ## Log de sesiones
 
+### 2026-07-23 (sesión 13 — UI: RECUPERACION workflow + menciones primer ciclo)
+
+**Fix 1 — RECUPERACION separada de NO_PROMOVIDO en coordinador.html** (commit `beeae4b`):
+- Antes, RECUPERACION y NO_PROMOVIDO compartían el mismo botón "↑ Forzar"
+- Fix: botón "🟡 Registrar" exclusivo para RECUPERACION (`promRegistrarRecuperacion(estId)`)
+  que llama `_promCallEjecutarUno` con `forzarPromovido=false` y obs="Recuperación pedagógica agosto"
+- NO_PROMOVIDO mantiene "❌ Forzar" separado
+
+**Fix 2 — Mensajes y labels correctos en perfil.html** (commits `beeae4b`, `c4c5ad6`):
+- Dialog RECUPERACION: ahora dice "permanece en grado actual, examen agosto" (antes decía "pasa a siguiente grado")
+- `_actualizarUIPromocion` para RECUPERACION: muestra "🟡 Recuperación registrada — examen agosto pendiente" (antes "Recuperación → [mismo grado]")
+- Banner informativo en perfil cuando motor = RECUPERACION: explica flujo y próximos pasos
+- Botón cuando `p_acad < 70` y sin motor ejecutado: muestra "Repitente — GRADO" (antes "Evaluar y Promover")
+
+**Fix 3 — Menciones (Especialidad) solo existen en 4TO y 5TO** (commit `b6a2940`):
+- `index.html`: sidebar Especialidad se oculta cuando filtro activo es primer ciclo
+  - Nueva función `_sbActualizarEspecialidad(ciclo)` llamada desde `sbSetCiclo()` y `sbSetGrado()`
+  - Al seleccionar primer ciclo: sección Especialidad `display:none`, menciones activas limpiadas
+- `usuarios.html`: `onCicloChange('primer_ciclo')` ahora oculta `#bloque-mencion` y desmarca
+  todas las menciones activas + llama `onMencionChange()` para limpiar materias técnicas
+
+**REGLA CONFIRMADA — estructura de menciones:**
+- Primer ciclo (1ERO, 2DO, 3ERO): NO tienen mención artística
+- Segundo ciclo: 4TO y 5TO → MULTIMEDIA / TEATRO / MÚSICA / ARTES VISUALES / DANZA
+- 6TO también es segundo ciclo pero los docentes de mención típicamente son de 4TO/5TO
+
+**Pendientes en Render Shell:**
+```bash
+python3 scripts/recalcular_kpis_notas0.py --commit
+python3 scripts/recalcular_conductual.py --commit
+python3 scripts/cargar_diseno_basico_p12.py --commit
+```
+
 ### 2026-07-23 (sesión 12 — Fix motor dedup cross-mención + cierre de año)
 
 **Problema reportado:** El usuario intentó cerrar el año escolar 2025-2026 y recibió:
