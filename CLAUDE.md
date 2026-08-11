@@ -1,13 +1,44 @@
-# CLAUDE.md — TecnoAuladom / Axula
+# CLAUDE.md — Axula (Asistente Personal Docente)
 # Contexto específico de este proyecto. Claude Code lee primero ~/.claude/CLAUDE.md
 # y luego este archivo — ambos aplican en conjunto.
+
+---
+
+## CAMBIO DE PARADIGMA (sesión 14 — 2026-08-11)
+
+Axula dejó de ser plataforma institucional del C.E. Benito Juárez.
+**Ahora es el asistente personal de clases de Erick Hernandez (MULTIMEDIA 4TO/5TO/6TO).**
+
+- Backup completo archivado en: https://github.com/erickherndza/axulafull.git (intocable)
+- Este repo (axula.git) = versión personal recortada
+
+### Módulos eliminados
+`finanzas` · `secretaria` · `digitador` · `usuarios` · `promocion` · `config`
+`portal_padres` · `firmas` · `suministros` · `normativa` · `planificacion_basica`
+
+### Módulos activos (18 blueprints)
+`auth` · `estudiantes` · `calificaciones` · `asistencia` · `casos` · `reportes`
+`notificaciones` · `calendario` · `profesor` · `planificacion` · `dashboard`
+`asignaciones` · `evaluacion` · `ocr` · `expediente` · `analitica` · `archivos` · `asistente`
+
+### Perfil de Erick en BD (id=3)
+- username: `erick.hernandez@educacion.edu.do`
+- rol: `profesor` · tipo_docencia: `tecnica`
+- grado: `4to,5to` · mencion: `MULTIMEDIA`
+- materia: `Fotografía|Diseño Básico y Expresión Visual|Diseño Web|Diseño Gráfico|Publicidad y Creatividad`
+
+### Reglas de acceso post-recorte
+- Login siempre redirige a `/profesor` (rol único activo)
+- `/casos` abierto al profesor (cuaderno anecdótico)
+- `/api/evaluacion/ce/configurar` abierto al profesor (configura sus propias CEs)
+- SECRET_KEY ya está en Render como env var — no tocar
 
 ---
 
 ## Stack
 
 - Flask + SQLite (WAL mode) + Python 3 + ReportLab + openpyxl + Groq API
-- Arquitectura Blueprint: /core/ + /routes/ (20 blueprints) + app.py factory
+- Arquitectura Blueprint: /core/ + /routes/ (18 blueprints) + app.py factory
 - Iniciar local: cd /Users/erickhernandez/elearning && python3 app.py
 - DB local: database.db
 - **Deploy: git push origin main → Render auto-deploya (~5-10 min) → hard refresh en browser**
@@ -28,15 +59,15 @@ Power BI light mode · Teal: #038C8C, #024959, #012840
 
 ## Módulos completados
 
-- Autenticación y 8 roles
+- Autenticación (usuario único profesor MULTIMEDIA)
 - Expediente estudiantil (ind_conducta, ind_psico, ind_academico, ind_logros)
-- Boletín PDF con header institucional
-- Acuerdo-compromiso en /acuerdo/<est_id> (página dedicada, no modal)
-- 4 portales administrativos (Secretaría, Digitador, Finanzas, Evaluación Competencias)
-- Evaluación por competencias Ordenanza 04-2023
+- Evaluación por competencias Ordenanza 04-2023 — CEs sembradas para todas las menciones
 - Generación PDF/Excel
 - Registro de estudiantes MVP
+- Escáner OCR de documentos (`/escaner`)
+- Cuaderno anecdótico (`/casos`) — abierto al profesor
 - **Carga masiva de notas desde PDF** — scripts/cargar_notas_pdf.py (2026-06-27)
+- **Competencias Modalidad Artes** — scripts/sembrar_competencias_arte.py (2026-08-11)
 
 ## Datos cargados en BD (año escolar 2025-2026)
 
@@ -100,6 +131,47 @@ python3 -c "import app; print('OK')"
 - Todos los overrides centralizados en `static/theme.css` (al final del archivo)
 
 ## Log de sesiones
+
+### 2026-08-11 (sesión 14 — Paradigma: Axula → asistente personal MULTIMEDIA)
+
+**Cambio de paradigma:** El centro y el MINERD ya tienen plataforma propia.
+Axula se convierte en asistente personal de clases de Erick (4TO/5TO/6TO MULTIMEDIA).
+
+**Backup:** Historial completo archivado en `axulafull.git` (push directo, remote removido del local).
+
+**Recorte de módulos (commit `7731cbe`):**
+- Eliminados 11 blueprints institucionales: finanzas, secretaria, digitador, usuarios, promocion, config, portal_padres, firmas, suministros, normativa, planificacion_basica
+- 21,576 líneas borradas · 18 blueprints activos
+
+**Acceso profesor completo (commit `f230325`):**
+- Login siempre redirige a `/profesor`
+- Sidebar: Reportes, Planificación, Cuaderno anecdótico visibles al profesor
+- Welcome cards: Cuaderno anecdótico y Reportes accesibles
+
+**Fix acceso evaluación y casos (commit `1f59264`):**
+- `/casos` — eliminado bloqueo de rol (profesor puede usar cuaderno anecdótico)
+- `/api/evaluacion/ce/configurar` — profesor puede configurar sus propias CEs
+
+**Fix escáner + perfil + competencias (commit `c45dabe` + `caa0722`):**
+- `escaner.html` restaurado (borrado por error en el recorte)
+- Perfil Erick en BD: grado `4to,5to`, mencion `MULTIMEDIA`, 5 materias técnicas
+- `scripts/sembrar_competencias_arte.py` — 188 CEs para todas las menciones de Artes MINERD
+  (MULTIMEDIA · TEATRO · MÚSICA · ARTES VISUALES · DANZA) · 4 CEs por materia · cubre variantes mayúsculas
+
+**Pendiente en Render Shell:**
+```bash
+python3 scripts/sembrar_competencias_arte.py --commit
+```
+
+**ARQUITECTURA POST-RECORTE:**
+```
+Login → /profesor (único destino)
+/casos        → cuaderno anecdótico (abierto al profesor)
+/evaluacion   → /evaluacion/panel → panel_asignaciones.html
+               usa prof.get("materia") + prof.get("grado") del usuario en BD
+/escaner      → OCR de documentos (abierto a cualquier usuario logueado)
+competencias_materia → tabla con CEs por materia/año escolar
+```
 
 ### 2026-07-23 (sesión 13 — UI: RECUPERACION workflow + menciones primer ciclo)
 
