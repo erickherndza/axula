@@ -1975,34 +1975,20 @@ tr:hover td{background:var(--hover)}
       </a>
       {% endif %}
 
-      {% if current_user and current_user.rol not in ['profesor'] %}
       <a class="sb-item" href="/reportes" style="text-decoration:none;">
         <i class="fas fa-flag" style="font-size:13px;width:18px;text-align:center;"></i>
         <span style="flex:1;">Reportes</span>
       </a>
-      {% endif %}
 
-      {% if current_user and (current_user.es_coord or current_user.es_directora) %}
-      <a class="sb-item" href="/coordinador" style="text-decoration:none;">
-        <i class="fas fa-tachometer-alt" style="font-size:13px;width:18px;text-align:center;"></i>
-        <span style="flex:1;">Mi Panel</span>
-      </a>
-      <a class="sb-item" href="/patrones" style="text-decoration:none;">
-        <i class="fas fa-brain" style="font-size:13px;width:18px;text-align:center;"></i>
-        <span style="flex:1;">Patrones IA</span>
-      </a>
       <a class="sb-item" href="/planificacion" style="text-decoration:none;">
         <i class="fas fa-book-open" style="font-size:13px;width:18px;text-align:center;"></i>
         <span style="flex:1;">Planificación</span>
       </a>
-      {% endif %}
 
-      {% if current_user and (current_user.es_coord or current_user.es_directora or current_user.es_psicologa) %}
       <a class="sb-item" href="/casos" style="text-decoration:none;">
         <i class="fas fa-folder-open" style="font-size:13px;width:18px;text-align:center;"></i>
-        <span style="flex:1;">Casos</span>
+        <span style="flex:1;">Cuaderno anecdótico</span>
       </a>
-      {% endif %}
 
       {% if current_user and current_user.rol not in ['psicologa_primer_ciclo','psicologa_segundo_ciclo','padre'] %}
       <button class="sb-item" onclick="showSection('upload');closeSidebarMobile();">
@@ -2027,30 +2013,6 @@ tr:hover td{background:var(--hover)}
     </div>
 
     <div class="sb-sep"></div>
-
-    <!-- ── PORTALES DIRECTOS ── -->
-    {% if current_user and current_user.rol in ('secretaria','secretaria_docente') %}
-    <div class="sb-section">
-      <a class="sb-item" href="/secretaria" style="text-decoration:none;font-weight:600;color:var(--accent);">
-        <i class="fas fa-file-alt" style="font-size:13px;width:18px;text-align:center;"></i>
-        <span style="flex:1;">→ Panel Secretaría</span>
-      </a>
-    </div>
-    {% elif current_user and current_user.rol == 'digitador' %}
-    <div class="sb-section">
-      <a class="sb-item" href="/digitador" style="text-decoration:none;font-weight:600;color:var(--accent);">
-        <i class="fas fa-keyboard" style="font-size:13px;width:18px;text-align:center;"></i>
-        <span style="flex:1;">→ Panel Digitación</span>
-      </a>
-    </div>
-    {% elif current_user and current_user.rol == 'auxiliar_contabilidad' %}
-    <div class="sb-section">
-      <a class="sb-item" href="/finanzas" style="text-decoration:none;font-weight:600;color:var(--accent);">
-        <i class="fas fa-chart-line" style="font-size:13px;width:18px;text-align:center;"></i>
-        <span style="flex:1;">→ Panel Finanzas</span>
-      </a>
-    </div>
-    {% endif %}
 
     <div class="sb-sep" style="margin-bottom:10px;"></div>
 
@@ -2414,18 +2376,16 @@ tr:hover td{background:var(--hover)}
           <div class="wc-cd">Todos los perfiles con notas, alertas y búsqueda</div>
         </a>
 
-        {% if current_user and (current_user.es_coord or current_user.es_directora or current_user.es_psicologa) %}
         <a href="/casos" class="wc-card">
           <div class="wc-ci ci-orange"><i class="fas fa-folder-open"></i></div>
-          <div class="wc-ct">Gestión de casos</div>
-          <div class="wc-cd">Seguimiento psicológico y conductual</div>
+          <div class="wc-ct">Cuaderno anecdótico</div>
+          <div class="wc-cd">Observaciones y seguimiento de tus estudiantes</div>
         </a>
         <a href="/reportes" class="wc-card">
           <div class="wc-ci ci-purple"><i class="fas fa-clipboard-list"></i></div>
           <div class="wc-ct">Reportes</div>
           <div class="wc-cd">Conductuales, psicológicos y académicos</div>
         </a>
-        {% endif %}
 
         {% if es_profesor %}
         <a href="/profesor" class="wc-card">

@@ -448,28 +448,8 @@ def login_post():
     session["grado"]         = u["grado"]         or ""
     session["mencion"]       = u["mencion"]       or ""
     session["tipo_docencia"] = u["tipo_docencia"] or ""
-    # Redirigir según rol
-    rol_norm = _normalizar_rol(u["rol"])
     session.modified = True
-    # Use a page-based redirect instead of 302 to ensure cookie is committed
-    if rol_norm == "superusuario":
-        dest = "/"
-    elif rol_norm == "profesor":
-        dest = "/profesor"
-    elif rol_norm == "padre":
-        dest = "/portal-padres"
-    elif rol_norm in ("secretaria", "secretaria_docente"):
-        dest = "/secretaria"
-    elif rol_norm == "digitador":
-        dest = "/digitador"
-    elif rol_norm == "auxiliar_contabilidad":
-        dest = "/finanzas"
-    elif rol_norm == "suministros":
-        dest = "/suministros"
-    elif rol_norm == "asistente_directora":
-        dest = "/asistente"
-    else:
-        dest = "/"
+    dest = "/profesor"
     return f'''<!DOCTYPE html>
 <html><head>
 <meta charset="UTF-8">
