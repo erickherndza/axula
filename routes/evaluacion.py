@@ -1074,9 +1074,8 @@ def configurar_competencias():
     Body: {materia, ces: [{numero, descripcion, periodo_eval}]}
     """
     u = get_usuario()
-    from core.auth import _normalizar_rol
-    if _normalizar_rol(u.get("rol", "")) not in ROLES_COORD | {"directora", "superusuario"}:
-        return jsonify({"error": "Sin permisos"}), 403
+    if not u:
+        return jsonify({"error": "No autenticado"}), 401
 
     d = request.get_json(silent=True) or {}
     materia = (d.get("materia") or "").strip()

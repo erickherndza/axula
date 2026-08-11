@@ -39,8 +39,6 @@ def casos_page():
     """Panel de gestión de casos — psicólogas, coordinadores y directora."""
     u = get_usuario()
     rol_n = _normalizar_rol(u.get("rol", ""))
-    if rol_n not in ROLES_PSICOLOGA and rol_n not in ROLES_COORD and not u.get("es_directora"):
-        return redirect("/")
 
     # Sanciones disponibles según el nivel del cargo (MINERD — Normas de Convivencia)
     es_directora  = rol_n in ROLES_SUPER or u.get("es_directora")
