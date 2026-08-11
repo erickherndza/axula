@@ -1,0 +1,1339 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Escáner de Documentos — Axula</title>
+<meta name="csrf-token" content="{{ csrf_token }}">
+<link rel="stylesheet" href="/static/theme.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  /* ── Layout ───────────────────────────────────────────────────────────── */
+  body { background: var(--bg-page, #f3f2f1); }
+  .ocr-wrapper {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 24px 16px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  @media (max-width: 768px) {
+    .ocr-wrapper { grid-template-columns: 1fr; }
+  }
+  .ocr-full { grid-column: 1 / -1; }
+
+  /* ── Cabecera ─────────────────────────────────────────────────────────── */
+  .page-header {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 18px 22px;
+    background: var(--card-bg, #ffffff);
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.08);
+    border-left: 4px solid #0078d4;
+  }
+  .page-header .icon-big {
+    width: 52px; height: 52px;
+    background: #0078d4;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 24px;
+    flex-shrink: 0;
+  }
+  .page-header h1 { margin: 0; font-size: 1.35rem; color: var(--text-primary, #201f1e); }
+  .page-header p  { margin: 4px 0 0; font-size: .85rem; color: var(--text-secondary, #605e5c); }
+  .back-btn {
+    margin-left: auto;
+    padding: 8px 16px;
+    background: #f3f2f1;
+    border: 1px solid #edebe9;
+    border-radius: 4px;
+    color: #323130;
+    text-decoration: none;
+    font-size: .85rem;
+    display: flex; align-items: center; gap: 6px;
+    transition: background .15s;
+  }
+  .back-btn:hover { background: #edebe9; }
+
+  /* ── Card ─────────────────────────────────────────────────────────────── */
+  .card {
+    background: var(--card-bg, #ffffff);
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.08);
+    padding: 20px;
+  }
+  .card-title {
+    font-size: .95rem;
+    font-weight: 600;
+    color: var(--text-primary, #201f1e);
+    margin: 0 0 16px;
+    display: flex; align-items: center; gap: 8px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border, #edebe9);
+  }
+  .card-title i { color: #0078d4; }
+
+  /* ── Zona de carga ────────────────────────────────────────────────────── */
+  .drop-zone {
+    border: 2px dashed #c8c6c4;
+    border-radius: 8px;
+    padding: 32px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .2s, background .2s;
+    background: #faf9f8;
+    position: relative;
+  }
+  .drop-zone:hover, .drop-zone.drag-over {
+    border-color: #0078d4;
+    background: #eff6fc;
+  }
+  .drop-zone i { font-size: 2.5rem; color: #0078d4; margin-bottom: 10px; display: block; }
+  .drop-zone p { margin: 6px 0; color: #605e5c; font-size: .9rem; }
+  .drop-zone input[type="file"] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+
+  .btn-row {
+    display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px;
+  }
+  .btn {
+    padding: 8px 18px;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    font-size: .88rem;
+    font-weight: 500;
+    display: inline-flex; align-items: center; gap: 7px;
+    transition: filter .15s;
+  }
+  .btn:hover { filter: brightness(.93); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-primary  { background: #0078d4; color: #fff; }
+  .btn-success  { background: #107c10; color: #fff; }
+  .btn-danger   { background: #d13438; color: #fff; }
+  .btn-outline  {
+    background: transparent;
+    border: 1px solid #0078d4;
+    color: #0078d4;
+  }
+  .btn-camera   { background: #2b2b2b; color: #fff; }
+
+  /* ── Preview imagen ───────────────────────────────────────────────────── */
+  #preview-container {
+    margin-top: 14px;
+    display: none;
+    position: relative;
+  }
+  #preview-img {
+    width: 100%;
+    max-height: 320px;
+    object-fit: contain;
+    border-radius: 6px;
+    border: 1px solid #edebe9;
+  }
+  #btn-limpiar {
+    position: absolute; top: 8px; right: 8px;
+    background: rgba(0,0,0,.55);
+    color: #fff; border: none; border-radius: 50%;
+    width: 28px; height: 28px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .8rem;
+  }
+
+  /* ── Cámara ───────────────────────────────────────────────────────────── */
+  #camara-container {
+    display: none;
+    margin-top: 14px;
+  }
+  #video-feed {
+    width: 100%; border-radius: 6px;
+    border: 2px solid #0078d4;
+    max-height: 300px;
+    background: #000;
+  }
+  #canvas-hidden { display: none; }
+
+  /* ── Spinner ──────────────────────────────────────────────────────────── */
+  .spinner-wrap {
+    display: none;
+    text-align: center;
+    padding: 30px;
+  }
+  .spinner {
+    width: 44px; height: 44px;
+    border: 4px solid #c8c6c4;
+    border-top-color: #0078d4;
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+    margin: 0 auto 12px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Resultado ────────────────────────────────────────────────────────── */
+  #resultado-container { display: none; }
+
+  .doc-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-size: .82rem; font-weight: 600;
+    margin-bottom: 14px;
+  }
+  .badge-cedula         { background: #ddf3d9; color: #107c10; }
+  .badge-pasaporte      { background: #d0e8f8; color: #0078d4; }
+  .badge-acta_nacimiento{ background: #fff4ce; color: #8a5800; }
+  .badge-factura        { background: #fde7e9; color: #d13438; }
+  .badge-contrato       { background: #ede8f5; color: #5c2d91; }
+  .badge-certificado    { background: #e6f7f1; color: #107c10; }
+  .badge-otro           { background: #f3f2f1; color: #605e5c; }
+
+  .confianza-chip {
+    display: inline-block;
+    padding: 2px 10px; border-radius: 12px; font-size: .77rem; font-weight: 600;
+    margin-left: 8px;
+  }
+  .conf-alta  { background: #ddf3d9; color: #107c10; }
+  .conf-media { background: #fff4ce; color: #8a5800; }
+  .conf-baja  { background: #fde7e9; color: #d13438; }
+
+  /* ── Campos estructurados ─────────────────────────────────────────────── */
+  .campos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .campo-item {
+    background: #faf9f8;
+    border: 1px solid #edebe9;
+    border-radius: 6px;
+    padding: 10px 12px;
+    position: relative;
+  }
+  .campo-item label {
+    font-size: .72rem;
+    font-weight: 600;
+    color: #605e5c;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    display: block;
+    margin-bottom: 4px;
+  }
+  .campo-item .campo-valor {
+    font-size: .92rem;
+    color: #201f1e;
+    word-break: break-word;
+  }
+  .btn-copiar {
+    position: absolute; top: 6px; right: 6px;
+    background: transparent; border: none;
+    color: #c8c6c4; cursor: pointer; font-size: .8rem;
+    padding: 2px;
+    transition: color .15s;
+  }
+  .btn-copiar:hover { color: #0078d4; }
+
+  /* ── Texto completo ───────────────────────────────────────────────────── */
+  .texto-completo {
+    background: #faf9f8;
+    border: 1px solid #edebe9;
+    border-radius: 6px;
+    padding: 12px;
+    font-family: 'Courier New', monospace;
+    font-size: .82rem;
+    white-space: pre-wrap;
+    max-height: 220px;
+    overflow-y: auto;
+    color: #323130;
+    line-height: 1.55;
+  }
+
+  /* ── Ítems de factura ─────────────────────────────────────────────────── */
+  .tabla-items {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .85rem;
+    margin-bottom: 10px;
+  }
+  .tabla-items th {
+    background: #0078d4;
+    color: #fff;
+    padding: 7px 10px;
+    text-align: left;
+    font-weight: 600;
+  }
+  .tabla-items td {
+    padding: 7px 10px;
+    border-bottom: 1px solid #edebe9;
+    vertical-align: top;
+  }
+  .tabla-items tr:nth-child(even) td { background: #f3f2f1; }
+  .tabla-items .num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  /* ── Historial ────────────────────────────────────────────────────────── */
+  .hist-table {
+    width: 100%; border-collapse: collapse; font-size: .84rem;
+  }
+  .hist-table th {
+    background: #edebe9;
+    padding: 8px 10px; text-align: left;
+    font-size: .78rem; font-weight: 600; color: #323130;
+    position: sticky; top: 0;
+  }
+  .hist-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid #f3f2f1;
+    vertical-align: middle;
+  }
+  .hist-table tr:hover td { background: #f9f8f7; }
+  .hist-wrap { max-height: 340px; overflow-y: auto; }
+
+  .tag {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 9px; border-radius: 12px; font-size: .75rem; font-weight: 600;
+  }
+
+  /* ── Alert ────────────────────────────────────────────────────────────── */
+  .alert {
+    padding: 10px 14px; border-radius: 6px; font-size: .88rem;
+    margin-bottom: 12px; display: none;
+  }
+  .alert-error   { background: #fde7e9; color: #a80000; border-left: 3px solid #d13438; }
+  .alert-ok      { background: #ddf3d9; color: #0b5e0b; border-left: 3px solid #107c10; }
+  .alert-success { background: #ddf3d9; color: #0b5e0b; border-left: 3px solid #107c10; }
+
+  /* ── Responsivo cámara ────────────────────────────────────────────────── */
+  @media (max-width: 480px) {
+    .btn-row { flex-direction: column; }
+    .btn { justify-content: center; }
+  }
+</style>
+</head>
+<body>
+
+<div class="ocr-wrapper">
+
+  <!-- ── CABECERA ──────────────────────────────────────────────────────── -->
+  <div class="page-header ocr-full">
+    <div class="icon-big"><i class="fas fa-camera-retro"></i></div>
+    <div>
+      <h1>Escáner de Documentos</h1>
+      <p>Fotografía o sube cualquier documento — el sistema extrae el texto y los datos automáticamente</p>
+    </div>
+    <a href="javascript:history.back()" class="back-btn">
+      <i class="fas fa-arrow-left"></i> Volver
+    </a>
+  </div>
+
+  <!-- ── PANEL IZQUIERDO: subir imagen ─────────────────────────────────── -->
+  <div class="card">
+    <div class="card-title"><i class="fas fa-upload"></i> Subir o Fotografiar Documento</div>
+
+    <!-- Zona drag & drop -->
+    <div class="drop-zone" id="drop-zone">
+      <input type="file" id="file-input" accept="image/*" capture>
+      <i class="fas fa-file-image"></i>
+      <p><strong>Arrastra la imagen aquí</strong></p>
+      <p>o haz clic para seleccionar un archivo</p>
+      <p style="font-size:.78rem;color:#a19f9d">JPG, PNG, WEBP — máximo 10 MB</p>
+    </div>
+
+    <!-- Preview -->
+    <div id="preview-container">
+      <img id="preview-img" alt="Vista previa">
+      <button id="btn-limpiar" title="Quitar imagen"><i class="fas fa-times"></i></button>
+    </div>
+
+    <!-- Cámara -->
+    <div id="camara-container">
+      <video id="video-feed" autoplay playsinline></video>
+      <canvas id="canvas-hidden"></canvas>
+    </div>
+
+    <div class="btn-row" style="margin-top:14px">
+      <button class="btn btn-camera" id="btn-camara">
+        <i class="fas fa-camera"></i> Usar Cámara
+      </button>
+      <button class="btn btn-primary" id="btn-escanear" disabled>
+        <i class="fas fa-search"></i> Escanear
+      </button>
+      <button class="btn btn-outline" id="btn-capturar" style="display:none">
+        <i class="fas fa-circle"></i> Capturar
+      </button>
+    </div>
+
+    <!-- Alerta de error -->
+    <div class="alert alert-error" id="alerta-error"></div>
+
+    <!-- Spinner -->
+    <div class="spinner-wrap" id="spinner">
+      <div class="spinner"></div>
+      <p style="color:#605e5c;font-size:.88rem">Analizando documento con IA…</p>
+    </div>
+  </div>
+
+  <!-- ── PANEL DERECHO: resultado ───────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-title"><i class="fas fa-file-alt"></i> Resultado del Escaneo</div>
+
+    <div id="resultado-vacio" style="text-align:center;padding:40px 20px;color:#a19f9d">
+      <i class="fas fa-file-search" style="font-size:3rem;margin-bottom:12px;display:block"></i>
+      <p>Los datos extraídos aparecerán aquí</p>
+    </div>
+
+    <div id="resultado-container">
+
+      <!-- Badge tipo + confianza -->
+      <div style="display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:14px">
+        <span class="doc-badge" id="badge-tipo"></span>
+        <span class="confianza-chip" id="chip-confianza"></span>
+        <!-- Botones dinámicos según rol -->
+        <div id="acciones-rol" style="display:flex;gap:6px;flex-wrap:wrap;margin-left:auto"></div>
+      </div>
+
+      <!-- Campos estructurados -->
+      <div id="campos-grid" class="campos-grid"></div>
+
+      <!-- Tabla ítems (facturas) -->
+      <div id="items-container" style="display:none;margin-bottom:14px">
+        <p style="font-size:.82rem;font-weight:600;color:#605e5c;margin-bottom:6px">
+          <i class="fas fa-list"></i> Ítems / Productos
+        </p>
+        <div style="overflow-x:auto">
+          <table class="tabla-items" id="tabla-items">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Descripción</th>
+                <th class="num">Cant.</th>
+                <th class="num">Precio Unit.</th>
+                <th class="num">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody id="items-tbody"></tbody>
+          </table>
+        </div>
+        <div id="totales-container" style="text-align:right;font-size:.88rem;margin-top:6px"></div>
+      </div>
+
+      <!-- Texto completo -->
+      <p style="font-size:.82rem;font-weight:600;color:#605e5c;margin-bottom:6px">
+        <i class="fas fa-align-left"></i> Texto Completo Extraído
+        <button class="btn btn-outline" id="btn-copiar-texto"
+          style="padding:3px 10px;font-size:.78rem;margin-left:10px">
+          <i class="fas fa-copy"></i> Copiar
+        </button>
+      </p>
+      <div class="texto-completo" id="texto-completo-div"></div>
+
+    </div>
+  </div>
+
+  <!-- ── HISTORIAL ──────────────────────────────────────────────────────── -->
+  <div class="card ocr-full">
+    <div class="card-title" style="justify-content:space-between">
+      <span><i class="fas fa-history"></i> Historial de Escaneos</span>
+      <button class="btn btn-outline" id="btn-refrescar" style="padding:4px 12px;font-size:.8rem">
+        <i class="fas fa-sync-alt"></i> Refrescar
+      </button>
+    </div>
+    <div class="hist-wrap">
+      <table class="hist-table">
+        <thead>
+          <tr>
+            <th>Tipo</th>
+            <th>Archivo</th>
+            <th>Confianza</th>
+            <th>Usuario</th>
+            <th>Fecha</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="historial-tbody">
+          <tr><td colspan="6" style="text-align:center;color:#a19f9d;padding:20px">
+            Cargando historial…
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div><!-- /ocr-wrapper -->
+
+<!-- ══════════════════════════════════════════════════════════════
+     MODAL: PASE DE LISTA (Profesor)
+════════════════════════════════════════════════════════════════ -->
+<div id="modal-pase" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:900;align-items:center;justify-content:center">
+  <div style="background:var(--card-bg,#fff);border-radius:10px;width:min(700px,96vw);max-height:90vh;overflow-y:auto;padding:24px;position:relative">
+    <button onclick="cerrarModal('modal-pase')"
+      style="position:absolute;top:12px;right:14px;background:none;border:none;font-size:1.3rem;cursor:pointer;color:#605e5c">&times;</button>
+    <h3 style="margin:0 0 6px;font-size:1.1rem"><i class="fas fa-clipboard-list" style="color:#0078d4"></i> Pase de Lista desde Escaneo</h3>
+    <p id="pase-aviso-limite" style="display:none;background:#fff4ce;border-left:3px solid #f7630c;padding:8px 12px;border-radius:4px;font-size:.85rem;color:#7a5200;margin-bottom:12px"></p>
+    <p style="font-size:.83rem;color:#605e5c;margin-bottom:14px">
+      <i class="fas fa-info-circle" style="color:#0078d4"></i>
+      Revisa y ajusta quién está presente. El sistema solo registra a los estudiantes que reconoció.
+      Límite: <strong id="pase-usos-txt"></strong>.
+    </p>
+
+    <!-- Materia y fecha -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+      <div>
+        <label style="font-size:.82rem;font-weight:600;display:block;margin-bottom:4px">Materia *</label>
+        <input id="pase-materia" type="text" placeholder="Ej: Fotografía"
+          style="width:100%;padding:7px 10px;border:1px solid #edebe9;border-radius:4px;font-size:.9rem;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:.82rem;font-weight:600;display:block;margin-bottom:4px">Fecha</label>
+        <input id="pase-fecha" type="date"
+          style="width:100%;padding:7px 10px;border:1px solid #edebe9;border-radius:4px;font-size:.9rem;box-sizing:border-box">
+      </div>
+    </div>
+
+    <!-- Lista de estudiantes reconocidos -->
+    <div id="pase-lista-container">
+      <p style="font-size:.82rem;font-weight:600;margin-bottom:8px">Estudiantes reconocidos <span id="pase-count-badge" class="doc-badge" style="font-size:.75rem"></span></p>
+      <div id="pase-lista-rows" style="max-height:280px;overflow-y:auto;border:1px solid #edebe9;border-radius:6px;padding:8px"></div>
+    </div>
+
+    <!-- Sin match -->
+    <div id="pase-sin-match-box" style="display:none;margin-top:12px">
+      <p style="font-size:.82rem;font-weight:600;color:#a80000;margin-bottom:4px">
+        <i class="fas fa-exclamation-triangle"></i> No reconocidos (no se registrarán):
+      </p>
+      <div id="pase-sin-match-list" style="font-size:.8rem;color:#605e5c;padding:6px 10px;background:#fde7e9;border-radius:4px"></div>
+    </div>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+      <button class="btn btn-outline" onclick="cerrarModal('modal-pase')">Cancelar</button>
+      <button class="btn btn-success" id="btn-confirmar-pase" onclick="confirmarPaseLista()">
+        <i class="fas fa-check"></i> Registrar Asistencia
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     MODAL: CATEGORIZAR ARCHIVO (Secretaria / Coordinador / Directora)
+════════════════════════════════════════════════════════════════ -->
+<div id="modal-archivo" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:900;align-items:center;justify-content:center">
+  <div style="background:var(--card-bg,#fff);border-radius:10px;width:min(500px,96vw);max-height:90vh;overflow-y:auto;padding:24px;position:relative">
+    <button onclick="cerrarModal('modal-archivo')"
+      style="position:absolute;top:12px;right:14px;background:none;border:none;font-size:1.3rem;cursor:pointer;color:#605e5c">&times;</button>
+    <h3 style="margin:0 0 14px;font-size:1.1rem"><i class="fas fa-archive" style="color:#0078d4"></i> Categorizar y Archivar Documento</h3>
+
+    <label style="font-size:.82rem;font-weight:600;display:block;margin-bottom:4px">Categoría del documento *</label>
+    <select id="archivo-categoria"
+      style="width:100%;padding:8px 10px;border:1px solid #edebe9;border-radius:4px;font-size:.9rem;margin-bottom:14px">
+      <option value="general">General</option>
+      <option value="acta_nacimiento">Acta de Nacimiento</option>
+      <option value="licencia">Licencia de Personal</option>
+      <option value="permiso">Permiso Institucional</option>
+      <option value="certificado">Certificado</option>
+      <option value="documento_institucional">Documento Institucional</option>
+      <option value="factura">Factura / Recibo</option>
+      <option value="contrato">Contrato / Acuerdo</option>
+      <option value="expediente_personal">Expediente Personal</option>
+    </select>
+
+    <label style="font-size:.82rem;font-weight:600;display:block;margin-bottom:4px">Etiqueta / Nombre (opcional)</label>
+    <input id="archivo-etiqueta" type="text" placeholder="Ej: Licencia médica Juan Pérez"
+      style="width:100%;padding:8px 10px;border:1px solid #edebe9;border-radius:4px;font-size:.9rem;margin-bottom:14px;box-sizing:border-box">
+
+    <label style="font-size:.82rem;font-weight:600;display:block;margin-bottom:4px">Asociar a miembro del personal (opcional)</label>
+    <select id="archivo-personal"
+      style="width:100%;padding:8px 10px;border:1px solid #edebe9;border-radius:4px;font-size:.9rem;margin-bottom:20px">
+      <option value="">— Sin asociar —</option>
+    </select>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn btn-outline" onclick="cerrarModal('modal-archivo')">Cancelar</button>
+      <button class="btn btn-success" onclick="confirmarArchivo()">
+        <i class="fas fa-archive"></i> Archivar
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Estado global ─────────────────────────────────────────────────────────
+let imagenBase64 = null;
+let mimeType = "image/jpeg";
+let resultadoActual = null;
+let streamCamara = null;
+const CSRF = document.querySelector('meta[name="csrf-token"]')?.content || "";
+const ROL = "{{ usuario.rol | default('') }}";
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+function $(sel) { return document.querySelector(sel); }
+function $id(id) { return document.getElementById(id); }
+function fmt(v) {
+  if (v == null || v === "") return "—";
+  const n = parseFloat(String(v).replace(/,/g, ""));
+  if (!isNaN(n)) return n.toLocaleString("es-DO", {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  return v;
+}
+function label(k) {
+  const map = {
+    nombre:"Nombre", apellido:"Apellido", cedula:"Cédula",
+    fecha_nacimiento:"Fecha de Nac.", fecha_vencimiento:"Vencimiento",
+    lugar_nacimiento:"Lugar de Nac.", sexo:"Sexo",
+    numero_pasaporte:"# Pasaporte", nacionalidad:"Nacionalidad",
+    numero_acta:"# Acta", tomo:"Tomo", folio:"Folio", anio:"Año",
+    oficalia:"Oficialía", nombre_padre:"Padre", nombre_madre:"Madre",
+    nombre_abuelo_paterno:"Abuelo Paterno", nombre_abuela_paterna:"Abuela Paterna",
+    nombre_abuelo_materno:"Abuelo Materno", nombre_abuela_materna:"Abuela Materna",
+    numero_factura:"# Factura", ncf:"NCF", fecha:"Fecha",
+    vendedor:"Vendedor", rnc_cedula_vendedor:"RNC Vendedor",
+    comprador:"Comprador", rnc_cedula_comprador:"RNC Comprador",
+    subtotal:"Subtotal", itbis:"ITBIS", descuento:"Descuento",
+    total:"TOTAL", forma_pago:"Forma de Pago", moneda:"Moneda",
+    partes:"Partes", objeto:"Objeto", monto:"Monto",
+    duracion:"Duración", condiciones_clave:"Condiciones",
+    nombre_beneficiario:"Beneficiario", tipo_certificado:"Tipo",
+    fecha_emision:"Emisión", emitido_por:"Emitido por",
+    numero_registro:"# Registro", vigencia:"Vigencia",
+  };
+  return map[k] || k.replace(/_/g," ").replace(/\b\w/g,c=>c.toUpperCase());
+}
+
+function mostrarAlerta(msg, tipo="error") {
+  const el = $id("alerta-error");
+  el.textContent = msg;
+  el.className = "alert alert-" + tipo;
+  el.style.display = "block";
+  setTimeout(() => el.style.display="none", 6000);
+}
+
+// ── Drop Zone ─────────────────────────────────────────────────────────────
+const dropZone = $id("drop-zone");
+const fileInput = $id("file-input");
+
+dropZone.addEventListener("dragover", e => { e.preventDefault(); dropZone.classList.add("drag-over"); });
+dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag-over"));
+dropZone.addEventListener("drop", e => {
+  e.preventDefault();
+  dropZone.classList.remove("drag-over");
+  const file = e.dataTransfer.files[0];
+  if (file) cargarArchivo(file);
+});
+fileInput.addEventListener("change", () => {
+  if (fileInput.files[0]) cargarArchivo(fileInput.files[0]);
+});
+
+function cargarArchivo(file) {
+  if (!file.type.startsWith("image/")) {
+    mostrarAlerta("Solo se aceptan imágenes (JPG, PNG, WEBP).");
+    return;
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    mostrarAlerta("La imagen supera los 10 MB permitidos.");
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = e => {
+    const dataUrl = e.target.result;
+    mimeType = file.type || "image/jpeg";
+    const partes = dataUrl.split(",");
+    imagenBase64 = partes[1];
+    mostrarPreview(dataUrl);
+    detenerCamara();
+  };
+  reader.readAsDataURL(file);
+}
+
+function mostrarPreview(dataUrl) {
+  const img = $id("preview-img");
+  img.src = dataUrl;
+  $id("preview-container").style.display = "block";
+  dropZone.style.display = "none";
+  $id("btn-escanear").disabled = false;
+}
+
+$id("btn-limpiar").addEventListener("click", limpiarTodo);
+
+function limpiarTodo() {
+  imagenBase64 = null;
+  fileInput.value = "";
+  $id("preview-container").style.display = "none";
+  dropZone.style.display = "block";
+  $id("btn-escanear").disabled = true;
+  $id("resultado-container").style.display = "none";
+  $id("resultado-vacio").style.display = "block";
+  resultadoActual = null;
+  detenerCamara();
+}
+
+// ── Cámara ────────────────────────────────────────────────────────────────
+const btnCamara = $id("btn-camara");
+const btnCapturar = $id("btn-capturar");
+const videoFeed = $id("video-feed");
+const canvas = $id("canvas-hidden");
+
+btnCamara.addEventListener("click", () => {
+  if (streamCamara) { detenerCamara(); return; }
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+    .then(stream => {
+      streamCamara = stream;
+      videoFeed.srcObject = stream;
+      $id("camara-container").style.display = "block";
+      $id("preview-container").style.display = "none";
+      dropZone.style.display = "none";
+      btnCamara.innerHTML = '<i class="fas fa-times"></i> Cerrar Cámara';
+      btnCapturar.style.display = "inline-flex";
+    })
+    .catch(() => mostrarAlerta("No se pudo acceder a la cámara. Verifica los permisos del navegador."));
+});
+
+btnCapturar.addEventListener("click", () => {
+  if (!streamCamara) return;
+  canvas.width = videoFeed.videoWidth;
+  canvas.height = videoFeed.videoHeight;
+  canvas.getContext("2d").drawImage(videoFeed, 0, 0);
+  const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
+  mimeType = "image/jpeg";
+  imagenBase64 = dataUrl.split(",")[1];
+  mostrarPreview(dataUrl);
+  detenerCamara();
+});
+
+function detenerCamara() {
+  if (streamCamara) {
+    streamCamara.getTracks().forEach(t => t.stop());
+    streamCamara = null;
+  }
+  $id("camara-container").style.display = "none";
+  btnCamara.innerHTML = '<i class="fas fa-camera"></i> Usar Cámara';
+  btnCapturar.style.display = "none";
+}
+
+// ── Escanear ──────────────────────────────────────────────────────────────
+$id("btn-escanear").addEventListener("click", async () => {
+  if (!imagenBase64) return;
+  $id("spinner").style.display = "block";
+  $id("btn-escanear").disabled = true;
+  $id("resultado-container").style.display = "none";
+  $id("resultado-vacio").style.display = "none";
+  $id("alerta-error").style.display = "none";
+
+  try {
+    const form = new FormData();
+    // Convertir base64 a blob para enviar como multipart
+    const byteChars = atob(imagenBase64);
+    const byteNums = new Uint8Array(byteChars.length);
+    for (let i = 0; i < byteChars.length; i++) byteNums[i] = byteChars.charCodeAt(i);
+    const blob = new Blob([byteNums], {type: mimeType});
+    const ext = mimeType === "image/png" ? "png" : mimeType === "image/webp" ? "webp" : "jpg";
+    form.append("imagen", blob, `documento.${ext}`);
+
+    const resp = await fetch("/api/ocr/escanear", {
+      method: "POST",
+      headers: { "X-CSRF-Token": getCsrfToken() },
+      body: form,
+    });
+    const data = await resp.json();
+    if (!resp.ok || data.error) throw new Error(data.error || "Error del servidor");
+
+    resultadoActual = data;
+    mostrarResultado(data);
+    cargarHistorial();
+
+  } catch (e) {
+    mostrarAlerta("Error: " + e.message);
+    $id("resultado-vacio").style.display = "block";
+  } finally {
+    $id("spinner").style.display = "none";
+    $id("btn-escanear").disabled = false;
+  }
+});
+
+// ── Mostrar resultado ─────────────────────────────────────────────────────
+function mostrarResultado(data) {
+  $id("resultado-vacio").style.display = "none";
+  $id("resultado-container").style.display = "block";
+
+  // Badge tipo
+  const badgeEl = $id("badge-tipo");
+  badgeEl.textContent = (data.tipo === "cedula" ? "🪪 " :
+                         data.tipo === "pasaporte" ? "📔 " :
+                         data.tipo === "acta_nacimiento" ? "📜 " :
+                         data.tipo === "factura" ? "🧾 " :
+                         data.tipo === "contrato" ? "📃 " :
+                         data.tipo === "certificado" ? "🏅 " : "📄 ") + data.tipo_label;
+  badgeEl.className = "doc-badge badge-" + data.tipo;
+
+  // Confianza
+  const chip = $id("chip-confianza");
+  chip.textContent = { alta:"✔ Alta", media:"⚠ Media", baja:"⚡ Baja" }[data.confianza] || data.confianza;
+  chip.className = "confianza-chip conf-" + data.confianza;
+
+  // Botones dinámicos según rol
+  generarBotonesRol(data.tipo);
+
+  // Campos estructurados
+  const grid = $id("campos-grid");
+  grid.innerHTML = "";
+  const datos = data.datos || {};
+  const camposExcluidos = ["items","subtotal","itbis","descuento","total","forma_pago","moneda","ncf",
+                            "numero_factura","fecha","vendedor","rnc_cedula_vendedor",
+                            "comprador","rnc_cedula_comprador","condiciones_clave"];
+
+  Object.entries(datos).forEach(([k, v]) => {
+    if (camposExcluidos.includes(k)) return;
+    if (Array.isArray(v) || typeof v === "object") return;
+    if (!v && v !== 0) return;
+    const div = document.createElement("div");
+    div.className = "campo-item";
+    div.innerHTML = `
+      <label>${label(k)}</label>
+      <div class="campo-valor">${v}</div>
+      <button class="btn-copiar" title="Copiar" onclick="copiar('${String(v).replace(/'/g,"\\'")}', this)">
+        <i class="fas fa-copy"></i>
+      </button>`;
+    grid.appendChild(div);
+  });
+
+  // Items de factura
+  const itemsContainer = $id("items-container");
+  const tbody = $id("items-tbody");
+  tbody.innerHTML = "";
+  const items = datos.items || [];
+  if (data.tipo === "factura" && items.length > 0) {
+    itemsContainer.style.display = "block";
+    items.forEach((item, i) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${i+1}</td>
+        <td>${item.descripcion || "—"}</td>
+        <td class="num">${item.cantidad ?? "—"}</td>
+        <td class="num">${fmt(item.precio_unitario)}</td>
+        <td class="num">${fmt(item.subtotal)}</td>`;
+      tbody.appendChild(tr);
+    });
+    const totalesEl = $id("totales-container");
+    totalesEl.innerHTML = `
+      ${datos.subtotal ? `<div>Subtotal: <strong>${fmt(datos.subtotal)}</strong></div>` : ""}
+      ${datos.itbis ? `<div>ITBIS (18%): <strong>${fmt(datos.itbis)}</strong></div>` : ""}
+      ${datos.descuento ? `<div>Descuento: <strong>-${fmt(datos.descuento)}</strong></div>` : ""}
+      ${datos.total ? `<div style="font-size:1.05rem;font-weight:700;color:#0078d4;margin-top:6px">
+        TOTAL: ${fmt(datos.total)} ${datos.moneda||"DOP"}</div>` : ""}`;
+  } else {
+    itemsContainer.style.display = "none";
+  }
+
+  // Texto completo
+  $id("texto-completo-div").textContent = data.texto_completo || "(Sin texto extraído)";
+}
+
+// ── Copiar texto ──────────────────────────────────────────────────────────
+function copiar(texto, btn) {
+  navigator.clipboard.writeText(texto).then(() => {
+    if (btn) {
+      btn.innerHTML = '<i class="fas fa-check" style="color:#107c10"></i>';
+      setTimeout(() => btn.innerHTML = '<i class="fas fa-copy"></i>', 1500);
+    }
+  });
+}
+
+$id("btn-copiar-texto").addEventListener("click", () => {
+  const texto = $id("texto-completo-div").textContent;
+  copiar(texto, $id("btn-copiar-texto"));
+});
+
+// ── Botones dinámicos según ROL + tipo de documento ───────────────────────
+function generarBotonesRol(tipo) {
+  const contenedor = $id("acciones-rol");
+  contenedor.innerHTML = "";
+
+  const esFactura   = ["factura","estado_cuenta"].includes(tipo);
+  const esIdentidad = ["cedula","pasaporte","acta_nacimiento"].includes(tipo);
+  const rolNorm     = ROL.toLowerCase();
+
+  const esDigitador    = rolNorm === "digitador";
+  const esSecretaria   = rolNorm.startsWith("secretaria");
+  const esContable     = rolNorm === "auxiliar_contabilidad";
+  const esDirectora    = rolNorm === "directora";
+  const esCoordinador  = rolNorm.startsWith("coordinador");
+  const esProfesor     = rolNorm === "profesor";
+  const esPsicologa    = rolNorm.startsWith("psicologa");
+
+  const btns = [];
+
+  // ── DIGITADOR ─────────────────────────────────────────────────────────────
+  if (esDigitador) {
+    if (esIdentidad) {
+      btns.push({ id:"btn-inscripcion", cls:"btn-outline", icon:"fa-magic",
+                  label:"Usar en Inscripción", action:"inscripcion" });
+    }
+    if (esFactura) {
+      btns.push({ id:"btn-excel-rol", cls:"btn-success", icon:"fa-file-excel",
+                  label:"Exportar Excel", action:"excel" });
+    }
+    btns.push({ id:"btn-archivar", cls:"btn-outline", icon:"fa-archive",
+                label:"Archivar", action:"archivar" });
+  }
+
+  // ── SECRETARIA ────────────────────────────────────────────────────────────
+  else if (esSecretaria) {
+    if (esFactura) {
+      btns.push({ id:"btn-excel-rol", cls:"btn-success", icon:"fa-file-excel",
+                  label:"Exportar Excel", action:"excel" });
+    }
+    if (esIdentidad) {
+      btns.push({ id:"btn-inscripcion", cls:"btn-outline", icon:"fa-magic",
+                  label:"Usar datos", action:"copiar_datos" });
+    }
+    btns.push({ id:"btn-archivar", cls:"btn-outline", icon:"fa-archive",
+                label:"Categorizar y Archivar", action:"modal_archivo" });
+  }
+
+  // ── CONTABLE ──────────────────────────────────────────────────────────────
+  else if (esContable) {
+    if (esFactura) {
+      btns.push({ id:"btn-excel-rol", cls:"btn-success", icon:"fa-file-excel",
+                  label:"Exportar Excel", action:"excel" });
+      btns.push({ id:"btn-archivar", cls:"btn-outline", icon:"fa-archive",
+                  label:"Archivar factura", action:"archivar" });
+    } else {
+      btns.push({ id:"btn-archivar", cls:"btn-outline", icon:"fa-archive",
+                  label:"Archivar registro", action:"archivar" });
+    }
+  }
+
+  // ── DIRECTORA — acceso total a todas las acciones ─────────────────────────
+  else if (esDirectora) {
+    if (esIdentidad) {
+      btns.push({ id:"btn-inscripcion", cls:"btn-outline", icon:"fa-magic",
+                  label:"Usar en Inscripción", action:"inscripcion" });
+    }
+    if (esFactura) {
+      btns.push({ id:"btn-excel-rol", cls:"btn-success", icon:"fa-file-excel",
+                  label:"Exportar Excel", action:"excel" });
+    }
+    btns.push({ id:"btn-copiar", cls:"btn-outline", icon:"fa-magic",
+                label:"Usar datos", action:"copiar_datos" });
+    btns.push({ id:"btn-guardar-perfil", cls:"btn-outline", icon:"fa-user-circle",
+                label:"Guardar en perfil", action:"guardar_perfil" });
+    btns.push({ id:"btn-archivar", cls:"btn-outline", icon:"fa-archive",
+                label:"Archivar", action:"archivar" });
+  }
+
+  // ── COORDINADOR ───────────────────────────────────────────────────────────
+  else if (esCoordinador) {
+    if (esFactura) {
+      btns.push({ id:"btn-excel-rol", cls:"btn-success", icon:"fa-file-excel",
+                  label:"Exportar Excel", action:"excel" });
+    }
+    btns.push({ id:"btn-archivar", cls:"btn-outline", icon:"fa-archive",
+                label:"Categorizar y Archivar", action:"modal_archivo" });
+  }
+
+  // ── PROFESOR / PSICÓLOGA ──────────────────────────────────────────────────
+  else if (esProfesor || esPsicologa) {
+    btns.push({ id:"btn-pase-lista", cls:"btn-outline", icon:"fa-clipboard-list",
+                label:"Usar como Pase de Lista", action:"modal_pase" });
+    btns.push({ id:"btn-guardar-perfil", cls:"btn-outline", icon:"fa-user-circle",
+                label:"Guardar en Mi Perfil", action:"guardar_perfil" });
+    if (esFactura) {
+      btns.push({ id:"btn-excel-rol", cls:"btn-success", icon:"fa-file-excel",
+                  label:"Exportar Excel", action:"excel" });
+    }
+  }
+
+  // ── FALLBACK (cualquier rol no listado) ───────────────────────────────────
+  else {
+    if (esFactura) {
+      btns.push({ id:"btn-excel-rol", cls:"btn-success", icon:"fa-file-excel",
+                  label:"Exportar Excel", action:"excel" });
+    }
+    btns.push({ id:"btn-archivar", cls:"btn-outline", icon:"fa-archive",
+                label:"Archivar", action:"archivar" });
+  }
+
+  // Renderizar botones
+  btns.forEach(b => {
+    const btn = document.createElement("button");
+    btn.id = b.id;
+    btn.className = "btn " + b.cls;
+    btn.innerHTML = `<i class="fas ${b.icon}"></i> ${b.label}`;
+    btn.addEventListener("click", () => ejecutarAccion(b.action, btn));
+    contenedor.appendChild(btn);
+  });
+}
+
+// ── Ejecutar acción según botón ───────────────────────────────────────────
+async function ejecutarAccion(action, btn) {
+  if (!resultadoActual) return;
+
+  if (action === "inscripcion") {
+    const d = resultadoActual.datos || {};
+    sessionStorage.setItem("ocr_inscripcion", JSON.stringify({
+      nombre:           d.nombre || "",
+      apellido:         d.apellido || "",
+      cedula:           d.cedula || d.numero_pasaporte || "",
+      fecha_nacimiento: d.fecha_nacimiento || "",
+      lugar_nacimiento: d.lugar_nacimiento || "",
+      sexo:             d.sexo || "",
+      nombre_padre:     d.nombre_padre || "",
+      nombre_madre:     d.nombre_madre || "",
+      tipo_doc:         resultadoActual.tipo,
+    }));
+    window.location.href = "/digitador?from=ocr";
+    return;
+  }
+
+  if (action === "excel") {
+    const orig = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando…';
+    try {
+      const resp = await fetch("/api/ocr/exportar-excel", {
+        method: "POST",
+        headers: { "Content-Type":"application/json", "X-CSRF-Token": getCsrfToken() },
+        body: JSON.stringify({
+          datos: resultadoActual.datos || {},
+          texto_completo: resultadoActual.texto_completo || "",
+          tipo: resultadoActual.tipo || "",
+        }),
+      });
+      if (!resp.ok) throw new Error("Error generando Excel");
+      const blob = await resp.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement("a");
+      a.href = url; a.download = "documento.xlsx"; a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      mostrarAlerta("No se pudo generar el Excel: " + e.message);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = orig;
+    }
+    return;
+  }
+
+  if (action === "archivar") {
+    btn.innerHTML = '<i class="fas fa-check"></i> Archivado';
+    btn.disabled = true;
+    btn.style.color = "#107c10";
+    mostrarAlerta("Documento archivado en el historial de escaneos.", "success");
+    return;
+  }
+
+  if (action === "modal_pase") {
+    abrirModalPase();
+    return;
+  }
+
+  if (action === "modal_archivo") {
+    abrirModalArchivo();
+    return;
+  }
+
+  if (action === "copiar_datos") {
+    // Secretaria: copia todos los datos como texto al portapapeles
+    const d = resultadoActual.datos || {};
+    const texto = Object.entries(d)
+      .filter(([k,v]) => v && !Array.isArray(v) && typeof v !== "object")
+      .map(([k,v]) => `${label(k)}: ${v}`)
+      .join("\n");
+    navigator.clipboard.writeText(texto).then(() => {
+      btn.innerHTML = '<i class="fas fa-check"></i> Copiado';
+      setTimeout(() => btn.innerHTML = '<i class="fas fa-magic"></i> Usar datos', 1500);
+    });
+    return;
+  }
+
+  if (action === "guardar_perfil") {
+    // Profesor: marca el escaneo con etiqueta "perfil" para mostrarlo en su perfil
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando…';
+    try {
+      const resp = await fetch("/api/ocr/guardar-perfil", {
+        method: "POST",
+        headers: { "Content-Type":"application/json", "X-CSRF-Token": getCsrfToken() },
+        body: JSON.stringify({ tipo: resultadoActual.tipo }),
+      });
+      const data = await resp.json();
+      if (data.ok) {
+        btn.innerHTML = '<i class="fas fa-check"></i> Guardado en perfil';
+        btn.style.color = "#107c10";
+        mostrarAlerta("Documento guardado en tu perfil.", "success");
+      } else {
+        throw new Error(data.error || "Error");
+      }
+    } catch(e) {
+      mostrarAlerta("No se pudo guardar: " + e.message);
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-user-circle"></i> Guardar en Mi Perfil';
+    }
+    return;
+  }
+}
+
+// ── Historial ─────────────────────────────────────────────────────────────
+async function cargarHistorial() {
+  try {
+    const resp = await fetch("/api/ocr/historial");
+    const rows = await resp.json();
+    const tbody = $id("historial-tbody");
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#a19f9d;padding:20px">Sin escaneos aún</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map(r => `
+      <tr>
+        <td><span class="tag badge-${r.tipo_documento}" style="font-size:.75rem">${r.tipo_label}</span></td>
+        <td>${r.nombre_archivo || "—"}</td>
+        <td><span class="confianza-chip conf-${r.confianza}" style="font-size:.72rem">${r.confianza}</span></td>
+        <td>${r.usuario_nombre}</td>
+        <td>${formatFecha(r.creado_en)}</td>
+        <td>
+          <button class="btn btn-outline" style="padding:3px 8px;font-size:.75rem"
+            onclick="verDetalle(${r.id})">
+            <i class="fas fa-eye"></i>
+          </button>
+          <button class="btn btn-danger" style="padding:3px 8px;font-size:.75rem;margin-left:4px"
+            onclick="eliminarEscaneo(${r.id}, this)">
+            <i class="fas fa-trash"></i>
+          </button>
+        </td>
+      </tr>`).join("");
+  } catch(e) {
+    console.error("Error cargando historial:", e);
+  }
+}
+
+async function verDetalle(id) {
+  try {
+    const resp = await fetch(`/api/ocr/historial/${id}`);
+    const data = await resp.json();
+    if (data.error) { mostrarAlerta(data.error); return; }
+    // Restaurar resultado y mostrarlo
+    resultadoActual = { tipo: data.tipo_documento, tipo_label: data.tipo_label,
+                        confianza: data.confianza, texto_completo: data.texto_completo,
+                        datos: data.datos };
+    mostrarResultado(resultadoActual);
+    window.scrollTo({top: 0, behavior: "smooth"});
+  } catch(e) {
+    mostrarAlerta("Error al cargar el escaneo.");
+  }
+}
+
+async function eliminarEscaneo(id, btn) {
+  if (!confirm("¿Eliminar este escaneo del historial?")) return;
+  btn.disabled = true;
+  try {
+    const resp = await fetch(`/api/ocr/historial/${id}`, {
+      method: "DELETE",
+      headers: { "X-CSRF-Token": getCsrfToken() },
+    });
+    const data = await resp.json();
+    if (data.ok) cargarHistorial();
+    else mostrarAlerta(data.error || "No se pudo eliminar.");
+  } catch(e) {
+    mostrarAlerta("Error al eliminar.");
+    btn.disabled = false;
+  }
+}
+
+$id("btn-refrescar").addEventListener("click", cargarHistorial);
+
+function formatFecha(f) {
+  if (!f) return "—";
+  try {
+    const d = new Date(f.replace(" ", "T"));
+    return d.toLocaleDateString("es-DO", {day:"2-digit",month:"short",year:"numeric"})
+      + " " + d.toLocaleTimeString("es-DO", {hour:"2-digit",minute:"2-digit"});
+  } catch { return f; }
+}
+
+function getCsrfToken() {
+  return CSRF;
+}
+
+// ── Helpers de modales ────────────────────────────────────────────────────
+function abrirModal(id) {
+  const m = $id(id);
+  m.style.display = "flex";
+}
+function cerrarModal(id) {
+  $id(id).style.display = "none";
+}
+
+// ══ MODAL PASE DE LISTA ══════════════════════════════════════════════════════
+let _paseData = null;   // guarda resultado del preview
+
+async function abrirModalPase() {
+  if (!resultadoActual) return;
+
+  // Fecha de hoy
+  $id("pase-fecha").value = new Date().toISOString().slice(0,10);
+  $id("pase-lista-rows").innerHTML = '<p style="color:#a19f9d;font-size:.85rem;text-align:center">Analizando nombres… <i class="fas fa-spinner fa-spin"></i></p>';
+  $id("pase-aviso-limite").style.display = "none";
+  abrirModal("modal-pase");
+
+  try {
+    const resp = await fetch("/api/ocr/pase-lista-preview", {
+      method: "POST",
+      headers: { "Content-Type":"application/json", "X-CSRF-Token": getCsrfToken() },
+      body: JSON.stringify({ texto_completo: resultadoActual.texto_completo || "" }),
+    });
+    const data = await resp.json();
+
+    if (!data.ok && data.limite) {
+      $id("pase-aviso-limite").textContent = data.mensaje;
+      $id("pase-aviso-limite").style.display = "block";
+      $id("pase-lista-rows").innerHTML = "";
+      $id("btn-confirmar-pase").disabled = true;
+      $id("pase-usos-txt").textContent = `${data.usos_semana}/${data.max} usados esta semana`;
+      return;
+    }
+    if (!data.ok) {
+      $id("pase-lista-rows").innerHTML = `<p style="color:#a80000">${data.mensaje}</p>`;
+      return;
+    }
+
+    _paseData = data;
+    $id("pase-usos-txt").textContent = `${data.usos_semana}/${data.max} usos esta semana`;
+    $id("btn-confirmar-pase").disabled = false;
+    $id("pase-count-badge").textContent = `${data.coincidencias.length} reconocidos`;
+
+    // Renderizar lista con checkboxes
+    const cont = $id("pase-lista-rows");
+    if (!data.coincidencias.length) {
+      cont.innerHTML = '<p style="color:#a19f9d;font-size:.85rem;text-align:center;padding:20px">No se reconocieron nombres del sistema en el documento.</p>';
+      return;
+    }
+    cont.innerHTML = data.coincidencias.map(e => `
+      <div style="display:flex;align-items:center;gap:10px;padding:7px 10px;border-bottom:1px solid #edebe9">
+        <label style="display:flex;align-items:center;gap:8px;flex:1;cursor:pointer;font-size:.88rem">
+          <input type="checkbox" class="pase-check" value="${e.id}" checked
+            style="width:16px;height:16px;cursor:pointer">
+          <span><strong>${e.nombre} ${e.apellido}</strong> — ${e.grado} ${e.curso}</span>
+        </label>
+        <span style="font-size:.75rem;color:#a19f9d" title="Texto original: ${e.texto_original}">
+          ${Math.round(e.score*100)}% coincidencia
+        </span>
+      </div>`).join("");
+
+    // Sin match
+    if (data.sin_match.length) {
+      $id("pase-sin-match-box").style.display = "block";
+      $id("pase-sin-match-list").textContent = data.sin_match.join(", ");
+    } else {
+      $id("pase-sin-match-box").style.display = "none";
+    }
+
+  } catch(e) {
+    $id("pase-lista-rows").innerHTML = `<p style="color:#a80000">Error al analizar: ${e.message}</p>`;
+  }
+}
+
+async function confirmarPaseLista() {
+  const materia = $id("pase-materia").value.trim();
+  const fecha   = $id("pase-fecha").value;
+  if (!materia) { alert("Escribe la materia primero."); return; }
+  if (!_paseData) return;
+
+  const checks = document.querySelectorAll(".pase-check");
+  const presentes = [], ausentes = [];
+  checks.forEach(c => {
+    if (c.checked) presentes.push(parseInt(c.value));
+    else ausentes.push(parseInt(c.value));
+  });
+
+  const btn = $id("btn-confirmar-pase");
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Registrando…';
+
+  try {
+    const resp = await fetch("/api/ocr/registrar-asistencia-escaner", {
+      method: "POST",
+      headers: { "Content-Type":"application/json", "X-CSRF-Token": getCsrfToken() },
+      body: JSON.stringify({ presentes, ausentes, materia, fecha, periodo: 1 }),
+    });
+    const data = await resp.json();
+    if (data.ok) {
+      cerrarModal("modal-pase");
+      mostrarAlerta(`Asistencia registrada: ${data.registrados} estudiantes (${presentes.length} presentes, ${ausentes.length} ausentes).`, "success");
+    } else {
+      mostrarAlerta(data.error || "Error al registrar.", "error");
+    }
+  } catch(e) {
+    mostrarAlerta("Error de conexión: " + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-check"></i> Registrar Asistencia';
+  }
+}
+
+// ══ MODAL ARCHIVO (secretaria / coordinador / directora) ═══════════════════
+async function abrirModalArchivo() {
+  // Preseleccionar categoría según tipo de documento escaneado
+  if (resultadoActual) {
+    const mapa = {
+      factura: "factura", contrato: "contrato",
+      certificado: "certificado", acta_nacimiento: "acta_nacimiento"
+    };
+    $id("archivo-categoria").value = mapa[resultadoActual.tipo] || "general";
+  }
+
+  // Cargar lista de personal
+  const sel = $id("archivo-personal");
+  if (sel.options.length <= 1) {
+    try {
+      const resp = await fetch("/api/ocr/personal-lista");
+      const lista = await resp.json();
+      lista.forEach(p => {
+        const opt = document.createElement("option");
+        opt.value = p.id;
+        opt.textContent = `${p.nombre} (${p.rol.replace(/_/g," ")})`;
+        sel.appendChild(opt);
+      });
+    } catch(e) { /* no critico */ }
+  }
+  abrirModal("modal-archivo");
+}
+
+async function confirmarArchivo() {
+  const categoria   = $id("archivo-categoria").value;
+  const etiqueta    = $id("archivo-etiqueta").value.trim();
+  const personal_id = $id("archivo-personal").value || null;
+
+  try {
+    const resp = await fetch("/api/ocr/categorizar", {
+      method: "POST",
+      headers: { "Content-Type":"application/json", "X-CSRF-Token": getCsrfToken() },
+      body: JSON.stringify({ categoria, etiqueta, personal_id }),
+    });
+    const data = await resp.json();
+    if (data.ok) {
+      cerrarModal("modal-archivo");
+      mostrarAlerta(`Documento archivado como "${data.categoria}".`, "success");
+      cargarHistorial();
+    } else {
+      mostrarAlerta(data.error || "Error al archivar.");
+    }
+  } catch(e) {
+    mostrarAlerta("Error de conexión: " + e.message);
+  }
+}
+
+// Cerrar modales al hacer clic fuera
+["modal-pase","modal-archivo"].forEach(id => {
+  $id(id)?.addEventListener("click", e => {
+    if (e.target.id === id) cerrarModal(id);
+  });
+});
+
+// ── Init ──────────────────────────────────────────────────────────────────
+cargarHistorial();
+
+// Auto-llenar desde sessionStorage si se vuelve al escáner
+</script>
+</body>
+</html>
