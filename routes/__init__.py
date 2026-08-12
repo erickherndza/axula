@@ -19,6 +19,7 @@ from .expediente import expediente_bp
 from .analitica import bp as analitica_bp
 from .archivos import archivos_bp
 from .asistente import asistente_bp
+from .usuarios import usuarios_bp
 
 ALL_BLUEPRINTS = [
     auth_bp,
@@ -39,4 +40,5 @@ ALL_BLUEPRINTS = [
     analitica_bp,
     archivos_bp,
     asistente_bp,
+    usuarios_bp,
 ]

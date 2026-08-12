@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Gestión de Usuarios — Axula</title>
+  <link rel="stylesheet" href="/static/theme.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body { background:var(--bg); color:var(--text); font-family:'Manrope',sans-serif; margin:0; }
+    .topbar { display:flex; align-items:center; gap:12px; padding:14px 24px;
+              background:var(--surface); border-bottom:1px solid var(--border); }
+    .topbar a { color:var(--muted); text-decoration:none; font-size:13px; }
+    .topbar a:hover { color:var(--accent); }
+    .topbar h1 { font-size:16px; font-weight:700; margin:0 0 0 8px; }
+    .container { max-width:1100px; margin:0 auto; padding:24px 16px; }
+    .toolbar { display:flex; gap:10px; margin-bottom:18px; align-items:center; }
+    .toolbar input { flex:1; padding:8px 12px; border-radius:8px;
+                     border:1px solid var(--border); background:var(--surface);
+                     color:var(--text); font-size:13px; }
+    .btn { padding:8px 14px; border-radius:8px; border:none; cursor:pointer;
+           font-size:13px; font-weight:600; transition:.15s; }
+    .btn-accent { background:var(--accent); color:#fff; }
+    .btn-accent:hover { opacity:.88; }
+    .btn-sm { padding:5px 10px; font-size:11px; border-radius:6px; border:none;
+              cursor:pointer; font-weight:600; transition:.15s; }
+    .btn-edit  { background:rgba(3,140,140,.15); color:var(--accent); }
+    .btn-pwd   { background:rgba(247,201,72,.15); color:#c48a1e; }
+    .btn-del   { background:rgba(201,53,43,.1);   color:#C9352B; }
+    .btn-sm:hover { opacity:.8; }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    thead th { text-align:left; padding:8px 10px; font-size:11px; font-weight:700;
+               text-transform:uppercase; letter-spacing:.4px; color:var(--muted);
+               border-bottom:2px solid var(--border); }
+    tbody tr { border-bottom:1px solid var(--border); transition:background .1s; }
+    tbody tr:hover { background:var(--surface2); }
+    td { padding:9px 10px; vertical-align:middle; }
+    .badge { display:inline-block; padding:2px 8px; border-radius:20px;
+             font-size:10px; font-weight:700; white-space:nowrap; }
+    .badge-super   { background:rgba(180,75,232,.15); color:#b44be8; }
+    .badge-dir     { background:rgba(3,140,140,.15);  color:var(--accent); }
+    .badge-coord   { background:rgba(96,184,240,.15); color:#60b8f0; }
+    .badge-prof    { background:rgba(46,158,104,.15); color:#2E9E68; }
+    .badge-psico   { background:rgba(255,159,96,.15); color:#ff9f60; }
+    .badge-otro    { background:var(--surface2);      color:var(--muted); }
+    .inactive { opacity:.45; }
+
+    /* Modal */
+    .overlay { position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:200;
+               display:none; align-items:center; justify-content:center; }
+    .overlay.open { display:flex; }
+    .modal { background:var(--surface); border-radius:14px; padding:24px;
+             width:min(500px,94vw); max-height:90vh; overflow-y:auto;
+             border:1px solid var(--border); }
+    .modal h2 { margin:0 0 4px; font-size:16px; }
+    .modal .sub { font-size:12px; color:var(--muted); margin-bottom:18px; }
+    .frow { display:flex; gap:10px; margin-bottom:12px; flex-wrap:wrap; }
+    .fg { display:flex; flex-direction:column; gap:4px; flex:1; min-width:140px; }
+    .fg label { font-size:11px; font-weight:700; color:var(--muted);
+                text-transform:uppercase; letter-spacing:.4px; }
+    .fg input, .fg select, .fg textarea {
+      padding:8px 10px; border-radius:8px; border:1px solid var(--border);
+      background:var(--surface2); color:var(--text); font-size:13px;
+      font-family:inherit; width:100%; box-sizing:border-box; }
+    .fg input:focus, .fg select:focus { outline:none; border-color:var(--accent); }
+    .actions { display:flex; gap:8px; margin-top:16px; justify-content:flex-end; }
+    #toast { position:fixed; bottom:20px; right:20px; padding:10px 16px;
+             border-radius:10px; font-size:13px; font-weight:600;
+             opacity:0; transition:opacity .3s; z-index:999; pointer-events:none; }
+    #toast.ok  { background:#2E9E68; color:#fff; opacity:1; }
+    #toast.err { background:#C9352B; color:#fff; opacity:1; }
+    .section-div { margin:24px 0 14px; font-size:11px; font-weight:700;
+                   text-transform:uppercase; letter-spacing:.5px; color:var(--accent);
+                   display:flex; align-items:center; gap:8px; }
+    .section-div::after { content:''; flex:1; height:1px; background:var(--border); }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="/"><i class="fas fa-arrow-left"></i></a>
+  <i class="fas fa-users-cog" style="color:var(--accent)"></i>
+  <h1>Gestión de Usuarios</h1>
+  <span style="margin-left:auto;font-size:12px;color:var(--muted)" id="conteo"></span>
+</div>
+
+<div class="container">
+  <div class="toolbar">
+    <input type="search" id="filtro" placeholder="Buscar por nombre, username o rol…" oninput="filtrar()">
+    <button class="btn btn-accent" onclick="abrirCrear()">
+      <i class="fas fa-plus"></i> Nuevo usuario
+    </button>
+  </div>
+
+  <table id="tabla-usuarios">
+    <thead>
+      <tr>
+        <th>Nombre</th>
+        <th>Username</th>
+        <th>Rol</th>
+        <th>Materia(s)</th>
+        <th>Grado</th>
+        <th>Estado</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+</div>
+
+<!-- MODAL: Editar / Crear -->
+<div class="overlay" id="overlay-edit">
+  <div class="modal">
+    <h2 id="modal-title">Editar usuario</h2>
+    <p class="sub" id="modal-sub"></p>
+    <input type="hidden" id="edit-id">
+
+    <div class="frow">
+      <div class="fg">
+        <label>Nombre completo</label>
+        <input id="edit-nombre" type="text" placeholder="Ej: Erick Hernández">
+      </div>
+      <div class="fg">
+        <label>Username</label>
+        <input id="edit-username" type="text" placeholder="usuario@educacion.edu.do">
+      </div>
+    </div>
+    <div class="frow">
+      <div class="fg">
+        <label>Rol</label>
+        <select id="edit-rol">
+          {% for key, label in roles.items() %}
+          <option value="{{ key }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="fg">
+        <label>Tipo docencia</label>
+        <select id="edit-tipo">
+          <option value="ambas">Básicas y Técnicas</option>
+          <option value="basica">Materias Básicas</option>
+          <option value="tecnica">Materias Técnicas</option>
+        </select>
+      </div>
+    </div>
+    <div class="frow">
+      <div class="fg" style="flex:2">
+        <label>Materias <span style="font-weight:400;color:var(--muted)">(separar con |)</span></label>
+        <input id="edit-materia" type="text" placeholder="Fotografía|Diseño Web">
+      </div>
+      <div class="fg">
+        <label>Grado(s)</label>
+        <input id="edit-grado" type="text" placeholder="4to,5to">
+      </div>
+    </div>
+    <div class="frow">
+      <div class="fg">
+        <label>Mención</label>
+        <input id="edit-mencion" type="text" placeholder="MULTIMEDIA">
+      </div>
+      <div class="fg">
+        <label>Ciclo</label>
+        <select id="edit-ciclo">
+          <option value="">— Sin restricción —</option>
+          <option value="primer_ciclo">Primer Ciclo</option>
+          <option value="segundo_ciclo">Segundo Ciclo</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Solo para nuevo usuario -->
+    <div id="bloque-password" style="display:none">
+      <div class="section-div"><i class="fas fa-lock"></i> Contraseña inicial</div>
+      <div class="fg">
+        <label>Contraseña</label>
+        <input id="edit-password" type="text" placeholder="Mínimo 4 caracteres">
+      </div>
+    </div>
+
+    <div class="frow" style="margin-top:6px;align-items:center;gap:10px">
+      <label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer">
+        <input type="checkbox" id="edit-activo" style="width:auto"> Cuenta activa
+      </label>
+    </div>
+
+    <div class="actions">
+      <button class="btn" style="background:var(--surface2);color:var(--text)"
+              onclick="cerrar()">Cancelar</button>
+      <button class="btn btn-accent" onclick="guardar()">
+        <i class="fas fa-save"></i> Guardar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Reset password -->
+<div class="overlay" id="overlay-pwd">
+  <div class="modal">
+    <h2>Cambiar contraseña</h2>
+    <p class="sub" id="pwd-sub"></p>
+    <input type="hidden" id="pwd-uid">
+    <div class="fg">
+      <label>Nueva contraseña</label>
+      <input id="pwd-nueva" type="text" placeholder="Mínimo 4 caracteres">
+    </div>
+    <div class="actions">
+      <button class="btn" style="background:var(--surface2);color:var(--text)"
+              onclick="document.getElementById('overlay-pwd').classList.remove('open')">Cancelar</button>
+      <button class="btn btn-accent" onclick="resetPassword()">
+        <i class="fas fa-key"></i> Actualizar
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+var TODOS = [];
+
+function badgeRol(rol) {
+  var cls = 'badge-otro';
+  if (rol === 'superusuario') cls = 'badge-super';
+  else if (rol === 'directora') cls = 'badge-dir';
+  else if (rol && rol.includes('coord')) cls = 'badge-coord';
+  else if (rol === 'profesor') cls = 'badge-prof';
+  else if (rol && rol.includes('psicol')) cls = 'badge-psico';
+  var LABELS = {{ roles | tojson }};
+  return '<span class="badge ' + cls + '">' + (LABELS[rol] || rol) + '</span>';
+}
+
+function renderTabla(lista) {
+  var tb = document.getElementById('tbody');
+  document.getElementById('conteo').textContent = lista.length + ' usuario(s)';
+  if (!lista.length) {
+    tb.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--muted)">Sin resultados</td></tr>';
+    return;
+  }
+  tb.innerHTML = lista.map(function(u) {
+    var cls = u.activo ? '' : 'inactive';
+    var estado = u.activo
+      ? '<span style="color:#2E9E68;font-size:11px;font-weight:700">● Activo</span>'
+      : '<span style="color:var(--muted);font-size:11px;font-weight:700">○ Inactivo</span>';
+    var mats = (u.materia || '').split('|').filter(Boolean)
+      .map(function(m){ return '<span style="font-size:10px;padding:1px 6px;border-radius:10px;background:var(--surface2);margin:1px;display:inline-block">' + m.trim() + '</span>'; })
+      .join('');
+    return '<tr class="' + cls + '">'
+      + '<td><strong>' + (u.nombre || '') + '</strong></td>'
+      + '<td style="font-size:12px;color:var(--muted)">' + (u.username || '') + '</td>'
+      + '<td>' + badgeRol(u.rol) + '</td>'
+      + '<td>' + (mats || '<span style="color:var(--muted);font-size:11px">—</span>') + '</td>'
+      + '<td style="font-size:12px">' + (u.grado || '—') + '</td>'
+      + '<td>' + estado + '</td>'
+      + '<td style="white-space:nowrap;text-align:right">'
+        + '<button class="btn-sm btn-edit" onclick="abrirEditar(' + u.id + ')"><i class="fas fa-pen"></i> Editar</button> '
+        + '<button class="btn-sm btn-pwd"  onclick="abrirPwd(' + u.id + ',\'' + (u.nombre||'').replace(/'/g,"\\'") + '\')"><i class="fas fa-key"></i> Pwd</button>'
+      + '</td>'
+      + '</tr>';
+  }).join('');
+}
+
+function filtrar() {
+  var q = document.getElementById('filtro').value.toLowerCase();
+  if (!q) { renderTabla(TODOS); return; }
+  renderTabla(TODOS.filter(function(u){
+    return (u.nombre||'').toLowerCase().includes(q)
+        || (u.username||'').toLowerCase().includes(q)
+        || (u.rol||'').toLowerCase().includes(q);
+  }));
+}
+
+async function cargar() {
+  var r = await fetch('/api/usuarios');
+  TODOS = await r.json();
+  renderTabla(TODOS);
+}
+
+// ── Modal editar ─────────────────────────────────────
+function abrirEditar(id) {
+  var u = TODOS.find(function(x){ return x.id === id; });
+  if (!u) return;
+  document.getElementById('edit-id').value = id;
+  document.getElementById('modal-title').textContent = 'Editar usuario';
+  document.getElementById('modal-sub').textContent = 'ID #' + id + ' · ' + (u.username || '');
+  document.getElementById('edit-nombre').value   = u.nombre   || '';
+  document.getElementById('edit-username').value = u.username || '';
+  document.getElementById('edit-rol').value      = u.rol      || 'profesor';
+  document.getElementById('edit-tipo').value     = u.tipo_docencia || 'ambas';
+  document.getElementById('edit-materia').value  = u.materia  || '';
+  document.getElementById('edit-grado').value    = u.grado    || '';
+  document.getElementById('edit-mencion').value  = u.mencion  || '';
+  document.getElementById('edit-ciclo').value    = u.ciclo    || '';
+  document.getElementById('edit-activo').checked = !!u.activo;
+  document.getElementById('bloque-password').style.display = 'none';
+  document.getElementById('overlay-edit').classList.add('open');
+}
+
+function abrirCrear() {
+  document.getElementById('edit-id').value = '';
+  document.getElementById('modal-title').textContent = 'Nuevo usuario';
+  document.getElementById('modal-sub').textContent = '';
+  ['nombre','username','materia','grado','mencion','password'].forEach(function(f){
+    document.getElementById('edit-' + f).value = '';
+  });
+  document.getElementById('edit-rol').value   = 'profesor';
+  document.getElementById('edit-tipo').value  = 'ambas';
+  document.getElementById('edit-ciclo').value = '';
+  document.getElementById('edit-activo').checked = true;
+  document.getElementById('bloque-password').style.display = 'block';
+  document.getElementById('overlay-edit').classList.add('open');
+}
+
+function cerrar() {
+  document.getElementById('overlay-edit').classList.remove('open');
+}
+
+async function guardar() {
+  var id = document.getElementById('edit-id').value;
+  var data = {
+    nombre:        document.getElementById('edit-nombre').value.trim(),
+    username:      document.getElementById('edit-username').value.trim(),
+    rol:           document.getElementById('edit-rol').value,
+    tipo_docencia: document.getElementById('edit-tipo').value,
+    materia:       document.getElementById('edit-materia').value.trim(),
+    grado:         document.getElementById('edit-grado').value.trim(),
+    mencion:       document.getElementById('edit-mencion').value.trim(),
+    ciclo:         document.getElementById('edit-ciclo').value || null,
+    activo:        document.getElementById('edit-activo').checked ? 1 : 0,
+  };
+  var url, method;
+  if (id) {
+    url = '/api/usuarios/' + id; method = 'PATCH';
+  } else {
+    data.password = document.getElementById('edit-password').value.trim();
+    url = '/api/usuarios'; method = 'POST';
+  }
+  try {
+    var r = await fetch(url, {
+      method: method,
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(data)
+    });
+    var d = await r.json();
+    if (d.ok) {
+      cerrar();
+      toast('Guardado correctamente', 'ok');
+      await cargar();
+    } else {
+      toast(d.error || 'Error al guardar', 'err');
+    }
+  } catch(e) { toast('Error de conexión', 'err'); }
+}
+
+// ── Modal reset password ──────────────────────────────
+function abrirPwd(id, nombre) {
+  document.getElementById('pwd-uid').value = id;
+  document.getElementById('pwd-sub').textContent = nombre;
+  document.getElementById('pwd-nueva').value = '';
+  document.getElementById('overlay-pwd').classList.add('open');
+}
+
+async function resetPassword() {
+  var id  = document.getElementById('pwd-uid').value;
+  var pwd = document.getElementById('pwd-nueva').value.trim();
+  try {
+    var r = await fetch('/api/usuarios/' + id + '/password', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ password: pwd })
+    });
+    var d = await r.json();
+    if (d.ok) {
+      document.getElementById('overlay-pwd').classList.remove('open');
+      toast('Contraseña actualizada', 'ok');
+    } else {
+      toast(d.error || 'Error', 'err');
+    }
+  } catch(e) { toast('Error de conexión', 'err'); }
+}
+
+// ── Cerrar con Escape ─────────────────────────────────
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.overlay.open').forEach(function(o){
+      o.classList.remove('open');
+    });
+  }
+});
+
+function toast(msg, tipo) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = tipo;
+  setTimeout(function(){ t.className = ''; }, 3000);
+}
+
+cargar();
+</script>
+</body>
+</html>

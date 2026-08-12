@@ -312,6 +312,16 @@ def migrar_bd():
     except Exception as _e:
         logger.warning(f"[db] fix curso/grado: {_e}")
 
+    # Elevar usuario 'admin' a superusuario (solo si sigue como coordinador_general)
+    try:
+        with sqlite3.connect(DATABASE, timeout=10) as _c:
+            _c.execute(
+                "UPDATE usuarios SET rol='superusuario' WHERE username='admin' AND rol='coordinador_general'"
+            )
+            _c.commit()
+    except Exception:
+        pass
+
     logger.info("  ── Migración completada ✓")
 
     # H12: sembrar catálogo de materias si está vacío
