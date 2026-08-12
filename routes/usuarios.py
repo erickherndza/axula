@@ -79,6 +79,10 @@ def api_editar(uid):
     if "rol" in updates:
         updates["rol"] = _normalizar_rol(updates["rol"])
 
+    # Si se actualiza materia, limpiar asignaturas para que no tome precedencia
+    if "materia" in updates:
+        updates["asignaturas"] = None
+
     sets   = ", ".join(f"{k}=?" for k in updates)
     valores = list(updates.values()) + [uid]
 

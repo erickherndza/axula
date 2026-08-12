@@ -210,6 +210,9 @@ def editar_mi_perfil():
     # Solo campos permitidos para auto-edición
     CAMPOS_EDITABLES = {"telefono", "bio", "titulo_academico", "departamento", "materia", "grado"}
     updates = {k: v for k, v in d.items() if k in CAMPOS_EDITABLES}
+    # Si se actualiza materia, limpiar asignaturas para que no tome precedencia
+    if "materia" in updates:
+        updates["asignaturas"] = None
 
     if not updates:
         return jsonify({"error": "Nada que actualizar"}), 400
