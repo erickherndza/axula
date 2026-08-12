@@ -132,6 +132,48 @@ python3 -c "import app; print('OK')"
 
 ## Log de sesiones
 
+### 2026-08-12 (sesión 15 — Usuarios admin + generador planificación 2026)
+
+**Fe de errata — perfil propio editable (commit previo):**
+- `routes/profesor.py` → `editar_mi_perfil()` extendido: `CAMPOS_EDITABLES` incluye `materia` y `grado`
+- Al actualizar materia: `asignaturas=NULL` para evitar que el campo legacy tome precedencia
+- Sesión Flask refrescada al guardar (`session["materia"]`, `session["grado"]`)
+- `templates/mi_perfil.html`: chips de materias en modal edición, envía `materia` y `grado`
+
+**Módulo /usuarios rehab ilitado (commits previos):**
+- `routes/usuarios.py` — blueprint nuevo: `GET /usuarios`, `GET/PATCH /api/usuarios/<id>`, `POST /api/usuarios`, `POST /api/usuarios/<id>/password`
+- `templates/usuarios.html` — tabla + modales edición/creación, usa `apiFetch()` con `X-CSRF-Token`
+- `core/database.py` — migración startup: `admin` elevado a `superusuario`
+- Acceso restringido a `_ROLES_ADMIN = {"superusuario", "directora"}`
+
+**Fix CSRF en /usuarios:** `var CSRF = '{{ csrf_token }}'` + helper `apiFetch()` que inyecta header automáticamente.
+
+**Fix materia persistente tras edición admin:** campo `asignaturas` tenía precedencia sobre `materia` en portal (`prof.get("asignaturas") or prof.get("materia")`). Fix: `asignaturas=NULL` al editar materia en ambos blueprints (`usuarios.py` y `profesor.py`). En Render Shell: `UPDATE usuarios SET asignaturas=NULL WHERE id=3;`
+
+**Fix Render apuntando a repo incorrecto:** Render estaba conectado a `dipromes` en lugar de `axula`. Usuario reconectó desde Render Settings.
+
+**Generador planificación MINERD 2026 (commit `e19270d`):**
+- Archivo: `routes/generar_planificacion_abp.js` (en .gitignore → `git add -f`)
+- `W.EL`: 5→6 columnas [2400, 2400, 2400, 3000, 2100, 2100]
+- `W.FA`: 9→8 columnas [2000, 1100, 3400, 2000, 1800, 1800, 1200, 1100]
+- `bloque2` ELEMENTOS: "Competencias Fundamentales" como fila fusionada ancho completo,
+  luego 6 cols: Competencias específicas (Laborales profesionales) | Elemento de la competencia |
+  RAE | Contenidos | Problema a resolver | Pregunta desafiante
+- `bloque3` FASES: elimina columna CF, 8 cols:
+  `*Fases del ABP/ABPr` | Tiempo aproximado | Actividades | Integración STEAM
+  (Ciencia, Tecnología, Ingeniería, Artes, Matemática) | Rol del Docente | Rol del estudiante |
+  Recursos | Técnicas e Instrumentos de Evaluación
+- Nota al pie: `- Anexar los instrumentos de evaluación de cada fase.`
+- Campo `curriculo.competencias_especificas` / `curriculo.competencias_laborales` para col nueva;
+  fallback a `elementos_competencia` si no existe
+
+**ARQUITECTURA crítica — precedencia de materia:**
+```
+portal_profesor usa: prof.get("asignaturas") or prof.get("materia")
+→ asignaturas siempre debe ser NULL si el profesor no tiene asignaciones personalizadas
+→ editar_mi_perfil() y PATCH /api/usuarios/<id> siempre nullifican asignaturas al cambiar materia
+```
+
 ### 2026-08-11 (sesión 14 — Paradigma: Axula → asistente personal MULTIMEDIA)
 
 **Cambio de paradigma:** El centro y el MINERD ya tienen plataforma propia.
