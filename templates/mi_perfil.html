@@ -804,6 +804,36 @@ main{max-width:1100px;margin:0 auto;padding:28px 24px}
       <textarea class="form-textarea" id="edit-bio"
                 placeholder="Una breve descripción de tu rol y especialidad...">{{ staff.bio or '' }}</textarea>
     </div>
+
+    {% if es_prof %}
+    <div style="border-top:1px solid var(--border);margin:16px 0 14px;padding-top:14px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;
+                  color:var(--accent);margin-bottom:10px">
+        <i class="fas fa-book-open" style="margin-right:5px"></i>Mis materias y grado
+      </div>
+      <div class="form-row">
+        <div class="form-group" style="flex:2">
+          <label class="form-label">Materias <span style="color:var(--muted);font-weight:400">(separadas por |)</span></label>
+          <input class="form-input" id="edit-materia" type="text"
+                 placeholder="Fotografía|Diseño Web|Diseño Gráfico"
+                 value="{{ staff.materia or '' }}">
+          <div style="font-size:10px;color:var(--muted);margin-top:4px">
+            Agrega o elimina materias. Separa cada una con <code>|</code>
+          </div>
+          <!-- chips en vivo -->
+          <div id="materia-chips" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:8px"></div>
+        </div>
+        <div class="form-group" style="flex:1">
+          <label class="form-label">Grado(s)</label>
+          <input class="form-input" id="edit-grado" type="text"
+                 placeholder="4to,5to"
+                 value="{{ staff.grado or '' }}">
+          <div style="font-size:10px;color:var(--muted);margin-top:4px">Ej: 4to,5to</div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
     <div class="modal-actions">
       <button class="btn-cancel" onclick="cerrarModal('modal-editar')">Cancelar</button>
       <button class="btn-save" onclick="guardarPerfil()">
@@ -877,6 +907,37 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
+// ── Chips de materias ─────────────────────────────────────────────
+(function(){
+  var inp = document.getElementById('edit-materia');
+  if (!inp) return;
+  function renderChips() {
+    var chips = document.getElementById('materia-chips');
+    if (!chips) return;
+    var mats = inp.value.split('|').map(function(m){ return m.trim(); }).filter(Boolean);
+    chips.innerHTML = mats.map(function(m, i){
+      return '<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 9px;'
+           + 'border-radius:20px;background:var(--surface2);border:1px solid var(--border);'
+           + 'font-size:11px;color:var(--text)">'
+           + m
+           + '<button onclick="eliminarMateria(' + i + ')" type="button" '
+           + 'style="border:none;background:none;cursor:pointer;color:var(--muted);'
+           + 'font-size:12px;padding:0;line-height:1">&times;</button></span>';
+    }).join('');
+  }
+  inp.addEventListener('input', renderChips);
+  renderChips();
+})();
+
+function eliminarMateria(idx) {
+  var inp = document.getElementById('edit-materia');
+  if (!inp) return;
+  var mats = inp.value.split('|').map(function(m){ return m.trim(); }).filter(Boolean);
+  mats.splice(idx, 1);
+  inp.value = mats.join('|');
+  inp.dispatchEvent(new Event('input'));
+}
+
 async function guardarPerfil() {
   var data = {
     telefono:         document.getElementById('edit-telefono').value.trim(),
@@ -884,6 +945,11 @@ async function guardarPerfil() {
     departamento:     document.getElementById('edit-departamento').value.trim(),
     bio:              document.getElementById('edit-bio').value.trim(),
   };
+  var matEl = document.getElementById('edit-materia');
+  var gradoEl = document.getElementById('edit-grado');
+  if (matEl) data.materia = matEl.value.trim();
+  if (gradoEl) data.grado = gradoEl.value.trim();
+
   try {
     var r = await fetch('/mi-perfil/editar', {
       method: 'POST',

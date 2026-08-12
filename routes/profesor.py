@@ -208,7 +208,7 @@ def editar_mi_perfil():
     d  = request.get_json(silent=True) or {}
 
     # Solo campos permitidos para auto-edición
-    CAMPOS_EDITABLES = {"telefono", "bio", "titulo_academico", "departamento"}
+    CAMPOS_EDITABLES = {"telefono", "bio", "titulo_academico", "departamento", "materia", "grado"}
     updates = {k: v for k, v in d.items() if k in CAMPOS_EDITABLES}
 
     if not updates:
@@ -220,6 +220,14 @@ def editar_mi_perfil():
     with sqlite3.connect(DATABASE, timeout=10) as conn:
         conn.execute(f"UPDATE usuarios SET {sets} WHERE id=?", valores)
         conn.commit()
+
+    # Refrescar sesión si cambió materia o grado (afecta filtro de estudiantes)
+    if "materia" in updates:
+        from flask import session as _sess
+        _sess["materia"] = updates["materia"]
+    if "grado" in updates:
+        from flask import session as _sess
+        _sess["grado"] = updates["grado"]
 
     return jsonify({"ok": True})
 
