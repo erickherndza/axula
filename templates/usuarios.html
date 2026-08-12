@@ -217,6 +217,13 @@
 
 <script>
 var TODOS = [];
+var CSRF = '{{ csrf_token }}';
+
+function apiFetch(url, opts) {
+  opts = opts || {};
+  opts.headers = Object.assign({'Content-Type':'application/json','X-CSRF-Token':CSRF}, opts.headers||{});
+  return fetch(url, opts);
+}
 
 function badgeRol(rol) {
   var cls = 'badge-otro';
@@ -270,7 +277,7 @@ function filtrar() {
 }
 
 async function cargar() {
-  var r = await fetch('/api/usuarios');
+  var r = await apiFetch('/api/usuarios', {method:'GET'});
   TODOS = await r.json();
   renderTabla(TODOS);
 }
@@ -335,11 +342,7 @@ async function guardar() {
     url = '/api/usuarios'; method = 'POST';
   }
   try {
-    var r = await fetch(url, {
-      method: method,
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(data)
-    });
+    var r = await apiFetch(url, {method: method, body: JSON.stringify(data)});
     var d = await r.json();
     if (d.ok) {
       cerrar();
@@ -363,10 +366,8 @@ async function resetPassword() {
   var id  = document.getElementById('pwd-uid').value;
   var pwd = document.getElementById('pwd-nueva').value.trim();
   try {
-    var r = await fetch('/api/usuarios/' + id + '/password', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ password: pwd })
+    var r = await apiFetch('/api/usuarios/' + id + '/password', {
+      method: 'POST', body: JSON.stringify({ password: pwd })
     });
     var d = await r.json();
     if (d.ok) {
