@@ -320,6 +320,63 @@ def asistencia_por_clase():
     return jsonify([dict(r) for r in rows])
 
 
+# ── EXPORTAR ASISTENCIA CSV ─────────────────────────────────────────────────
+
+@asistencia_bp.route("/api/asistencia/export-csv")
+@login_required
+def exportar_asistencia_csv():
+    """
+    Descarga asistencia de una fecha+materia como CSV listo para Gestión.
+    ?fecha=YYYY-MM-DD&materia=Fotografía
+    Si no hay fecha, exporta todo el historial de esa materia del profesor.
+    Columnas: Fecha, Apellido, Nombre, Grado, Estado, Horas, Observación
+    """
+    import csv, io
+    prof    = _get_profesor()
+    prof_id = prof["id"] if prof else session.get("user_id")
+    fecha   = request.args.get("fecha", "").strip()
+    materia = request.args.get("materia", "").strip()
+
+    q = """
+        SELECT a.fecha, e.apellido, e.nombre, e.grado, e.curso,
+               a.estado, a.horas_clase, a.observacion
+        FROM asistencia a
+        JOIN estudiantes e ON e.id = a.estudiante_id
+        WHERE a.profesor_id = ?
+    """
+    params = [prof_id]
+    if materia: q += " AND a.materia = ?";     params.append(materia)
+    if fecha:   q += " AND a.fecha = ?";       params.append(fecha)
+    q += " ORDER BY a.fecha, e.apellido, e.nombre"
+
+    with sqlite3.connect(DATABASE, timeout=10) as conn:
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(q, params).fetchall()
+
+    buf = io.StringIO()
+    w   = csv.writer(buf)
+    w.writerow(["Fecha","Apellido","Nombre","Grado","Sección","Estado","Horas","Observación"])
+    _estado_label = {
+        "presente":"Presente","ausente":"Ausente",
+        "tardanza":"Tardanza","justificado":"Justificado",
+    }
+    for r in rows:
+        w.writerow([
+            r["fecha"], r["apellido"], r["nombre"],
+            r["grado"], r["curso"] or "",
+            _estado_label.get(r["estado"], r["estado"]),
+            r["horas_clase"], r["observacion"] or "",
+        ])
+
+    mat_slug = re.sub(r"[^a-zA-Z0-9]", "_", materia or "asistencia")
+    fname    = f"asistencia_{mat_slug}_{fecha or 'historial'}.csv"
+    return Response(
+        "\ufeff" + buf.getvalue(),   # BOM para que Excel lo abra bien
+        mimetype="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{fname}"'},
+    )
+
+
 # ── IMPORTAR LISTA DE PROFESORES (Excel) ────────────────────────────────────
 
 
