@@ -54,44 +54,14 @@ def asignaciones_generar_criterios():
     prompt = _construir_prompt_asignacion(tipo, materia, grado, mencion, titulo)
 
     try:
-        import os, json as _json
-        groq_key = os.environ.get("GROQ_API_KEY", "")
-        if not groq_key:
-            # Sin IA: devolver estructura vacía con placeholder
-            return jsonify({
-                "ok": True,
-                "ia": False,
-                "titulo": f"{tipo.capitalize()} — {materia}",
-                "descripcion": f"Describe aquí la actividad de {tipo} para {materia}.",
-                "mandato": "",
-                "producto_esperado": "",
-                "preguntas": [],
-                "fuentes": [],
-                "instrumento_tipo": "rubrica_analitica",
-                "criterios": [
-                    {"nombre": "Criterio 1", "puntaje_max": 25, "descripcion": "Descripción del criterio", "niveles": {}},
-                    {"nombre": "Criterio 2", "puntaje_max": 25, "descripcion": "Descripción del criterio", "niveles": {}},
-                    {"nombre": "Criterio 3", "puntaje_max": 25, "descripcion": "Descripción del criterio", "niveles": {}},
-                    {"nombre": "Criterio 4", "puntaje_max": 25, "descripcion": "Descripción del criterio", "niveles": {}},
-                ]
-            })
+        from core.ia import llamar_ia
+        import json as _json
 
-        import urllib.request as _req
-        payload = _json.dumps({
-            "model": "llama-3.3-70b-versatile",
-            "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0.7,
-            "max_tokens": 1800,
-        }).encode()
-        req = _req.Request(
-            "https://api.groq.com/openai/v1/chat/completions",
-            data=payload,
-            headers={"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"},
-            method="POST"
+        raw, _ = llamar_ia(
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=1800,
+            temperature=0.7,
         )
-        with _req.urlopen(req, timeout=30) as resp:
-            result = _json.loads(resp.read())
-        raw = result["choices"][0]["message"]["content"].strip()
         # Limpiar posibles backticks
         if raw.startswith("```"):
             raw = raw.split("```")[1]
@@ -112,7 +82,7 @@ def asignaciones_generar_criterios():
         })
     except Exception as e:
         logger.error(f"[asignaciones_generar_criterios] error IA: {e}")
-        return jsonify({"ok": False, "error": "Error al generar criterios. Intenta de nuevo."}), 500
+        return jsonify({"ok": False, "error": "Error interno del servidor. Intenta de nuevo."}), 500
 
 
 @asignaciones_bp.route("/api/asignaciones", methods=["GET"])
