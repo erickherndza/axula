@@ -78,7 +78,7 @@ def asignaciones_generar_criterios():
 
         import urllib.request as _req
         payload = _json.dumps({
-            "model": "llama3-70b-8192",
+            "model": "llama-3.3-70b-versatile",
             "messages": [{"role": "user", "content": prompt}],
             "temperature": 0.7,
             "max_tokens": 1800,
