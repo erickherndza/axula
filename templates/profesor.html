@@ -402,11 +402,11 @@ main{max-width:1200px;margin:0 auto;padding:28px 24px;}
   .est-nombre{font-size:12px;}
   .est-ini{width:30px;height:30px;font-size:11px;}
   .est-curso{display:none;}
-  /* Botones ausente/tardanza/justificado: más compactos en móvil */
   .ab3{padding:8px 8px;font-size:10px;}
   .pase-counters span{font-size:10px;}
   .pase-search{width:100px;font-size:11px;}
-  .pase-float{bottom:10px;padding:9px 12px;gap:8px;min-width:240px;}
+  .csv-lbl{display:none;}            /* solo ícono en móvil */
+  .pase-float{bottom:10px;padding:9px 12px;gap:8px;min-width:220px;}
   .float-info strong{font-size:11px;}
   #btn-guardar{padding:9px 14px;font-size:12px;}
 
@@ -796,6 +796,14 @@ main{max-width:1200px;margin:0 auto;padding:28px 24px;}
         <button class="btn-icon" id="btn-pase-cfg" onclick="togglePaseCfg()" title="Horas y período">
           <i class="fas fa-sliders"></i>
         </button>
+        <a id="btn-export-csv" href="#" onclick="exportarCSV(event)" title="Descargar lista del día en Excel/CSV"
+           style="display:flex;align-items:center;gap:5px;padding:0 10px;height:38px;border-radius:9px;
+                  border:1px solid var(--border);background:var(--hover);color:var(--muted);
+                  text-decoration:none;font-size:11px;font-weight:600;white-space:nowrap;flex-shrink:0;
+                  transition:all .15s;">
+          <i class="fas fa-file-csv"></i>
+          <span class="csv-lbl">Exportar</span>
+        </a>
       </div>
 
       <!-- Config extra: horas + período (colapsable) -->
@@ -880,24 +888,17 @@ main{max-width:1200px;margin:0 auto;padding:28px 24px;}
       </div>
     </div>
 
-    <!-- Barra flotante de guardar -->
+    <!-- Barra flotante: solo guardar + conteo de excepciones -->
     <div class="pase-float" id="pase-float">
       <div class="float-info">
-        <strong id="float-excepciones">Sin excepciones — todos presentes</strong>
-        <small id="float-sub"></small>
+        <strong id="float-excepciones">Todos presentes</strong>
+        <small id="float-sub" style="color:var(--muted);">Toca Guardar para registrar</small>
       </div>
-      <button class="btn-sec" style="white-space:nowrap;padding:7px 10px;font-size:11px;" onclick="resetPase()" title="Limpiar marcas">
-        <i class="fas fa-rotate-left"></i>
+      <button class="btn-sec" style="padding:7px 10px;font-size:11px;" onclick="resetPase()" title="Limpiar todas las marcas">
+        <i class="fas fa-rotate-left"></i> Limpiar
       </button>
-      <a id="btn-export-csv" href="#" onclick="exportarCSV(event)"
-         style="padding:8px 11px;border-radius:9px;font-size:11px;font-weight:600;
-                border:1px solid var(--border);color:var(--muted);text-decoration:none;
-                display:flex;align-items:center;gap:5px;white-space:nowrap;"
-         title="Exportar CSV">
-        <i class="fas fa-download"></i>
-      </a>
-      <button class="btn-primary" onclick="guardarAsistencia()" id="btn-guardar" style="white-space:nowrap;">
-        <i class="fas fa-check"></i> Guardar
+      <button class="btn-primary" onclick="guardarAsistencia()" id="btn-guardar">
+        <i class="fas fa-check"></i> Guardar lista
       </button>
     </div>
 
@@ -1813,9 +1814,11 @@ function exportarCSV(e) {
     e.preventDefault();
     var fecha   = document.getElementById('lista-fecha').value;
     var materia = document.getElementById('lista-materia').value;
-    if (!fecha || !materia) { tk('Selecciona fecha y materia primero','warn'); return; }
-    window.location.href = '/api/asistencia/export-csv?fecha=' + fecha
+    if (!fecha || !materia) { tk('Selecciona fecha y materia primero', 'warn'); return; }
+    // Descarga el pase de lista completo del día: todos los estudiantes con su estado
+    window.location.href = '/api/asistencia/export-csv?fecha=' + encodeURIComponent(fecha)
         + '&materia=' + encodeURIComponent(materia);
+    tk('Descargando lista del ' + fecha + '…', 'success');
 }
 
 function actualizarContadores() {
@@ -1847,8 +1850,10 @@ function actualizarContadores() {
     var subEl  = document.getElementById('float-sub');
     if (excEl) excEl.innerHTML = excepParts.length
         ? excepParts.join(' · ')
-        : 'Sin excepciones — todos presentes';
-    if (subEl) subEl.textContent = total + ' estudiantes registrados al guardar';
+        : '<span style="color:var(--success,#2E9E68);">✓ Todos presentes</span>';
+    if (subEl) subEl.textContent = excepParts.length
+        ? total + ' estudiantes · toca Guardar para registrar'
+        : total + ' estudiantes · toca Guardar para registrar';
 }
 
 async function guardarAsistencia() {
