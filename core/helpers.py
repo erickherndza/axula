@@ -2465,6 +2465,63 @@ def _get_config_centro():
     return dict(DEFAULTS_CENTRO)
 
 
+CURRICULUM_ARTES = {
+    "Fotografía": {
+        "competencia": "Diseño y Creatividad Multimedia (DCM) — elemento DCM.1.2",
+        "descripcion": "Expresión artística y comunicacional mediante la cámara fotográfica, composición, luz y postproducción digital.",
+        "evidencias": "Serie fotográfica, reportaje visual, portafolio de trabajos con edición digital.",
+        "indicadores": ["Aplica principios de composición y luz en sus fotografías", "Edita imágenes con software digital", "Comunica ideas mediante el lenguaje visual fotográfico"],
+    },
+    "Diseño Básico y Expresión Visual": {
+        "competencia": "Diseño y Creatividad Multimedia (DCM) — elemento DCM.1.1",
+        "descripcion": "Uso de elementos visuales básicos (punto, línea, plano, forma, color, textura) para comunicar mensajes gráficos creativos.",
+        "evidencias": "Composiciones visuales, exploración de técnicas manuales y digitales, portafolio de diseño.",
+        "indicadores": ["Emplea atributos físicos y visuales de la forma", "Crea comunicaciones efectivas mediante figuras y formas", "Aplica método de solución de problemas de diseño"],
+    },
+    "Diseño Web": {
+        "competencia": "Diseño y Creatividad Multimedia (DCM) — elemento DCM.2.1",
+        "descripcion": "Desarrollo de sitios web interactivos usando HTML, CSS y principios de usabilidad y diseño de interfaz.",
+        "evidencias": "Sitio web funcional publicado, wireframes, diseño responsivo.",
+        "indicadores": ["Aplica lenguajes HTML y CSS para maquetar sitios web", "Diseña interfaces considerando usabilidad", "Integra texto, imagen, sonido y animaciones en documentos web"],
+    },
+    "Diseño Gráfico": {
+        "competencia": "Diseño y Creatividad Multimedia (DCM)",
+        "descripcion": "Creación de piezas gráficas digitales para comunicación visual: identidad corporativa, publicidad, editorial.",
+        "evidencias": "Logotipo, afiche, material POP, diseño editorial, mockup digital.",
+        "indicadores": ["Aplica principios del diseño gráfico en producciones digitales", "Maneja software de diseño vectorial y edición de imágenes", "Crea identidad visual coherente para empresas o eventos"],
+    },
+    "Publicidad y Creatividad": {
+        "competencia": "Apreciación y Expresión del Diseño y la Comunicación Multimediática (ADCM) — elemento ADCM.2.1",
+        "descripcion": "Estrategia creativa publicitaria: briefing, concepto creativo, selección de medios, campaña integrada.",
+        "evidencias": "Campaña publicitaria, storyboard de anuncio, estrategia de redes sociales.",
+        "indicadores": ["Diseña estrategias de comunicación para productos o servicios", "Crea piezas publicitarias creativas y efectivas", "Selecciona medios adecuados según el público objetivo"],
+    },
+    "Producción Audiovisual": {
+        "competencia": "Diseño y Creatividad Multimedia (DCM) — elemento DCM.3.1",
+        "descripcion": "Preproducción, producción y postproducción de contenido audiovisual: cortometrajes, spots, documentales.",
+        "evidencias": "Video editado y publicado, guion técnico, storyboard, plan de producción.",
+        "indicadores": ["Planifica y ejecuta proyectos audiovisuales completos", "Aplica técnicas de edición de video", "Integra audio, imagen y efectos en producciones audiovisuales"],
+    },
+    "Historia del Arte Universal y la Estética Digital": {
+        "competencia": "Artístico-Cultural (A.C.)",
+        "descripcion": "Análisis crítico de movimientos artísticos, estética contemporánea y arte digital en contexto global y dominicano.",
+        "evidencias": "Ensayo analítico, presentación comparativa, análisis de obra digital.",
+        "indicadores": ["Relaciona movimientos artísticos históricos con la producción contemporánea", "Analiza obras de arte con vocabulario estético apropiado", "Valora el aporte del arte dominicano en el contexto universal"],
+    },
+    "Redes Sociales": {
+        "competencia": "Apreciación y Expresión del Diseño y la Comunicación Multimediática (ADCM) — elemento ADCM.2.1",
+        "descripcion": "Gestión estratégica de plataformas digitales: contenido, comunidad, métricas y marketing digital.",
+        "evidencias": "Plan de contenido para red social, análisis de métricas, campaña digital.",
+        "indicadores": ["Crea contenido estratégico para plataformas digitales", "Analiza el impacto de las redes sociales en la sociedad", "Gestiona comunidades digitales con criterio comunicacional"],
+    },
+    "Medios de Comunicación": {
+        "competencia": "Apreciación y Expresión del Diseño y la Comunicación Multimediática (ADCM) — elemento ADCM.1.1",
+        "descripcion": "Análisis del ecosistema mediático: historia, tipos de medios, plan de medios y gestión comunicacional.",
+        "evidencias": "Plan de medios, análisis comparativo de medios, propuesta de campaña multicanal.",
+        "indicadores": ["Identifica características y función de los distintos medios de comunicación", "Diseña estrategias de selección de medios según objetivos", "Evalúa críticamente el impacto de los medios en la sociedad"],
+    },
+}
+
 def _construir_prompt_asignacion(tipo, materia, grado, mencion, titulo=""):
     """
     Genera el prompt para producir un documento de asignación MINERD completo:
