@@ -204,71 +204,103 @@ main{max-width:1200px;margin:0 auto;padding:28px 24px;}
 }
 .btn-sec:hover{border-color:var(--accent);color:var(--accent);}
 
-/* ── LISTA DE ESTUDIANTES ── */
+/* ── LISTA DE ESTUDIANTES v2 ── */
 .lista-grid{display:flex;flex-direction:column;gap:6px;}
 .est-row{
-  display:flex;align-items:center;gap:12px;padding:11px 14px;
-  background:var(--hover);border-radius:10px;border:1px solid var(--border);
-  transition:background .12s;
+  display:flex;align-items:center;gap:12px;padding:13px 14px;
+  background:var(--hover);border-radius:10px;border:1.5px solid var(--border);
+  transition:background .12s,border-color .12s;cursor:pointer;user-select:none;
 }
-.est-row:hover{background:var(--surface);}
+.est-row:active{transform:scale(.995);}
 [data-theme="light"] .est-row{background:#F9F8F7;border-color:#E8E6E0;}
 [data-theme="light"] .est-row:hover{background:#fff;}
+/* Estados — la fila entera cambia color */
+.est-row.estado-a{background:rgba(192,43,43,.08);border-color:rgba(192,43,43,.45);}
+.est-row.estado-t{background:rgba(180,83,9,.07);border-color:rgba(180,83,9,.45);}
+.est-row.estado-j{background:rgba(24,95,165,.07);border-color:rgba(24,95,165,.4);}
+.est-row.estado-p{background:rgba(26,107,60,.07);border-color:rgba(26,107,60,.45);}
+[data-theme="light"] .est-row.estado-a{background:#FFF0F0;border-color:#FECACA;}
+[data-theme="light"] .est-row.estado-t{background:#FFF8EE;border-color:#FFCA80;}
+[data-theme="light"] .est-row.estado-j{background:#EDF4FF;border-color:#BDD9FF;}
+[data-theme="light"] .est-row.estado-p{background:#EBF5EE;border-color:#A8DFBC;}
 .est-ini{
-  width:32px;height:32px;border-radius:9px;
+  width:34px;height:34px;border-radius:10px;
   background:rgba(24,95,165,.1);color:var(--accent);
   font-family:'Syne',sans-serif;font-size:12px;font-weight:800;
   display:flex;align-items:center;justify-content:center;flex-shrink:0;
 }
 [data-theme="light"] .est-ini{background:#EDF4FF;color:#185FA5;}
-.est-nombre{flex:1;font-size:12px;font-weight:500;}
-.est-curso{font-size:10px;color:var(--muted);}
-.asist-btns{display:flex;gap:5px;}
-.asist-btn{
-  padding:5px 12px;border-radius:8px;font-size:11px;font-weight:600;
-  cursor:pointer;border:1px solid transparent;transition:all .12s;font-family:'DM Sans',sans-serif;
+.est-nombre{font-size:13px;font-weight:600;line-height:1.3;}
+.est-curso{font-size:10px;color:var(--muted);margin-top:1px;}
+/* Badge de estado (P/A/T/J) */
+.est-badge{
+  min-width:32px;height:32px;border-radius:9px;font-size:11px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  border:1.5px solid var(--border);color:var(--muted);background:rgba(255,255,255,.05);
+  transition:all .12s;letter-spacing:.5px;
 }
-.asist-btn.p{background:rgba(26,107,60,.1);color:#1A6B3C;border-color:rgba(26,107,60,.25);}
-.asist-btn.p.sel,.asist-btn.p:hover{background:#1A6B3C;color:#fff;}
-[data-theme="light"] .asist-btn.p{background:#E8F5EE;border-color:#A8DFBC;}
-.asist-btn.t{background:rgba(180,83,9,.1);color:var(--warn);border-color:rgba(180,83,9,.25);}
-.asist-btn.t.sel,.asist-btn.t:hover{background:var(--warn);color:#fff;}
-[data-theme="light"] .asist-btn.t{background:#FFF4E6;border-color:#FFCA80;color:#9A3412;}
-.asist-btn.a{background:rgba(192,43,43,.1);color:#C02B2B;border-color:rgba(192,43,43,.25);}
-.asist-btn.a.sel,.asist-btn.a:hover{background:#C02B2B;color:#fff;}
-[data-theme="light"] .asist-btn.a{background:#FFF1F1;border-color:#FECACA;color:#C02B2B;}
-.asist-btn.j{background:rgba(24,95,165,.1);color:var(--accent);border-color:rgba(24,95,165,.25);}
-.asist-btn.j.sel,.asist-btn.j:hover{background:var(--accent);color:#fff;}
-[data-theme="light"] .asist-btn.j{background:#EDF4FF;border-color:#BDD9FF;color:#185FA5;}
-.obs-inp{
-  background:var(--hover);border:1px solid var(--border);color:var(--muted);
-  padding:5px 9px;border-radius:7px;font-size:11px;width:120px;
-  font-family:'DM Sans',sans-serif;outline:none;
-}
-.obs-inp:focus{border-color:var(--accent);color:var(--text);}
-[data-theme="light"] .obs-inp{background:#fff;border-color:#D4D2CC;color:#323130;}
+.est-row.estado-a .est-badge{background:#C02B2B;border-color:#C02B2B;color:#fff;}
+.est-row.estado-t .est-badge{background:#B45309;border-color:#B45309;color:#fff;}
+.est-row.estado-j .est-badge{background:#185FA5;border-color:#185FA5;color:#fff;}
+.est-row.estado-p .est-badge{background:#1A6B3C;border-color:#1A6B3C;color:#fff;}
+/* Hint de "toca para cambiar" */
+.est-hint{font-size:9px;color:var(--muted);text-align:center;margin-top:2px;opacity:.7;}
 
-/* ── MODO PASE (toggle rápido mobile) ── */
-.modo-pase-bar{
-  display:flex;gap:8px;align-items:center;margin-bottom:14px;
-  padding:10px 12px;border-radius:10px;border:1px solid var(--border);
-  background:var(--hover);
+/* ── CONTROLES PASE v2 ── */
+.pase-top-bar{display:flex;gap:8px;align-items:flex-end;margin-bottom:10px;}
+.pase-top-bar .fld{flex:1;}
+.btn-icon{
+  width:38px;height:38px;border-radius:9px;border:1px solid var(--border);
+  background:var(--hover);color:var(--muted);cursor:pointer;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:14px;
+  transition:all .15s;
 }
-.modo-pase-bar .modo-label{font-size:11px;color:var(--muted);font-weight:600;margin-right:4px;white-space:nowrap;}
-.modo-btn{
-  flex:1;padding:7px 10px;border-radius:8px;font-size:11px;font-weight:700;
-  cursor:pointer;border:1px solid var(--border);background:var(--hover);color:var(--muted);
-  transition:all .15s;font-family:'DM Sans',sans-serif;text-align:center;
+.btn-icon:hover{border-color:var(--accent);color:var(--accent);}
+.btn-icon.activo{border-color:var(--accent);color:var(--accent);background:rgba(24,95,165,.1);}
+.pase-config-extra{
+  display:none;gap:8px;margin-bottom:10px;padding:10px 12px;
+  border:1px solid var(--border);border-radius:10px;background:var(--hover);
+  flex-wrap:wrap;
 }
-.modo-btn.activo-ausentes{background:#C02B2B;color:#fff;border-color:#C02B2B;}
-.modo-btn.activo-presentes{background:#1A6B3C;color:#fff;border-color:#1A6B3C;}
-[data-theme="light"] .modo-btn{background:#F9F8F7;border-color:#E8E6E0;color:#555;}
-[data-theme="light"] .modo-btn.activo-ausentes{background:#C02B2B;color:#fff;}
-[data-theme="light"] .modo-btn.activo-presentes{background:#1A6B3C;color:#fff;}
+.pase-config-extra.visible{display:flex;}
+/* Barra meta: contadores + búsqueda */
+.pase-meta-bar{display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap;}
+.pase-counters{display:flex;gap:12px;flex:1;flex-wrap:wrap;}
+.pase-counters span{font-size:11px;font-weight:600;white-space:nowrap;}
+#cnt-p{color:#1A6B3C;}
+#cnt-a{color:#C02B2B;}
+#cnt-t{color:var(--warn);}
+#cnt-j{color:var(--accent);}
+#cnt-sin{color:var(--muted);}
+.pase-search{
+  background:var(--hover);border:1px solid var(--border);color:var(--text);
+  padding:6px 10px;border-radius:8px;font-size:12px;outline:none;width:130px;
+  font-family:'DM Sans',sans-serif;
+}
+.pase-search:focus{border-color:var(--accent);}
+[data-theme="light"] .pase-search{background:#fff;border-color:#D4D2CC;}
 
-/* Feedback visual implícito en fila */
-.est-row.implicito-p{border-left:3px solid rgba(26,107,60,.4);}
-.est-row.implicito-a{border-left:3px solid rgba(192,43,43,.4);}
+/* ── BARRA FLOTANTE DE GUARDAR ── */
+.pase-float{
+  position:fixed;bottom:16px;left:50%;transform:translateX(-50%);
+  background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  padding:10px 14px;display:flex;align-items:center;gap:10px;
+  box-shadow:0 4px 24px rgba(0,0,0,.3);z-index:200;
+  min-width:260px;max-width:calc(100vw - 32px);transition:opacity .2s;
+}
+.pase-float.oculta{opacity:0;pointer-events:none;}
+[data-theme="light"] .pase-float{background:#fff;box-shadow:0 4px 20px rgba(0,0,0,.15);}
+.float-resumen{flex:1;font-size:11px;line-height:1.5;}
+.float-resumen strong{font-size:13px;display:block;margin-bottom:1px;}
+.float-aus{color:#C02B2B;font-weight:700;}
+.float-tar{color:#B45309;font-weight:700;}
+
+/* ── ALERTA YA REGISTRADA ── */
+.lista-ok-badge{
+  display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;
+  padding:4px 10px;border-radius:20px;background:rgba(26,107,60,.15);color:#1A6B3C;
+}
+[data-theme="light"] .lista-ok-badge{background:#E8F5EE;}
 
 /* ═══════════════════════════════════════════════════
    MOBILE — ≤640px
@@ -349,20 +381,18 @@ main{max-width:1200px;margin:0 auto;padding:28px 24px;}
     flex:1;justify-content:center;
   }
 
-  /* ── FILAS DE ESTUDIANTES ── */
-  .obs-inp{display:none;}
-  .est-row{padding:9px 10px;gap:8px;}
-  .asist-btn{padding:7px 11px;font-size:12px;}
-  .est-nombre{font-size:11px;}
-  .est-ini{width:28px;height:28px;font-size:11px;border-radius:7px;}
-  .est-curso{display:none;}               /* oculta grado/sección en la fila (ya está en el selector) */
-
-  /* ── MODO PASE TOGGLE ── */
-  .modo-pase-bar{flex-wrap:wrap;gap:6px;}
-  #modo-hint{width:100%;text-align:center;margin-left:0;}
-
-  /* ── CONTADORES ── */
-  #cnt-sin{display:none;}                 /* oculta "sin marcar" — redundante con el resto */
+  /* ── PASE v2 MOBILE ── */
+  .est-row{padding:12px 10px;gap:10px;border-radius:12px;}
+  .est-nombre{font-size:12px;}
+  .est-ini{width:36px;height:36px;font-size:12px;border-radius:10px;}
+  .est-curso{display:none;}
+  .est-badge{min-width:36px;height:36px;border-radius:10px;font-size:12px;}
+  .pase-counters{gap:8px;}
+  .pase-counters span{font-size:10px;}
+  .pase-search{width:110px;}
+  .pase-float{bottom:12px;padding:10px 12px;gap:8px;}
+  .float-resumen strong{font-size:12px;}
+  #btn-guardar{padding:9px 14px;font-size:12px;}
 
   /* ── STAT GRID ── */
   .stat-grid{grid-template-columns:repeat(2,1fr);}
@@ -727,39 +757,35 @@ main{max-width:1200px;margin:0 auto;padding:28px 24px;}
   <!-- ═══════════════════════════════════════════════════════════════════ -->
   <div id="tab-pase" style="display:none;">
 
-    <div class="alerta-minerd">
-      <i class="fas fa-scale-balanced"></i>
-      <div>
-        <div class="al-title">Normativa MINERD — Asistencia (Ordenanza 1'96 mod. 1'98)</div>
-        <div class="al-text">
-          Art. 51: El estudiante <strong>reprueba la asignatura</strong> si acumula más del 20% de inasistencias injustificadas.
-          El promedio de asistencia se calcula como: <strong>(horas presentes ÷ horas totales impartidas) × 100</strong>.
-          Las tardanzas cuentan como ½ hora ausente. Las inasistencias justificadas no penalizan.
-        </div>
-      </div>
-    </div>
-
     <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-        <div class="card-title" style="margin:0;"><i class="fas fa-clipboard-list"></i> Registrar Asistencia</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <div class="card-title" style="margin:0;"><i class="fas fa-clipboard-list"></i> Pase de Lista</div>
         <div id="lista-hoy-indicator"></div>
       </div>
 
-      <div class="lista-controls">
+      <!-- Controles compactos: fecha + materia en una línea -->
+      <div class="pase-top-bar">
         <div class="fld">
-          <label>Fecha *</label>
+          <label>Fecha</label>
           <input type="date" id="lista-fecha" value="{{ fecha_hoy }}">
         </div>
-        <div class="fld">
-          <label>Materia *</label>
+        <div class="fld" style="flex:2;">
+          <label>Materia</label>
           <select id="lista-materia" onchange="onMateriaChange();">
             {% for asig, horas in plan %}
-            <option value="{{ asig }}" data-horas="{{ horas }}">{{ asig }} ({{ horas }}h/sem)</option>
+            <option value="{{ asig }}" data-horas="{{ horas }}">{{ asig }}</option>
             {% endfor %}
           </select>
         </div>
-        <div class="fld">
-          <label>Horas de clase hoy</label>
+        <button class="btn-icon" id="btn-pase-cfg" onclick="togglePaseCfg()" title="Horas y período">
+          <i class="fas fa-sliders"></i>
+        </button>
+      </div>
+
+      <!-- Config extra: horas + período (colapsable) -->
+      <div class="pase-config-extra" id="pase-cfg-extra">
+        <div class="fld" style="flex:1;">
+          <label>Horas hoy</label>
           <select id="lista-horas">
             <option value="1">1 hora</option>
             <option value="2">2 horas</option>
@@ -767,7 +793,7 @@ main{max-width:1200px;margin:0 auto;padding:28px 24px;}
             <option value="4">4 horas</option>
           </select>
         </div>
-        <div class="fld">
+        <div class="fld" style="flex:1;">
           <label>Período</label>
           <select id="lista-periodo">
             <option value="P1">P1 — Primer Período</option>
@@ -776,54 +802,38 @@ main{max-width:1200px;margin:0 auto;padding:28px 24px;}
             <option value="P4">P4 — Cuarto Período</option>
           </select>
         </div>
-        <div style="display:flex;gap:6px;align-items:flex-end;">
-          <button class="btn-sec" onclick="marcarTodos('presente')">
-            <i class="fas fa-check-double"></i> Todos presentes
-          </button>
-          <button class="btn-primary" onclick="guardarAsistencia()" id="btn-guardar">
-            <i class="fas fa-save"></i> Guardar lista
-          </button>
+      </div>
+
+      <!-- Barra meta: contadores + búsqueda -->
+      <div class="pase-meta-bar">
+        <div class="pase-counters">
+          <span id="cnt-p">✔ <span id="cnt-p-n">{{ estudiantes|length }}</span> presentes</span>
+          <span id="cnt-a">✗ <span id="cnt-a-n">0</span> ausentes</span>
+          <span id="cnt-t">⏱ <span id="cnt-t-n">0</span> tardanzas</span>
+          <span id="cnt-j">📋 <span id="cnt-j-n">0</span> justific.</span>
         </div>
+        <input type="search" class="pase-search" placeholder="Buscar alumno…" oninput="filtrarPase(this.value)">
       </div>
 
-      <!-- Toggle modo de marcado rápido -->
-      <div class="modo-pase-bar">
-        <span class="modo-label">Modo rápido:</span>
-        <button class="modo-btn activo-ausentes" id="modo-btn-ausentes" onclick="setModoPase('ausentes')">
-          ✗ Marcar Ausentes
-        </button>
-        <button class="modo-btn" id="modo-btn-presentes" onclick="setModoPase('presentes')">
-          ✔ Marcar Presentes
-        </button>
-        <span id="modo-hint" style="font-size:10px;color:var(--muted);margin-left:4px;flex-shrink:0;">
-          No marcados = Presentes
-        </span>
+      <!-- Instrucción rápida -->
+      <div style="font-size:10px;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:6px;">
+        <i class="fas fa-hand-pointer" style="font-size:11px;"></i>
+        Toca una fila para marcar ausente · toca de nuevo para tardanza · otra vez para justificado · otra para quitar
       </div>
 
-      <!-- Contadores en tiempo real -->
-      <div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap;">
-        <span id="cnt-p" style="font-size:11px;color:var(--success);">✔ 0 presentes</span>
-        <span id="cnt-t" style="font-size:11px;color:var(--warn);">⏱ 0 tardanzas</span>
-        <span id="cnt-a" style="font-size:11px;color:#ff6b6b;">✗ 0 ausentes</span>
-        <span id="cnt-j" style="font-size:11px;color:var(--blue);">📋 0 justificados</span>
-        <span id="cnt-sin" style="font-size:11px;color:#555;">⚪ <span id="cnt-sin-n">{{ estudiantes|length }}</span> sin marcar</span>
-      </div>
-
+      <!-- Lista de estudiantes -->
       <div class="lista-grid" id="lista-container">
         {% for est in estudiantes %}
-        <div class="est-row" data-id="{{ est.id }}">
+        <div class="est-row" data-id="{{ est.id }}" onclick="tapEstudiante(this)">
           <div class="est-ini">{{ est.nombre[0] }}{{ est.apellido[0] }}</div>
-          <div style="flex:1;">
+          <div style="flex:1;min-width:0;">
             <div class="est-nombre">{{ est.apellido }}, {{ est.nombre }}</div>
-            <div class="est-curso">{{ est.curso or est.grado }}{% if est.seccion %} · <span style="color:#6366f1;font-weight:700;">Sec. {{ est.seccion }}</span>{% endif %}</div>
+            <div class="est-curso">{{ est.curso or est.grado }}{% if est.seccion %} · Sec. {{ est.seccion }}{% endif %}</div>
           </div>
-          <div class="asist-btns">
-            <button class="asist-btn p" onclick="setEstado(this,'presente')">P</button>
-            <button class="asist-btn t" onclick="setEstado(this,'tardanza')">T</button>
-            <button class="asist-btn a" onclick="setEstado(this,'ausente')">A</button>
-            <button class="asist-btn j" onclick="setEstado(this,'justificado')">J</button>
+          <div>
+            <div class="est-badge">—</div>
+            <div class="est-hint">toca</div>
           </div>
-          <input class="obs-inp" placeholder="Observación…" title="Observación">
         </div>
         {% endfor %}
         {% if not estudiantes %}
@@ -835,6 +845,32 @@ main{max-width:1200px;margin:0 auto;padding:28px 24px;}
         {% endif %}
       </div>
     </div>
+
+    <!-- Barra flotante de guardar (siempre visible) -->
+    <div class="pase-float" id="pase-float">
+      <div class="float-resumen">
+        <strong id="float-titulo">Lista lista para guardar</strong>
+        <span id="float-detalle" style="color:var(--muted);">Todos presentes</span>
+      </div>
+      <button class="btn-sec" style="white-space:nowrap;padding:8px 12px;font-size:11px;" onclick="resetPase()">
+        <i class="fas fa-rotate-left"></i> Reset
+      </button>
+      <button class="btn-primary" onclick="guardarAsistencia()" id="btn-guardar" style="white-space:nowrap;">
+        <i class="fas fa-check"></i> Guardar
+      </button>
+    </div>
+
+    <!-- Nota MINERD colapsada (menos intrusiva) -->
+    <details style="margin-top:10px;">
+      <summary style="font-size:10px;color:var(--muted);cursor:pointer;user-select:none;">
+        <i class="fas fa-scale-balanced" style="margin-right:4px;"></i>Normativa MINERD (Art. 51)
+      </summary>
+      <div style="font-size:10px;color:var(--muted);padding:8px 12px;line-height:1.6;margin-top:4px;border-left:2px solid var(--border);">
+        El estudiante reprueba la asignatura si acumula más del <strong>20% de inasistencias injustificadas</strong>.
+        Fórmula: (horas presentes ÷ horas totales) × 100. Las tardanzas cuentan como ½ hora ausente.
+      </div>
+    </details>
+
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════════════ -->
@@ -1634,7 +1670,7 @@ function showTab(name) {
     document.querySelectorAll('.tab-btn').forEach(function(b){
         var txt = b.textContent.trim().toLowerCase();
         var match = false;
-        if(name==='pase'     && txt.includes('lista'))  { match=true; setTimeout(function(){ setModoPase(MODO_PASE); },50); }
+        if(name==='pase'     && txt.includes('lista'))  { match=true; setTimeout(function(){ actualizarContadores(); },50); }
         if(name==='historial'&& txt.includes('historial'))match=true;
         if(name==='resumen'  && txt.includes('resumen'))  match=true;
         if(name==='notas'    && txt.includes('notas'))    match=true;
@@ -1654,72 +1690,117 @@ function showTab(name) {
     if(name==='asignaciones')  { cargarAsignaciones(); actualizarSugerencia(); }
 }
 
-// ── PASE DE LISTA ────────────────────────────────────────────────────────────
+// ── PASE DE LISTA v2 ────────────────────────────────────────────────────────
+// Ciclo: sin marcar → ausente → tardanza → justificado → sin marcar (=presente)
+var _CICLO = [null, 'ausente', 'tardanza', 'justificado'];
+var _CICLO_LABELS = { ausente:'A', tardanza:'T', justificado:'J' };
+var _CICLO_CSS    = { ausente:'estado-a', tardanza:'estado-t', justificado:'estado-j' };
 
-function setModoPase(modo) {
-    MODO_PASE = modo;
-    document.getElementById('modo-btn-ausentes').className  = 'modo-btn' + (modo==='ausentes'  ? ' activo-ausentes'  : '');
-    document.getElementById('modo-btn-presentes').className = 'modo-btn' + (modo==='presentes' ? ' activo-presentes' : '');
-    document.getElementById('modo-hint').textContent =
-        modo === 'ausentes' ? 'No marcados = Presentes' : 'No marcados = Ausentes';
-    // Actualizar feedback visual en filas no marcadas
-    document.querySelectorAll('.est-row').forEach(function(row){
-        var estId = parseInt(row.dataset.id);
-        if (!ESTADOS[estId]) {
-            row.classList.toggle('implicito-p', modo === 'ausentes');
-            row.classList.toggle('implicito-a', modo === 'presentes');
-        }
-    });
+function tapEstudiante(row) {
+    var estId  = parseInt(row.dataset.id);
+    var actual = ESTADOS[estId] ? ESTADOS[estId].estado : null;
+    var idx    = _CICLO.indexOf(actual);
+    var next   = _CICLO[(idx + 1) % _CICLO.length]; // cicla de vuelta a null
+
+    _aplicarEstadoFila(row, estId, next);
     actualizarContadores();
 }
 
-function setEstado(btn, estado) {
-    var row   = btn.closest('.est-row');
-    var estId = parseInt(row.dataset.id);
-    var obsEl = row.querySelector('.obs-inp');
-    var obs   = obsEl ? obsEl.value : '';
+function _aplicarEstadoFila(row, estId, estado) {
+    // Limpiar clases de estado
+    row.classList.remove('estado-a','estado-t','estado-j','estado-p');
+    var badge = row.querySelector('.est-badge');
+    var hint  = row.querySelector('.est-hint');
 
-    // Si ya estaba marcado con el mismo estado → desmarcar (vuelve al implícito)
-    if (ESTADOS[estId] && ESTADOS[estId].estado === estado) {
+    if (!estado) {
         delete ESTADOS[estId];
-        row.querySelectorAll('.asist-btn').forEach(function(b){ b.classList.remove('sel'); });
-        row.classList.toggle('implicito-p', MODO_PASE === 'ausentes');
-        row.classList.toggle('implicito-a', MODO_PASE === 'presentes');
-        actualizarContadores();
-        return;
+        if (badge) { badge.textContent = '—'; }
+        if (hint)  { hint.textContent = 'toca'; }
+    } else {
+        ESTADOS[estId] = { estado: estado, observacion: '' };
+        row.classList.add(_CICLO_CSS[estado]);
+        if (badge) badge.textContent = _CICLO_LABELS[estado];
+        if (hint)  hint.textContent  = estado === 'ausente' ? 'tap→T' : estado === 'tardanza' ? 'tap→J' : 'tap→quitar';
     }
+}
 
-    row.querySelectorAll('.asist-btn').forEach(function(b){ b.classList.remove('sel'); });
-    btn.classList.add('sel');
-    row.classList.remove('implicito-p','implicito-a');
-    ESTADOS[estId] = { estado: estado, observacion: obs };
+// Compat: setEstado sigue funcionando si algún código lo llama directamente
+function setEstado(btn, estado) {
+    var row   = btn ? btn.closest('.est-row') : null;
+    if (!row) return;
+    var estId = parseInt(row.dataset.id);
+    var actual = ESTADOS[estId] ? ESTADOS[estId].estado : null;
+    var next = (actual === estado) ? null : estado;  // mismo = desmarcar
+    _aplicarEstadoFila(row, estId, next);
     actualizarContadores();
 }
 
 function marcarTodos(estado) {
-    document.querySelectorAll('.est-row').forEach(function(row){
-        var btn = row.querySelector('.asist-btn.' + estado[0]);
-        if (btn) setEstado(btn, estado);
+    document.querySelectorAll('#lista-container .est-row').forEach(function(row){
+        if (row.style.display === 'none') return;
+        var estId = parseInt(row.dataset.id);
+        _aplicarEstadoFila(row, estId, estado === 'presente' ? null : estado);
+    });
+    actualizarContadores();
+}
+
+// Sin uso activo pero se conserva por si algo lo llama
+function setModoPase(modo) { MODO_PASE = modo; }
+
+function resetPase() {
+    ESTADOS = {};
+    document.querySelectorAll('#lista-container .est-row').forEach(function(row){
+        var estId = parseInt(row.dataset.id);
+        _aplicarEstadoFila(row, estId, null);
+    });
+    actualizarContadores();
+}
+
+function togglePaseCfg() {
+    var panel = document.getElementById('pase-cfg-extra');
+    var btn   = document.getElementById('btn-pase-cfg');
+    var vis   = panel.classList.toggle('visible');
+    btn.classList.toggle('activo', vis);
+}
+
+function filtrarPase(q) {
+    var qn = q.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    document.querySelectorAll('#lista-container .est-row').forEach(function(row){
+        var nombre = (row.querySelector('.est-nombre')||{}).textContent||'';
+        var norm   = nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+        row.style.display = (!q || norm.includes(qn)) ? '' : 'none';
     });
 }
 
 function actualizarContadores() {
-    var counts    = {presente:0,tardanza:0,ausente:0,justificado:0};
-    var total     = ESTUDIANTES.length;
-    var marcados  = Object.keys(ESTADOS).length;
-    var noMarcados = total - marcados;
+    var counts = {presente:0,tardanza:0,ausente:0,justificado:0};
+    var total  = ESTUDIANTES.length;
+    var marcados = Object.keys(ESTADOS).length;
 
-    Object.values(ESTADOS).forEach(function(e){ if(counts[e.estado]!==undefined) counts[e.estado]++; });
+    Object.values(ESTADOS).forEach(function(e){
+        if (counts[e.estado] !== undefined) counts[e.estado]++;
+    });
+    counts.presente = total - marcados; // los no marcados son presentes
 
-    // Los no marcados cuentan implícitamente según el modo
-    if (MODO_PASE === 'ausentes')  counts.presente  += noMarcados;
-    if (MODO_PASE === 'presentes') counts.ausente   += noMarcados;
+    // Actualizar spans individuales si existen
+    var pn = document.getElementById('cnt-p-n');
+    var an = document.getElementById('cnt-a-n');
+    var tn = document.getElementById('cnt-t-n');
+    var jn = document.getElementById('cnt-j-n');
+    if (pn) pn.textContent = counts.presente;
+    if (an) an.textContent = counts.ausente;
+    if (tn) tn.textContent = counts.tardanza;
+    if (jn) jn.textContent = counts.justificado;
 
-    document.getElementById('cnt-p').textContent = '✔ '+counts.presente+' presentes';
-    document.getElementById('cnt-t').textContent = '⏱ '+counts.tardanza+' tardanzas';
-    document.getElementById('cnt-a').textContent = '✗ '+counts.ausente+' ausentes';
-    document.getElementById('cnt-j').textContent = '📋 '+counts.justificado+' justificados';
-    document.getElementById('cnt-sin-n').textContent = noMarcados;
+    // Actualizar barra flotante
+    var detalles = [];
+    if (counts.ausente  > 0) detalles.push('<span class="float-aus">'+counts.ausente+' ausente'+(counts.ausente>1?'s':'')+'</span>');
+    if (counts.tardanza > 0) detalles.push('<span class="float-tar">'+counts.tardanza+' tardanza'+(counts.tardanza>1?'s':'')+'</span>');
+    if (counts.justificado > 0) detalles.push(counts.justificado+' justif.');
+    var det = document.getElementById('float-detalle');
+    var tit = document.getElementById('float-titulo');
+    if (det) det.innerHTML = detalles.length ? detalles.join(' · ') : '<span style="color:var(--muted)">Todos presentes</span>';
+    if (tit) tit.textContent = total + ' estudiantes · P' + (document.getElementById('lista-periodo')||{value:'?'}).value;
 }
 
 async function guardarAsistencia() {
@@ -1734,14 +1815,13 @@ async function guardarAsistencia() {
     var btn = document.getElementById('btn-guardar');
     btn.textContent = 'Guardando…'; btn.disabled = true;
 
-    // Construir lista completa: marcados explícitos + implícitos del modo
-    var estadoImplicito = MODO_PASE === 'ausentes' ? 'presente' : 'ausente';
+    // Construir lista: marcados explícitos, los demás = presente
     var marcadosSet = new Set(Object.keys(ESTADOS).map(Number));
     var registros = ESTUDIANTES.map(function(est){
         if (marcadosSet.has(est.id)) {
             return { estudiante_id: est.id, estado: ESTADOS[est.id].estado, observacion: ESTADOS[est.id].observacion };
         }
-        return { estudiante_id: est.id, estado: estadoImplicito, observacion: '' };
+        return { estudiante_id: est.id, estado: 'presente', observacion: '' };
     });
 
     try {
@@ -1753,9 +1833,7 @@ async function guardarAsistencia() {
         var d = await res.json();
         if (d.ok) {
             tk('Asistencia guardada: ' + d.registrados + ' registros', 'success');
-            ESTADOS = {};
-            document.querySelectorAll('.asist-btn.sel').forEach(function(b){ b.classList.remove('sel'); });
-            setModoPase(MODO_PASE); // restaura feedback implícito y contadores
+            resetPase();
         } else {
             tk(d.error || 'Error al guardar', 'error');
         }
@@ -2210,9 +2288,9 @@ async function verificarListaHoy() {
         var indicator = document.getElementById('lista-hoy-indicator');
         if (!indicator) return;
         if (data && data.length > 0) {
-            indicator.innerHTML = '<span style="padding:3px 10px;background:rgba(77,255,180,.1);border:1px solid rgba(77,255,180,.2);border-radius:20px;font-size:10px;color:#4dffb4;"><i class=\'fas fa-circle-check\'></i> Lista ya registrada hoy — puedes editarla</span>';
+            indicator.innerHTML = '<span class="lista-ok-badge"><i class="fas fa-circle-check"></i> Lista ya registrada hoy</span>';
         } else {
-            indicator.innerHTML = '<span style="padding:3px 10px;background:rgba(255,196,77,.08);border:1px solid rgba(255,196,77,.15);border-radius:20px;font-size:10px;color:#ffc44d;"><i class=\'fas fa-clock\'></i> Lista pendiente para hoy</span>';
+            indicator.innerHTML = '<span style="font-size:10px;color:var(--muted);"><i class="fas fa-clock" style="margin-right:4px;"></i>Pendiente hoy</span>';
         }
     } catch(e) {}
 }
