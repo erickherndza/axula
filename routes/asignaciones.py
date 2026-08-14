@@ -50,7 +50,8 @@ def asignaciones_generar_criterios():
     if not materia:
         return jsonify({"ok": False, "error": "Materia requerida"}), 400
 
-    prompt = _construir_prompt_asignacion(tipo, materia, grado, mencion)
+    titulo  = (data.get("titulo") or "").strip()
+    prompt = _construir_prompt_asignacion(tipo, materia, grado, mencion, titulo)
 
     try:
         import os, json as _json
@@ -62,20 +63,25 @@ def asignaciones_generar_criterios():
                 "ia": False,
                 "titulo": f"{tipo.capitalize()} — {materia}",
                 "descripcion": f"Describe aquí la actividad de {tipo} para {materia}.",
+                "mandato": "",
+                "producto_esperado": "",
+                "preguntas": [],
+                "fuentes": [],
+                "instrumento_tipo": "rubrica_analitica",
                 "criterios": [
-                    {"nombre": "Criterio 1", "puntaje_max": 25, "descripcion": "Descripción del criterio"},
-                    {"nombre": "Criterio 2", "puntaje_max": 25, "descripcion": "Descripción del criterio"},
-                    {"nombre": "Criterio 3", "puntaje_max": 25, "descripcion": "Descripción del criterio"},
-                    {"nombre": "Criterio 4", "puntaje_max": 25, "descripcion": "Descripción del criterio"},
+                    {"nombre": "Criterio 1", "puntaje_max": 25, "descripcion": "Descripción del criterio", "niveles": {}},
+                    {"nombre": "Criterio 2", "puntaje_max": 25, "descripcion": "Descripción del criterio", "niveles": {}},
+                    {"nombre": "Criterio 3", "puntaje_max": 25, "descripcion": "Descripción del criterio", "niveles": {}},
+                    {"nombre": "Criterio 4", "puntaje_max": 25, "descripcion": "Descripción del criterio", "niveles": {}},
                 ]
             })
 
         import urllib.request as _req
         payload = _json.dumps({
-            "model": "llama3-8b-8192",
+            "model": "llama3-70b-8192",
             "messages": [{"role": "user", "content": prompt}],
             "temperature": 0.7,
-            "max_tokens": 900,
+            "max_tokens": 1800,
         }).encode()
         req = _req.Request(
             "https://api.groq.com/openai/v1/chat/completions",
@@ -83,7 +89,7 @@ def asignaciones_generar_criterios():
             headers={"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"},
             method="POST"
         )
-        with _req.urlopen(req, timeout=20) as resp:
+        with _req.urlopen(req, timeout=30) as resp:
             result = _json.loads(resp.read())
         raw = result["choices"][0]["message"]["content"].strip()
         # Limpiar posibles backticks
@@ -92,7 +98,18 @@ def asignaciones_generar_criterios():
             if raw.startswith("json"):
                 raw = raw[4:]
         ia_data = _json.loads(raw.strip())
-        return jsonify({"ok": True, "ia": True, **ia_data})
+        return jsonify({
+            "ok": True,
+            "ia": True,
+            "titulo":            ia_data.get("titulo", ""),
+            "descripcion":       ia_data.get("descripcion", ""),
+            "mandato":           ia_data.get("mandato", ""),
+            "producto_esperado": ia_data.get("producto_esperado", ""),
+            "preguntas":         ia_data.get("preguntas", []),
+            "fuentes":           ia_data.get("fuentes", []),
+            "instrumento_tipo":  ia_data.get("instrumento_tipo", "rubrica_analitica"),
+            "criterios":         ia_data.get("criterios", []),
+        })
     except Exception as e:
         logger.error(f"[asignaciones_generar_criterios] error IA: {e}")
         return jsonify({"ok": False, "error": "Error al generar criterios. Intenta de nuevo."}), 500
@@ -148,6 +165,17 @@ def asignaciones_crear():
     periodo     = (data.get("periodo") or "P1").strip()
     estado      = (data.get("estado") or "borrador").strip()
 
+    mandato           = (data.get("mandato") or "").strip()
+    preguntas         = data.get("preguntas") or []
+    fuentes           = data.get("fuentes") or []
+    instrumento_tipo  = (data.get("instrumento_tipo") or "rubrica_analitica").strip()
+    instrumento_data  = data.get("instrumento_data") or {}
+    producto_esperado = (data.get("producto_esperado") or "").strip()
+
+    preguntas_str   = _json.dumps(preguntas, ensure_ascii=False)
+    fuentes_str     = _json.dumps(fuentes, ensure_ascii=False)
+    inst_data_str   = _json.dumps(instrumento_data, ensure_ascii=False)
+
     if not titulo or not materia:
         return jsonify({"ok": False, "error": "Título y materia son requeridos"}), 400
 
@@ -157,10 +185,12 @@ def asignaciones_crear():
         cur = conn.execute(
             """INSERT INTO asignaciones
                (profesor_id, materia, grado, mencion, tipo, titulo, descripcion,
-                criterios, puntaje_total, fecha_entrega, periodo, estado)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+                criterios, puntaje_total, fecha_entrega, periodo, estado,
+                mandato, preguntas, fuentes, instrumento_tipo, instrumento_data, producto_esperado)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (u["id"], materia, grado, mencion, tipo, titulo, descripcion,
-             criterios_json, puntaje, fecha_ent, periodo, estado)
+             criterios_json, puntaje, fecha_ent, periodo, estado,
+             mandato, preguntas_str, fuentes_str, instrumento_tipo, inst_data_str, producto_esperado)
         )
         new_id = cur.lastrowid
 

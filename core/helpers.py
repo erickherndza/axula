@@ -2465,10 +2465,10 @@ def _get_config_centro():
     return dict(DEFAULTS_CENTRO)
 
 
-def _construir_prompt_asignacion(tipo, materia, grado, mencion):
+def _construir_prompt_asignacion(tipo, materia, grado, mencion, titulo=""):
     """
-    Genera un prompt para que la IA devuelva criterios de evaluación
-    diferenciados según el tipo de asignación, la materia y la mención.
+    Genera el prompt para producir un documento de asignación MINERD completo:
+    mandato, preguntas orientadoras, producto esperado, fuentes y rúbrica/instrumento.
     """
     curriculum = CURRICULUM_ARTES.get(materia, {})
     competencia  = curriculum.get("competencia", "")
@@ -2478,51 +2478,76 @@ def _construir_prompt_asignacion(tipo, materia, grado, mencion):
     ind_str = "; ".join(indicadores[:3]) if indicadores else ""
 
     tipo_guia = {
-        "tarea": (
-            "una TAREA escrita o práctica individual. "
-            "Los criterios deben evaluar comprensión conceptual, aplicación y presentación."
-        ),
-        "examen": (
-            "un EXAMEN formal de conocimientos. "
-            "Los criterios deben reflejar dominio conceptual, precisión técnica y argumentación."
-            " Para materias técnicas artísticas (instrumento, actuación, fotografía, danza) "
-            "el examen es una DEMOSTRACIÓN PRÁCTICA o audición grabada, no escrita."
-        ),
-        "proyecto": (
-            "un PROYECTO creativo o de investigación. "
-            "Los criterios deben evaluar proceso, creatividad, técnica, presentación y reflexión."
-        ),
-    }.get(tipo, "una actividad evaluativa")
+        "tarea":        "TAREA individual — práctica o investigación de corto alcance",
+        "examen":       "EXAMEN/DEMOSTRACIÓN — prueba de dominio técnico o conceptual",
+        "proyecto":     "PROYECTO creativo — proceso y producto con múltiples etapas",
+        "trabajo_final":"TRABAJO FINAL integrador — evidencia acumulada del período",
+    }.get(tipo, "actividad evaluativa")
 
-    prompt = f"""Eres un experto en evaluación educativa del bachillerato dominicano (MINERD), especializado en la Modalidad en Artes del C.E. Benito Juárez.
+    instrumento_guia = {
+        "tarea":        "Lista de cotejo (Sí/No/Parcial) para verificar requisitos técnicos",
+        "examen":       "Escala de estimación (1-4) para evaluar dominio técnico",
+        "proyecto":     "Rúbrica analítica (Avanzado/Satisfactorio/En desarrollo/Inicial)",
+        "trabajo_final":"Rúbrica analítica con énfasis en proceso y producto final",
+    }.get(tipo, "Rúbrica analítica")
 
-Contexto de la asignación:
+    titulo_ctx = f'Título: "{titulo}"' if titulo else ""
+
+    return f"""Eres un experto en diseño curricular del bachillerato dominicano (MINERD Ordenanza 04-2023), especializado en la Modalidad en Artes — Mención {mencion}.
+
+Genera un documento de asignación COMPLETO y OFICIAL para:
 - Tipo: {tipo_guia}
-- Materia: {materia}
-- Grado: {grado} | Mención: {mencion}
+- Materia: {materia} | Grado: {grado} | Mención: {mencion}
+- {titulo_ctx}
 - Competencia curricular: {competencia}
-- Descripción de la materia: {descripcion}
-- Evidencias de aprendizaje esperadas: {evidencias}
-- Indicadores de logro relevantes: {ind_str}
+- Evidencias de aprendizaje: {evidencias}
+- Indicadores de logro: {ind_str}
+- Instrumento recomendado: {instrumento_guia}
 
-Genera exactamente 4 criterios de evaluación apropiados para esta asignación.
-Cada criterio debe ser específico para la naturaleza de "{materia}" — NO uses criterios genéricos válidos para cualquier materia.
+REGLAS:
+1. El MANDATO debe seguir la fórmula MINERD: VERBO DE ACCIÓN + OBJETO + CONDICIÓN/PROPÓSITO
+   Ejemplo: "Diseña una serie fotográfica de 6 imágenes que documente una tradición cultural dominicana, aplicando los principios de composición aprendidos en el período."
+2. Las PREGUNTAS ORIENTADORAS son ABP/ABPr — conectan el saber con la realidad del estudiante
+3. Las FUENTES deben ser reales y específicas para {materia} (no inventar URLs)
+4. El instrumento debe usar 4 niveles: Avanzado (100%), Satisfactorio (75%), En desarrollo (50%), Inicial (25%)
+5. Adapta TODO al contexto de {materia} — nada genérico
 
-Responde SOLO con un objeto JSON con esta estructura exacta, sin texto adicional ni backticks:
+Responde ÚNICAMENTE con JSON válido, sin texto adicional, sin backticks:
 {{
-  "titulo": "título breve y descriptivo de la asignación (ej: 'Portafolio fotográfico — Luz y sombra')",
-  "descripcion": "descripción en 2-3 oraciones de qué debe hacer el estudiante, adaptada a la materia",
+  "titulo": "título conciso y descriptivo de la asignación",
+  "descripcion": "2-3 oraciones describiendo qué aprenderá el estudiante y por qué es relevante para su formación en {mencion}",
+  "mandato": "instrucción principal en formato MINERD: verbo + objeto + condición, 1-3 oraciones",
+  "producto_esperado": "descripción concreta del entregable: formato, extensión, modalidad de entrega",
+  "preguntas": [
+    "¿Pregunta orientadora 1 — conecta el tema con la realidad?",
+    "¿Pregunta orientadora 2 — desafía el pensamiento crítico?",
+    "¿Pregunta orientadora 3 — orienta hacia el producto?"
+  ],
+  "fuentes": [
+    {{"titulo": "nombre de la fuente", "referencia": "URL o descripción bibliográfica", "tipo": "documentacion|tutorial|visual|libro"}},
+    {{"titulo": "nombre de la fuente", "referencia": "URL o descripción bibliográfica", "tipo": "documentacion|tutorial|visual|libro"}},
+    {{"titulo": "nombre de la fuente", "referencia": "URL o descripción bibliográfica", "tipo": "documentacion|tutorial|visual|libro"}}
+  ],
+  "instrumento_tipo": "rubrica_analitica",
   "criterios": [
-    {{"nombre": "nombre del criterio", "puntaje_max": 25, "descripcion": "qué se evalúa exactamente"}},
-    {{"nombre": "nombre del criterio", "puntaje_max": 25, "descripcion": "qué se evalúa exactamente"}},
-    {{"nombre": "nombre del criterio", "puntaje_max": 25, "descripcion": "qué se evalúa exactamente"}},
-    {{"nombre": "nombre del criterio", "puntaje_max": 25, "descripcion": "qué se evalúa exactamente"}}
+    {{
+      "nombre": "nombre del criterio",
+      "puntaje_max": 25,
+      "descripcion": "qué evalúa exactamente",
+      "niveles": {{
+        "avanzado": "descriptor nivel 4 — excelente",
+        "satisfactorio": "descriptor nivel 3 — cumple expectativas",
+        "en_desarrollo": "descriptor nivel 2 — en proceso",
+        "inicial": "descriptor nivel 1 — necesita apoyo"
+      }}
+    }},
+    {{"nombre": "criterio 2", "puntaje_max": 25, "descripcion": "...", "niveles": {{"avanzado":"","satisfactorio":"","en_desarrollo":"","inicial":""}}}},
+    {{"nombre": "criterio 3", "puntaje_max": 25, "descripcion": "...", "niveles": {{"avanzado":"","satisfactorio":"","en_desarrollo":"","inicial":""}}}},
+    {{"nombre": "criterio 4", "puntaje_max": 25, "descripcion": "...", "niveles": {{"avanzado":"","satisfactorio":"","en_desarrollo":"","inicial":""}}}}
   ]
 }}
 
-Los puntajes deben sumar 100. Adapta los criterios al tipo "{tipo}" de forma que tenga sentido para "{materia}" en {mencion}.
-"""
-    return prompt
+Los 4 criterios deben sumar 100 puntos. Adapta los descriptores de niveles a la naturaleza de {materia}."""
 
 
 def _periodo_bloqueado(periodo: str, anio_escolar: str = None) -> bool:

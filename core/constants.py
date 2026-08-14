@@ -589,6 +589,12 @@ TABLAS_NUEVAS = [
         fecha_entrega   TEXT,
         periodo         TEXT DEFAULT 'P1',              -- P1..P4
         estado          TEXT DEFAULT 'borrador',        -- 'borrador','publicada','cerrada'
+        mandato         TEXT,     -- Instrucción principal: verbo + objeto + condición (MINERD)
+        preguntas       TEXT,     -- JSON: ["¿Pregunta orientadora 1?", "¿Pregunta 2?"]
+        fuentes         TEXT,     -- JSON: [{"titulo": "MDN Web Docs", "url": "...", "tipo": "documentacion"}]
+        instrumento_tipo TEXT DEFAULT 'rubrica_analitica', -- 'rubrica_analitica'|'lista_cotejo'|'escala_estimacion'|'portafolio'
+        instrumento_data TEXT,    -- JSON con los detalles del instrumento
+        producto_esperado TEXT,   -- Descripción del entregable concreto
         creado_en       TEXT DEFAULT (datetime('now'))
     )
     """,
@@ -1217,6 +1223,25 @@ MIGRACIONES_ESPECIALES = [
     ("Agregar caso_limite a promociones",
      "ALTER TABLE promociones ADD COLUMN caso_limite INTEGER DEFAULT 0",
      "caso_limite", "promociones"),
+    # ── Campos MINERD en asignaciones ────────────────────────────────────────
+    ("Agregar mandato a asignaciones",
+     "ALTER TABLE asignaciones ADD COLUMN mandato TEXT",
+     "mandato", "asignaciones"),
+    ("Agregar preguntas a asignaciones",
+     "ALTER TABLE asignaciones ADD COLUMN preguntas TEXT",
+     "preguntas", "asignaciones"),
+    ("Agregar fuentes a asignaciones",
+     "ALTER TABLE asignaciones ADD COLUMN fuentes TEXT",
+     "fuentes", "asignaciones"),
+    ("Agregar instrumento_tipo a asignaciones",
+     "ALTER TABLE asignaciones ADD COLUMN instrumento_tipo TEXT DEFAULT 'rubrica_analitica'",
+     "instrumento_tipo", "asignaciones"),
+    ("Agregar instrumento_data a asignaciones",
+     "ALTER TABLE asignaciones ADD COLUMN instrumento_data TEXT",
+     "instrumento_data", "asignaciones"),
+    ("Agregar producto_esperado a asignaciones",
+     "ALTER TABLE asignaciones ADD COLUMN producto_esperado TEXT",
+     "producto_esperado", "asignaciones"),
     # ← AGREGA MIGRACIONES PUNTUALES AQUÍ
 ]
 
