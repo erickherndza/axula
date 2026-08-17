@@ -18,19 +18,24 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-hei
 .top a{color:var(--accent);text-decoration:none;font-weight:600;font-size:.85rem}
 
 /* LAYOUT */
-.c{max-width:1320px;margin:0 auto;padding:24px}
+.c{max-width:1400px;margin:0 auto;padding:24px}
 
 /* HEADER CARD */
 .poa-head{background:var(--surface);border:1px solid var(--border);border-radius:12px;
           padding:20px 24px;margin-bottom:20px}
+.poa-inst{font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;
+          letter-spacing:.07em;margin-bottom:6px}
 .poa-head-top{display:flex;align-items:flex-start;justify-content:space-between;
               flex-wrap:wrap;gap:12px}
-.poa-head h2{font-size:1.1rem;font-weight:700;margin-bottom:4px}
+.poa-head h2{font-size:1.15rem;font-weight:800;margin-bottom:4px}
 .poa-head .meta{font-size:.8rem;color:var(--muted);margin-bottom:6px}
-.poa-head .obj-general{font-size:.85rem;color:var(--text);margin-top:8px;
-                        padding:10px 14px;background:var(--surface2);border-radius:8px;
-                        border-left:3px solid var(--accent)}
-.poa-head .actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.poa-head .meta span{margin-right:14px}
+.obj-general{font-size:.85rem;color:var(--text);margin-top:8px;
+             padding:10px 14px;background:rgba(3,140,140,.07);border-radius:8px;
+             border-left:3px solid var(--accent)}
+.poa-info-line{font-size:.82rem;color:var(--muted);margin-top:6px}
+.poa-info-line strong{color:var(--text)}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;flex-shrink:0}
 
 /* BADGES */
 .badge{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;
@@ -49,14 +54,13 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-hei
 .btn-ghost{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
 .btn-danger{background:var(--danger);color:#fff}
 .btn-green{background:#2E9E68;color:#fff}
-.btn-amber{background:#C48A1E;color:#fff}
 .btn-sm{padding:5px 10px;font-size:.76rem}
 
 /* STATS */
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:20px}
 .stat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
-.stat-label{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:4px}
-.stat-value{font-size:1.4rem;font-weight:800;color:var(--text)}
+.stat-label{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:4px}
+.stat-value{font-size:1.35rem;font-weight:800;color:var(--text)}
 .stat-value.accent{color:var(--accent)}
 
 /* TABLE */
@@ -64,53 +68,31 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-hei
                text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}
 .tbl-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;
           overflow-x:auto;margin-bottom:20px}
-table{width:100%;border-collapse:collapse;font-size:.8rem;min-width:1400px}
-thead th{background:var(--surface2);color:var(--muted);font-size:.68rem;font-weight:700;
+table{width:100%;border-collapse:collapse;font-size:.79rem;min-width:1200px}
+thead th{background:var(--surface2);color:var(--muted);font-size:.67rem;font-weight:700;
          text-transform:uppercase;letter-spacing:.06em;padding:9px 10px;
          text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
 tbody tr{border-bottom:1px solid var(--border)}
 tbody tr:last-child{border-bottom:none}
 tbody tr:hover{background:var(--hover)}
 td{padding:9px 10px;vertical-align:top}
-td.obj{font-weight:600;color:var(--text);max-width:160px}
-td.act{color:var(--muted);max-width:180px}
+td.num{color:var(--muted);font-size:.75rem;white-space:nowrap;text-align:center}
+td.act-name{font-weight:600;color:var(--text);max-width:180px}
+td.long{max-width:160px;color:var(--muted);font-size:.77rem}
 td.pres{font-family:var(--font-mono);font-size:.78rem;color:var(--accent);white-space:nowrap}
-td.small{font-size:.76rem;color:var(--muted)}
+td.short{font-size:.76rem;color:var(--muted);white-space:nowrap}
 .row-total td{font-weight:700;background:var(--surface2);border-top:2px solid var(--border)}
-.row-total .pres{color:var(--accent);font-size:.88rem}
-
-/* PROGRESS BAR */
-.prog-wrap{display:flex;align-items:center;gap:6px;min-width:90px}
-.prog-bar{flex:1;height:6px;border-radius:3px;background:var(--border);overflow:hidden}
-.prog-fill{height:100%;border-radius:3px;transition:width .3s}
-.prog-fill.verde{background:#2E9E68}
-.prog-fill.amarillo{background:#C48A1E}
-.prog-fill.rojo{background:var(--danger)}
-.prog-pct{font-family:var(--font-mono);font-size:.72rem;white-space:nowrap}
-.prog-pct.verde{color:#2E9E68}
-.prog-pct.amarillo{color:#C48A1E}
-.prog-pct.rojo{color:var(--danger)}
 
 /* ACTIVITY BADGE */
 .act-badge{display:inline-block;padding:2px 8px;border-radius:20px;
            font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
-.act-badge.pendiente{background:rgba(200,136,10,.15);color:#C8880A}
+.act-badge.pendiente{background:rgba(196,138,30,.15);color:#C48A1E}
 .act-badge.en_proceso{background:rgba(38,97,246,.15);color:#8BAEF8}
 .act-badge.completada{background:rgba(46,158,104,.15);color:#2E9E68}
 
 /* SELECT ESTADO INLINE */
 .estado-sel{border:1px solid var(--border);border-radius:6px;padding:4px 8px;
-            font-size:.73rem;background:var(--surface2);color:var(--text);cursor:pointer;
-            max-width:110px}
-
-/* EJECUTADO INLINE */
-.ejec-form{display:flex;gap:5px;align-items:center;min-width:120px}
-.ejec-form input{width:68px;padding:4px 7px;border-radius:6px;border:1px solid var(--border);
-                 background:var(--surface2);color:var(--text);font-size:.78rem;
-                 font-family:var(--font-mono)}
-.ejec-form button{padding:4px 9px;border-radius:6px;border:none;background:var(--accent);
-                  color:#fff;font-size:.72rem;font-weight:700;cursor:pointer;white-space:nowrap}
-.ejec-form button:hover{opacity:.85}
+            font-size:.73rem;background:var(--surface2);color:var(--text);cursor:pointer;max-width:110px}
 
 /* FORM */
 .form-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;
@@ -120,7 +102,6 @@ td.small{font-size:.76rem;color:var(--muted)}
 .form-body{padding:18px}
 .form-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
 .col-full{grid-column:1/-1}
-.col-2{grid-column:span 2}
 .f{display:flex;flex-direction:column;gap:4px}
 .f label{font-size:.72rem;font-weight:700;color:var(--muted);
          text-transform:uppercase;letter-spacing:.05em}
@@ -128,20 +109,20 @@ td.small{font-size:.76rem;color:var(--muted)}
   border:1px solid var(--border);background:var(--surface2);color:var(--text);
   font-size:.83rem;font-family:var(--font-body);width:100%}
 .f input:focus,.f select:focus,.f textarea:focus{outline:none;border-color:var(--accent)}
-textarea.f-ctrl{resize:vertical;min-height:60px}
+.f textarea{resize:vertical;min-height:60px}
 .form-foot{padding:12px 18px;border-top:1px solid var(--border);
            display:flex;justify-content:flex-end;gap:8px;background:var(--surface2)}
 
 /* FLASH + INFO */
 .flash{padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:.84rem}
-.flash.success{background:rgba(38,97,246,.1);color:#8BAEF8;border-left:3px solid var(--accent)}
+.flash.success{background:rgba(3,140,140,.1);color:var(--accent);border-left:3px solid var(--accent)}
 .flash.error{background:rgba(224,72,72,.12);color:#F8A0A0;border-left:3px solid var(--danger)}
 .info-box{background:var(--surface2);border:1px solid var(--border);border-radius:8px;
           padding:12px 16px;font-size:.84rem;color:var(--muted)}
 
 @media(max-width:768px){
   .form-grid{grid-template-columns:1fr}
-  .col-full,.col-2{grid-column:1}
+  .col-full{grid-column:1}
   .poa-head-top{flex-direction:column;align-items:flex-start}
 }
 </style>
@@ -153,7 +134,6 @@ textarea.f-ctrl{resize:vertical;min-height:60px}
   <h1><i class="fas fa-clipboard-list" style="color:var(--accent);margin-right:8px"></i>
       POA — {{ poa.asignatura }}</h1>
   <div class="r">
-    <span>{{ current_user.nombre }}</span>
     <a href="/poa"><i class="fas fa-arrow-left"></i> Mis POAs</a>
     <a href="/profesor"><i class="fas fa-chalkboard-teacher"></i> Portal</a>
     <a href="/home"><i class="fas fa-home"></i> Inicio</a>
@@ -170,18 +150,32 @@ textarea.f-ctrl{resize:vertical;min-height:60px}
 
   <!-- Cabecera del POA -->
   <div class="poa-head">
+    <div class="poa-inst">Viceministerio de Planificación y Desarrollo Educativo · Centro Educativo en Artes Benito Juárez</div>
     <div class="poa-head-top">
       <div style="flex:1;min-width:0">
-        <h2>{{ poa.asignatura }}{% if poa.area %} · <span style="font-weight:500;color:var(--muted)">{{ poa.area }}</span>{% endif %}</h2>
+        <h2>{{ poa.asignatura }}</h2>
         <div class="meta">
-          Año {{ poa.anio_escolar }}
-          {% if poa.trimestre %} · Trimestre {{ poa.trimestre }}{% endif %}
-          · Actualizado {{ poa.fecha_actualizacion[:10] }}
+          <span>{% if poa.area %}<i class="fas fa-layer-group" style="margin-right:4px;opacity:.6"></i>{{ poa.area }}{% endif %}</span>
+          <span><i class="fas fa-calendar-alt" style="margin-right:4px;opacity:.6"></i>{{ poa.anio_escolar }}</span>
+          <span>{% if poa.trimestre %}T{{ poa.trimestre }}{% else %}Anual{% endif %}</span>
+          <span style="opacity:.6">Actualizado {{ poa.fecha_actualizacion[:10] }}</span>
         </div>
         {% if poa.objetivo_general %}
         <div class="obj-general">
           <i class="fas fa-bullseye" style="color:var(--accent);margin-right:6px"></i>
           <strong>Objetivo general:</strong> {{ poa.objetivo_general }}
+        </div>
+        {% endif %}
+        {% if poa.integrantes %}
+        <div class="poa-info-line">
+          <i class="fas fa-users" style="margin-right:5px;opacity:.6"></i>
+          <strong>Integrantes:</strong> {{ poa.integrantes }}
+        </div>
+        {% endif %}
+        {% if poa.responsable_mesa %}
+        <div class="poa-info-line">
+          <i class="fas fa-user-tie" style="margin-right:5px;opacity:.6"></i>
+          <strong>Responsable de la mesa:</strong> {{ poa.responsable_mesa }}
         </div>
         {% endif %}
       </div>
@@ -203,7 +197,9 @@ textarea.f-ctrl{resize:vertical;min-height:60px}
         <form method="POST" style="margin:0">
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
           <input type="hidden" name="accion" value="aprobar">
-          <button type="submit" class="btn btn-green btn-sm"><i class="fas fa-check"></i> Aprobar</button>
+          <button type="submit" class="btn btn-green btn-sm">
+            <i class="fas fa-check"></i> Aprobar
+          </button>
         </form>
         {% endif %}
 
@@ -221,84 +217,63 @@ textarea.f-ctrl{resize:vertical;min-height:60px}
     </div>
   </div>
 
-  <!-- Métricas -->
+  <!-- KPIs -->
   {% set total_pres = actividades | sum(attribute='presupuesto') %}
-  {% set total_ejec = actividades | sum(attribute='ejecutado') %}
   {% set n_comp = actividades | selectattr('estado', 'equalto', 'completada') | list | length %}
-  {% set n_proc = actividades | selectattr('estado', 'equalto', 'en_proceso') | list | length %}
+  {% set n_pend = actividades | selectattr('estado', 'equalto', 'pendiente') | list | length %}
   <div class="stats">
     <div class="stat">
-      <div class="stat-label">Actividades</div>
+      <div class="stat-label">Total actividades</div>
       <div class="stat-value">{{ actividades | length }}</div>
     </div>
     <div class="stat">
-      <div class="stat-label">En proceso</div>
-      <div class="stat-value accent">{{ n_proc }}</div>
+      <div class="stat-label">Total costo</div>
+      <div class="stat-value accent" style="font-size:.9rem;padding-top:5px">
+        RD$ {{ "{:,.2f}".format(total_pres) }}
+      </div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Pendientes</div>
+      <div class="stat-value" style="color:#C48A1E">{{ n_pend }}</div>
     </div>
     <div class="stat">
       <div class="stat-label">Completadas</div>
-      <div class="stat-value accent">{{ n_comp }}</div>
-    </div>
-    <div class="stat">
-      <div class="stat-label">Presupuesto</div>
-      <div class="stat-value accent" style="font-size:.95rem;padding-top:4px">
-        RD$ {{ "%.2f" | format(total_pres) }}
-      </div>
-    </div>
-    <div class="stat">
-      <div class="stat-label">Ejecutado</div>
-      <div class="stat-value accent" style="font-size:.95rem;padding-top:4px;color:#2E9E68">
-        RD$ {{ "%.2f" | format(total_ejec) }}
-      </div>
+      <div class="stat-value" style="color:#2E9E68">{{ n_comp }}</div>
     </div>
   </div>
 
-  <!-- Tabla actividades MINERD -->
+  <!-- Tabla de 9 columnas (plantilla CBJ) -->
   <p class="section-label">Actividades registradas</p>
   <div class="tbl-wrap">
     {% if actividades %}
     <table>
       <thead>
         <tr>
-          <th>#</th>
-          <th>Obj. Estratégico</th>
-          <th>Línea de Acción</th>
-          <th>Actividad</th>
-          <th>Indicador</th>
-          <th>Meta</th>
-          <th>UM</th>
-          <th>Responsable</th>
-          <th>T inicio</th>
-          <th>T fin</th>
-          <th>Fuente Verif.</th>
-          <th>Presupuesto</th>
-          <th>Fuente Financ.</th>
-          <th>Estado</th>
-          <th>Ejecutado</th>
-          <th>% Ejec.</th>
-          {% if puede_editar %}<th></th>{% endif %}
+          <th style="width:36px;text-align:center">No.</th>
+          <th style="min-width:160px">Actividad / Proyecto</th>
+          <th style="min-width:150px">Acciones principales</th>
+          <th style="min-width:130px">¿Qué necesitamos?</th>
+          <th style="min-width:90px">Cantidad</th>
+          <th style="min-width:110px">Costo (RD$)</th>
+          <th style="min-width:100px">¿Cuándo?</th>
+          <th style="min-width:140px">Evidencia / Producto</th>
+          <th style="min-width:130px">Responsable(s)</th>
+          <th style="min-width:100px">Estado</th>
+          {% if puede_editar %}<th style="width:40px"></th>{% endif %}
         </tr>
       </thead>
       <tbody>
         {% for act in actividades %}
-        {% set pct = act.pct_ejecucion %}
-        {% if pct >= 100 %}{% set pct_cls = 'verde' %}
-        {% elif pct >= 50 %}{% set pct_cls = 'amarillo' %}
-        {% else %}{% set pct_cls = 'rojo' %}{% endif %}
         <tr>
-          <td class="small">{{ loop.index }}</td>
-          <td class="obj" style="max-width:140px">{{ act.objetivo_estrategico or '—' }}</td>
-          <td class="small" style="max-width:130px">{{ act.linea_accion or '—' }}</td>
-          <td class="act">{{ act.actividad }}</td>
-          <td class="small" style="max-width:140px">{{ act.indicador or '—' }}</td>
-          <td class="pres" style="color:var(--text)">{{ act.meta | int if act.meta == act.meta | int else act.meta }}</td>
-          <td class="small">{{ act.unidad_medida or '—' }}</td>
-          <td>{{ act.responsable }}</td>
-          <td class="small" style="white-space:nowrap">{{ act.fecha_inicio or '—' }}</td>
-          <td class="small" style="white-space:nowrap;color:var(--accent)">{{ act.fecha_fin or '—' }}</td>
-          <td class="small" style="max-width:130px">{{ act.fuente_verificacion or '—' }}</td>
-          <td class="pres">RD$ {{ "%.2f" | format(act.presupuesto) }}</td>
-          <td class="small">{{ act.fuente_financiamiento or 'Fondos propios' }}</td>
+          <td class="num">{{ loop.index }}</td>
+          <td class="act-name">{{ act.actividad }}</td>
+          <td class="long">{{ act.acciones or '—' }}</td>
+          <td class="long">{{ act.recursos or '—' }}</td>
+          <td class="short">{{ act.cantidad or '—' }}</td>
+          <td class="pres">RD$ {{ "{:,.2f}".format(act.presupuesto or 0) }}</td>
+          <td class="short">{{ act.cuando or '—' }}</td>
+          <td class="long">{{ act.evidencia or '—' }}</td>
+          <td class="long">{{ act.responsable }}</td>
           <td>
             {% if puede_editar %}
             <form method="POST" style="margin:0">
@@ -315,25 +290,6 @@ textarea.f-ctrl{resize:vertical;min-height:60px}
             <span class="act-badge {{ act.estado }}">{{ act.estado | replace('_',' ') }}</span>
             {% endif %}
           </td>
-          <td>
-            <form method="POST" style="margin:0" class="ejec-form">
-              <input type="hidden" name="csrf_token"   value="{{ csrf_token }}">
-              <input type="hidden" name="accion"       value="actualizar_ejecutado">
-              <input type="hidden" name="actividad_id" value="{{ act.id }}">
-              <input type="number" name="ejecutado" step="0.1" min="0"
-                     value="{{ act.ejecutado | default(0) }}"
-                     {% if not puede_editar and poa.estado == 'borrador' %}disabled{% endif %}>
-              <button type="submit" title="Guardar">✓</button>
-            </form>
-          </td>
-          <td>
-            <div class="prog-wrap">
-              <div class="prog-bar">
-                <div class="prog-fill {{ pct_cls }}" style="width:{{ [pct, 100] | min }}%"></div>
-              </div>
-              <span class="prog-pct {{ pct_cls }}">{{ pct }}%</span>
-            </div>
-          </td>
           {% if puede_editar %}
           <td>
             <form method="POST" style="margin:0">
@@ -347,16 +303,22 @@ textarea.f-ctrl{resize:vertical;min-height:60px}
           {% endif %}
         </tr>
         {% endfor %}
+        <!-- Fila total -->
         <tr class="row-total">
-          <td colspan="11" style="text-align:right;padding-right:14px;font-size:.78rem">Total presupuesto</td>
-          <td class="pres">RD$ {{ "%.2f" | format(total_pres) }}</td>
+          <td colspan="{{ 10 if puede_editar else 9 }}" style="text-align:right;padding-right:14px;font-size:.78rem">
+            {# vacía excepto la celda de costo #}
+          </td>
+        </tr>
+        <tr class="row-total">
+          <td colspan="5" style="text-align:right;padding-right:10px;font-size:.78rem;font-weight:700">Total costo</td>
+          <td class="pres">RD$ {{ "{:,.2f}".format(total_pres) }}</td>
           <td colspan="{{ 5 if puede_editar else 4 }}"></td>
         </tr>
       </tbody>
     </table>
     {% else %}
-    <div style="text-align:center;padding:40px 16px;color:var(--muted)">
-      <i class="fas fa-clipboard" style="font-size:2rem;display:block;margin-bottom:10px;opacity:.3"></i>
+    <div style="text-align:center;padding:48px 16px;color:var(--muted)">
+      <i class="fas fa-clipboard" style="font-size:2.2rem;display:block;margin-bottom:12px;opacity:.25"></i>
       <p>No hay actividades todavía.{% if puede_editar %} Agrega la primera usando el formulario de abajo.{% endif %}</p>
     </div>
     {% endif %}
@@ -375,89 +337,63 @@ textarea.f-ctrl{resize:vertical;min-height:60px}
       <div class="form-body">
         <div class="form-grid">
 
-          <!-- Fila 1: objetivo_estrategico | linea_accion -->
-          <div class="f col-full" style="grid-column:1/3">
-            <label>Objetivo Estratégico</label>
-            <textarea name="objetivo_estrategico" class="f-ctrl"
-                      placeholder="Objetivo del PEI o plan estratégico del centro…"></textarea>
-          </div>
-          <div class="f">
-            <label>Línea de Acción</label>
-            <input type="text" name="linea_accion"
-                   placeholder="Ej. Gestión Pedagógica, Convivencia…">
-          </div>
-
-          <!-- Fila 2: actividad (full) -->
+          <!-- Fila 1: Actividad / Proyecto (full) -->
           <div class="f col-full">
-            <label>Actividad <span style="color:var(--danger)">*</span></label>
-            <textarea name="actividad" class="f-ctrl"
-                      placeholder="Describe la actividad concreta…" required></textarea>
+            <label>Actividad / Proyecto <span style="color:var(--danger)">*</span></label>
+            <input type="text" name="actividad"
+                   placeholder="Nombre de la actividad o proyecto…" required>
           </div>
 
-          <!-- Campo legacy objetivo (requerido por BD, usamos mismo valor que obj_estrategico via JS) -->
-          <div class="f col-full" style="display:none">
-            <label>Objetivo (legacy)</label>
-            <input type="text" name="objetivo" id="objetivo_legacy" value=" ">
+          <!-- Fila 2: Acciones principales (full) -->
+          <div class="f col-full">
+            <label>Acciones principales</label>
+            <textarea name="acciones"
+                      placeholder="Acciones específicas a realizar para llevar a cabo esta actividad…"></textarea>
           </div>
 
-          <!-- Fila 3: indicador | meta | unidad_medida -->
-          <div class="f col-2">
-            <label>Indicador</label>
-            <input type="text" name="indicador"
-                   placeholder="Ej. Nº de talleres realizados…">
-          </div>
-          <div class="f">
-            <label>Meta</label>
-            <input type="number" name="meta" step="0.5" min="0" placeholder="0" value="0">
-          </div>
-          <div class="f">
-            <label>Unidad de Medida</label>
-            <input type="text" name="unidad_medida"
-                   placeholder="talleres, estudiantes, informes…">
+          <!-- Fila 3: ¿Qué necesitamos? (full) -->
+          <div class="f col-full">
+            <label>¿Qué necesitamos?</label>
+            <input type="text" name="recursos"
+                   placeholder="Recursos o materiales necesarios…">
           </div>
 
-          <!-- Fila 4: responsable | fuente_verificacion | fuente_financiamiento -->
+          <!-- Fila 4: Cantidad | Costo estimado | ¿Cuándo? -->
           <div class="f">
-            <label>Responsable <span style="color:var(--danger)">*</span></label>
-            <input type="text" name="responsable" placeholder="Nombre del responsable" required>
+            <label>Cantidad</label>
+            <input type="text" name="cantidad"
+                   placeholder="Ej: 5 resmas, 2 proyectores…">
           </div>
           <div class="f">
-            <label>Fuente de Verificación</label>
-            <input type="text" name="fuente_verificacion"
-                   placeholder="Actas, fotos, registros, informes…">
-          </div>
-          <div class="f">
-            <label>Fuente de Financiamiento</label>
-            <select name="fuente_financiamiento">
-              <option value="Fondos propios" selected>Fondos propios</option>
-              <option value="MINERD">MINERD</option>
-              <option value="ANSEF">ANSEF</option>
-              <option value="Comunidad">Comunidad</option>
-              <option value="Otro">Otro</option>
-            </select>
-          </div>
-
-          <!-- Fila 5: presupuesto | fecha_inicio | fecha_fin -->
-          <div class="f">
-            <label>Presupuesto (RD$)</label>
+            <label>Costo estimado (RD$)</label>
             <input type="number" name="presupuesto" step="0.01" min="0"
                    placeholder="0.00" value="0">
           </div>
           <div class="f">
-            <label>Fecha inicio (T inicio)</label>
-            <input type="date" name="fecha_inicio">
+            <label>¿Cuándo?</label>
+            <input type="text" name="cuando"
+                   placeholder="Ej: Enero-Marzo, T1-T2…">
           </div>
-          <div class="f">
-            <label>Fecha fin (T fin)</label>
-            <input type="date" name="fecha_fin">
+
+          <!-- Fila 5: Evidencia / Producto (full) -->
+          <div class="f col-full">
+            <label>Evidencia / Producto</label>
+            <input type="text" name="evidencia"
+                   placeholder="¿Qué queda como evidencia del cumplimiento? Actas, fotos, informes…">
+          </div>
+
+          <!-- Fila 6: Responsable(s) (full) -->
+          <div class="f col-full">
+            <label>Responsable(s) <span style="color:var(--danger)">*</span></label>
+            <input type="text" name="responsable"
+                   placeholder="Nombre(s) del/los responsable(s)" required>
           </div>
 
         </div>
       </div>
       <div class="form-foot">
         <button type="reset" class="btn btn-ghost">Limpiar</button>
-        <button type="submit" class="btn btn-primary"
-                onclick="syncLegacyObjetivo()">
+        <button type="submit" class="btn btn-primary">
           <i class="fas fa-plus"></i> Agregar actividad
         </button>
       </div>
@@ -478,23 +414,5 @@ textarea.f-ctrl{resize:vertical;min-height:60px}
   {% endif %}
 
 </div>
-
-<script>
-/* Sync campo objetivo legacy (requerido por NOT NULL en BD) con objetivo_estrategico */
-function syncLegacyObjetivo() {
-  var oe = document.querySelector('[name="objetivo_estrategico"]');
-  var ol = document.getElementById('objetivo_legacy');
-  if (oe && ol) {
-    ol.value = oe.value.trim() || '—';
-  }
-}
-/* También al hacer submit del form */
-(function(){
-  var form = document.querySelector('form [name="accion"][value="agregar_actividad"]');
-  if (form) {
-    form.closest('form').addEventListener('submit', syncLegacyObjetivo);
-  }
-})();
-</script>
 </body>
 </html>
