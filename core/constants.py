@@ -1086,6 +1086,35 @@ CREATE TABLE IF NOT EXISTS notas_competencias_ce (
         activo                      INTEGER DEFAULT 1
     )
     """,
+    # ── POA: Plan Operativo Anual ─────────────────────────────────────────────
+    """
+    CREATE TABLE IF NOT EXISTS poa (
+        id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+        docente_id          INTEGER NOT NULL,
+        anio_escolar        TEXT    NOT NULL DEFAULT '2025-2026',
+        asignatura          TEXT    NOT NULL,
+        trimestre           INTEGER,
+        estado              TEXT    NOT NULL DEFAULT 'borrador',
+        fecha_creacion      TEXT    DEFAULT (datetime('now')),
+        fecha_actualizacion TEXT    DEFAULT (datetime('now')),
+        FOREIGN KEY (docente_id) REFERENCES usuarios(id)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS poa_actividad (
+        id           INTEGER PRIMARY KEY AUTOINCREMENT,
+        poa_id       INTEGER NOT NULL,
+        objetivo     TEXT    NOT NULL,
+        actividad    TEXT    NOT NULL,
+        responsable  TEXT    NOT NULL,
+        fecha_inicio TEXT,
+        fecha_fin    TEXT,
+        presupuesto  REAL    DEFAULT 0.0,
+        estado       TEXT    NOT NULL DEFAULT 'pendiente',
+        FOREIGN KEY (poa_id) REFERENCES poa(id) ON DELETE CASCADE
+    )
+    """,
+    """CREATE INDEX IF NOT EXISTS idx_poa_docente ON poa(docente_id)""",
 ]
 
 

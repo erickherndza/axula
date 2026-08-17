@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Plan Operativo Anual | Axula{% endblock %}
+
+{% block content %}
+<div style="max-width:960px;margin:0 auto;padding:2rem 1.5rem;">
+
+  <div style="display:flex;align-items:center;justify-content:space-between;
+              margin-bottom:1.75rem;flex-wrap:wrap;gap:1rem;">
+    <div>
+      <h1 style="font-size:1.25rem;font-weight:700;color:var(--navy,#024959);margin:0 0 .2rem;">
+        Plan Operativo Anual
+      </h1>
+      <p style="font-size:.85rem;color:var(--text-soft,#5A7080);margin:0;">
+        {% if es_admin %}Todos los POAs del centro{% else %}Tus POAs — {{ current_user.nombre }}{% endif %}
+      </p>
+    </div>
+    <a href="{{ url_for('poa_bp.poa_nuevo') }}"
+       style="display:inline-flex;align-items:center;gap:.4rem;
+              background:#038C8C;color:#fff;font-size:.875rem;font-weight:600;
+              padding:.6rem 1.1rem;border-radius:7px;text-decoration:none;">
+      + Nuevo POA
+    </a>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div style="padding:.75rem 1rem;border-radius:7px;margin-bottom:1rem;font-size:.875rem;
+                  {% if cat == 'success' %}background:#DCFCE7;color:#166534;border-left:3px solid #16a34a;
+                  {% else %}background:#FEE2E2;color:#991B1B;border-left:3px solid #dc2626;{% endif %}">
+        {{ msg }}
+      </div>
+    {% endfor %}
+  {% endwith %}
+
+  {% if poas %}
+  <div style="display:grid;gap:1rem;">
+    {% for poa in poas %}
+    <div style="background:var(--surface-card,#fff);border:1px solid var(--border,#E8E1D8);
+                border-radius:10px;padding:1.25rem 1.5rem;display:flex;align-items:center;
+                justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+      <div>
+        <p style="font-size:1rem;font-weight:700;color:var(--navy,#024959);margin:0 0 .25rem;">
+          {{ poa.asignatura }}
+        </p>
+        <p style="font-size:.82rem;color:var(--text-soft,#5A7080);margin:0;">
+          Año {{ poa.anio_escolar }}
+          {% if poa.trimestre %} · Trimestre {{ poa.trimestre }}{% endif %}
+          {% if es_admin %} · <strong>{{ poa.docente_nombre }}</strong>{% endif %}
+          · Creado {{ poa.fecha_creacion[:10] }}
+        </p>
+      </div>
+      <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;">
+        {% if poa.estado == 'borrador' %}
+          <span style="background:var(--surface,#F7F4EF);color:var(--text-soft,#5A7080);font-size:.75rem;
+                       font-weight:700;padding:.25rem .7rem;border-radius:20px;text-transform:uppercase;
+                       letter-spacing:.04em;">Borrador</span>
+        {% elif poa.estado == 'enviado' %}
+          <span style="background:#DBEAFE;color:#1E40AF;font-size:.75rem;font-weight:700;
+                       padding:.25rem .7rem;border-radius:20px;text-transform:uppercase;
+                       letter-spacing:.04em;">Enviado</span>
+        {% elif poa.estado == 'aprobado' %}
+          <span style="background:#DCFCE7;color:#166534;font-size:.75rem;font-weight:700;
+                       padding:.25rem .7rem;border-radius:20px;text-transform:uppercase;
+                       letter-spacing:.04em;">Aprobado</span>
+        {% endif %}
+        <a href="{{ url_for('poa_bp.poa_editar', poa_id=poa.id) }}"
+           style="background:#024959;color:#fff;font-size:.8rem;font-weight:600;
+                  padding:.4rem .9rem;border-radius:6px;text-decoration:none;">
+          {{ 'Editar' if poa.estado == 'borrador' else 'Ver' }}
+        </a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% else %}
+  <div style="text-align:center;padding:4rem 1.5rem;color:var(--text-soft,#5A7080);">
+    <div style="font-size:2.5rem;margin-bottom:1rem;opacity:.35;">📋</div>
+    <p style="font-size:1rem;margin:0 0 1.5rem;">Aún no hay ningún POA creado.</p>
+    <a href="{{ url_for('poa_bp.poa_nuevo') }}"
+       style="display:inline-flex;align-items:center;gap:.4rem;
+              background:#038C8C;color:#fff;font-size:.875rem;font-weight:600;
+              padding:.65rem 1.25rem;border-radius:7px;text-decoration:none;">
+      + Crear primer POA
+    </a>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

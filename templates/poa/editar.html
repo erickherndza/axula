@@ -1,0 +1,342 @@
+{% extends "base.html" %}
+{% block title %}POA — {{ poa.asignatura }} | Axula{% endblock %}
+
+{% block extra_css %}
+<style>
+  .poa-wrap  { max-width:1100px; margin:0 auto; padding:2rem 1.5rem 4rem; }
+
+  .poa-header {
+    background:#012840; border-radius:10px; padding:1.5rem 2rem;
+    margin-bottom:1.75rem; display:flex; align-items:center;
+    justify-content:space-between; gap:1rem; flex-wrap:wrap;
+  }
+  .poa-header h1 { font-size:1.25rem; font-weight:700; color:#fff; margin:0 0 .25rem; }
+  .poa-header p  { font-size:.85rem; color:rgba(255,255,255,.5); margin:0; }
+
+  .badge-estado {
+    display:inline-flex; align-items:center; gap:.4rem;
+    font-size:.78rem; font-weight:600; letter-spacing:.04em;
+    text-transform:uppercase; padding:.3rem .75rem; border-radius:20px;
+  }
+  .badge-borrador { background:rgba(255,255,255,.12); color:rgba(255,255,255,.8); }
+  .badge-enviado  { background:rgba(3,140,140,.3);    color:#04BFBF; }
+  .badge-aprobado { background:rgba(22,163,74,.25);   color:#4ade80; }
+  .badge-dot { width:6px; height:6px; border-radius:50%; background:currentColor; }
+
+  .btn {
+    display:inline-flex; align-items:center; gap:.4rem;
+    font-size:.875rem; font-weight:600; padding:.55rem 1.1rem;
+    border-radius:7px; border:none; cursor:pointer;
+    text-decoration:none; transition:opacity .15s;
+  }
+  .btn:hover { opacity:.88; }
+  .btn-teal      { background:#038C8C; color:#fff; }
+  .btn-ghost-inv { background:rgba(255,255,255,.12); color:rgba(255,255,255,.85); }
+  .btn-danger    { background:#C9352B; color:#fff; }
+  .btn-ghost     { background:transparent; color:var(--text-soft,#5A7080);
+                   border:1px solid var(--border,#E8E1D8); }
+  .btn-navy      { background:#024959; color:#fff; }
+  .btn-green     { background:#2E9E68; color:#fff; }
+  .btn-sm        { font-size:.8rem; padding:.35rem .75rem; }
+
+  .poa-stats {
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(145px,1fr));
+    gap:1rem; margin-bottom:1.75rem;
+  }
+  .stat-card { background:var(--surface-card,#fff); border:1px solid var(--border,#E8E1D8);
+               border-radius:8px; padding:1rem 1.25rem; }
+  .stat-label { font-size:.75rem; color:var(--text-soft,#5A7080); text-transform:uppercase;
+                letter-spacing:.06em; font-weight:600; margin-bottom:.3rem; }
+  .stat-value { font-size:1.5rem; font-weight:700; color:#024959; line-height:1; }
+  .stat-value.teal { color:#038C8C; }
+
+  .section-title { font-size:.8rem; font-weight:700; color:var(--text-soft,#5A7080);
+                   text-transform:uppercase; letter-spacing:.08em; margin-bottom:.75rem; }
+  .table-card { background:var(--surface-card,#fff); border:1px solid var(--border,#E8E1D8);
+                border-radius:10px; overflow:hidden; margin-bottom:1.75rem; overflow-x:auto; }
+  .poa-table { width:100%; border-collapse:collapse; font-size:.875rem; min-width:640px; }
+  .poa-table thead th {
+    background:var(--surface,#F7F4EF); color:var(--text-soft,#5A7080); font-size:.75rem;
+    font-weight:700; text-transform:uppercase; letter-spacing:.06em;
+    padding:.7rem 1rem; text-align:left; border-bottom:1px solid var(--border,#E8E1D8);
+  }
+  .poa-table tbody tr { border-bottom:1px solid var(--border,#E8E1D8); }
+  .poa-table tbody tr:last-child { border-bottom:none; }
+  .poa-table tbody tr:hover { background:var(--surface,#F7F4EF); }
+  .poa-table td { padding:.85rem 1rem; color:var(--text,#201C16); vertical-align:top; }
+  .cell-obj  { font-weight:600; color:#024959; max-width:210px; }
+  .cell-act  { max-width:230px; color:var(--text-soft,#5A7080); }
+  .cell-pres { font-family:monospace; font-size:.82rem; color:#038C8C; white-space:nowrap; }
+
+  .badge-act { font-size:.72rem; font-weight:700; padding:.2rem .6rem; border-radius:20px;
+               text-transform:uppercase; letter-spacing:.04em; display:inline-block; }
+  .badge-act.pendiente  { background:#FEF9C3; color:#854D0E; }
+  .badge-act.en_proceso { background:#DBEAFE; color:#1E40AF; }
+  .badge-act.completada { background:#DCFCE7; color:#166534; }
+
+  .row-total td { font-weight:700; color:#024959; background:var(--surface,#F7F4EF);
+                  border-top:2px solid var(--border,#E8E1D8); }
+  .row-total .cell-pres { color:#038C8C; font-size:.95rem; }
+
+  .empty-state { padding:3rem 1.5rem; text-align:center; color:var(--text-soft,#5A7080); }
+  .empty-icon  { font-size:2rem; margin-bottom:.75rem; opacity:.4; }
+
+  .form-card { background:var(--surface-card,#fff); border:1px solid var(--border,#E8E1D8);
+               border-radius:10px; overflow:hidden; }
+  .form-head { background:var(--surface,#F7F4EF); padding:.9rem 1.25rem;
+               border-bottom:1px solid var(--border,#E8E1D8); }
+  .form-head h3 { font-size:.9rem; font-weight:700; color:#024959; margin:0; }
+  .form-body { padding:1.25rem; }
+  .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+  .col-full  { grid-column:1/-1; }
+  .form-group { display:flex; flex-direction:column; gap:.35rem; }
+  .form-label { font-size:.78rem; font-weight:700; color:var(--text-soft,#5A7080);
+                text-transform:uppercase; letter-spacing:.05em; }
+  .form-ctrl {
+    border:1px solid var(--border,#E8E1D8); border-radius:6px; padding:.55rem .85rem;
+    font-size:.875rem; color:var(--text,#201C16); background:#fff;
+    width:100%; box-sizing:border-box; font-family:inherit;
+    transition:border-color .15s, box-shadow .15s;
+  }
+  .form-ctrl:focus { outline:none; border-color:#038C8C; box-shadow:0 0 0 3px rgba(3,140,140,.12); }
+  textarea.form-ctrl { resize:vertical; min-height:72px; }
+  .form-foot { padding:1rem 1.25rem; border-top:1px solid var(--border,#E8E1D8);
+               display:flex; justify-content:flex-end; gap:.75rem;
+               background:var(--surface,#F7F4EF); }
+
+  .flash { padding:.75rem 1rem; border-radius:7px; margin-bottom:1rem; font-size:.875rem; }
+  .flash.success { background:#DCFCE7; color:#166534; border-left:3px solid #2E9E68; }
+  .flash.error   { background:#FEE2E2; color:#991B1B; border-left:3px solid #C9352B; }
+
+  .info-box { background:var(--surface,#F7F4EF); border:1px solid var(--border,#E8E1D8);
+              border-radius:8px; padding:1rem 1.25rem; font-size:.875rem;
+              color:var(--text-soft,#5A7080); }
+
+  @media (max-width:640px) {
+    .poa-header { flex-direction:column; align-items:flex-start; }
+    .form-grid  { grid-template-columns:1fr; }
+    .col-full   { grid-column:1; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="poa-wrap">
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="flash {{ cat }}">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <!-- Cabecera -->
+  <div class="poa-header">
+    <div>
+      <h1>POA — {{ poa.asignatura }}</h1>
+      <p>Año escolar {{ poa.anio_escolar }}
+         {% if poa.trimestre %} · Trimestre {{ poa.trimestre }}{% endif %}
+         {% if es_admin %} · <em>{{ current_user.nombre }}</em>{% endif %}
+      </p>
+    </div>
+    <div style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;">
+      <span class="badge-estado badge-{{ poa.estado }}">
+        <span class="badge-dot"></span>
+        {{ poa.estado | capitalize }}
+      </span>
+
+      {% if puede_editar %}
+      <form method="POST" style="margin:0">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="accion" value="enviar">
+        <button type="submit" class="btn btn-ghost-inv btn-sm"
+                onclick="return confirm('¿Enviar el POA para revisión? No podrás editarlo después.')">
+          ↑ Enviar para revisión
+        </button>
+      </form>
+      {% endif %}
+
+      {% if es_admin and poa.estado == 'enviado' %}
+      <form method="POST" style="margin:0">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="accion" value="aprobar">
+        <button type="submit" class="btn btn-green btn-sm">✓ Aprobar</button>
+      </form>
+      {% endif %}
+
+      {% if es_admin and poa.estado in ('enviado', 'aprobado') %}
+      <form method="POST" style="margin:0">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="accion" value="devolver">
+        <button type="submit" class="btn btn-ghost-inv btn-sm"
+                onclick="return confirm('¿Devolver el POA a borrador?')">
+          ↩ Devolver
+        </button>
+      </form>
+      {% endif %}
+
+      <a href="{{ url_for('poa_bp.poa_index') }}" class="btn btn-ghost-inv btn-sm">← Volver</a>
+    </div>
+  </div>
+
+  <!-- Métricas -->
+  {% set total_pres = actividades | sum(attribute='presupuesto') %}
+  {% set n_completadas = actividades | selectattr('estado', 'equalto', 'completada') | list | length %}
+  {% set n_proceso = actividades | selectattr('estado', 'equalto', 'en_proceso') | list | length %}
+  <div class="poa-stats">
+    <div class="stat-card">
+      <div class="stat-label">Actividades</div>
+      <div class="stat-value">{{ actividades | length }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">En proceso</div>
+      <div class="stat-value teal">{{ n_proceso }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Completadas</div>
+      <div class="stat-value teal">{{ n_completadas }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Presupuesto</div>
+      <div class="stat-value teal" style="font-size:1.1rem;">RD$ {{ "%.2f" | format(total_pres) }}</div>
+    </div>
+  </div>
+
+  <!-- Tabla de actividades -->
+  <p class="section-title">Actividades registradas</p>
+  <div class="table-card">
+    {% if actividades %}
+    <table class="poa-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Objetivo</th>
+          <th>Actividad</th>
+          <th>Responsable</th>
+          <th>Fechas</th>
+          <th>Presupuesto</th>
+          <th>Estado</th>
+          {% if puede_editar %}<th></th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for act in actividades %}
+        <tr>
+          <td style="color:var(--text-soft,#5A7080);font-size:.8rem;">{{ loop.index }}</td>
+          <td class="cell-obj">{{ act.objetivo }}</td>
+          <td class="cell-act">{{ act.actividad }}</td>
+          <td>{{ act.responsable }}</td>
+          <td style="font-size:.8rem;color:var(--text-soft,#5A7080);white-space:nowrap;">
+            {{ act.fecha_inicio or '—' }}<br>
+            <span style="color:#038C8C;">→ {{ act.fecha_fin or '—' }}</span>
+          </td>
+          <td class="cell-pres">RD$ {{ "%.2f" | format(act.presupuesto) }}</td>
+          <td>
+            {% if puede_editar %}
+            <form method="POST" style="margin:0">
+              <input type="hidden" name="csrf_token"    value="{{ csrf_token }}">
+              <input type="hidden" name="accion"        value="cambiar_estado_actividad">
+              <input type="hidden" name="actividad_id"  value="{{ act.id }}">
+              <select name="nuevo_estado" onchange="this.form.submit()"
+                      style="border:1px solid var(--border,#E8E1D8);border-radius:5px;
+                             padding:.25rem .5rem;font-size:.75rem;background:#fff;cursor:pointer;">
+                <option value="pendiente"  {% if act.estado=='pendiente' %}selected{% endif %}>Pendiente</option>
+                <option value="en_proceso" {% if act.estado=='en_proceso'%}selected{% endif %}>En proceso</option>
+                <option value="completada" {% if act.estado=='completada'%}selected{% endif %}>Completada</option>
+              </select>
+            </form>
+            {% else %}
+            <span class="badge-act {{ act.estado }}">
+              {{ act.estado | replace('_', ' ') }}
+            </span>
+            {% endif %}
+          </td>
+          {% if puede_editar %}
+          <td>
+            <form method="POST" style="margin:0">
+              <input type="hidden" name="csrf_token"   value="{{ csrf_token }}">
+              <input type="hidden" name="accion"       value="eliminar_actividad">
+              <input type="hidden" name="actividad_id" value="{{ act.id }}">
+              <button type="submit" class="btn btn-danger btn-sm"
+                      onclick="return confirm('¿Eliminar esta actividad?')">✕</button>
+            </form>
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+        <tr class="row-total">
+          <td colspan="5" style="text-align:right;padding-right:1rem;font-size:.85rem;">
+            Total presupuesto
+          </td>
+          <td class="cell-pres">RD$ {{ "%.2f" | format(total_pres) }}</td>
+          <td colspan="{{ 2 if puede_editar else 1 }}"></td>
+        </tr>
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-icon">📋</div>
+      <p>No hay actividades todavía.{% if puede_editar %} Agrega la primera abajo.{% endif %}</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Formulario nueva actividad (solo en borrador + propietario) -->
+  {% if puede_editar %}
+  <p class="section-title">Agregar actividad</p>
+  <div class="form-card">
+    <div class="form-head"><h3>Nueva actividad</h3></div>
+    <form method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="accion"     value="agregar_actividad">
+      <div class="form-body">
+        <div class="form-grid">
+          <div class="form-group col-full">
+            <label class="form-label" for="objetivo">Objetivo</label>
+            <textarea class="form-ctrl" id="objetivo" name="objetivo"
+                      placeholder="Describe el objetivo estratégico…" required></textarea>
+          </div>
+          <div class="form-group col-full">
+            <label class="form-label" for="actividad">Actividad</label>
+            <textarea class="form-ctrl" id="actividad" name="actividad"
+                      placeholder="Describe la actividad concreta…" required></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="responsable">Responsable</label>
+            <input class="form-ctrl" type="text" id="responsable" name="responsable"
+                   placeholder="Nombre del responsable" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="presupuesto">Presupuesto (RD$)</label>
+            <input class="form-ctrl" type="number" id="presupuesto" name="presupuesto"
+                   step="0.01" min="0" placeholder="0.00" value="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="fecha_inicio">Fecha inicio</label>
+            <input class="form-ctrl" type="date" id="fecha_inicio" name="fecha_inicio">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="fecha_fin">Fecha fin</label>
+            <input class="form-ctrl" type="date" id="fecha_fin" name="fecha_fin">
+          </div>
+        </div>
+      </div>
+      <div class="form-foot">
+        <button type="reset"  class="btn btn-ghost">Limpiar</button>
+        <button type="submit" class="btn btn-teal">+ Agregar actividad</button>
+      </div>
+    </form>
+  </div>
+
+  {% else %}
+  <div class="info-box">
+    {% if poa.estado == 'enviado' %}
+    Este POA fue enviado para revisión y no puede editarse.
+    {% if es_admin %}Puedes aprobarlo o devolverlo a borrador desde los botones de arriba.{% endif %}
+    {% elif poa.estado == 'aprobado' %}
+    Este POA fue aprobado. Contacta a coordinación si necesitas hacer cambios.
+    {% endif %}
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
