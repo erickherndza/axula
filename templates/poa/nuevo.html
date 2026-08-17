@@ -79,6 +79,21 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-hei
         </div>
 
         <div class="f">
+          <label for="area">Área / Departamento</label>
+          <input type="text" id="area" name="area"
+                 placeholder="Ej. MULTIMEDIA, Matemática, Lengua Española…">
+        </div>
+
+        <div class="f">
+          <label for="objetivo_general">Objetivo General del POA</label>
+          <textarea id="objetivo_general" name="objetivo_general"
+                    style="padding:9px 12px;border-radius:8px;border:1px solid var(--border);
+                           background:var(--surface2);color:var(--text);font-size:.875rem;
+                           font-family:var(--font-body);width:100%;min-height:72px;resize:vertical"
+                    placeholder="Describe el objetivo general que orienta este POA…"></textarea>
+        </div>
+
+        <div class="f">
           <label for="anio_escolar">Año escolar</label>
           <input type="text" id="anio_escolar" name="anio_escolar"
                  value="{{ anio }}" required>
