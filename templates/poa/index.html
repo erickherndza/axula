@@ -1,71 +1,97 @@
-{% extends "base.html" %}
-{% block title %}Plan Operativo Anual | Axula{% endblock %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Plan Operativo Anual — Axula</title>
+<link rel="stylesheet" href="/static/theme.css">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-height:100vh}
+.top{display:flex;align-items:center;justify-content:space-between;padding:14px 28px;
+     background:var(--surface);border-bottom:1px solid var(--border)}
+.top h1{font-family:var(--font-display);font-size:1.2rem;font-weight:800}
+.top .r{display:flex;gap:12px;align-items:center;font-size:.85rem;color:var(--muted)}
+.top a{color:var(--accent);text-decoration:none;font-weight:600;font-size:.85rem}
+.c{max-width:900px;margin:0 auto;padding:28px 24px}
+.page-head{display:flex;align-items:center;justify-content:space-between;
+           margin-bottom:24px;flex-wrap:wrap;gap:12px}
+.page-head h2{font-size:1.1rem;font-weight:700}
+.page-head p{font-size:.82rem;color:var(--muted);margin-top:2px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;
+     border:none;font-weight:600;cursor:pointer;font-size:.84rem;text-decoration:none;
+     transition:opacity .15s}
+.btn:hover{opacity:.88}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-sm{padding:5px 12px;font-size:.78rem}
+.btn-navy{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+.flash{padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:.85rem;font-weight:500}
+.flash.success{background:rgba(91,138,247,.12);color:#8BAEF8;border-left:3px solid var(--accent)}
+.flash.error{background:rgba(224,72,72,.12);color:#F8A0A0;border-left:3px solid var(--danger)}
+.poa-grid{display:flex;flex-direction:column;gap:12px}
+.poa-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;
+          padding:18px 20px;display:flex;align-items:center;
+          justify-content:space-between;gap:12px;flex-wrap:wrap;
+          transition:border-color .15s}
+.poa-card:hover{border-color:var(--accent)}
+.poa-card .title{font-size:.95rem;font-weight:700;margin-bottom:4px}
+.poa-card .meta{font-size:.78rem;color:var(--muted)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.72rem;
+       font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.badge-borrador{background:var(--surface2);color:var(--muted)}
+.badge-enviado{background:rgba(38,97,246,.15);color:#8BAEF8}
+.badge-aprobado{background:rgba(91,220,130,.12);color:#5BDC82}
+.card-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.empty{text-align:center;padding:60px 24px;color:var(--muted)}
+.empty i{font-size:2.5rem;display:block;margin-bottom:14px;opacity:.3}
+</style>
+<script src="/static/theme.js"></script>
+</head>
+<body>
 
-{% block content %}
-<div style="max-width:960px;margin:0 auto;padding:2rem 1.5rem;">
-
-  <div style="display:flex;align-items:center;justify-content:space-between;
-              margin-bottom:1.75rem;flex-wrap:wrap;gap:1rem;">
-    <div>
-      <h1 style="font-size:1.25rem;font-weight:700;color:var(--navy,#024959);margin:0 0 .2rem;">
-        Plan Operativo Anual
-      </h1>
-      <p style="font-size:.85rem;color:var(--text-soft,#5A7080);margin:0;">
-        {% if es_admin %}Todos los POAs del centro{% else %}Tus POAs — {{ current_user.nombre }}{% endif %}
-      </p>
-    </div>
-    <a href="{{ url_for('poa_bp.poa_nuevo') }}"
-       style="display:inline-flex;align-items:center;gap:.4rem;
-              background:#038C8C;color:#fff;font-size:.875rem;font-weight:600;
-              padding:.6rem 1.1rem;border-radius:7px;text-decoration:none;">
-      + Nuevo POA
-    </a>
+<div class="top">
+  <h1><i class="fas fa-clipboard-list" style="color:var(--accent);margin-right:8px"></i>Plan Operativo Anual</h1>
+  <div class="r">
+    <span>{{ current_user.nombre }}</span>
+    <a href="/profesor"><i class="fas fa-arrow-left"></i> Portal</a>
+    <a href="/home"><i class="fas fa-home"></i> Inicio</a>
   </div>
+</div>
+
+<div class="c">
 
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% for cat, msg in messages %}
-      <div style="padding:.75rem 1rem;border-radius:7px;margin-bottom:1rem;font-size:.875rem;
-                  {% if cat == 'success' %}background:#DCFCE7;color:#166534;border-left:3px solid #16a34a;
-                  {% else %}background:#FEE2E2;color:#991B1B;border-left:3px solid #dc2626;{% endif %}">
-        {{ msg }}
-      </div>
+      <div class="flash {{ cat }}">{{ msg }}</div>
     {% endfor %}
   {% endwith %}
 
+  <div class="page-head">
+    <div>
+      <h2>Mis Planes Operativos</h2>
+      <p>{% if es_admin %}Todos los POAs registrados en el centro{% else %}POAs de {{ current_user.nombre }}{% endif %}</p>
+    </div>
+    <a href="/poa/nuevo" class="btn btn-primary"><i class="fas fa-plus"></i> Nuevo POA</a>
+  </div>
+
   {% if poas %}
-  <div style="display:grid;gap:1rem;">
+  <div class="poa-grid">
     {% for poa in poas %}
-    <div style="background:var(--surface-card,#fff);border:1px solid var(--border,#E8E1D8);
-                border-radius:10px;padding:1.25rem 1.5rem;display:flex;align-items:center;
-                justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+    <div class="poa-card">
       <div>
-        <p style="font-size:1rem;font-weight:700;color:var(--navy,#024959);margin:0 0 .25rem;">
-          {{ poa.asignatura }}
-        </p>
-        <p style="font-size:.82rem;color:var(--text-soft,#5A7080);margin:0;">
+        <div class="title">{{ poa.asignatura }}</div>
+        <div class="meta">
           Año {{ poa.anio_escolar }}
           {% if poa.trimestre %} · Trimestre {{ poa.trimestre }}{% endif %}
-          {% if es_admin %} · <strong>{{ poa.docente_nombre }}</strong>{% endif %}
-          · Creado {{ poa.fecha_creacion[:10] }}
-        </p>
+          {% if es_admin %} · <strong style="color:var(--text)">{{ poa.docente_nombre }}</strong>{% endif %}
+          · {{ poa.fecha_creacion[:10] }}
+        </div>
       </div>
-      <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;">
-        {% if poa.estado == 'borrador' %}
-          <span style="background:var(--surface,#F7F4EF);color:var(--text-soft,#5A7080);font-size:.75rem;
-                       font-weight:700;padding:.25rem .7rem;border-radius:20px;text-transform:uppercase;
-                       letter-spacing:.04em;">Borrador</span>
-        {% elif poa.estado == 'enviado' %}
-          <span style="background:#DBEAFE;color:#1E40AF;font-size:.75rem;font-weight:700;
-                       padding:.25rem .7rem;border-radius:20px;text-transform:uppercase;
-                       letter-spacing:.04em;">Enviado</span>
-        {% elif poa.estado == 'aprobado' %}
-          <span style="background:#DCFCE7;color:#166534;font-size:.75rem;font-weight:700;
-                       padding:.25rem .7rem;border-radius:20px;text-transform:uppercase;
-                       letter-spacing:.04em;">Aprobado</span>
-        {% endif %}
-        <a href="{{ url_for('poa_bp.poa_editar', poa_id=poa.id) }}"
-           style="background:#024959;color:#fff;font-size:.8rem;font-weight:600;
-                  padding:.4rem .9rem;border-radius:6px;text-decoration:none;">
+      <div class="card-actions">
+        <span class="badge badge-{{ poa.estado }}">{{ poa.estado }}</span>
+        <a href="/poa/{{ poa.id }}/editar" class="btn btn-navy btn-sm">
+          <i class="fas fa-{{ 'pen' if poa.estado == 'borrador' else 'eye' }}"></i>
           {{ 'Editar' if poa.estado == 'borrador' else 'Ver' }}
         </a>
       </div>
@@ -74,17 +100,13 @@
   </div>
 
   {% else %}
-  <div style="text-align:center;padding:4rem 1.5rem;color:var(--text-soft,#5A7080);">
-    <div style="font-size:2.5rem;margin-bottom:1rem;opacity:.35;">📋</div>
-    <p style="font-size:1rem;margin:0 0 1.5rem;">Aún no hay ningún POA creado.</p>
-    <a href="{{ url_for('poa_bp.poa_nuevo') }}"
-       style="display:inline-flex;align-items:center;gap:.4rem;
-              background:#038C8C;color:#fff;font-size:.875rem;font-weight:600;
-              padding:.65rem 1.25rem;border-radius:7px;text-decoration:none;">
-      + Crear primer POA
-    </a>
+  <div class="empty">
+    <i class="fas fa-clipboard-list"></i>
+    <p style="margin-bottom:20px">Aún no hay ningún POA creado.</p>
+    <a href="/poa/nuevo" class="btn btn-primary"><i class="fas fa-plus"></i> Crear primer POA</a>
   </div>
   {% endif %}
 
 </div>
-{% endblock %}
+</body>
+</html>
