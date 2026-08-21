@@ -410,16 +410,12 @@ def generar_planificacion_abp():
     nombre_docente = u.get("nombre", "")
 
     # ── CONTEXTO OFICIAL DEL CURRÍCULO ─────────────────────────────────────
+    # Tope de longitud: el tier gratuito de Groq da solo 8000 TPM y esto compite
+    # por presupuesto con el resto del prompt + las 2 llamadas de la ruta.
     curriculo_oficial = _curriculo_fmt(mencion, asignatura)
-    datos_oficiales   = _curriculo_get(mencion, asignatura)
-
-    # ── CONTEXTO RAG — normativa vigente subida por el centro ─────────────
-    rag_contexto = ""
-    try:
-        rag_consulta = f"planificación {asignatura} {grado} bachillerato artes {mencion.lower()} ordenanza"
-        rag_contexto = buscar_chunks(get_db(), rag_consulta, top_k=2, max_chars_total=1200, mencion=mencion)
-    except Exception as _rag_err:
-        logger.warning(f"[RAG] No se pudo recuperar contexto: {_rag_err}")
+    if len(curriculo_oficial) > 1800:
+        curriculo_oficial = curriculo_oficial[:1800] + "…"
+    datos_oficiales = _curriculo_get(mencion, asignatura)
 
     # ── PROMPT DEL SISTEMA (compartido entre las 2 llamadas) ────────────────
     # NOTA: el modelo openai/gpt-oss-120b tiene un límite de 8000 TPM en el tier
@@ -457,8 +453,8 @@ REGLAS CRÍTICAS:
         """Llama a Groq. En 429 (TPM) falla YA (sin sleep bloqueante — el timeout
         real del worker en Render no está garantizado) para que el request pueda
         devolver un error claro y el usuario reintente con el botón de la UI.
-        Loguea los headers reales x-ratelimit-* de Groq (éxito o error) para
-        diagnosticar con datos exactos de la cuenta, no estimaciones."""
+        Devuelve (completion, headers) — headers trae x-ratelimit-remaining-tokens
+        REAL de la cuenta, que se usa para dimensionar la siguiente llamada."""
         try:
             raw = _get_groq_client().chat.completions.with_raw_response.create(
                 model="openai/gpt-oss-120b",
@@ -476,7 +472,7 @@ REGLAS CRÍTICAS:
                 f"requests: limite={h.get('x-ratelimit-limit-requests')} "
                 f"restantes={h.get('x-ratelimit-remaining-requests')}"
             )
-            return raw.parse()
+            return raw.parse(), h
         except Exception as ex:
             status = getattr(ex, "status_code", None)
             es_rate_limit = status == 429 or "429" in str(ex) or "rate_limit" in str(ex).lower()
@@ -519,8 +515,6 @@ DATOS DEL PROYECTO:
 CURRÍCULO OFICIAL MINERD PARA ESTA ASIGNATURA:
 {curriculo_oficial if curriculo_oficial else "(No hay datos oficiales — usa tu conocimiento del currículo de Bachillerato en Arte Multimedia MINERD)"}
 
-{rag_contexto if rag_contexto else ""}
-
 INSTRUCCIONES:
 1. **curriculo.contenidos**: Usa los saberes oficiales de arriba. Selecciona los 4-6 más
    relevantes al proyecto. NO repitas contenido entre conceptuales, procedimentales y actitudinales.
@@ -557,7 +551,7 @@ Responde SOLO este JSON (sin markdown, sin texto extra):
 }}"""
 
     try:
-        completion_1 = _groq_completion(
+        completion_1, headers_1 = _groq_completion(
             [
                 {"role": "system", "content": prompt_sistema},
                 {"role": "user",   "content": prompt_usuario_1},
@@ -570,7 +564,12 @@ Responde SOLO este JSON (sin markdown, sin texto extra):
         # ── LLAMADA 2 — FASES ABP + INSTRUMENTOS DE EVALUACIÓN ──────────────
         proyecto_1  = bloque_1.get("proyecto", {}) or {}
         curriculo_1 = bloque_1.get("curriculo", {}) or {}
-        curriculo_resumen = _json.dumps(curriculo_1, ensure_ascii=False)
+        # Solo lo esencial para redactar actividades — problema/pregunta/elementos_competencia
+        # no aportan a las fases y cuestan tokens que aquí escasean.
+        curriculo_resumen = _json.dumps({
+            "rae": curriculo_1.get("rae", []),
+            "contenidos": curriculo_1.get("contenidos", {}),
+        }, ensure_ascii=False)
 
         prompt_usuario_2 = f"""Genera las 4 FASES ABP y los INSTRUMENTOS DE EVALUACIÓN de una planificación MINERD.
 
@@ -661,12 +660,34 @@ Responde SOLO este JSON (sin markdown, sin texto extra):
   }}
 }}"""
 
-        completion_2 = _groq_completion(
+        # ── Dimensionar max_tokens de la llamada 2 según el cupo REAL restante ──
+        # La llamada 1 ya consumió parte del TPM de este minuto. Pedir un tope
+        # fijo puede exceder lo que Groq realmente tiene disponible ahora mismo
+        # y disparar 429. Usamos el header x-ratelimit-remaining-tokens que
+        # Groq acaba de devolver (dato real, no una estimación de caracteres).
+        max_tokens_2 = 3500
+        restante_str = headers_1.get("x-ratelimit-remaining-tokens")
+        if restante_str:
+            try:
+                restante = float(restante_str)
+                # Ratio chars/token calibrado con datos reales de esta misma ruta.
+                prompt_2_aprox = (len(prompt_sistema) + len(prompt_usuario_2)) / 2.4
+                margen_seguridad = 150
+                disponible = int(restante - prompt_2_aprox - margen_seguridad)
+                max_tokens_2 = max(1200, min(max_tokens_2, disponible))
+                logger.info(
+                    f"[IA] Cupo TPM restante tras llamada1: {restante:.0f} — "
+                    f"max_tokens llamada2 ajustado a {max_tokens_2}"
+                )
+            except ValueError:
+                pass
+
+        completion_2, headers_2 = _groq_completion(
             [
                 {"role": "system", "content": prompt_sistema},
                 {"role": "user",   "content": prompt_usuario_2},
             ],
-            max_tokens=4000,
+            max_tokens=max_tokens_2,
             etiqueta="llamada2:fases+instrumentos",
         )
         bloque_2 = _parse_json_ia(completion_2.choices[0].message.content)
