@@ -456,15 +456,27 @@ REGLAS CRÍTICAS:
     def _groq_completion(messages, max_tokens, etiqueta):
         """Llama a Groq. En 429 (TPM) falla YA (sin sleep bloqueante — el timeout
         real del worker en Render no está garantizado) para que el request pueda
-        devolver un error claro y el usuario reintente con el botón de la UI."""
+        devolver un error claro y el usuario reintente con el botón de la UI.
+        Loguea los headers reales x-ratelimit-* de Groq (éxito o error) para
+        diagnosticar con datos exactos de la cuenta, no estimaciones."""
         try:
-            return _get_groq_client().chat.completions.create(
+            raw = _get_groq_client().chat.completions.with_raw_response.create(
                 model="openai/gpt-oss-120b",
                 messages=messages,
                 temperature=0.65,
                 max_tokens=max_tokens,
                 top_p=0.9,
             )
+            h = raw.headers
+            logger.info(
+                f"[IA] Groq OK {etiqueta} | "
+                f"tokens: limite={h.get('x-ratelimit-limit-tokens')} "
+                f"restantes={h.get('x-ratelimit-remaining-tokens')} "
+                f"reset={h.get('x-ratelimit-reset-tokens')} | "
+                f"requests: limite={h.get('x-ratelimit-limit-requests')} "
+                f"restantes={h.get('x-ratelimit-remaining-requests')}"
+            )
+            return raw.parse()
         except Exception as ex:
             status = getattr(ex, "status_code", None)
             es_rate_limit = status == 429 or "429" in str(ex) or "rate_limit" in str(ex).lower()
@@ -472,12 +484,19 @@ REGLAS CRÍTICAS:
                 raise
             espera = 30
             resp = getattr(ex, "response", None)
-            retry_after = resp.headers.get("retry-after") if resp is not None else None
+            headers = resp.headers if resp is not None else {}
+            retry_after = headers.get("retry-after")
             if retry_after:
                 try:
                     espera = min(float(retry_after), 55)
                 except ValueError:
                     pass
+            logger.warning(
+                f"[IA] Groq 429 {etiqueta} | "
+                f"limite={headers.get('x-ratelimit-limit-tokens')} "
+                f"restantes={headers.get('x-ratelimit-remaining-tokens')} "
+                f"reset={headers.get('x-ratelimit-reset-tokens')}"
+            )
             raise _GroqRateLimitError(espera, etiqueta, str(ex)) from ex
 
     datos_proyecto = (
