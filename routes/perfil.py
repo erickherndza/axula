@@ -456,7 +456,7 @@ def generar_analisis_ia(id):
 
     try:
         completion = _get_groq_client().chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="openai/gpt-oss-120b",
             messages=[
                 {
                     "role": "system",
@@ -605,7 +605,7 @@ Con base en la tendencia actual, ¿qué puede lograr al final del año?
 Usa lenguaje técnico-pedagógico. Sé preciso con los datos. Máximo 380 palabras."""
 
         completion = _get_groq_client().chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="openai/gpt-oss-120b",
             messages=[
                 {"role": "system", "content": "Eres un evaluador pedagógico experto en la Modalidad de Artes del bachillerato dominicano. Respondes en español con análisis precisos basados en datos reales."},
                 {"role": "user", "content": prompt}

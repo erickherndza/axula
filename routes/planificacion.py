@@ -107,7 +107,7 @@ def generar_planificacion():
         )
         try:
             completion = _get_groq_client().chat.completions.create(
-                model="llama-3.3-70b-versatile",
+                model="openai/gpt-oss-120b",
                 messages=[
                     {"role": "system", "content":
                         "Eres un experto en planificación curricular para la Modalidad de Artes "
@@ -150,7 +150,7 @@ def generar_planificacion():
             _sys_content += f"\n\n{_rag_ctx}"
 
         completion = _get_groq_client().chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="openai/gpt-oss-120b",
             messages=[
                 {
                     "role": "system",
@@ -191,7 +191,7 @@ def generar_rubrica():
 
     try:
         completion = _get_groq_client().chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="openai/gpt-oss-120b",
             messages=[
                 {
                     "role": "system",
@@ -233,7 +233,7 @@ def generar_estrategia():
 
     try:
         completion = _get_groq_client().chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="openai/gpt-oss-120b",
             messages=[
                 {
                     "role": "system",
@@ -610,7 +610,7 @@ ESTRUCTURA JSON EXACTA (sin markdown, sin texto extra):
 
     try:
         completion = _get_groq_client().chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="openai/gpt-oss-120b",
             messages=[
                 {"role": "system", "content": prompt_sistema},
                 {"role": "user",   "content": prompt_usuario},

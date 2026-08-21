@@ -431,7 +431,7 @@ def _truncar_prompt(texto: str, max_tokens: int = _MAX_INPUT_TOKENS) -> tuple[st
 
 def llamar_ia(
     messages: list,
-    model: str = "llama-3.3-70b-versatile",
+    model: str = "openai/gpt-oss-120b",
     max_tokens: int = 800,
     temperature: float = 0.7,
     top_p: float = 0.9,

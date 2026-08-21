@@ -858,7 +858,7 @@ def generar_analisis_ia(id):
 
     try:
         completion = _get_groq_client().chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="openai/gpt-oss-120b",
             messages=[
                 {
                     "role": "system",
@@ -1026,7 +1026,7 @@ Con base en la tendencia actual, ¿qué puede lograr al final del año?
 Usa lenguaje técnico-pedagógico. Sé preciso con los datos. Máximo 380 palabras."""
 
         completion = _get_groq_client().chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="openai/gpt-oss-120b",
             messages=[
                 {"role": "system", "content": "Eres un evaluador pedagógico experto en la Modalidad de Artes del bachillerato dominicano. Respondes en español con análisis precisos basados en datos reales."},
                 {"role": "user", "content": prompt}
@@ -1486,7 +1486,7 @@ Reglas: P1/P2 pueden llamarse Periodo 1, Trimestre 1, Parcial 1, PROM P1, etc.
 Si nombre+apellido van juntos usa col_nombre_completo."""
 
         completion = _get_groq_client().chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="openai/gpt-oss-120b",
             messages=[
                 {"role":"system","content":"Responde SOLO con JSON válido."},
                 {"role":"user","content":prompt}

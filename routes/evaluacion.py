@@ -502,7 +502,7 @@ Responde SOLO con el párrafo de retroalimentación, sin títulos, sin bullets."
     try:
         client = _get_groq_client()
         resp = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="openai/gpt-oss-120b",
             messages=[{"role":"user","content":prompt}],
             max_tokens=250,
             temperature=0.6,

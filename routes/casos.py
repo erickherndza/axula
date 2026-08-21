@@ -466,7 +466,7 @@ Devuelve SOLO el texto del acuerdo, sin comentarios adicionales."""
 
     try:
         completion = _get_groq_client().chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="openai/gpt-oss-120b",
             messages=[
                 {"role": "system", "content": "Eres un especialista en normativa educativa dominicana (MINERD). Generas documentos formales precisos alineados a la legislación vigente."},
                 {"role": "user",   "content": prompt}
