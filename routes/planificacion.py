@@ -421,87 +421,68 @@ def generar_planificacion_abp():
     except Exception as _rag_err:
         logger.warning(f"[RAG] No se pudo recuperar contexto: {_rag_err}")
 
-    # ── PROMPT DEL SISTEMA ─────────────────────────────────────────────────
+    # ── PROMPT DEL SISTEMA (compartido entre las 2 llamadas) ────────────────
+    # NOTA: el modelo openai/gpt-oss-120b tiene un límite de 8000 TPM en el tier
+    # gratuito de Groq. Un solo prompt con proyecto+curriculo+4 fases+instrumentos
+    # supera ese límite (~10200 tokens), por eso se parte en 2 llamadas más chicas.
     prompt_sistema = f"""Eres un experto en planificación curricular ABP para la Modalidad en Artes del MINERD
 de la República Dominicana, especializado en Bachillerato en Arte Multimedia
 (C.E. Benito Juárez — Mención {mencion}).
 
-Conoces el esquema oficial MINERD/DEMA con sus 4 bloques: IDENTIFICACIÓN,
-ELEMENTOS DE LA UNIDAD, FASES ABP (4 fases) e INSTRUMENTOS DE EVALUACIÓN.
-
 REGLAS CRÍTICAS:
 1. SIEMPRE respondes ÚNICAMENTE con JSON válido, sin texto antes ni después, sin markdown.
 2. NO repites contenido entre secciones — cada campo debe tener información única y específica.
-3. Usas EXCLUSIVAMENTE los saberes oficiales que te proporciono del plan MINERD,
-   no inventes contenidos genéricos. Si amplías, mantén el enfoque oficial.
+3. Usas EXCLUSIVAMENTE los saberes oficiales que te proporciono, no inventes contenidos genéricos.
 4. Las actividades deben ser ESPECÍFICAS de la asignatura, con verbos de acción
-   (investiga, diseña, produce, presenta), no frases vacías.
-5. La integración STEAM debe incluir los 5 elementos (Ciencia, Tecnología, Ingeniería, Arte, Matemática)
-   con ejemplos aplicados al proyecto concreto.
-6. Las 4 fases ABP son fijas y en este orden: Exploración e Investigación, Diseño y Planificación,
-   Desarrollo y Construcción, Presentación y Evaluación.
+   (investiga, diseña, produce, presenta), no frases vacías."""
 
-{rag_contexto if rag_contexto else ""}"""
+    def _parse_json_ia(raw: str) -> dict:
+        raw = raw.strip()
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+            raw = raw.strip()
+        if raw.endswith("```"):
+            raw = raw[:-3].strip()
+        return _json.loads(raw)
 
-    # ── PROMPT DEL USUARIO ─────────────────────────────────────────────────
-    prompt_usuario = f"""Genera una planificación ABP oficial MINERD para:
+    datos_proyecto = (
+        f"- Asignatura: {asignatura}\n"
+        f"- Grado: {grado} — Mención {mencion.title()}\n"
+        f"- Título del proyecto: {titulo if titulo else '(inventa un título creativo y específico al proyecto)'}\n"
+        f"- Fecha inicio: {fecha_inicio if fecha_inicio else '(período actual)'}\n"
+        f"- Fecha cierre: {fecha_cierre if fecha_cierre else '(al finalizar el período)'}\n"
+        f"- Duración: {duracion if duracion else '2 meses (8 semanas aproximadamente)'}\n"
+        f"- Producto final esperado: {producto if producto else '(sugiere el producto final típico de esta asignatura)'}\n"
+        + (f"- Contexto adicional del docente: {contexto_ia}\n" if contexto_ia else "")
+    )
+
+    # ── LLAMADA 1 — PROYECTO + CURRÍCULO ────────────────────────────────────
+    prompt_usuario_1 = f"""Genera el bloque de PROYECTO y CURRÍCULO de una planificación ABP oficial MINERD.
 
 DATOS DEL PROYECTO:
-- Asignatura: {asignatura}
-- Docente: {nombre_docente}
-- Grado: {grado} — Mención {mencion.title()}
-- Título del proyecto: {titulo if titulo else "(inventa un título creativo y específico al proyecto)"}
-- Fecha inicio: {fecha_inicio if fecha_inicio else "(período actual)"}
-- Fecha cierre: {fecha_cierre if fecha_cierre else "(al finalizar el período)"}
-- Duración: {duracion if duracion else "2 meses (8 semanas aproximadamente)"}
-- Producto final esperado: {producto if producto else "(sugiere el producto final típico de esta asignatura)"}
-{f"- Contexto adicional del docente: {contexto_ia}" if contexto_ia else ""}
+{datos_proyecto}
 
 CURRÍCULO OFICIAL MINERD PARA ESTA ASIGNATURA:
 {curriculo_oficial if curriculo_oficial else "(No hay datos oficiales — usa tu conocimiento del currículo de Bachillerato en Arte Multimedia MINERD)"}
 
-INSTRUCCIONES ESPECÍFICAS PARA EL JSON:
+{rag_contexto if rag_contexto else ""}
 
-1. **curriculo.contenidos**: Usa los saberes oficiales listados arriba. Selecciona
-   los 4-6 más relevantes al proyecto propuesto. NO los repitas entre conceptuales,
-   procedimentales y actitudinales — cada categoría debe tener contenido distinto.
+INSTRUCCIONES:
+1. **curriculo.contenidos**: Usa los saberes oficiales de arriba. Selecciona los 4-6 más
+   relevantes al proyecto. NO repitas contenido entre conceptuales, procedimentales y actitudinales.
+2. **curriculo.rae**: Usa los RAEs oficiales, o derívalos del Elemento de Competencia oficial.
+3. **curriculo.elementos_competencia**: Cita el Elemento de Competencia oficial (párrafo completo)
+   y añade 2-3 indicadores observables derivados.
+4. **curriculo.problema**: Párrafo contextual sobre una situación real de los estudiantes
+   dominicanos que el proyecto viene a resolver.
+5. **curriculo.pregunta**: UNA pregunta desafiante abierta que guíe todo el proyecto,
+   iniciando con "¿Cómo..." o "¿De qué manera...".
 
-2. **curriculo.rae**: Usa los RAEs oficiales listados arriba, o derívalos del
-   Elemento de Competencia oficial.
-
-3. **curriculo.elementos_competencia**: Cita el Elemento de Competencia oficial
-   (párrafo completo) y añade 2-3 indicadores observables derivados.
-
-4. **curriculo.problema**: Redacta un párrafo contextual que explique una
-   situación real de los estudiantes dominicanos que el proyecto viene a resolver.
-   Debe conectar con la realidad del joven dominicano.
-
-5. **curriculo.pregunta**: Formula UNA pregunta desafiante abierta que guíe
-   todo el proyecto. Debe empezar con "¿Cómo..." o "¿De qué manera...".
-
-6. **fases**: Genera LAS 4 FASES en orden. Cada fase debe tener:
-   - Actividades concretas (3-5 actividades con verbos de acción) distribuidas
-     en momentos de Inicio, Desarrollo y Cierre.
-   - Los 5 elementos STEAM aplicados específicamente al proyecto.
-   - Roles específicos del docente y del estudiante (no genéricos).
-   - Recursos materiales/digitales concretos.
-   - Instrumentos de evaluación específicos (lista de cotejo, rúbrica, registro anecdótico, etc).
-
-7. **instrumentos**: Genera lista de cotejo con 6-8 criterios específicos al producto final,
-   rúbrica de proceso con 3 niveles de dominio, rúbrica final con 4 criterios de 20 pts c/u.
-
-ESTRUCTURA JSON EXACTA (sin markdown, sin texto extra):
+Responde SOLO este JSON (sin markdown, sin texto extra):
 
 {{
-  "docente": {{
-    "nombre_completo": "{nombre_docente}",
-    "asignatura": "{asignatura}",
-    "grado": "{grado} {mencion.title()}",
-    "mencion": "{mencion.title()}",
-    "centro": "Centro Educativo en Artes Benito Juárez",
-    "modulo": "{datos_oficiales.get('modulo', 'Formación Artístico-Cultural')}",
-    "horas_semanales": "{datos_oficiales.get('horas', '')}"
-  }},
   "proyecto": {{
     "titulo": "título creativo específico del proyecto",
     "fecha_inicio": "{fecha_inicio}",
@@ -520,7 +501,51 @@ ESTRUCTURA JSON EXACTA (sin markdown, sin texto extra):
     "elementos_competencia": ["elemento competencia oficial", "indicador observable 1", "indicador observable 2"],
     "problema": "párrafo contextualizado sobre la situación real que motiva el proyecto",
     "pregunta": "¿Pregunta desafiante abierta que guíe todo el proyecto?"
-  }},
+  }}
+}}"""
+
+    try:
+        completion_1 = _get_groq_client().chat.completions.create(
+            model="openai/gpt-oss-120b",
+            messages=[
+                {"role": "system", "content": prompt_sistema},
+                {"role": "user",   "content": prompt_usuario_1},
+            ],
+            temperature=0.65,
+            max_tokens=1600,
+            top_p=0.9,
+        )
+        bloque_1 = _parse_json_ia(completion_1.choices[0].message.content)
+
+        # ── LLAMADA 2 — FASES ABP + INSTRUMENTOS DE EVALUACIÓN ──────────────
+        proyecto_1  = bloque_1.get("proyecto", {}) or {}
+        curriculo_1 = bloque_1.get("curriculo", {}) or {}
+        curriculo_resumen = _json.dumps(curriculo_1, ensure_ascii=False)
+
+        prompt_usuario_2 = f"""Genera las 4 FASES ABP y los INSTRUMENTOS DE EVALUACIÓN de una planificación MINERD.
+
+PROYECTO:
+- Asignatura: {asignatura} | Grado: {grado} Mención {mencion.title()}
+- Título: {proyecto_1.get('titulo') or titulo or '(coherente con el currículo dado)'}
+- Producto final: {proyecto_1.get('producto_final') or producto or '(coherente con la asignatura)'}
+
+CURRÍCULO YA DEFINIDO (úsalo como base, no lo repitas literal):
+{curriculo_resumen}
+
+REGLAS DE LAS FASES:
+- Las 4 fases son fijas y en este orden: Exploración e Investigación, Diseño y Planificación,
+  Desarrollo y Construcción, Presentación y Evaluación.
+- Cada fase: 3-5 actividades con verbos de acción, distribuidas en Inicio/Desarrollo/Cierre.
+- Integración STEAM: los 5 elementos (Ciencia, Tecnología, Ingeniería, Arte, Matemática)
+  aplicados específicamente al proyecto.
+- Roles específicos del docente y del estudiante (no genéricos). Recursos concretos.
+  Instrumentos de evaluación específicos por fase.
+- **instrumentos**: lista de cotejo con 6-8 criterios específicos al producto final,
+  rúbrica de proceso con 3 niveles de dominio, rúbrica final con 4 criterios de 20 pts c/u.
+
+Responde SOLO este JSON (sin markdown, sin texto extra):
+
+{{
   "fases": [
     {{
       "numero": 1,
@@ -543,56 +568,34 @@ ESTRUCTURA JSON EXACTA (sin markdown, sin texto extra):
       "instrumentos_evaluacion": ["instrumento 1", "instrumento 2"]
     }},
     {{
-      "numero": 2,
-      "nombre": "Diseño y Planificación",
-      "tiempo": "2 semanas",
-      "competencias_especificas": ["..."],
-      "actividades_inicio": ["..."],
-      "actividades_desarrollo": ["..."],
-      "actividades_cierre": ["..."],
+      "numero": 2, "nombre": "Diseño y Planificación", "tiempo": "2 semanas",
+      "competencias_especificas": ["..."], "actividades_inicio": ["..."],
+      "actividades_desarrollo": ["..."], "actividades_cierre": ["..."],
       "steam": {{"ciencia": "...", "tecnologia": "...", "ingenieria": "...", "arte": "...", "matematica": "..."}},
-      "rol_docente": ["..."],
-      "rol_estudiante": ["..."],
-      "recursos": ["..."],
-      "instrumentos_evaluacion": ["..."]
+      "rol_docente": ["..."], "rol_estudiante": ["..."],
+      "recursos": ["..."], "instrumentos_evaluacion": ["..."]
     }},
     {{
-      "numero": 3,
-      "nombre": "Desarrollo y Construcción",
-      "tiempo": "3 semanas",
-      "competencias_especificas": ["..."],
-      "actividades_inicio": ["..."],
-      "actividades_desarrollo": ["..."],
-      "actividades_cierre": ["..."],
+      "numero": 3, "nombre": "Desarrollo y Construcción", "tiempo": "3 semanas",
+      "competencias_especificas": ["..."], "actividades_inicio": ["..."],
+      "actividades_desarrollo": ["..."], "actividades_cierre": ["..."],
       "steam": {{"ciencia": "...", "tecnologia": "...", "ingenieria": "...", "arte": "...", "matematica": "..."}},
-      "rol_docente": ["..."],
-      "rol_estudiante": ["..."],
-      "recursos": ["..."],
-      "instrumentos_evaluacion": ["..."]
+      "rol_docente": ["..."], "rol_estudiante": ["..."],
+      "recursos": ["..."], "instrumentos_evaluacion": ["..."]
     }},
     {{
-      "numero": 4,
-      "nombre": "Presentación y Evaluación",
-      "tiempo": "1 semana",
-      "competencias_especificas": ["..."],
-      "actividades_inicio": ["..."],
-      "actividades_desarrollo": ["..."],
-      "actividades_cierre": ["..."],
+      "numero": 4, "nombre": "Presentación y Evaluación", "tiempo": "1 semana",
+      "competencias_especificas": ["..."], "actividades_inicio": ["..."],
+      "actividades_desarrollo": ["..."], "actividades_cierre": ["..."],
       "steam": {{"ciencia": "...", "tecnologia": "...", "ingenieria": "...", "arte": "...", "matematica": "..."}},
-      "rol_docente": ["..."],
-      "rol_estudiante": ["..."],
-      "recursos": ["..."],
-      "instrumentos_evaluacion": ["..."]
+      "rol_docente": ["..."], "rol_estudiante": ["..."],
+      "recursos": ["..."], "instrumentos_evaluacion": ["..."]
     }}
   ],
   "instrumentos": {{
     "lista_cotejo": [
-      "criterio observable 1",
-      "criterio observable 2",
-      "criterio observable 3",
-      "criterio observable 4",
-      "criterio observable 5",
-      "criterio observable 6"
+      "criterio observable 1", "criterio observable 2", "criterio observable 3",
+      "criterio observable 4", "criterio observable 5", "criterio observable 6"
     ],
     "rubrica_proceso": [
       {{"criterio": "Investigación", "destacado": "...", "satisfactorio": "...", "basico": "...", "en_proceso": "..."}},
@@ -608,29 +611,19 @@ ESTRUCTURA JSON EXACTA (sin markdown, sin texto extra):
   }}
 }}"""
 
-    try:
-        completion = _get_groq_client().chat.completions.create(
+        completion_2 = _get_groq_client().chat.completions.create(
             model="openai/gpt-oss-120b",
             messages=[
                 {"role": "system", "content": prompt_sistema},
-                {"role": "user",   "content": prompt_usuario},
+                {"role": "user",   "content": prompt_usuario_2},
             ],
             temperature=0.65,
-            max_tokens=6500,
+            max_tokens=4500,
             top_p=0.9,
         )
-        raw = completion.choices[0].message.content.strip()
+        bloque_2 = _parse_json_ia(completion_2.choices[0].message.content)
 
-        # Limpiar posibles bloques markdown
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
-            raw = raw.strip()
-        if raw.endswith("```"):
-            raw = raw[:-3].strip()
-
-        plan_json = _json.loads(raw)
+        plan_json = {**bloque_1, **bloque_2}
 
         # ── POST-PROCESAMIENTO: INYECTAR COMPETENCIAS FUNDAMENTALES OFICIALES ──
         # La IA NO genera las 7 competencias (evita el bug de duplicados).
