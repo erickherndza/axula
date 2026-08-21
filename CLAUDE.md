@@ -218,10 +218,11 @@ materias". Verificado en código: eso ya no aplica — `routes/profesor.py::edit
 `grado` desde `/mi-perfil` → Editar perfil, sin restricción de rol y sin restricción para
 *quitar* (es un campo de texto libre separado por `|`, se reemplaza completo con lo que se
 envíe). No hace falta la cuenta `directora` para que Erick ajuste sus propias materias del año
-escolar. Pendiente sin confirmar: el usuario mencionó que vía cuenta `directora`/`admin`
-(`/usuarios`, editando su perfil desde ahí) el cambio de materias no le funcionó — no se
-reprodujo ni se investigó a fondo en esta sesión; revisar `routes/usuarios.py::api_editar`
-(PATCH /api/usuarios/<uid>) si vuelve a reportarse.
+escolar. **Confirmado por el usuario: entró a `/mi-perfil` y pudo editar/quitar materias sin
+problema.** Queda sin reproducir el reporte inicial de que vía `/usuarios` (cuenta
+directora/admin) el cambio no le funcionó — revisar `routes/usuarios.py::api_editar`
+(PATCH /api/usuarios/<uid>) solo si se vuelve a reportar; la vía recomendada de ahora en
+adelante para que un profesor ajuste sus propias materias/grado es `/mi-perfil`, no `/usuarios`.
 
 ### 2026-08-12 (sesión 15 — Usuarios admin + generador planificación 2026)
 
