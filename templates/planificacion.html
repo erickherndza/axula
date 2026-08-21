@@ -1749,16 +1749,29 @@ async function generarPlanificacion() {
         document.getElementById('abp-loading').style.display = 'block';
         document.getElementById('btn-generar-abp').disabled = true;
 
-        // Animar barra de progreso
-        let prog = 0;
+        // Barra de progreso — 3 pasos reales (no simulados)
         const pbar = document.getElementById('abp-progress-bar');
-        const progInterval = setInterval(() => {
-            prog = Math.min(prog + 3, 85);
-            pbar.style.width = prog + '%';
-        }, 600);
+        pbar.style.width = '5%';
+
+        // Genera la planificación en 3 llamadas HTTP independientes en vez de
+        // una sola larga: Render mata el worker en requests largos sin importar
+        // streaming ni actividad (WORKER TIMEOUT), así que cada paso debe ser
+        // corto por sí solo — el navegador arma el plan final combinando los 3.
+        async function _abpPaso(payload) {
+            const res  = await fetch('/api/planificacion/generar-abp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            const data = await res.json();
+            if (!res.ok || data.error) {
+                throw new Error(data.error || 'Error del servidor');
+            }
+            return data;
+        }
 
         try {
-            const payload = {
+            const base = {
                 asignatura,
                 grado:           document.getElementById('abp-grado').value,
                 mencion:         document.getElementById('abp-mencion').value,
@@ -1770,28 +1783,28 @@ async function generarPlanificacion() {
                 contexto_adicional: document.getElementById('abp-contexto').value.trim(),
             };
 
-            const res  = await fetch('/api/planificacion/generar-abp', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-            });
-            const data = await res.json();
+            // Paso 1 — proyecto + currículo
+            const r1 = await _abpPaso({ ...base, paso: 1 });
+            const proyecto  = r1.bloque.proyecto  || {};
+            const curriculo = r1.bloque.curriculo || {};
+            pbar.style.width = '35%';
 
-            clearInterval(progInterval);
+            // Paso 2 — fases 1 y 2
+            const r2 = await _abpPaso({ ...base, paso: 2, proyecto, curriculo });
+            const fasesPrevias = r2.bloque.fases || [];
+            pbar.style.width = '70%';
+
+            // Paso 3 — fases 3-4 + instrumentos + ensamble final (server-side)
+            const r3 = await _abpPaso({ ...base, paso: 3, proyecto, curriculo, fases_previas: fasesPrevias });
             pbar.style.width = '100%';
 
-            if (!res.ok || data.error) {
-                throw new Error(data.error || 'Error del servidor');
-            }
-
-            _planABP = data.plan;
+            _planABP = r3.plan;
             setTimeout(() => {
                 document.getElementById('abp-loading').style.display = 'none';
                 renderPlanABP(_planABP);
             }, 400);
 
         } catch (err) {
-            clearInterval(progInterval);
             document.getElementById('abp-loading').style.display = 'none';
             document.getElementById('abp-estado-inicial').style.display = 'block';
             document.getElementById('abp-estado-inicial').innerHTML = `

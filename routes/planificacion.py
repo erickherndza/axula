@@ -344,16 +344,27 @@ def obtener_curriculo(materia):
 
 @planificacion_bp.route("/api/planificacion/generar-abp", methods=["POST"])
 @login_required
-@rate_limited(max_calls=20, window=60)
+@rate_limited(max_calls=40, window=60)
 def generar_planificacion_abp():
     """
-    Genera el JSON estructurado completo para una planificación ABP MINERD
-    usando LLaMA 3.3-70B con fidelidad al currículo oficial de Bachillerato
-    en Artes (MINERD). Soporta todas las menciones: Multimedia, Artes Visuales,
-    Música y Teatro. Inyecta los saberes oficiales de la asignatura como contexto.
+    Genera el JSON de una planificación ABP MINERD con Claude, en 3 PASOS
+    independientes (paso=1: proyecto+curriculo · paso=2: fases 1-2 ·
+    paso=3: fases 3-4 + instrumentos, entrega el plan final ya combinado).
+
+    Por qué 3 llamadas HTTP separadas y no una sola: en Render, una sola
+    llamada larga a Claude (incluso con streaming) termina en
+    "CRITICAL WORKER TIMEOUT" — gunicorn mata el worker por duración total
+    del request sin importar si hay actividad, y cambiar --timeout en
+    Procfile/render.yaml no tuvo efecto (probablemente el Start Command
+    real en el dashboard de Render es otro). La única forma confiable de
+    evitarlo es que cada request individual sea corta — el frontend hace
+    3 fetch() secuenciales en vez de que el backend haga 1 llamada larga.
     """
+    import anthropic
+
     u = get_usuario()
     data = request.get_json(silent=True) or {}
+    paso = data.get("paso", 1)
 
     asignatura   = (data.get("asignatura") or "").strip()
     grado        = (data.get("grado") or "4to").strip()
@@ -370,88 +381,92 @@ def generar_planificacion_abp():
 
     nombre_docente = u.get("nombre", "")
 
-    # ── CONTEXTO OFICIAL DEL CURRÍCULO ─────────────────────────────────────
-    curriculo_oficial = _curriculo_fmt(mencion, asignatura)
-    datos_oficiales   = _curriculo_get(mencion, asignatura)
-
-    # ── CONTEXTO RAG — normativa vigente subida por el centro ─────────────
-    rag_contexto = ""
-    try:
-        rag_consulta = f"planificación {asignatura} {grado} bachillerato artes {mencion.lower()} ordenanza"
-        rag_contexto = buscar_chunks(get_db(), rag_consulta, top_k=4, max_chars_total=2500, mencion=mencion)
-    except Exception as _rag_err:
-        logger.warning(f"[RAG] No se pudo recuperar contexto: {_rag_err}")
-
-    # ── PROMPT DEL SISTEMA ─────────────────────────────────────────────────
     prompt_sistema = f"""Eres un experto en planificación curricular ABP para la Modalidad en Artes del MINERD
 de la República Dominicana, especializado en Bachillerato en Arte Multimedia
 (C.E. Benito Juárez — Mención {mencion}).
 
-Conoces el esquema oficial MINERD/DEMA con sus 4 bloques: IDENTIFICACIÓN,
-ELEMENTOS DE LA UNIDAD, FASES ABP (4 fases) e INSTRUMENTOS DE EVALUACIÓN.
-
 REGLAS CRÍTICAS:
 1. SIEMPRE respondes ÚNICAMENTE con JSON válido, sin texto antes ni después, sin markdown.
 2. NO repites contenido entre secciones — cada campo debe tener información única y específica.
-3. Usas EXCLUSIVAMENTE los saberes oficiales que te proporciono del plan MINERD,
-   no inventes contenidos genéricos. Si amplías, mantén el enfoque oficial.
-4. Las actividades deben ser ESPECÍFICAS de la asignatura, con verbos de acción
+3. Las actividades deben ser ESPECÍFICAS de la asignatura, con verbos de acción
    (investiga, diseña, produce, presenta), no frases vacías.
-5. La integración STEAM debe incluir los 5 elementos (Ciencia, Tecnología, Ingeniería, Arte, Matemática)
-   con ejemplos aplicados al proyecto concreto.
-6. Las 4 fases ABP son fijas y en este orden: Exploración e Investigación, Diseño y Planificación,
-   Desarrollo y Construcción, Presentación y Evaluación.
+4. La integración STEAM debe incluir los 5 elementos (Ciencia, Tecnología, Ingeniería, Arte, Matemática)
+   aplicados específicamente al proyecto."""
 
-{rag_contexto if rag_contexto else ""}"""
+    def _parse_json_ia(raw: str) -> dict:
+        raw = raw.strip()
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+            raw = raw.strip()
+        if raw.endswith("```"):
+            raw = raw[:-3].strip()
+        return _json.loads(raw)
 
-    # ── PROMPT DEL USUARIO ─────────────────────────────────────────────────
-    prompt_usuario = f"""Genera una planificación ABP oficial MINERD para:
+    def _claude_json(prompt_usuario, max_tokens, etiqueta):
+        response = _get_anthropic_client().messages.create(
+            model="claude-sonnet-5",
+            max_tokens=max_tokens,
+            system=prompt_sistema,
+            messages=[{"role": "user", "content": prompt_usuario}],
+            output_config={"effort": "low"},
+        )
+        raw = next((b.text for b in response.content if b.type == "text"), "").strip()
+        logger.info(
+            f"[IA] Claude ABP {etiqueta} OK | stop_reason={response.stop_reason} "
+            f"output_tokens={response.usage.output_tokens}"
+        )
+        try:
+            return _parse_json_ia(raw)
+        except _json.JSONDecodeError:
+            logger.error(f"[IA] ABP JSON inválido ({etiqueta}) | últimos 300 chars: ...{raw[-300:]}")
+            raise
+
+    try:
+        if paso == 1:
+            # ── PASO 1 — PROYECTO + CURRÍCULO ────────────────────────────
+            curriculo_oficial = _curriculo_fmt(mencion, asignatura)
+            rag_contexto = ""
+            try:
+                rag_consulta = f"planificación {asignatura} {grado} bachillerato artes {mencion.lower()} ordenanza"
+                rag_contexto = buscar_chunks(get_db(), rag_consulta, top_k=2, max_chars_total=1200, mencion=mencion)
+            except Exception as _rag_err:
+                logger.warning(f"[RAG] No se pudo recuperar contexto: {_rag_err}")
+
+            datos_proyecto = (
+                f"- Asignatura: {asignatura}\n"
+                f"- Docente: {nombre_docente}\n"
+                f"- Grado: {grado} — Mención {mencion.title()}\n"
+                f"- Título del proyecto: {titulo if titulo else '(inventa un título creativo y específico al proyecto)'}\n"
+                f"- Fecha inicio: {fecha_inicio if fecha_inicio else '(período actual)'}\n"
+                f"- Fecha cierre: {fecha_cierre if fecha_cierre else '(al finalizar el período)'}\n"
+                f"- Duración: {duracion if duracion else '2 meses (8 semanas aproximadamente)'}\n"
+                f"- Producto final esperado: {producto if producto else '(sugiere el producto final típico de esta asignatura)'}\n"
+                + (f"- Contexto adicional del docente: {contexto_ia}\n" if contexto_ia else "")
+            )
+
+            prompt_usuario = f"""Genera el bloque de PROYECTO y CURRÍCULO de una planificación ABP oficial MINERD.
 
 DATOS DEL PROYECTO:
-- Asignatura: {asignatura}
-- Docente: {nombre_docente}
-- Grado: {grado} — Mención {mencion.title()}
-- Título del proyecto: {titulo if titulo else "(inventa un título creativo y específico al proyecto)"}
-- Fecha inicio: {fecha_inicio if fecha_inicio else "(período actual)"}
-- Fecha cierre: {fecha_cierre if fecha_cierre else "(al finalizar el período)"}
-- Duración: {duracion if duracion else "2 meses (8 semanas aproximadamente)"}
-- Producto final esperado: {producto if producto else "(sugiere el producto final típico de esta asignatura)"}
-{f"- Contexto adicional del docente: {contexto_ia}" if contexto_ia else ""}
+{datos_proyecto}
 
 CURRÍCULO OFICIAL MINERD PARA ESTA ASIGNATURA:
 {curriculo_oficial if curriculo_oficial else "(No hay datos oficiales — usa tu conocimiento del currículo de Bachillerato en Arte Multimedia MINERD)"}
 
-INSTRUCCIONES ESPECÍFICAS PARA EL JSON:
+{rag_contexto if rag_contexto else ""}
 
-1. **curriculo.contenidos**: Usa los saberes oficiales listados arriba. Selecciona
-   los 4-6 más relevantes al proyecto propuesto. NO los repitas entre conceptuales,
-   procedimentales y actitudinales — cada categoría debe tener contenido distinto.
+INSTRUCCIONES:
+1. curriculo.contenidos: 4-6 saberes oficiales más relevantes al proyecto, sin repetir entre
+   conceptuales/procedimentales/actitudinales.
+2. curriculo.rae: usa los RAEs oficiales de arriba, o derívalos del Elemento de Competencia oficial.
+3. curriculo.elementos_competencia: cita el Elemento de Competencia oficial (párrafo completo)
+   y añade 2-3 indicadores observables derivados.
+4. curriculo.problema: párrafo contextual sobre una situación real de los estudiantes
+   dominicanos que el proyecto resuelve.
+5. curriculo.pregunta: UNA pregunta desafiante abierta, iniciando con "¿Cómo..." o "¿De qué manera...".
 
-2. **curriculo.rae**: Usa los RAEs oficiales listados arriba, o derívalos del
-   Elemento de Competencia oficial.
-
-3. **curriculo.elementos_competencia**: Cita el Elemento de Competencia oficial
-   (párrafo completo) y añade 2-3 indicadores observables derivados.
-
-4. **curriculo.problema**: Redacta un párrafo contextual que explique una
-   situación real de los estudiantes dominicanos que el proyecto viene a resolver.
-   Debe conectar con la realidad del joven dominicano.
-
-5. **curriculo.pregunta**: Formula UNA pregunta desafiante abierta que guíe
-   todo el proyecto. Debe empezar con "¿Cómo..." o "¿De qué manera...".
-
-6. **fases**: Genera LAS 4 FASES en orden. Cada fase debe tener:
-   - Actividades concretas (3-5 actividades con verbos de acción) distribuidas
-     en momentos de Inicio, Desarrollo y Cierre.
-   - Los 5 elementos STEAM aplicados específicamente al proyecto.
-   - Roles específicos del docente y del estudiante (no genéricos).
-   - Recursos materiales/digitales concretos.
-   - Instrumentos de evaluación específicos (lista de cotejo, rúbrica, registro anecdótico, etc).
-
-7. **instrumentos**: Genera lista de cotejo con 6-8 criterios específicos al producto final,
-   rúbrica de proceso con 3 niveles de dominio, rúbrica final con 4 criterios de 20 pts c/u.
-
-ESTRUCTURA JSON EXACTA (sin markdown, sin texto extra; NO incluyas un campo "docente" — el sistema lo completa aparte):
+Responde SOLO este JSON (sin markdown, sin texto extra):
 
 {{
   "proyecto": {{
@@ -472,79 +487,102 @@ ESTRUCTURA JSON EXACTA (sin markdown, sin texto extra; NO incluyas un campo "doc
     "elementos_competencia": ["elemento competencia oficial", "indicador observable 1", "indicador observable 2"],
     "problema": "párrafo contextualizado sobre la situación real que motiva el proyecto",
     "pregunta": "¿Pregunta desafiante abierta que guíe todo el proyecto?"
-  }},
+  }}
+}}"""
+            bloque = _claude_json(prompt_usuario, max_tokens=1600, etiqueta="paso1")
+            return jsonify({"ok": True, "bloque": bloque})
+
+        elif paso in (2, 3):
+            proyecto_prev  = data.get("proyecto") or {}
+            curriculo_prev = data.get("curriculo") or {}
+            curriculo_resumen = _json.dumps({
+                "rae": curriculo_prev.get("rae", []),
+                "contenidos": curriculo_prev.get("contenidos", {}),
+            }, ensure_ascii=False)
+
+            contexto_proyecto = f"""PROYECTO:
+- Asignatura: {asignatura} | Grado: {grado} Mención {mencion.title()}
+- Título: {proyecto_prev.get('titulo') or titulo or '(coherente con el currículo dado)'}
+- Producto final: {proyecto_prev.get('producto_final') or producto or '(coherente con la asignatura)'}
+
+CURRÍCULO YA DEFINIDO (úsalo como base, no lo repitas literal):
+{curriculo_resumen}
+
+REGLAS DE LAS FASES:
+- Cada fase: 3-5 actividades con verbos de acción, distribuidas en Inicio/Desarrollo/Cierre.
+- Roles específicos del docente y del estudiante (no genéricos). Recursos concretos.
+- Instrumentos de evaluación específicos por fase."""
+
+            if paso == 2:
+                # ── PASO 2 — FASES 1 y 2 ─────────────────────────────────
+                prompt_usuario = f"""Genera las FASES 1 (Exploración e Investigación) y 2 (Diseño y Planificación)
+de una planificación ABP oficial MINERD.
+
+{contexto_proyecto}
+
+Responde SOLO este JSON (sin markdown, sin texto extra):
+
+{{
   "fases": [
     {{
-      "numero": 1,
-      "nombre": "Exploración e Investigación",
-      "tiempo": "2 semanas",
+      "numero": 1, "nombre": "Exploración e Investigación", "tiempo": "2 semanas",
       "competencias_especificas": ["competencia laboral 1", "competencia laboral 2"],
       "actividades_inicio": ["actividad 1", "actividad 2"],
       "actividades_desarrollo": ["actividad 1", "actividad 2", "actividad 3"],
       "actividades_cierre": ["actividad de cierre"],
-      "steam": {{
-        "ciencia": "aplicación científica específica",
-        "tecnologia": "herramientas tecnológicas a usar",
-        "ingenieria": "análisis estructural/proceso",
-        "arte": "dimensión artística/estética",
-        "matematica": "dimensión matemática/lógica"
-      }},
+      "steam": {{"ciencia": "...", "tecnologia": "...", "ingenieria": "...", "arte": "...", "matematica": "..."}},
       "rol_docente": ["acción docente 1", "acción docente 2", "acción docente 3"],
       "rol_estudiante": ["acción estudiante 1", "acción estudiante 2"],
       "recursos": ["recurso 1", "recurso 2", "recurso 3"],
       "instrumentos_evaluacion": ["instrumento 1", "instrumento 2"]
     }},
     {{
-      "numero": 2,
-      "nombre": "Diseño y Planificación",
-      "tiempo": "2 semanas",
-      "competencias_especificas": ["..."],
-      "actividades_inicio": ["..."],
-      "actividades_desarrollo": ["..."],
-      "actividades_cierre": ["..."],
+      "numero": 2, "nombre": "Diseño y Planificación", "tiempo": "2 semanas",
+      "competencias_especificas": ["...", "..."], "actividades_inicio": ["...", "..."],
+      "actividades_desarrollo": ["...", "...", "..."], "actividades_cierre": ["..."],
       "steam": {{"ciencia": "...", "tecnologia": "...", "ingenieria": "...", "arte": "...", "matematica": "..."}},
-      "rol_docente": ["..."],
-      "rol_estudiante": ["..."],
-      "recursos": ["..."],
-      "instrumentos_evaluacion": ["..."]
+      "rol_docente": ["...", "...", "..."], "rol_estudiante": ["...", "..."],
+      "recursos": ["...", "...", "..."], "instrumentos_evaluacion": ["...", "..."]
+    }}
+  ]
+}}"""
+                bloque = _claude_json(prompt_usuario, max_tokens=3000, etiqueta="paso2")
+                return jsonify({"ok": True, "bloque": bloque})
+
+            # ── PASO 3 — FASES 3-4 + INSTRUMENTOS + ENSAMBLE FINAL ────────
+            prompt_usuario = f"""Genera las FASES 3 (Desarrollo y Construcción) y 4 (Presentación y Evaluación),
+y los INSTRUMENTOS DE EVALUACIÓN de una planificación ABP oficial MINERD.
+
+{contexto_proyecto}
+
+instrumentos: lista de cotejo con 6-8 criterios específicos al producto final,
+rúbrica de proceso con 3 niveles de dominio, rúbrica final con 4 criterios de 20 pts c/u.
+
+Responde SOLO este JSON (sin markdown, sin texto extra):
+
+{{
+  "fases": [
+    {{
+      "numero": 3, "nombre": "Desarrollo y Construcción", "tiempo": "3 semanas",
+      "competencias_especificas": ["...", "..."], "actividades_inicio": ["...", "..."],
+      "actividades_desarrollo": ["...", "...", "..."], "actividades_cierre": ["..."],
+      "steam": {{"ciencia": "...", "tecnologia": "...", "ingenieria": "...", "arte": "...", "matematica": "..."}},
+      "rol_docente": ["...", "...", "..."], "rol_estudiante": ["...", "..."],
+      "recursos": ["...", "...", "..."], "instrumentos_evaluacion": ["...", "..."]
     }},
     {{
-      "numero": 3,
-      "nombre": "Desarrollo y Construcción",
-      "tiempo": "3 semanas",
-      "competencias_especificas": ["..."],
-      "actividades_inicio": ["..."],
-      "actividades_desarrollo": ["..."],
-      "actividades_cierre": ["..."],
+      "numero": 4, "nombre": "Presentación y Evaluación", "tiempo": "1 semana",
+      "competencias_especificas": ["...", "..."], "actividades_inicio": ["...", "..."],
+      "actividades_desarrollo": ["...", "...", "..."], "actividades_cierre": ["..."],
       "steam": {{"ciencia": "...", "tecnologia": "...", "ingenieria": "...", "arte": "...", "matematica": "..."}},
-      "rol_docente": ["..."],
-      "rol_estudiante": ["..."],
-      "recursos": ["..."],
-      "instrumentos_evaluacion": ["..."]
-    }},
-    {{
-      "numero": 4,
-      "nombre": "Presentación y Evaluación",
-      "tiempo": "1 semana",
-      "competencias_especificas": ["..."],
-      "actividades_inicio": ["..."],
-      "actividades_desarrollo": ["..."],
-      "actividades_cierre": ["..."],
-      "steam": {{"ciencia": "...", "tecnologia": "...", "ingenieria": "...", "arte": "...", "matematica": "..."}},
-      "rol_docente": ["..."],
-      "rol_estudiante": ["..."],
-      "recursos": ["..."],
-      "instrumentos_evaluacion": ["..."]
+      "rol_docente": ["...", "...", "..."], "rol_estudiante": ["...", "..."],
+      "recursos": ["...", "...", "..."], "instrumentos_evaluacion": ["...", "..."]
     }}
   ],
   "instrumentos": {{
     "lista_cotejo": [
-      "criterio observable 1",
-      "criterio observable 2",
-      "criterio observable 3",
-      "criterio observable 4",
-      "criterio observable 5",
-      "criterio observable 6"
+      "criterio observable 1", "criterio observable 2", "criterio observable 3",
+      "criterio observable 4", "criterio observable 5", "criterio observable 6"
     ],
     "rubrica_proceso": [
       {{"criterio": "Investigación", "destacado": "...", "satisfactorio": "...", "basico": "...", "en_proceso": "..."}},
@@ -559,90 +597,61 @@ ESTRUCTURA JSON EXACTA (sin markdown, sin texto extra; NO incluyas un campo "doc
     ]
   }}
 }}"""
+            bloque_3 = _claude_json(prompt_usuario, max_tokens=3600, etiqueta="paso3")
 
-    import anthropic
+            # ── ENSAMBLE FINAL — combina los 3 bloques + post-procesamiento ──
+            fases_previas = data.get("fases_previas") or []
+            plan_json = {
+                "proyecto": proyecto_prev,
+                "curriculo": dict(curriculo_prev),
+                "fases": list(fases_previas) + list(bloque_3.get("fases", [])),
+                "instrumentos": bloque_3.get("instrumentos", {}),
+            }
 
-    try:
-        # Streaming: una llamada bloqueante no devuelve ni un byte hasta que
-        # Claude termina TODO (thinking + JSON completo) — con max_tokens
-        # alto eso tardó más que el timeout del worker en Render y lo mató
-        # (WORKER TIMEOUT). Con stream + effort medio empieza a llegar
-        # respuesta de inmediato y se genera más rápido en general.
-        with _get_anthropic_client().messages.stream(
-            model="claude-sonnet-5",
-            max_tokens=16000,
-            system=prompt_sistema,
-            messages=[{"role": "user", "content": prompt_usuario}],
-            output_config={"effort": "medium"},
-        ) as stream:
-            response = stream.get_final_message()
-        raw = next((b.text for b in response.content if b.type == "text"), "").strip()
-        logger.info(
-            f"[IA] Claude ABP OK | stop_reason={response.stop_reason} "
-            f"output_tokens={response.usage.output_tokens} raw_len={len(raw)}"
-        )
+            datos_oficiales = _curriculo_get(mencion, asignatura)
 
-        # Limpiar posibles bloques markdown
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
-            raw = raw.strip()
-        if raw.endswith("```"):
-            raw = raw[:-3].strip()
+            # La IA NO genera las 7 competencias (evita el bug de duplicados);
+            # se inyectan desde el código con los nombres oficiales exactos.
+            plan_json["curriculo"]["competencias_fundamentales"] = list(COMPETENCIAS_FUNDAMENTALES)
 
-        try:
-            plan_json = _json.loads(raw)
-        except _json.JSONDecodeError:
-            logger.error(
-                f"[IA] ABP JSON inválido | stop_reason={response.stop_reason} | "
-                f"últimos 300 chars: ...{raw[-300:]}"
-            )
-            raise
+            # Datos del docente: siempre los reales del usuario, no lo que invente la IA.
+            plan_json["docente"] = {
+                "nombre_completo": nombre_docente,
+                "asignatura": asignatura,
+                "grado": f"{grado} {mencion.title()}",
+                "mencion": mencion.title(),
+                "centro": "Centro Educativo en Artes Benito Juárez",
+            }
+            if datos_oficiales.get("modulo"):
+                plan_json["docente"]["modulo"] = datos_oficiales["modulo"]
+            if datos_oficiales.get("horas"):
+                plan_json["docente"]["horas_semanales"] = datos_oficiales["horas"]
 
-        # ── POST-PROCESAMIENTO: INYECTAR COMPETENCIAS FUNDAMENTALES OFICIALES ──
-        # La IA NO genera las 7 competencias (evita el bug de duplicados).
-        # Las inyectamos desde el código con los nombres oficiales exactos.
-        if "curriculo" not in plan_json:
-            plan_json["curriculo"] = {}
-        plan_json["curriculo"]["competencias_fundamentales"] = list(COMPETENCIAS_FUNDAMENTALES)
-
-        # Asegurar que los datos del docente sean los correctos (no lo que la IA invente)
-        plan_json["docente"] = plan_json.get("docente", {})
-        plan_json["docente"]["nombre_completo"] = nombre_docente
-        plan_json["docente"]["asignatura"] = asignatura
-        plan_json["docente"]["grado"] = f"{grado} {mencion.title()}"
-        plan_json["docente"]["mencion"] = mencion.title()
-        plan_json["docente"]["centro"] = "Centro Educativo en Artes Benito Juárez"
-        if datos_oficiales.get("modulo"):
-            plan_json["docente"]["modulo"] = datos_oficiales["modulo"]
-        if datos_oficiales.get("horas"):
-            plan_json["docente"]["horas_semanales"] = datos_oficiales["horas"]
-
-        # Validación: las 4 fases deben estar en orden
-        if "fases" in plan_json and isinstance(plan_json["fases"], list):
+            # Validación: las 4 fases deben estar en orden correcto.
             nombres_correctos = list(FASES_ABP)
             for i, fase in enumerate(plan_json["fases"][:4]):
                 if i < len(nombres_correctos):
                     fase["nombre"] = nombres_correctos[i]
                     fase["numero"] = i + 1
 
-        return jsonify({"ok": True, "plan": plan_json})
+            return jsonify({"ok": True, "plan": plan_json})
 
-    except _json.JSONDecodeError as ex:
-        logger.error(f"[IA] ABP JSON inválido: {ex}")
+        else:
+            return jsonify({"error": "Paso inválido"}), 400
+
+    except _json.JSONDecodeError:
         return jsonify({"error": "La IA devolvió un formato inesperado. Intenta de nuevo."}), 500
     except anthropic.RateLimitError as ex:
-        logger.warning(f"[IA] Claude 429 (rate limit) en planificación ABP: {ex}")
+        logger.warning(f"[IA] Claude 429 (rate limit) en planificación ABP paso {paso}: {ex}")
         return jsonify({
             "error": "El servicio de IA alcanzó su límite temporal de uso. "
                      "Espera unos segundos y vuelve a intentar."
         }), 429
     except anthropic.APIStatusError as ex:
-        logger.error(f"[IA] Error de Claude generando planificación ABP: {ex}")
+        logger.error(f"[IA] Error de Claude generando planificación ABP paso {paso}: {ex}")
         return jsonify({"error": "Error generando la planificación. Intenta de nuevo."}), 500
     except Exception as ex:
-        logger.error(f"[IA] Error generando planificación ABP: {ex}")
+        logger.error(f"[IA] Error generando planificación ABP paso {paso}: {ex}")
         return jsonify({"error": "Error generando la planificación. Intenta de nuevo."}), 500
 
 
