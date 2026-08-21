@@ -417,7 +417,7 @@ def generar_planificacion_abp():
     rag_contexto = ""
     try:
         rag_consulta = f"planificación {asignatura} {grado} bachillerato artes {mencion.lower()} ordenanza"
-        rag_contexto = buscar_chunks(get_db(), rag_consulta, top_k=4, max_chars_total=2500, mencion=mencion)
+        rag_contexto = buscar_chunks(get_db(), rag_consulta, top_k=2, max_chars_total=1200, mencion=mencion)
     except Exception as _rag_err:
         logger.warning(f"[RAG] No se pudo recuperar contexto: {_rag_err}")
 
@@ -448,10 +448,12 @@ REGLAS CRÍTICAS:
         return _json.loads(raw)
 
     class _GroqRateLimitError(Exception):
-        def __init__(self, espera):
+        def __init__(self, espera, etiqueta, detalle):
             self.espera = espera
+            self.etiqueta = etiqueta
+            self.detalle = detalle
 
-    def _groq_completion(messages, max_tokens):
+    def _groq_completion(messages, max_tokens, etiqueta):
         """Llama a Groq. En 429 (TPM) falla YA (sin sleep bloqueante — el timeout
         real del worker en Render no está garantizado) para que el request pueda
         devolver un error claro y el usuario reintente con el botón de la UI."""
@@ -476,7 +478,7 @@ REGLAS CRÍTICAS:
                     espera = min(float(retry_after), 55)
                 except ValueError:
                     pass
-            raise _GroqRateLimitError(espera) from ex
+            raise _GroqRateLimitError(espera, etiqueta, str(ex)) from ex
 
     datos_proyecto = (
         f"- Asignatura: {asignatura}\n"
@@ -541,7 +543,8 @@ Responde SOLO este JSON (sin markdown, sin texto extra):
                 {"role": "system", "content": prompt_sistema},
                 {"role": "user",   "content": prompt_usuario_1},
             ],
-            max_tokens=1600,
+            max_tokens=1400,
+            etiqueta="llamada1:proyecto+curriculo",
         )
         bloque_1 = _parse_json_ia(completion_1.choices[0].message.content)
 
@@ -644,7 +647,8 @@ Responde SOLO este JSON (sin markdown, sin texto extra):
                 {"role": "system", "content": prompt_sistema},
                 {"role": "user",   "content": prompt_usuario_2},
             ],
-            max_tokens=4500,
+            max_tokens=4000,
+            etiqueta="llamada2:fases+instrumentos",
         )
         bloque_2 = _parse_json_ia(completion_2.choices[0].message.content)
 
@@ -680,7 +684,9 @@ Responde SOLO este JSON (sin markdown, sin texto extra):
         return jsonify({"ok": True, "plan": plan_json})
 
     except _GroqRateLimitError as ex:
-        logger.warning(f"[IA] Groq 429 (TPM) en planificación ABP — sugerido esperar {ex.espera:.0f}s")
+        logger.warning(
+            f"[IA] Groq 429 (TPM) en {ex.etiqueta} — sugerido esperar {ex.espera:.0f}s | {ex.detalle}"
+        )
         return jsonify({
             "error": f"El servicio de IA alcanzó su límite temporal de uso. "
                      f"Espera unos {ex.espera:.0f} segundos y vuelve a intentar."
