@@ -563,12 +563,19 @@ ESTRUCTURA JSON EXACTA (sin markdown, sin texto extra; NO incluyas un campo "doc
     import anthropic
 
     try:
-        response = _get_anthropic_client().messages.create(
+        # Streaming: una llamada bloqueante no devuelve ni un byte hasta que
+        # Claude termina TODO (thinking + JSON completo) — con max_tokens
+        # alto eso tardó más que el timeout del worker en Render y lo mató
+        # (WORKER TIMEOUT). Con stream + effort medio empieza a llegar
+        # respuesta de inmediato y se genera más rápido en general.
+        with _get_anthropic_client().messages.stream(
             model="claude-sonnet-5",
             max_tokens=16000,
             system=prompt_sistema,
             messages=[{"role": "user", "content": prompt_usuario}],
-        )
+            output_config={"effort": "medium"},
+        ) as stream:
+            response = stream.get_final_message()
         raw = next((b.text for b in response.content if b.type == "text"), "").strip()
         logger.info(
             f"[IA] Claude ABP OK | stop_reason={response.stop_reason} "
