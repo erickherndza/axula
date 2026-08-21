@@ -24,6 +24,7 @@ from core.helpers import (
     _periodo_actual, _audit,
 )
 from core import grades as G
+from core.ia import generar_con_fallback
 from core.evaluacion_engine import (
     get_puntos_usados_periodo, validar_puntos_actividad,
     calcular_nota_periodo, calcular_nota_final_area,
@@ -500,17 +501,10 @@ Genera una retroalimentación pedagógica breve (máximo 4 oraciones) que:
 Responde SOLO con el párrafo de retroalimentación, sin títulos, sin bullets."""
 
     try:
-        client = _get_groq_client()
-        resp = client.chat.completions.create(
-            model="openai/gpt-oss-120b",
-            messages=[{"role":"user","content":prompt}],
-            max_tokens=250,
-            temperature=0.6,
-        )
-        texto = resp.choices[0].message.content.strip()
+        texto = generar_con_fallback(prompt, max_tokens=250, temperature=0.6)
         return jsonify({"ok": True, "retroalimentacion": texto})
     except Exception as ex:
-        logger.warning(f"[EVAL-IA] Groq error: {ex}")
+        logger.warning(f"[EVAL-IA] Error IA: {ex}")
         return jsonify({"error": "Servicio IA no disponible temporalmente"}), 503
 
 

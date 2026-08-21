@@ -26,7 +26,7 @@ from core.helpers import *
 from core.ia import (
     _get_groq_client, _get_anthropic_client, groq_client, construir_prompt,
     construir_prompt_planificacion, construir_prompt_rubrica, construir_prompt_estrategia,
-    buscar_cache_semantico, guardar_cache_ia, incrementar_uso_cache,
+    buscar_cache_semantico, guardar_cache_ia, incrementar_uso_cache, generar_con_fallback,
 )
 from core.excel import _parsear_boletin_bj, _buscar_o_crear_estudiante, _detectar_mencion_listado, _limpiar_nota
 from core.pdf import _generar_pdf_acuerdo
@@ -106,21 +106,16 @@ def generar_planificacion():
             f"Mantén la estructura de 8 secciones. Máximo 500 palabras."
         )
         try:
-            completion = _get_groq_client().chat.completions.create(
-                model="openai/gpt-oss-120b",
-                messages=[
-                    {"role": "system", "content":
-                        "Eres un experto en planificación curricular para la Modalidad de Artes "
-                        f"mención {mencion} del bachillerato dominicano. Respondes en español."},
-                    {"role": "user", "content": adaptation_prompt},
-                ],
+            resultado = generar_con_fallback(
+                adaptation_prompt,
+                prompt_sistema=(
+                    "Eres un experto en planificación curricular para la Modalidad de Artes "
+                    f"mención {mencion} del bachillerato dominicano. Respondes en español."
+                ),
                 temperature=0.6,
                 max_tokens=800,
-                top_p=0.9,
             )
-            resultado = completion.choices[0].message.content.strip()
-            tokens    = completion.usage.total_tokens if completion.usage else 800
-            guardar_cache_ia("planificacion", grado, materia, tema, None, resultado, tokens, u["id"])
+            guardar_cache_ia("planificacion", grado, materia, tema, None, resultado, 800, u["id"])
             return jsonify({
                 "resultado": resultado,
                 "tipo": "planificacion",
@@ -149,25 +144,13 @@ def generar_planificacion():
         if _rag_ctx:
             _sys_content += f"\n\n{_rag_ctx}"
 
-        completion = _get_groq_client().chat.completions.create(
-            model="openai/gpt-oss-120b",
-            messages=[
-                {
-                    "role": "system",
-                    "content": _sys_content,
-                },
-                {
-                    "role": "user",
-                    "content": construir_prompt_planificacion(materia, grado, tema, duracion, nivel, mencion)
-                }
-            ],
+        resultado = generar_con_fallback(
+            construir_prompt_planificacion(materia, grado, tema, duracion, nivel, mencion),
+            prompt_sistema=_sys_content,
             temperature=0.7,
             max_tokens=1200,
-            top_p=0.9,
         )
-        resultado = completion.choices[0].message.content.strip()
-        tokens    = completion.usage.total_tokens if completion.usage else 1200
-        guardar_cache_ia("planificacion", grado, materia, tema, None, resultado, tokens, u["id"])
+        guardar_cache_ia("planificacion", grado, materia, tema, None, resultado, 1200, u["id"])
         return jsonify({"resultado": resultado, "tipo": "planificacion", "from_cache": False})
 
     except Exception as ex:
@@ -190,26 +173,15 @@ def generar_rubrica():
         return jsonify({"error": "Materia e indicador son requeridos"}), 400
 
     try:
-        completion = _get_groq_client().chat.completions.create(
-            model="openai/gpt-oss-120b",
-            messages=[
-                {
-                    "role": "system",
-                    "content": (
-                        "Eres un experto en evaluación educativa para la Modalidad de Artes "
-                        "del bachillerato dominicano. Creas rúbricas prácticas y alineadas al MINERD."
-                    )
-                },
-                {
-                    "role": "user",
-                    "content": construir_prompt_rubrica(materia, indicador, nivel)
-                }
-            ],
+        resultado = generar_con_fallback(
+            construir_prompt_rubrica(materia, indicador, nivel),
+            prompt_sistema=(
+                "Eres un experto en evaluación educativa para la Modalidad de Artes "
+                "del bachillerato dominicano. Creas rúbricas prácticas y alineadas al MINERD."
+            ),
             temperature=0.5,
             max_tokens=800,
-            top_p=0.9
         )
-        resultado = completion.choices[0].message.content.strip()
         return jsonify({"resultado": resultado, "tipo": "rubrica"})
 
     except Exception as ex:
@@ -232,27 +204,16 @@ def generar_estrategia():
         return jsonify({"error": "Materia y problema son requeridos"}), 400
 
     try:
-        completion = _get_groq_client().chat.completions.create(
-            model="openai/gpt-oss-120b",
-            messages=[
-                {
-                    "role": "system",
-                    "content": (
-                        "Eres un orientador pedagógico experto en la Modalidad de Artes "
-                        "del bachillerato dominicano. Ofreces estrategias didácticas prácticas "
-                        "y contextualizadas para el sistema educativo de RD."
-                    )
-                },
-                {
-                    "role": "user",
-                    "content": construir_prompt_estrategia(materia, problema, perfil)
-                }
-            ],
+        resultado = generar_con_fallback(
+            construir_prompt_estrategia(materia, problema, perfil),
+            prompt_sistema=(
+                "Eres un orientador pedagógico experto en la Modalidad de Artes "
+                "del bachillerato dominicano. Ofreces estrategias didácticas prácticas "
+                "y contextualizadas para el sistema educativo de RD."
+            ),
             temperature=0.7,
             max_tokens=700,
-            top_p=0.9
         )
-        resultado = completion.choices[0].message.content.strip()
         return jsonify({"resultado": resultado, "tipo": "estrategia"})
 
     except Exception as ex:
@@ -604,11 +565,15 @@ ESTRUCTURA JSON EXACTA (sin markdown, sin texto extra; NO incluyas un campo "doc
     try:
         response = _get_anthropic_client().messages.create(
             model="claude-sonnet-5",
-            max_tokens=8000,
+            max_tokens=16000,
             system=prompt_sistema,
             messages=[{"role": "user", "content": prompt_usuario}],
         )
         raw = next((b.text for b in response.content if b.type == "text"), "").strip()
+        logger.info(
+            f"[IA] Claude ABP OK | stop_reason={response.stop_reason} "
+            f"output_tokens={response.usage.output_tokens} raw_len={len(raw)}"
+        )
 
         # Limpiar posibles bloques markdown
         if raw.startswith("```"):
@@ -619,7 +584,14 @@ ESTRUCTURA JSON EXACTA (sin markdown, sin texto extra; NO incluyas un campo "doc
         if raw.endswith("```"):
             raw = raw[:-3].strip()
 
-        plan_json = _json.loads(raw)
+        try:
+            plan_json = _json.loads(raw)
+        except _json.JSONDecodeError:
+            logger.error(
+                f"[IA] ABP JSON inválido | stop_reason={response.stop_reason} | "
+                f"últimos 300 chars: ...{raw[-300:]}"
+            )
+            raise
 
         # ── POST-PROCESAMIENTO: INYECTAR COMPETENCIAS FUNDAMENTALES OFICIALES ──
         # La IA NO genera las 7 competencias (evita el bug de duplicados).

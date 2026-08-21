@@ -25,7 +25,7 @@ from core.auth import (
 from core.helpers import *
 from core.helpers import _anonimizar_estudiante, _buscar_estudiante_bd, _calcular_bienestar_emocional, _calcular_indice_conductual, _features_para_clustering, _get_profesor, _recalcular_indicadores, _validar_materia_profesor, _validar_magic_imagen, _normalizar_clave_materia, _dedup_materias
 from core import rls as _rls
-from core.ia import _get_groq_client, groq_client, construir_prompt, construir_prompt_planificacion, construir_prompt_rubrica, construir_prompt_estrategia
+from core.ia import _get_groq_client, groq_client, construir_prompt, construir_prompt_planificacion, construir_prompt_rubrica, construir_prompt_estrategia, generar_con_fallback
 from core.excel import _parsear_boletin_bj, _buscar_o_crear_estudiante, _detectar_mencion_listado, _limpiar_nota
 from core.pdf import _generar_pdf_acuerdo
 
@@ -857,28 +857,16 @@ def generar_analisis_ia(id):
         return jsonify({"analisis": e["ia_analisis"], "cached": True})
 
     try:
-        completion = _get_groq_client().chat.completions.create(
-            model="openai/gpt-oss-120b",
-            messages=[
-                {
-                    "role": "system",
-                    "content": (
-                        "Eres un orientador pedagógico experto en la Modalidad de Artes "
-                        "del bachillerato dominicano. Respondes siempre en español, "
-                        "de forma estructurada y profesional."
-                    )
-                },
-                {
-                    "role": "user",
-                    "content": construir_prompt(e)
-                }
-            ],
+        analisis = generar_con_fallback(
+            construir_prompt(e),
+            prompt_sistema=(
+                "Eres un orientador pedagógico experto en la Modalidad de Artes "
+                "del bachillerato dominicano. Respondes siempre en español, "
+                "de forma estructurada y profesional."
+            ),
             temperature=0.6,
             max_tokens=600,
-            top_p=0.9
         )
-
-        analisis = completion.choices[0].message.content.strip()
 
         with sqlite3.connect(DATABASE, timeout=10) as conn:
             conn.execute(
@@ -890,7 +878,7 @@ def generar_analisis_ia(id):
         return jsonify({"analisis": analisis, "cached": False})
 
     except Exception as ex:
-        logger.error(f"[IA] Error Groq estudiantes: {ex}")
+        logger.error(f"[IA] Error IA estudiantes: {ex}")
         return jsonify({"error": "Error al generar el análisis. Intenta de nuevo."}), 500
 
 
@@ -1025,16 +1013,12 @@ Con base en la tendencia actual, ¿qué puede lograr al final del año?
 
 Usa lenguaje técnico-pedagógico. Sé preciso con los datos. Máximo 380 palabras."""
 
-        completion = _get_groq_client().chat.completions.create(
-            model="openai/gpt-oss-120b",
-            messages=[
-                {"role": "system", "content": "Eres un evaluador pedagógico experto en la Modalidad de Artes del bachillerato dominicano. Respondes en español con análisis precisos basados en datos reales."},
-                {"role": "user", "content": prompt}
-            ],
+        resultado = generar_con_fallback(
+            prompt,
+            prompt_sistema="Eres un evaluador pedagógico experto en la Modalidad de Artes del bachillerato dominicano. Respondes en español con análisis precisos basados en datos reales.",
             temperature=0.5,
-            max_tokens=700
+            max_tokens=700,
         )
-        resultado = completion.choices[0].message.content.strip()
         return jsonify({"resultado": resultado})
 
     except Exception as ex:
@@ -1485,15 +1469,12 @@ Responde SOLO con JSON:
 Reglas: P1/P2 pueden llamarse Periodo 1, Trimestre 1, Parcial 1, PROM P1, etc.
 Si nombre+apellido van juntos usa col_nombre_completo."""
 
-        completion = _get_groq_client().chat.completions.create(
-            model="openai/gpt-oss-120b",
-            messages=[
-                {"role":"system","content":"Responde SOLO con JSON válido."},
-                {"role":"user","content":prompt}
-            ],
-            temperature=0.1, max_tokens=400,
+        resp = generar_con_fallback(
+            prompt,
+            prompt_sistema="Responde SOLO con JSON válido.",
+            temperature=0.1,
+            max_tokens=400,
         )
-        resp = completion.choices[0].message.content.strip()
         resp = resp.replace("```json","").replace("```","").strip()
         mapeo = _json.loads(resp)
         mapeo["modo"] = "llama"

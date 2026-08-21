@@ -3,7 +3,9 @@
 
 import os
 import re
+import time as _time
 import logging
+from datetime import datetime as _datetime
 from .constants import CURRICULUM_ARTES, CURRICULUM_MULTIMEDIA, PLAN_ARTES, PLAN_MULTIMEDIA
 
 logger = logging.getLogger("axula")
@@ -61,6 +63,69 @@ def _get_anthropic_client():
             "ANTHROPIC_API_KEY no configurado. Agrégalo en el archivo .env y reinicia el servidor."
         )
     return Anthropic(api_key=api_key)
+
+
+# ── Fallback Groq → Claude ───────────────────────────────────────────────────
+# Groq (gratis) tiene un límite de tokens/minuto muy bajo para su tier free
+# (8000 o menos según el modelo) y Groq lo va deprecando modelos sin aviso.
+# Cuando Groq responde 429 (límite agotado), esta función cae a Claude API
+# automáticamente para que la funcionalidad de IA no se caiga para el usuario.
+#
+# _groq_disabled_until: epoch seconds hasta el cual NO se reintenta Groq tras
+# un 429 — evita perder ~1-2s por request golpeando un límite que ya sabemos
+# vigente. Es una variable de proceso (no BD): con gunicorn --workers 1 del
+# Procfile hay un solo proceso, así que no hace falta un cron job externo ni
+# almacenamiento compartido — un simple chequeo de reloj en cada llamada logra
+# lo mismo que un "cron que revisa el tiempo cada hora", sin la infraestructura.
+_groq_disabled_until = 0.0
+
+
+def generar_con_fallback(prompt_usuario, prompt_sistema=None, max_tokens=1000,
+                          temperature=0.6, modelo_groq="openai/gpt-oss-120b",
+                          modelo_claude="claude-sonnet-5"):
+    """
+    Genera texto con Groq primero (gratis); si Groq devuelve 429 (límite de
+    cuenta agotado), cae a Claude API y no vuelve a intentar Groq por 1 hora.
+    Devuelve el texto de la respuesta (str), sin importar qué proveedor respondió.
+    """
+    global _groq_disabled_until
+    ahora = _time.time()
+
+    if ahora >= _groq_disabled_until:
+        try:
+            mensajes = []
+            if prompt_sistema:
+                mensajes.append({"role": "system", "content": prompt_sistema})
+            mensajes.append({"role": "user", "content": prompt_usuario})
+            completion = _get_groq_client().chat.completions.create(
+                model=modelo_groq,
+                messages=mensajes,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                top_p=0.9,
+            )
+            return completion.choices[0].message.content.strip()
+        except Exception as ex:
+            status = getattr(ex, "status_code", None)
+            es_rate_limit = status == 429 or "429" in str(ex) or "rate_limit" in str(ex).lower()
+            if not es_rate_limit:
+                raise
+            _groq_disabled_until = ahora + 3600
+            hora_reintento = _datetime.fromtimestamp(_groq_disabled_until).strftime("%H:%M:%S")
+            logger.warning(f"[IA] Groq alcanzó su límite — fallback a Claude, reintenta Groq después de {hora_reintento}")
+    else:
+        restante = int(_groq_disabled_until - ahora)
+        logger.info(f"[IA] Groq en cooldown ({restante}s restantes) — usando Claude directo")
+
+    kwargs = {
+        "model": modelo_claude,
+        "max_tokens": max_tokens,
+        "messages": [{"role": "user", "content": prompt_usuario}],
+    }
+    if prompt_sistema:
+        kwargs["system"] = prompt_sistema
+    response = _get_anthropic_client().messages.create(**kwargs)
+    return next((b.text for b in response.content if b.type == "text"), "").strip()
 
 
 def construir_prompt(e):

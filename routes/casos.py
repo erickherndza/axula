@@ -24,7 +24,7 @@ from core.auth import (
 )
 from core.helpers import *
 from core.helpers import _anio_escolar_actual, _anonimizar_estudiante, _audit, _crear_notificacion, _get_config_centro
-from core.ia import _get_groq_client, groq_client, construir_prompt, construir_prompt_planificacion, construir_prompt_rubrica, construir_prompt_estrategia
+from core.ia import _get_groq_client, groq_client, construir_prompt, construir_prompt_planificacion, construir_prompt_rubrica, construir_prompt_estrategia, generar_con_fallback
 from core.excel import _parsear_boletin_bj, _buscar_o_crear_estudiante, _detectar_mencion_listado, _limpiar_nota
 from core.pdf import _generar_pdf_acuerdo
 from core import rls as _rls
@@ -465,16 +465,12 @@ Tono: formal, respetuoso, orientado a la solución. Lenguaje dominicano oficial 
 Devuelve SOLO el texto del acuerdo, sin comentarios adicionales."""
 
     try:
-        completion = _get_groq_client().chat.completions.create(
-            model="openai/gpt-oss-120b",
-            messages=[
-                {"role": "system", "content": "Eres un especialista en normativa educativa dominicana (MINERD). Generas documentos formales precisos alineados a la legislación vigente."},
-                {"role": "user",   "content": prompt}
-            ],
+        contenido = generar_con_fallback(
+            prompt,
+            prompt_sistema="Eres un especialista en normativa educativa dominicana (MINERD). Generas documentos formales precisos alineados a la legislación vigente.",
             temperature=0.4,
             max_tokens=2000,
         )
-        contenido = completion.choices[0].message.content.strip()
     except Exception as ex:
         logger.error(f"[IA] Error generando acuerdo: {ex}")
         return jsonify({"error": "Error al generar el acuerdo. Intenta de nuevo."}), 500
