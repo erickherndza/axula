@@ -447,6 +447,34 @@ REGLAS CRÍTICAS:
             raw = raw[:-3].strip()
         return _json.loads(raw)
 
+    def _groq_completion(messages, max_tokens, intentos=2, espera_default=15):
+        """Llama a Groq con 1 reintento acotado si el organismo topa el TPM (429).
+        max_retries=0 en el cliente evita que el SDK duerma el worker por su cuenta."""
+        for intento in range(intentos):
+            try:
+                return _get_groq_client().chat.completions.create(
+                    model="openai/gpt-oss-120b",
+                    messages=messages,
+                    temperature=0.65,
+                    max_tokens=max_tokens,
+                    top_p=0.9,
+                )
+            except Exception as ex:
+                status = getattr(ex, "status_code", None)
+                es_rate_limit = status == 429 or "429" in str(ex) or "rate_limit" in str(ex).lower()
+                if not es_rate_limit or intento == intentos - 1:
+                    raise
+                espera = espera_default
+                resp = getattr(ex, "response", None)
+                retry_after = resp.headers.get("retry-after") if resp is not None else None
+                if retry_after:
+                    try:
+                        espera = min(float(retry_after), 55)
+                    except ValueError:
+                        pass
+                logger.warning(f"[IA] Groq 429 (TPM), reintentando en {espera:.0f}s...")
+                _time.sleep(espera)
+
     datos_proyecto = (
         f"- Asignatura: {asignatura}\n"
         f"- Grado: {grado} — Mención {mencion.title()}\n"
@@ -505,15 +533,12 @@ Responde SOLO este JSON (sin markdown, sin texto extra):
 }}"""
 
     try:
-        completion_1 = _get_groq_client().chat.completions.create(
-            model="openai/gpt-oss-120b",
-            messages=[
+        completion_1 = _groq_completion(
+            [
                 {"role": "system", "content": prompt_sistema},
                 {"role": "user",   "content": prompt_usuario_1},
             ],
-            temperature=0.65,
             max_tokens=1600,
-            top_p=0.9,
         )
         bloque_1 = _parse_json_ia(completion_1.choices[0].message.content)
 
@@ -611,15 +636,12 @@ Responde SOLO este JSON (sin markdown, sin texto extra):
   }}
 }}"""
 
-        completion_2 = _get_groq_client().chat.completions.create(
-            model="openai/gpt-oss-120b",
-            messages=[
+        completion_2 = _groq_completion(
+            [
                 {"role": "system", "content": prompt_sistema},
                 {"role": "user",   "content": prompt_usuario_2},
             ],
-            temperature=0.65,
             max_tokens=4500,
-            top_p=0.9,
         )
         bloque_2 = _parse_json_ia(completion_2.choices[0].message.content)
 
@@ -659,6 +681,11 @@ Responde SOLO este JSON (sin markdown, sin texto extra):
         return jsonify({"error": "La IA devolvió un formato inesperado. Intenta de nuevo."}), 500
     except Exception as ex:
         logger.error(f"[IA] Error generando planificación ABP: {ex}")
+        if getattr(ex, "status_code", None) == 429 or "rate_limit" in str(ex).lower():
+            return jsonify({
+                "error": "El servicio de IA alcanzó su límite temporal de uso. "
+                         "Espera unos 30-60 segundos y vuelve a intentar."
+            }), 429
         return jsonify({"error": "Error generando la planificación. Intenta de nuevo."}), 500
 
 

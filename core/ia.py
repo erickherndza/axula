@@ -44,7 +44,11 @@ def _get_groq_client():
         raise RuntimeError(
             "GROQ_API_KEY no configurado. Agrégalo en el archivo .env y reinicia el servidor."
         )
-    return Groq(api_key=api_key, timeout=30.0)
+    # max_retries=0: el SDK reintenta con time.sleep() bloqueante por defecto.
+    # En un worker sync de gunicorn eso puede exceder el --timeout del proceso
+    # y lo mata (WORKER TIMEOUT) devolviendo una respuesta vacía al cliente.
+    # Preferimos que la excepción suba de inmediato y la maneje la ruta.
+    return Groq(api_key=api_key, timeout=30.0, max_retries=0)
 
 
 def construir_prompt(e):

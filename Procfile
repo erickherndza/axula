@@ -1,1 +1,1 @@
-web: gunicorn app:app --workers 1 --threads 8 --bind 0.0.0.0:$PORT --timeout 120 --access-logfile - --preload
+web: gunicorn app:app --workers 1 --threads 8 --bind 0.0.0.0:$PORT --timeout 180 --access-logfile - --preload

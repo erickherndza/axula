@@ -5,7 +5,7 @@ services:
     region: ohio          # us-east-1 — más cercano a RD
     plan: starter         # $7/mo — necesario para disco persistente
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app --workers 1 --threads 8 --bind 0.0.0.0:$PORT --timeout 120 --access-logfile - --preload
+    startCommand: gunicorn app:app --workers 1 --threads 8 --bind 0.0.0.0:$PORT --timeout 180 --access-logfile - --preload
 
     # ── Variables de entorno ───────────────────────────────
     envVars:
