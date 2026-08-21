@@ -37,12 +37,18 @@ Axula dejó de ser plataforma institucional del C.E. Benito Juárez.
 
 ## Stack
 
-- Flask + SQLite (WAL mode) + Python 3 + ReportLab + openpyxl + Groq API
+- Flask + SQLite (WAL mode) + Python 3 + ReportLab + openpyxl + Groq API + Claude API (Anthropic)
 - Arquitectura Blueprint: /core/ + /routes/ (18 blueprints) + app.py factory
 - Iniciar local: cd /Users/erickhernandez/elearning && python3 app.py
 - DB local: database.db
-- **Deploy: git push origin main → Render auto-deploya (~5-10 min) → hard refresh en browser**
+- **Deploy: git push origin main → Render debería auto-deployar (~5-10 min), pero en sesión 16 el
+  auto-deploy no se disparó varias veces — si no ves el cambio, entra a Render → axula → Manual
+  Deploy → Deploy latest commit. Verificar SIEMPRE con logs antes de asumir que un fix quedó activo.**
 - **NO es PythonAnywhere** — ese es el otro proyecto (plantillas-web)
+- **⚠️ Procfile y render.yaml NO tienen efecto en este servicio.** Render usa el "Start Command"
+  guardado en Dashboard → axula → Settings → Deploy, que se configuró manualmente y es independiente
+  del repo. Cualquier flag de gunicorn (--timeout, --workers, --threads) hay que cambiarlo AHÍ, no en
+  el código. Start Command actual (sesión 16): `gunicorn app:app --workers 1 --threads 8 --timeout 120 --bind 0.0.0.0:$PORT`
 
 ## Patrones críticos — nunca romper
 
@@ -52,6 +58,12 @@ Axula dejó de ser plataforma institucional del C.E. Benito Juárez.
 - CSRF: header X-CSRF-Token en todos los POST
 - CSS: NUNCA hardcodear colores — siempre var(--surface), var(--border), var(--text)
 - data-theme NUNCA en <html> — lo maneja theme.js
+- GROQ_API_KEY y ANTHROPIC_API_KEY ya están en Render como env vars — no tocar
+- Groq client SIEMPRE con max_retries=0 (core/ia.py) — el retry por defecto del SDK usa
+  time.sleep() bloqueante, que puede matar el worker de gunicorn (WORKER TIMEOUT)
+- Llamadas IA que puedan tardar/generar mucho texto: preferir varias llamadas cortas orquestadas
+  desde el frontend en vez de una sola larga — el timeout real de gunicorn en este servicio es 120s
+  (ver Stack arriba), pero cualquier request que se acerque hay que partirlo en pasos
 
 ## Tema UI
 
@@ -131,6 +143,73 @@ python3 -c "import app; print('OK')"
 - Todos los overrides centralizados en `static/theme.css` (al final del archivo)
 
 ## Log de sesiones
+
+### 2026-08-21 (sesión 16 — Groq deprecado + migración a Claude + fix crítico timeout Render)
+
+**Disparador:** el generador de planificación ABP (`/planificacion`) empezó a fallar con
+`Error al generar` de la nada — funcionaba 8 días antes, sin ningún cambio de código de por medio.
+
+**Causa raíz 1 — Groq deprecó el modelo en producción:**
+`llama-3.3-70b-versatile` (el modelo usado desde el 27-jun-2026) fue anunciado como deprecado
+por Groq el 17-jun-2026, pero siguió funcionando en periodo de gracia hasta que Groq lo retiró
+de verdad la semana del 21-ago-2026 → 404 `model_not_found`. No fue una regresión nuestra.
+
+- Fix inmediato: modelo cambiado a `openai/gpt-oss-120b` en los ~13 sitios que llamaban a Groq.
+- Eso expuso el problema real: `openai/gpt-oss-120b` en el tier gratuito de Groq tiene **8,000
+  TPM** (tokens por minuto) vs. los **12,000 TPM** que tenía el modelo viejo → el prompt de ABP
+  (~10,200 tokens) que cabía antes ya no cabía → 413 rate_limit_exceeded, y dividiendo en 2
+  llamadas + reintentos + dimensionamiento dinámico según headers `x-ratelimit-*` seguía sin ser
+  confiable (8,000 TPM es muy poco para este tipo de generación).
+
+**Causa raíz 2 — el timeout real de gunicorn en Render NO es el del repo (la más importante):**
+Tras migrar el generador ABP a Claude API (ver abajo), empezó a fallar con
+`[CRITICAL] WORKER TIMEOUT` — el worker moría siempre ~30s después de iniciar una llamada a
+Claude, sin importar si se usaba streaming o no. Cambiar `--timeout` en `Procfile` y
+`render.yaml` no tuvo NINGÚN efecto. Se confirmó con una captura del dashboard de Render que el
+**Start Command real** (Settings → Deploy → Start Command) era literalmente:
+```
+gunicorn app:app
+```
+Sin `--timeout`, `--workers` ni `--threads` — Render **ignora por completo** `Procfile` y
+`render.yaml` en este servicio (fue creado/configurado manualmente en el dashboard, no vía
+Blueprint). gunicorn corría con su timeout por defecto (30s), de ahí el patrón exacto de crash.
+
+- **Fix definitivo:** Start Command editado DIRECTAMENTE en el dashboard de Render:
+  `gunicorn app:app --workers 1 --threads 8 --timeout 120 --bind 0.0.0.0:$PORT`
+- **LECCIÓN PERMANENTE:** cualquier flag de gunicorn (timeout, workers, threads) se cambia en
+  Render Dashboard → axula → Settings → Deploy → Start Command. El `Procfile`/`render.yaml` del
+  repo no tienen efecto real en este servicio — mantenerlos actualizados solo por documentación,
+  pero no asumir que un cambio ahí se aplica sin confirmarlo en el dashboard.
+
+**Migración a Claude API para el generador ABP:**
+- Usuario tenía crédito ($4.25) en Anthropic Console sin usar — tier "Start" da 2,000,000 ITPM /
+  400,000 OTPM (250x más que Groq free), suficiente de sobra para uso personal de un solo profesor.
+- `core/ia.py`: `_get_anthropic_client()` — cliente lazy, mismo patrón que `_get_groq_client()`.
+- `ANTHROPIC_API_KEY` agregado a env vars de Render. `anthropic==0.125.0` en requirements.txt.
+- `routes/planificacion.py::generar_planificacion_abp()`: modelo `claude-sonnet-5`.
+- **Arquitectura final — 3 pasos HTTP independientes** (no 1 sola llamada, ni siquiera con
+  streaming): el frontend (`templates/planificacion.html::generarPlanABP()`) hace 3 `fetch()`
+  secuenciales — `paso=1` (proyecto+currículo), `paso=2` (fases 1-2), `paso=3` (fases 3-4 +
+  instrumentos + ensamble final con inyección de docente/competencias/orden de fases). Cada
+  request es corta por sí sola, sin depender de que el timeout de Render esté bien configurado.
+
+**Fallback automático Groq→Claude para el resto de la IA:**
+- `core/ia.py::generar_con_fallback(prompt_usuario, prompt_sistema, max_tokens, temperature)`:
+  intenta Groq (gratis) primero; si Groq da 429, cae a Claude automáticamente y marca
+  `_groq_disabled_until = ahora + 1h` (variable de proceso — con `--workers 1` no hace falta
+  cron ni almacenamiento compartido, un chequeo de reloj en cada llamada basta).
+- Migradas las 11 llamadas a Groq en `casos.py`, `evaluacion.py`, `perfil.py`, `estudiantes.py`
+  y `planificacion.py` (las 4 rutas que no son el generador ABP) para usar este helper.
+- Bug preexistente arreglado de paso: `routes/evaluacion.py` usaba `_get_groq_client()` sin
+  importarlo — `NameError` silencioso atrapado por el `except Exception` genérico, la
+  retroalimentación IA de evaluación por competencias nunca había funcionado.
+
+**Pendiente / a vigilar:**
+- Con Claude en `effort: "low"` en pasos 2-3 del ABP, la calidad de las fases generadas es algo
+  más simple que con `effort` alto — si el usuario nota contenido pobre, subir a `"medium"` (ya
+  no hay riesgo de timeout real, pero cuidado con quedar cerca de los 120s de nuevo).
+- Si el crédito de $4.25 en Anthropic Console se agota, avisar al usuario — no hay fallback desde
+  Claude hacia otro proveedor, solo Groq→Claude.
 
 ### 2026-08-12 (sesión 15 — Usuarios admin + generador planificación 2026)
 
