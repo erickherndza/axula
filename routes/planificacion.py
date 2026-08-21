@@ -24,7 +24,7 @@ from core.auth import (
 )
 from core.helpers import *
 from core.ia import (
-    _get_groq_client, groq_client, construir_prompt,
+    _get_groq_client, _get_anthropic_client, groq_client, construir_prompt,
     construir_prompt_planificacion, construir_prompt_rubrica, construir_prompt_estrategia,
     buscar_cache_semantico, guardar_cache_ia, incrementar_uso_cache,
 )
@@ -410,123 +410,87 @@ def generar_planificacion_abp():
     nombre_docente = u.get("nombre", "")
 
     # ── CONTEXTO OFICIAL DEL CURRÍCULO ─────────────────────────────────────
-    # Tope de longitud: el tier gratuito de Groq da solo 8000 TPM y esto compite
-    # por presupuesto con el resto del prompt + las 2 llamadas de la ruta.
     curriculo_oficial = _curriculo_fmt(mencion, asignatura)
-    if len(curriculo_oficial) > 1800:
-        curriculo_oficial = curriculo_oficial[:1800] + "…"
-    datos_oficiales = _curriculo_get(mencion, asignatura)
+    datos_oficiales   = _curriculo_get(mencion, asignatura)
 
-    # ── PROMPT DEL SISTEMA (compartido entre las 2 llamadas) ────────────────
-    # NOTA: el modelo openai/gpt-oss-120b tiene un límite de 8000 TPM en el tier
-    # gratuito de Groq. Un solo prompt con proyecto+curriculo+4 fases+instrumentos
-    # supera ese límite (~10200 tokens), por eso se parte en 2 llamadas más chicas.
+    # ── CONTEXTO RAG — normativa vigente subida por el centro ─────────────
+    rag_contexto = ""
+    try:
+        rag_consulta = f"planificación {asignatura} {grado} bachillerato artes {mencion.lower()} ordenanza"
+        rag_contexto = buscar_chunks(get_db(), rag_consulta, top_k=4, max_chars_total=2500, mencion=mencion)
+    except Exception as _rag_err:
+        logger.warning(f"[RAG] No se pudo recuperar contexto: {_rag_err}")
+
+    # ── PROMPT DEL SISTEMA ─────────────────────────────────────────────────
     prompt_sistema = f"""Eres un experto en planificación curricular ABP para la Modalidad en Artes del MINERD
 de la República Dominicana, especializado en Bachillerato en Arte Multimedia
 (C.E. Benito Juárez — Mención {mencion}).
 
+Conoces el esquema oficial MINERD/DEMA con sus 4 bloques: IDENTIFICACIÓN,
+ELEMENTOS DE LA UNIDAD, FASES ABP (4 fases) e INSTRUMENTOS DE EVALUACIÓN.
+
 REGLAS CRÍTICAS:
 1. SIEMPRE respondes ÚNICAMENTE con JSON válido, sin texto antes ni después, sin markdown.
 2. NO repites contenido entre secciones — cada campo debe tener información única y específica.
-3. Usas EXCLUSIVAMENTE los saberes oficiales que te proporciono, no inventes contenidos genéricos.
+3. Usas EXCLUSIVAMENTE los saberes oficiales que te proporciono del plan MINERD,
+   no inventes contenidos genéricos. Si amplías, mantén el enfoque oficial.
 4. Las actividades deben ser ESPECÍFICAS de la asignatura, con verbos de acción
-   (investiga, diseña, produce, presenta), no frases vacías."""
+   (investiga, diseña, produce, presenta), no frases vacías.
+5. La integración STEAM debe incluir los 5 elementos (Ciencia, Tecnología, Ingeniería, Arte, Matemática)
+   con ejemplos aplicados al proyecto concreto.
+6. Las 4 fases ABP son fijas y en este orden: Exploración e Investigación, Diseño y Planificación,
+   Desarrollo y Construcción, Presentación y Evaluación.
 
-    def _parse_json_ia(raw: str) -> dict:
-        raw = raw.strip()
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
-            raw = raw.strip()
-        if raw.endswith("```"):
-            raw = raw[:-3].strip()
-        return _json.loads(raw)
+{rag_contexto if rag_contexto else ""}"""
 
-    class _GroqRateLimitError(Exception):
-        def __init__(self, espera, etiqueta, detalle):
-            self.espera = espera
-            self.etiqueta = etiqueta
-            self.detalle = detalle
-
-    def _groq_completion(messages, max_tokens, etiqueta):
-        """Llama a Groq. En 429 (TPM) falla YA (sin sleep bloqueante — el timeout
-        real del worker en Render no está garantizado) para que el request pueda
-        devolver un error claro y el usuario reintente con el botón de la UI.
-        Devuelve (completion, headers) — headers trae x-ratelimit-remaining-tokens
-        REAL de la cuenta, que se usa para dimensionar la siguiente llamada."""
-        try:
-            raw = _get_groq_client().chat.completions.with_raw_response.create(
-                model="openai/gpt-oss-120b",
-                messages=messages,
-                temperature=0.65,
-                max_tokens=max_tokens,
-                top_p=0.9,
-            )
-            h = raw.headers
-            logger.info(
-                f"[IA] Groq OK {etiqueta} | "
-                f"tokens: limite={h.get('x-ratelimit-limit-tokens')} "
-                f"restantes={h.get('x-ratelimit-remaining-tokens')} "
-                f"reset={h.get('x-ratelimit-reset-tokens')} | "
-                f"requests: limite={h.get('x-ratelimit-limit-requests')} "
-                f"restantes={h.get('x-ratelimit-remaining-requests')}"
-            )
-            return raw.parse(), h
-        except Exception as ex:
-            status = getattr(ex, "status_code", None)
-            es_rate_limit = status == 429 or "429" in str(ex) or "rate_limit" in str(ex).lower()
-            if not es_rate_limit:
-                raise
-            espera = 30
-            resp = getattr(ex, "response", None)
-            headers = resp.headers if resp is not None else {}
-            retry_after = headers.get("retry-after")
-            if retry_after:
-                try:
-                    espera = min(float(retry_after), 55)
-                except ValueError:
-                    pass
-            logger.warning(
-                f"[IA] Groq 429 {etiqueta} | "
-                f"limite={headers.get('x-ratelimit-limit-tokens')} "
-                f"restantes={headers.get('x-ratelimit-remaining-tokens')} "
-                f"reset={headers.get('x-ratelimit-reset-tokens')}"
-            )
-            raise _GroqRateLimitError(espera, etiqueta, str(ex)) from ex
-
-    datos_proyecto = (
-        f"- Asignatura: {asignatura}\n"
-        f"- Grado: {grado} — Mención {mencion.title()}\n"
-        f"- Título del proyecto: {titulo if titulo else '(inventa un título creativo y específico al proyecto)'}\n"
-        f"- Fecha inicio: {fecha_inicio if fecha_inicio else '(período actual)'}\n"
-        f"- Fecha cierre: {fecha_cierre if fecha_cierre else '(al finalizar el período)'}\n"
-        f"- Duración: {duracion if duracion else '2 meses (8 semanas aproximadamente)'}\n"
-        f"- Producto final esperado: {producto if producto else '(sugiere el producto final típico de esta asignatura)'}\n"
-        + (f"- Contexto adicional del docente: {contexto_ia}\n" if contexto_ia else "")
-    )
-
-    # ── LLAMADA 1 — PROYECTO + CURRÍCULO ────────────────────────────────────
-    prompt_usuario_1 = f"""Genera el bloque de PROYECTO y CURRÍCULO de una planificación ABP oficial MINERD.
+    # ── PROMPT DEL USUARIO ─────────────────────────────────────────────────
+    prompt_usuario = f"""Genera una planificación ABP oficial MINERD para:
 
 DATOS DEL PROYECTO:
-{datos_proyecto}
+- Asignatura: {asignatura}
+- Docente: {nombre_docente}
+- Grado: {grado} — Mención {mencion.title()}
+- Título del proyecto: {titulo if titulo else "(inventa un título creativo y específico al proyecto)"}
+- Fecha inicio: {fecha_inicio if fecha_inicio else "(período actual)"}
+- Fecha cierre: {fecha_cierre if fecha_cierre else "(al finalizar el período)"}
+- Duración: {duracion if duracion else "2 meses (8 semanas aproximadamente)"}
+- Producto final esperado: {producto if producto else "(sugiere el producto final típico de esta asignatura)"}
+{f"- Contexto adicional del docente: {contexto_ia}" if contexto_ia else ""}
 
 CURRÍCULO OFICIAL MINERD PARA ESTA ASIGNATURA:
 {curriculo_oficial if curriculo_oficial else "(No hay datos oficiales — usa tu conocimiento del currículo de Bachillerato en Arte Multimedia MINERD)"}
 
-INSTRUCCIONES:
-1. **curriculo.contenidos**: Usa los saberes oficiales de arriba. Selecciona los 4-6 más
-   relevantes al proyecto. NO repitas contenido entre conceptuales, procedimentales y actitudinales.
-2. **curriculo.rae**: Usa los RAEs oficiales, o derívalos del Elemento de Competencia oficial.
-3. **curriculo.elementos_competencia**: Cita el Elemento de Competencia oficial (párrafo completo)
-   y añade 2-3 indicadores observables derivados.
-4. **curriculo.problema**: Párrafo contextual sobre una situación real de los estudiantes
-   dominicanos que el proyecto viene a resolver.
-5. **curriculo.pregunta**: UNA pregunta desafiante abierta que guíe todo el proyecto,
-   iniciando con "¿Cómo..." o "¿De qué manera...".
+INSTRUCCIONES ESPECÍFICAS PARA EL JSON:
 
-Responde SOLO este JSON (sin markdown, sin texto extra):
+1. **curriculo.contenidos**: Usa los saberes oficiales listados arriba. Selecciona
+   los 4-6 más relevantes al proyecto propuesto. NO los repitas entre conceptuales,
+   procedimentales y actitudinales — cada categoría debe tener contenido distinto.
+
+2. **curriculo.rae**: Usa los RAEs oficiales listados arriba, o derívalos del
+   Elemento de Competencia oficial.
+
+3. **curriculo.elementos_competencia**: Cita el Elemento de Competencia oficial
+   (párrafo completo) y añade 2-3 indicadores observables derivados.
+
+4. **curriculo.problema**: Redacta un párrafo contextual que explique una
+   situación real de los estudiantes dominicanos que el proyecto viene a resolver.
+   Debe conectar con la realidad del joven dominicano.
+
+5. **curriculo.pregunta**: Formula UNA pregunta desafiante abierta que guíe
+   todo el proyecto. Debe empezar con "¿Cómo..." o "¿De qué manera...".
+
+6. **fases**: Genera LAS 4 FASES en orden. Cada fase debe tener:
+   - Actividades concretas (3-5 actividades con verbos de acción) distribuidas
+     en momentos de Inicio, Desarrollo y Cierre.
+   - Los 5 elementos STEAM aplicados específicamente al proyecto.
+   - Roles específicos del docente y del estudiante (no genéricos).
+   - Recursos materiales/digitales concretos.
+   - Instrumentos de evaluación específicos (lista de cotejo, rúbrica, registro anecdótico, etc).
+
+7. **instrumentos**: Genera lista de cotejo con 6-8 criterios específicos al producto final,
+   rúbrica de proceso con 3 niveles de dominio, rúbrica final con 4 criterios de 20 pts c/u.
+
+ESTRUCTURA JSON EXACTA (sin markdown, sin texto extra; NO incluyas un campo "docente" — el sistema lo completa aparte):
 
 {{
   "proyecto": {{
@@ -547,54 +511,7 @@ Responde SOLO este JSON (sin markdown, sin texto extra):
     "elementos_competencia": ["elemento competencia oficial", "indicador observable 1", "indicador observable 2"],
     "problema": "párrafo contextualizado sobre la situación real que motiva el proyecto",
     "pregunta": "¿Pregunta desafiante abierta que guíe todo el proyecto?"
-  }}
-}}"""
-
-    try:
-        completion_1, headers_1 = _groq_completion(
-            [
-                {"role": "system", "content": prompt_sistema},
-                {"role": "user",   "content": prompt_usuario_1},
-            ],
-            max_tokens=1400,
-            etiqueta="llamada1:proyecto+curriculo",
-        )
-        bloque_1 = _parse_json_ia(completion_1.choices[0].message.content)
-
-        # ── LLAMADA 2 — FASES ABP + INSTRUMENTOS DE EVALUACIÓN ──────────────
-        proyecto_1  = bloque_1.get("proyecto", {}) or {}
-        curriculo_1 = bloque_1.get("curriculo", {}) or {}
-        # Solo lo esencial para redactar actividades — problema/pregunta/elementos_competencia
-        # no aportan a las fases y cuestan tokens que aquí escasean.
-        curriculo_resumen = _json.dumps({
-            "rae": curriculo_1.get("rae", []),
-            "contenidos": curriculo_1.get("contenidos", {}),
-        }, ensure_ascii=False)
-
-        prompt_usuario_2 = f"""Genera las 4 FASES ABP y los INSTRUMENTOS DE EVALUACIÓN de una planificación MINERD.
-
-PROYECTO:
-- Asignatura: {asignatura} | Grado: {grado} Mención {mencion.title()}
-- Título: {proyecto_1.get('titulo') or titulo or '(coherente con el currículo dado)'}
-- Producto final: {proyecto_1.get('producto_final') or producto or '(coherente con la asignatura)'}
-
-CURRÍCULO YA DEFINIDO (úsalo como base, no lo repitas literal):
-{curriculo_resumen}
-
-REGLAS DE LAS FASES:
-- Las 4 fases son fijas y en este orden: Exploración e Investigación, Diseño y Planificación,
-  Desarrollo y Construcción, Presentación y Evaluación.
-- Cada fase: 3-5 actividades con verbos de acción, distribuidas en Inicio/Desarrollo/Cierre.
-- Integración STEAM: los 5 elementos (Ciencia, Tecnología, Ingeniería, Arte, Matemática)
-  aplicados específicamente al proyecto.
-- Roles específicos del docente y del estudiante (no genéricos). Recursos concretos.
-  Instrumentos de evaluación específicos por fase.
-- **instrumentos**: lista de cotejo con 6-8 criterios específicos al producto final,
-  rúbrica de proceso con 3 niveles de dominio, rúbrica final con 4 criterios de 20 pts c/u.
-
-Responde SOLO este JSON (sin markdown, sin texto extra):
-
-{{
+  }},
   "fases": [
     {{
       "numero": 1,
@@ -617,34 +534,56 @@ Responde SOLO este JSON (sin markdown, sin texto extra):
       "instrumentos_evaluacion": ["instrumento 1", "instrumento 2"]
     }},
     {{
-      "numero": 2, "nombre": "Diseño y Planificación", "tiempo": "2 semanas",
-      "competencias_especificas": ["..."], "actividades_inicio": ["..."],
-      "actividades_desarrollo": ["..."], "actividades_cierre": ["..."],
+      "numero": 2,
+      "nombre": "Diseño y Planificación",
+      "tiempo": "2 semanas",
+      "competencias_especificas": ["..."],
+      "actividades_inicio": ["..."],
+      "actividades_desarrollo": ["..."],
+      "actividades_cierre": ["..."],
       "steam": {{"ciencia": "...", "tecnologia": "...", "ingenieria": "...", "arte": "...", "matematica": "..."}},
-      "rol_docente": ["..."], "rol_estudiante": ["..."],
-      "recursos": ["..."], "instrumentos_evaluacion": ["..."]
+      "rol_docente": ["..."],
+      "rol_estudiante": ["..."],
+      "recursos": ["..."],
+      "instrumentos_evaluacion": ["..."]
     }},
     {{
-      "numero": 3, "nombre": "Desarrollo y Construcción", "tiempo": "3 semanas",
-      "competencias_especificas": ["..."], "actividades_inicio": ["..."],
-      "actividades_desarrollo": ["..."], "actividades_cierre": ["..."],
+      "numero": 3,
+      "nombre": "Desarrollo y Construcción",
+      "tiempo": "3 semanas",
+      "competencias_especificas": ["..."],
+      "actividades_inicio": ["..."],
+      "actividades_desarrollo": ["..."],
+      "actividades_cierre": ["..."],
       "steam": {{"ciencia": "...", "tecnologia": "...", "ingenieria": "...", "arte": "...", "matematica": "..."}},
-      "rol_docente": ["..."], "rol_estudiante": ["..."],
-      "recursos": ["..."], "instrumentos_evaluacion": ["..."]
+      "rol_docente": ["..."],
+      "rol_estudiante": ["..."],
+      "recursos": ["..."],
+      "instrumentos_evaluacion": ["..."]
     }},
     {{
-      "numero": 4, "nombre": "Presentación y Evaluación", "tiempo": "1 semana",
-      "competencias_especificas": ["..."], "actividades_inicio": ["..."],
-      "actividades_desarrollo": ["..."], "actividades_cierre": ["..."],
+      "numero": 4,
+      "nombre": "Presentación y Evaluación",
+      "tiempo": "1 semana",
+      "competencias_especificas": ["..."],
+      "actividades_inicio": ["..."],
+      "actividades_desarrollo": ["..."],
+      "actividades_cierre": ["..."],
       "steam": {{"ciencia": "...", "tecnologia": "...", "ingenieria": "...", "arte": "...", "matematica": "..."}},
-      "rol_docente": ["..."], "rol_estudiante": ["..."],
-      "recursos": ["..."], "instrumentos_evaluacion": ["..."]
+      "rol_docente": ["..."],
+      "rol_estudiante": ["..."],
+      "recursos": ["..."],
+      "instrumentos_evaluacion": ["..."]
     }}
   ],
   "instrumentos": {{
     "lista_cotejo": [
-      "criterio observable 1", "criterio observable 2", "criterio observable 3",
-      "criterio observable 4", "criterio observable 5", "criterio observable 6"
+      "criterio observable 1",
+      "criterio observable 2",
+      "criterio observable 3",
+      "criterio observable 4",
+      "criterio observable 5",
+      "criterio observable 6"
     ],
     "rubrica_proceso": [
       {{"criterio": "Investigación", "destacado": "...", "satisfactorio": "...", "basico": "...", "en_proceso": "..."}},
@@ -660,39 +599,27 @@ Responde SOLO este JSON (sin markdown, sin texto extra):
   }}
 }}"""
 
-        # ── Dimensionar max_tokens de la llamada 2 según el cupo REAL restante ──
-        # La llamada 1 ya consumió parte del TPM de este minuto. Pedir un tope
-        # fijo puede exceder lo que Groq realmente tiene disponible ahora mismo
-        # y disparar 429. Usamos el header x-ratelimit-remaining-tokens que
-        # Groq acaba de devolver (dato real, no una estimación de caracteres).
-        max_tokens_2 = 3500
-        restante_str = headers_1.get("x-ratelimit-remaining-tokens")
-        if restante_str:
-            try:
-                restante = float(restante_str)
-                # Ratio chars/token calibrado con datos reales de esta misma ruta.
-                prompt_2_aprox = (len(prompt_sistema) + len(prompt_usuario_2)) / 2.4
-                margen_seguridad = 150
-                disponible = int(restante - prompt_2_aprox - margen_seguridad)
-                max_tokens_2 = max(1200, min(max_tokens_2, disponible))
-                logger.info(
-                    f"[IA] Cupo TPM restante tras llamada1: {restante:.0f} — "
-                    f"max_tokens llamada2 ajustado a {max_tokens_2}"
-                )
-            except ValueError:
-                pass
+    import anthropic
 
-        completion_2, headers_2 = _groq_completion(
-            [
-                {"role": "system", "content": prompt_sistema},
-                {"role": "user",   "content": prompt_usuario_2},
-            ],
-            max_tokens=max_tokens_2,
-            etiqueta="llamada2:fases+instrumentos",
+    try:
+        response = _get_anthropic_client().messages.create(
+            model="claude-sonnet-5",
+            max_tokens=8000,
+            system=prompt_sistema,
+            messages=[{"role": "user", "content": prompt_usuario}],
         )
-        bloque_2 = _parse_json_ia(completion_2.choices[0].message.content)
+        raw = next((b.text for b in response.content if b.type == "text"), "").strip()
 
-        plan_json = {**bloque_1, **bloque_2}
+        # Limpiar posibles bloques markdown
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+            raw = raw.strip()
+        if raw.endswith("```"):
+            raw = raw[:-3].strip()
+
+        plan_json = _json.loads(raw)
 
         # ── POST-PROCESAMIENTO: INYECTAR COMPETENCIAS FUNDAMENTALES OFICIALES ──
         # La IA NO genera las 7 competencias (evita el bug de duplicados).
@@ -723,17 +650,18 @@ Responde SOLO este JSON (sin markdown, sin texto extra):
 
         return jsonify({"ok": True, "plan": plan_json})
 
-    except _GroqRateLimitError as ex:
-        logger.warning(
-            f"[IA] Groq 429 (TPM) en {ex.etiqueta} — sugerido esperar {ex.espera:.0f}s | {ex.detalle}"
-        )
-        return jsonify({
-            "error": f"El servicio de IA alcanzó su límite temporal de uso. "
-                     f"Espera unos {ex.espera:.0f} segundos y vuelve a intentar."
-        }), 429
     except _json.JSONDecodeError as ex:
         logger.error(f"[IA] ABP JSON inválido: {ex}")
         return jsonify({"error": "La IA devolvió un formato inesperado. Intenta de nuevo."}), 500
+    except anthropic.RateLimitError as ex:
+        logger.warning(f"[IA] Claude 429 (rate limit) en planificación ABP: {ex}")
+        return jsonify({
+            "error": "El servicio de IA alcanzó su límite temporal de uso. "
+                     "Espera unos segundos y vuelve a intentar."
+        }), 429
+    except anthropic.APIStatusError as ex:
+        logger.error(f"[IA] Error de Claude generando planificación ABP: {ex}")
+        return jsonify({"error": "Error generando la planificación. Intenta de nuevo."}), 500
     except Exception as ex:
         logger.error(f"[IA] Error generando planificación ABP: {ex}")
         return jsonify({"error": "Error generando la planificación. Intenta de nuevo."}), 500

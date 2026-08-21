@@ -51,6 +51,18 @@ def _get_groq_client():
     return Groq(api_key=api_key, timeout=30.0, max_retries=0)
 
 
+def _get_anthropic_client():
+    """Lazy Claude client — límites de tokens/minuto muy por encima de Groq
+    free tier, así que aquí sí se puede dejar el retry por defecto del SDK."""
+    from anthropic import Anthropic
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if not api_key:
+        raise RuntimeError(
+            "ANTHROPIC_API_KEY no configurado. Agrégalo en el archivo .env y reinicia el servidor."
+        )
+    return Anthropic(api_key=api_key)
+
+
 def construir_prompt(e):
     """
     Construye el prompt pedagógico para el LLM, adaptado por mención.
