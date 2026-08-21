@@ -447,33 +447,36 @@ REGLAS CRÍTICAS:
             raw = raw[:-3].strip()
         return _json.loads(raw)
 
-    def _groq_completion(messages, max_tokens, intentos=2, espera_default=15):
-        """Llama a Groq con 1 reintento acotado si el organismo topa el TPM (429).
-        max_retries=0 en el cliente evita que el SDK duerma el worker por su cuenta."""
-        for intento in range(intentos):
-            try:
-                return _get_groq_client().chat.completions.create(
-                    model="openai/gpt-oss-120b",
-                    messages=messages,
-                    temperature=0.65,
-                    max_tokens=max_tokens,
-                    top_p=0.9,
-                )
-            except Exception as ex:
-                status = getattr(ex, "status_code", None)
-                es_rate_limit = status == 429 or "429" in str(ex) or "rate_limit" in str(ex).lower()
-                if not es_rate_limit or intento == intentos - 1:
-                    raise
-                espera = espera_default
-                resp = getattr(ex, "response", None)
-                retry_after = resp.headers.get("retry-after") if resp is not None else None
-                if retry_after:
-                    try:
-                        espera = min(float(retry_after), 55)
-                    except ValueError:
-                        pass
-                logger.warning(f"[IA] Groq 429 (TPM), reintentando en {espera:.0f}s...")
-                _time.sleep(espera)
+    class _GroqRateLimitError(Exception):
+        def __init__(self, espera):
+            self.espera = espera
+
+    def _groq_completion(messages, max_tokens):
+        """Llama a Groq. En 429 (TPM) falla YA (sin sleep bloqueante — el timeout
+        real del worker en Render no está garantizado) para que el request pueda
+        devolver un error claro y el usuario reintente con el botón de la UI."""
+        try:
+            return _get_groq_client().chat.completions.create(
+                model="openai/gpt-oss-120b",
+                messages=messages,
+                temperature=0.65,
+                max_tokens=max_tokens,
+                top_p=0.9,
+            )
+        except Exception as ex:
+            status = getattr(ex, "status_code", None)
+            es_rate_limit = status == 429 or "429" in str(ex) or "rate_limit" in str(ex).lower()
+            if not es_rate_limit:
+                raise
+            espera = 30
+            resp = getattr(ex, "response", None)
+            retry_after = resp.headers.get("retry-after") if resp is not None else None
+            if retry_after:
+                try:
+                    espera = min(float(retry_after), 55)
+                except ValueError:
+                    pass
+            raise _GroqRateLimitError(espera) from ex
 
     datos_proyecto = (
         f"- Asignatura: {asignatura}\n"
@@ -676,16 +679,17 @@ Responde SOLO este JSON (sin markdown, sin texto extra):
 
         return jsonify({"ok": True, "plan": plan_json})
 
+    except _GroqRateLimitError as ex:
+        logger.warning(f"[IA] Groq 429 (TPM) en planificación ABP — sugerido esperar {ex.espera:.0f}s")
+        return jsonify({
+            "error": f"El servicio de IA alcanzó su límite temporal de uso. "
+                     f"Espera unos {ex.espera:.0f} segundos y vuelve a intentar."
+        }), 429
     except _json.JSONDecodeError as ex:
         logger.error(f"[IA] ABP JSON inválido: {ex}")
         return jsonify({"error": "La IA devolvió un formato inesperado. Intenta de nuevo."}), 500
     except Exception as ex:
         logger.error(f"[IA] Error generando planificación ABP: {ex}")
-        if getattr(ex, "status_code", None) == 429 or "rate_limit" in str(ex).lower():
-            return jsonify({
-                "error": "El servicio de IA alcanzó su límite temporal de uso. "
-                         "Espera unos 30-60 segundos y vuelve a intentar."
-            }), 429
         return jsonify({"error": "Error generando la planificación. Intenta de nuevo."}), 500
 
 
