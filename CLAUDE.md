@@ -211,6 +211,18 @@ Blueprint). gunicorn corría con su timeout por defecto (30s), de ahí el patró
 - Si el crédito de $4.25 en Anthropic Console se agota, avisar al usuario — no hay fallback desde
   Claude hacia otro proveedor, solo Groq→Claude.
 
+**Auto-edición de materias/grado — aclaración (mismo día, misma sesión):**
+Erick recordaba que el diseño original de la plataforma era "solo directora asigna/elimina
+materias". Verificado en código: eso ya no aplica — `routes/profesor.py::editar_mi_perfil()`
+(extendido en sesión 15) permite que CUALQUIER usuario logueado edite su propio `materia` y
+`grado` desde `/mi-perfil` → Editar perfil, sin restricción de rol y sin restricción para
+*quitar* (es un campo de texto libre separado por `|`, se reemplaza completo con lo que se
+envíe). No hace falta la cuenta `directora` para que Erick ajuste sus propias materias del año
+escolar. Pendiente sin confirmar: el usuario mencionó que vía cuenta `directora`/`admin`
+(`/usuarios`, editando su perfil desde ahí) el cambio de materias no le funcionó — no se
+reprodujo ni se investigó a fondo en esta sesión; revisar `routes/usuarios.py::api_editar`
+(PATCH /api/usuarios/<uid>) si vuelve a reportarse.
+
 ### 2026-08-12 (sesión 15 — Usuarios admin + generador planificación 2026)
 
 **Fe de errata — perfil propio editable (commit previo):**
