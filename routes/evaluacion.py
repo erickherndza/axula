@@ -1211,7 +1211,8 @@ def registro_ce_materia(materia):
         ).fetchall()
 
         # Estudiantes del grado/mención
-        q = "SELECT id, nombre, apellido, grado, curso FROM estudiantes WHERE 1=1"
+        q = ("SELECT id, nombre, apellido, grado, curso FROM estudiantes "
+             "WHERE (condicion IS NULL OR condicion NOT IN ('RETIRADO','TRANSFERIDO'))")
         params = []
         if grado:
             q += " AND LOWER(grado) LIKE ?"

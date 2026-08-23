@@ -953,15 +953,20 @@ def boletin_view(est_id):
         e = dict(est)
 
         # ── Completar notas desde materias_calificaciones ──────────────────
+        # Filtrado por año escolar + grado actual: sin esto, un estudiante promovido
+        # (ej. 4TO→5TO) arrastra las notas del grado/año anterior sobre el boletín.
+        anio_actual  = _anio_escolar_actual()
+        grado_actual_bv = (e.get('grado') or '').strip().upper()
         mats_rows = conn.execute("""
             SELECT materia, p1, p2, p3, p4, promedio, tipo, profesor
             FROM materias_calificaciones
             WHERE estudiante_id = ?
+              AND anio_escolar = ?
+              AND UPPER(TRIM(COALESCE(grado, ?))) = ?
             ORDER BY materia
-        """, (est_id,)).fetchall()
+        """, (est_id, anio_actual, grado_actual_bv, grado_actual_bv)).fetchall()
 
         # ── Notas manuales por período (prioridad mayor) ───────────────────
-        anio_actual = _anio_escolar_actual()
         notas_periodo_rows = conn.execute("""
             SELECT materia, periodo, calificacion
             FROM calificaciones_periodo

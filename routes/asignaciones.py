@@ -351,7 +351,8 @@ def asignaciones_reporte(asig_id):
         grados_prof    = _alc["grados"]
         menciones_prof = _alc["menciones"]
         _fmen          = _alc["filtro_mencion"]
-        eq = "SELECT id, nombre, apellido FROM estudiantes WHERE 1=1"
+        eq = ("SELECT id, nombre, apellido FROM estudiantes "
+              "WHERE (condicion IS NULL OR condicion NOT IN ('RETIRADO','TRANSFERIDO'))")
         ep = []
         if grados_prof:
             eq += " AND (" + " OR ".join(["grado LIKE ?" for _ in grados_prof]) + ")"
@@ -545,7 +546,8 @@ def asignaciones_exportar_csv(asig_id):
         grados_prof    = _alc["grados"]
         menciones_prof = _alc["menciones"]
         _fmen          = _alc["filtro_mencion"]
-        eq = "SELECT id, nombre, apellido FROM estudiantes WHERE 1=1"
+        eq = ("SELECT id, nombre, apellido FROM estudiantes "
+              "WHERE (condicion IS NULL OR condicion NOT IN ('RETIRADO','TRANSFERIDO'))")
         ep = []
         if grados_prof:
             eq += " AND (" + " OR ".join(["grado LIKE ?" for _ in grados_prof]) + ")"

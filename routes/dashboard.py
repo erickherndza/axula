@@ -91,7 +91,7 @@ def coordinador_resumen():
     with sqlite3.connect(DATABASE, timeout=10) as conn:
         conn.row_factory = sqlite3.Row
 
-        base_q = "WHERE 1=1"
+        base_q = "WHERE (condicion IS NULL OR condicion NOT IN ('RETIRADO','TRANSFERIDO'))"
         base_p = []
         if filtro_ciclo:
             base_q += " AND ciclo=?"

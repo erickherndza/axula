@@ -301,7 +301,8 @@ def asistencia_por_clase():
     grado   = request.args.get("grado", "")
 
     # Build filter
-    q = "SELECT id, nombre, apellido, curso, grado FROM estudiantes WHERE 1=1"
+    q = ("SELECT id, nombre, apellido, curso, grado FROM estudiantes "
+         "WHERE (condicion IS NULL OR condicion NOT IN ('RETIRADO','TRANSFERIDO'))")
     params = []
 
     if prof and prof.get("rol") == "profesor":
@@ -679,7 +680,8 @@ def profesor_estadisticas_asistencia():
     roles_admin_est = {"directora", "coordinador_general",
                        "coordinador_primer_ciclo", "coordinador_segundo_ciclo"}
 
-    est_query  = "SELECT id, nombre, apellido, grado, curso, ciclo, seccion FROM estudiantes WHERE 1=1"
+    est_query  = ("SELECT id, nombre, apellido, grado, curso, ciclo, seccion FROM estudiantes "
+                  "WHERE (condicion IS NULL OR condicion NOT IN ('RETIRADO','TRANSFERIDO'))")
     est_params = []
 
     if grado_filtro or curso_filtro:

@@ -667,6 +667,8 @@
                 <button class="hdr-dd-item" onclick="abrirEditar();document.getElementById('hdr-dd').classList.remove('hdr-dd--open')">
                     <i class="fas fa-edit" style="color:#378ADD;width:16px;"></i> Editar datos
                 </button>
+                {% endif %}
+                {% if current_user.es_admin %}
                 <button class="hdr-dd-item" id="btn-condicion" onclick="cambiarCondicion();document.getElementById('hdr-dd').classList.remove('hdr-dd--open')">
                     <i class="fas fa-user-tag" style="color:#60b8f0;width:16px;"></i> Estado: {{ e.condicion or 'ACTIVO' }}
                 </button>
@@ -3551,12 +3553,12 @@
     window.cambiarCondicion = function() {
         var actual = (document.getElementById('btn-condicion') || {}).textContent || CONDICION;
         actual = actual.trim();
-        var opts = ['ACTIVO','RETIRADO','GRADUADO'].filter(function(o){ return o !== actual; });
-        var nueva = prompt('Estado actual: ' + actual + '\n\nEscribe el nuevo estado:\n- ACTIVO\n- RETIRADO\n- GRADUADO', opts[0]);
+        var opts = ['ACTIVO','RETIRADO','TRANSFERIDO','GRADUADO'].filter(function(o){ return o !== actual; });
+        var nueva = prompt('Estado actual: ' + actual + '\n\nEscribe el nuevo estado:\n- ACTIVO\n- RETIRADO\n- TRANSFERIDO\n- GRADUADO\n\nRETIRADO y TRANSFERIDO ocultan al estudiante de todos los cursos y listados.', opts[0]);
         if (!nueva) return;
         nueva = nueva.toUpperCase().trim();
-        if (!['ACTIVO','RETIRADO','GRADUADO'].includes(nueva)) {
-            alert('Estado inválido. Usa: ACTIVO, RETIRADO o GRADUADO'); return;
+        if (!['ACTIVO','RETIRADO','TRANSFERIDO','GRADUADO'].includes(nueva)) {
+            alert('Estado inválido. Usa: ACTIVO, RETIRADO, TRANSFERIDO o GRADUADO'); return;
         }
         fetch('/api/estudiante/' + EST_ID + '/condicion', {
             method: 'POST',

@@ -46,8 +46,9 @@ def buscar_estudiantes():
         rows = conn.execute("""
             SELECT id, nombre, apellido, grado, curso
             FROM estudiantes
-            WHERE nombre LIKE ? OR apellido LIKE ?
-               OR (nombre || ' ' || apellido) LIKE ?
+            WHERE (nombre LIKE ? OR apellido LIKE ?
+               OR (nombre || ' ' || apellido) LIKE ?)
+              AND (condicion IS NULL OR condicion NOT IN ('RETIRADO','TRANSFERIDO'))
             ORDER BY apellido, nombre LIMIT 12
         """, (like, like, like)).fetchall()
     return jsonify([dict(r) for r in rows])
@@ -96,7 +97,9 @@ def mis_estudiantes():
             rows = conn.execute(
                 f"SELECT id,nombre,apellido,curso,grado,p_acad,puntualidad,participacion,"
                 f"asistencia,indice_riesgo,nivel_riesgo FROM estudiantes "
-                f"WHERE id IN ({placeholders}) ORDER BY apellido,nombre",
+                f"WHERE id IN ({placeholders}) "
+                f"AND (condicion IS NULL OR condicion NOT IN ('RETIRADO','TRANSFERIDO')) "
+                f"ORDER BY apellido,nombre",
                 all_ids
             ).fetchall()
         else:
@@ -108,7 +111,8 @@ def mis_estudiantes():
             filtro_men = alcance["filtro_mencion"]
 
             q = ("SELECT id,nombre,apellido,curso,grado,p_acad,puntualidad,participacion,"
-                 "asistencia,indice_riesgo,nivel_riesgo FROM estudiantes WHERE 1=1")
+                 "asistencia,indice_riesgo,nivel_riesgo FROM estudiantes "
+                 "WHERE (condicion IS NULL OR condicion NOT IN ('RETIRADO','TRANSFERIDO'))")
             params = []
             if grados:
                 q += " AND (" + " OR ".join(["grado LIKE ?" for _ in grados]) + ")"
@@ -276,7 +280,8 @@ def portal_profesor():
       menciones_prof = alcance["menciones"]
       filtro_men     = alcance["filtro_mencion"]
 
-      q = "SELECT id, nombre, apellido, curso, grado FROM estudiantes WHERE 1=1"
+      q = ("SELECT id, nombre, apellido, curso, grado FROM estudiantes "
+           "WHERE (condicion IS NULL OR condicion NOT IN ('RETIRADO','TRANSFERIDO'))")
       params = []
       if grados_prof:
           q += " AND (" + " OR ".join(["grado LIKE ?" for _ in grados_prof]) + ")"

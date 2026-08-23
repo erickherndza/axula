@@ -2043,7 +2043,7 @@ def _calcular_bienestar_emocional(conn, est_id):
     return round(max(0.0, min(100.0, score)), 1)
 
 
-def obtener_notas_estudiante(conn, est_id, anio=None):
+def obtener_notas_estudiante(conn, est_id, anio=None, grado=None):
     """
     Retorna las notas del estudiante desde la fuente canónica (calificaciones_periodo).
     Para materias sin nota manual, cae en materias_calificaciones (importación PDF).
@@ -2055,21 +2055,35 @@ def obtener_notas_estudiante(conn, est_id, anio=None):
       · Períodos faltantes en una entrada se completan desde la otra
       · Nombre de display: prefiere Proper Case sobre TODO MAYÚSCULAS
 
+    Si `grado` se pasa, filtra también por grado (NULL-tolerant — filas sin grado
+    etiquetado se incluyen igual). Evita que un estudiante promovido (ej. 4TO→5TO)
+    arrastre notas del grado anterior cuando ambas comparten el mismo anio_escolar
+    porque el año todavía no rotó en configuracion_centro.
+
     Retorna dict: {materia: {p1, p2, p3, p4, promedio}}
     Todos los callers reciben datos ya deduplicados — no es necesario deduplicar
     de nuevo en evaluar_estudiante() ni en recalcular_kpis_estudiante().
     """
     if anio is None:
         anio = _anio_escolar_actual()
+    grado_n = (grado or "").strip().upper() or None
 
     notas = {}  # {materia_raw: {p1, p2, p3, p4}}
 
     # ── 1. Fuente canónica: calificaciones_periodo (notas manuales de profesores) ──
-    rows_cp = conn.execute(
-        "SELECT materia, periodo, calificacion FROM calificaciones_periodo "
-        "WHERE estudiante_id=? AND anio_escolar=?",
-        (est_id, anio)
-    ).fetchall()
+    if grado_n:
+        rows_cp = conn.execute(
+            "SELECT materia, periodo, calificacion FROM calificaciones_periodo "
+            "WHERE estudiante_id=? AND anio_escolar=? "
+            "  AND (grado IS NULL OR UPPER(grado)=?)",
+            (est_id, anio, grado_n)
+        ).fetchall()
+    else:
+        rows_cp = conn.execute(
+            "SELECT materia, periodo, calificacion FROM calificaciones_periodo "
+            "WHERE estudiante_id=? AND anio_escolar=?",
+            (est_id, anio)
+        ).fetchall()
     for r in rows_cp:
         mat  = r["materia"] if hasattr(r, "keys") else r[0]
         per  = (r["periodo"] if hasattr(r, "keys") else r[1]).upper().strip()
@@ -2083,11 +2097,19 @@ def obtener_notas_estudiante(conn, est_id, anio=None):
 
     # ── 2. Fallback: materias_calificaciones (importadas desde PDF) ────────────
     # Merge por período: CP tiene prioridad; períodos faltantes se completan desde MC.
-    rows_mc = conn.execute(
-        "SELECT materia, p1, p2, p3, p4 FROM materias_calificaciones "
-        "WHERE estudiante_id=? AND anio_escolar=?",
-        (est_id, anio)
-    ).fetchall()
+    if grado_n:
+        rows_mc = conn.execute(
+            "SELECT materia, p1, p2, p3, p4 FROM materias_calificaciones "
+            "WHERE estudiante_id=? AND anio_escolar=? "
+            "  AND (grado IS NULL OR UPPER(grado)=?)",
+            (est_id, anio, grado_n)
+        ).fetchall()
+    else:
+        rows_mc = conn.execute(
+            "SELECT materia, p1, p2, p3, p4 FROM materias_calificaciones "
+            "WHERE estudiante_id=? AND anio_escolar=?",
+            (est_id, anio)
+        ).fetchall()
     for r in rows_mc:
         mat = r["materia"] if hasattr(r, "keys") else r[0]
         p_mc = {
@@ -2152,7 +2174,10 @@ def recalcular_kpis_estudiante(conn, est_id, anio=None):
     if anio is None:
         anio = _anio_escolar_actual()
 
-    notas = obtener_notas_estudiante(conn, est_id, anio)
+    _grado_row = conn.execute("SELECT grado FROM estudiantes WHERE id=?", (est_id,)).fetchone()
+    _grado_est = (_grado_row[0] if _grado_row else None) or None
+
+    notas = obtener_notas_estudiante(conn, est_id, anio, grado=_grado_est)
     if not notas:
         return  # sin datos: no sobreescribir ceros
 

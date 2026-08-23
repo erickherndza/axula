@@ -340,6 +340,7 @@ def api_datos():
     mencion    = request.args.get("mencion", "").strip()
     ciclo      = request.args.get("ciclo", "").strip()
     solo_notas = request.args.get("solo_con_notas", "0") == "1"
+    incluir_inactivos = request.args.get("incluir_inactivos", "0") == "1"
 
     # ── Aplicar restricciones de acceso por rol ──────────────────────────
     _usr = _get_profesor()
@@ -366,11 +367,11 @@ def api_datos():
             if not ciclo:
                 ciclo = ciclo_usr
             # Caché por ciclo
-            if not grado and not mencion and not solo_notas:
+            if not grado and not mencion and not solo_notas and not incluir_inactivos:
                 cache_key = f"api_datos_ciclo_{ciclo}"
         else:
             # Directora / coordinador_general / admin: ven TODO
-            if not grado and not mencion and not solo_notas and not ciclo:
+            if not grado and not mencion and not solo_notas and not ciclo and not incluir_inactivos:
                 cache_key = "api_datos_all"
 
     # Intentar servir desde caché (solo para roles sin filtro forzado)
@@ -383,6 +384,11 @@ def api_datos():
 
     query  = "SELECT * FROM estudiantes WHERE 1=1"
     params = []
+
+    # Estudiantes retirados/transferidos nunca aparecen en los listados de curso,
+    # salvo que se pida explícitamente (ej. panel admin de estudiantes inactivos)
+    if not incluir_inactivos:
+        query += " AND (condicion IS NULL OR condicion NOT IN ('RETIRADO','TRANSFERIDO'))"
 
     # Profesores: usar alcance resuelto (multi-grado + mención canónica con acento)
     if es_profesor:
@@ -507,13 +513,20 @@ def perfil_estudiante(id):
         e = dict(estudiante)
 
         # ── Completar notas desde materias_calificaciones si campos directos están vacíos ──
+        # Filtrado por año escolar actual + grado actual: sin esto, un estudiante
+        # promovido (ej. 4TO→5TO) arrastra las notas del grado/año anterior sobre
+        # los campos directos del perfil (mismo bug que boletin_estudiante ya arregló).
+        grado_actual_mc = (e.get('grado') or '').strip().upper()
+        anio_actual_mc  = _anio_escolar_actual()
         with sqlite3.connect(DATABASE, timeout=10) as conn2:
             conn2.row_factory = sqlite3.Row
             mats = conn2.execute("""
                 SELECT materia, p1, p2, p3, p4, promedio, fecha_carga, profesor
                 FROM materias_calificaciones
                 WHERE estudiante_id = ?
-            """, (id,)).fetchall()
+                  AND anio_escolar = ?
+                  AND UPPER(TRIM(COALESCE(grado, ?))) = ?
+            """, (id, anio_actual_mc, grado_actual_mc, grado_actual_mc)).fetchall()
 
         if mats:
             # ══ MAPA UNIVERSAL DE MATERIAS ══════════════════════════════════
@@ -1968,11 +1981,18 @@ def eliminar_estudiante(id):
 @estudiantes_bp.route("/api/estudiante/<int:id>/condicion", methods=["POST"])
 @login_required
 def cambiar_condicion(id):
-    """Cambia la condición del estudiante: ACTIVO / RETIRADO / GRADUADO."""
+    """Cambia la condición del estudiante: ACTIVO / RETIRADO / TRANSFERIDO / GRADUADO.
+    Solo directora/superusuario — retirar/transferir a un estudiante lo oculta de
+    todos los listados de curso (dashboard, asistencia, asignaciones, evaluación)."""
+    u = get_usuario()
+    rol = _normalizar_rol(u.get("rol", ""))
+    from core.constants import ROLES_DIRECTORA
+    if rol not in ROLES_DIRECTORA:
+        return jsonify({"error": "Sin permisos. Solo la directora puede cambiar la condición de un estudiante."}), 403
     data      = request.get_json(silent=True) or {}
     condicion = str(data.get("condicion", "ACTIVO")).upper().strip()
-    if condicion not in ("ACTIVO", "RETIRADO", "GRADUADO"):
-        return jsonify({"error": "Condición inválida. Usa ACTIVO, RETIRADO o GRADUADO"}), 400
+    if condicion not in ("ACTIVO", "RETIRADO", "TRANSFERIDO", "GRADUADO"):
+        return jsonify({"error": "Condición inválida. Usa ACTIVO, RETIRADO, TRANSFERIDO o GRADUADO"}), 400
     with sqlite3.connect(DATABASE, timeout=10) as conn:
         conn.execute("UPDATE estudiantes SET condicion=? WHERE id=?", (condicion, id))
         conn.commit()
