@@ -1039,20 +1039,8 @@ Usa lenguaje técnico-pedagógico. Sé preciso con los datos. Máximo 380 palabr
         return jsonify({"error": "Error al generar el análisis. Intenta de nuevo."}), 500
 
 
-@estudiantes_bp.route("/api/promover/<int:id>", methods=["POST"])
-@login_required
-def promover_estudiante(id):
-    """Cambia el grado del estudiante (4to ↔ 5to)."""
-    try:
-        data = request.json or {}
-        nuevo_grado = data.get("grado", "5to")
-        with sqlite3.connect(DATABASE, timeout=10) as conn:
-            conn.execute("UPDATE estudiantes SET grado=? WHERE id=?", (nuevo_grado, id))
-            conn.commit()
-        return jsonify({"ok": True, "grado": nuevo_grado})
-    except Exception as ex:
-        logger.error(f"[ESTUDIANTES] Error actualizando grado: {ex}")
-        return jsonify({"error": "Error al actualizar el grado. Intenta de nuevo."}), 500
+    # /api/promover/<id> (endpoint legacy sin reglas ni reset de KPIs) fue
+    # eliminado — usar POST /api/promocion/ejecutar/<id> (routes/promocion.py).
 
 
 
@@ -2089,6 +2077,44 @@ def editar_estudiante(id):
     # Recalcular promedios derivados si se actualizaron módulos
     campos_recibidos = set(data.keys())
     with sqlite3.connect(DATABASE, timeout=10) as conn:
+        # ── Blindaje: si este PATCH cambia el grado, limpiar el caché de KPIs ──
+        # Este endpoint es un editor genérico de campos — no sabe de reglas de
+        # promoción. Si alguien cambia "grado" a mano aquí (en vez de usar el
+        # motor de /api/promocion/ejecutar/<id>), sin este blindaje los campos
+        # de notas se quedan con los valores del grado anterior indefinidamente
+        # (exactamente el bug que dejó a estudiantes promovidos mostrando notas
+        # de su grado anterior). Solo se resetean columnas que este mismo PATCH
+        # no esté fijando explícitamente, para no pisar un envío legítimo.
+        if 'grado' in data:
+            _row0 = conn.execute("SELECT grado FROM estudiantes WHERE id=?", (id,)).fetchone()
+            _grado_prev = ((_row0[0] if _row0 else "") or "").strip().upper()
+            _grado_nuevo = str(data.get('grado') or "").strip().upper()
+            if _grado_nuevo and _grado_nuevo != _grado_prev:
+                _CAMPOS_CACHE_KPI = [
+                    "p_acad", "acad_p1", "acad_p2", "acad_p3", "acad_p4",
+                    "asistencia", "asistencia_p1", "asistencia_p2", "asistencia_p3", "asistencia_p4",
+                    "prom_modulos", "tiene_notas",
+                    "fotografia_p1", "fotografia_p2", "fotografia_p3", "fotografia_p4", "p_foto",
+                    "lv_p1", "lv_p2", "lv_p3", "lv_p4", "p_lv",
+                    "diseno_p1", "diseno_p2", "diseno_p3", "diseno_p4", "p_diseno",
+                    "instrumento_p1", "instrumento_p2", "instrumento_p3", "instrumento_p4", "p_instrumento",
+                    "canto_p1", "canto_p2", "canto_p3", "canto_p4", "p_canto",
+                    "lenguaje_musical_p1", "lenguaje_musical_p2", "lenguaje_musical_p3",
+                    "lenguaje_musical_p4", "p_lenguaje_musical",
+                    "entrenamiento_p1", "entrenamiento_p2", "entrenamiento_p3", "entrenamiento_p4", "p_entrenamiento",
+                    "expresion_p1", "expresion_p2", "expresion_p3", "expresion_p4", "p_expresion",
+                    "historia_teatro_p1", "historia_teatro_p2", "historia_teatro_p3",
+                    "historia_teatro_p4", "p_historia_teatro",
+                    "dibujo_p1", "dibujo_p2", "dibujo_p3", "dibujo_p4", "p_dibujo",
+                    "pintura_p1", "pintura_p2", "pintura_p3", "pintura_p4", "p_pintura",
+                    "historia_arte_p1", "historia_arte_p2", "historia_arte_p3",
+                    "historia_arte_p4", "p_historia_arte",
+                ]
+                for _c in _CAMPOS_CACHE_KPI:
+                    if _c not in campos_recibidos:
+                        set_parts.append(f"{_c} = ?")
+                        set_values.append(0 if _c == "tiene_notas" else None)
+
         conn.execute(
             f"UPDATE estudiantes SET {', '.join(set_parts)} WHERE id=?",
             set_values + [id]
@@ -2644,16 +2670,12 @@ def cargar_registro():
                             asist_vals
                         )
 
-                # Recalcular p_acad del estudiante
+                # Recalcular p_acad del estudiante — vía la función canónica
+                # (filtra por año escolar + grado actual; antes esto promediaba
+                # TODO el historial de materias_calificaciones del estudiante,
+                # de cualquier año/grado, sin distinción)
                 try:
-                    proms = conn.execute(
-                        "SELECT promedio FROM materias_calificaciones WHERE estudiante_id=? AND promedio>0",
-                        (est_id,)
-                    ).fetchall()
-                    if proms:
-                        p_acad_nuevo = round(sum(r[0] for r in proms) / len(proms), 1)
-                        conn.execute("UPDATE estudiantes SET p_acad=?, tiene_notas=1 WHERE id=?",
-                                     (p_acad_nuevo, est_id))
+                    recalcular_kpis_estudiante(conn, est_id)
                 except Exception: pass
 
                 sheet_ok += 1
@@ -3116,44 +3138,20 @@ def cargar_boletin():
                             ))
                         total_materias += 1
 
-                    # Recalcular p_acad del estudiante
-                    proms = conn.execute("""
-                        SELECT promedio FROM materias_calificaciones
-                        WHERE estudiante_id=? AND tipo='académico' AND promedio > 0
-                    """, (est_id,)).fetchall()
-                    if proms:
-                        p_acad_nuevo = round(sum(r[0] for r in proms) / len(proms), 2)
-                        # Calcular p_acad_p1 y p_acad_p2 para dashboard
-                        p1s = conn.execute("""
-                            SELECT p1 FROM materias_calificaciones
-                            WHERE estudiante_id=? AND tipo='académico' AND p1 > 0
-                        """, (est_id,)).fetchall()
-                        p2s = conn.execute("""
-                            SELECT p2 FROM materias_calificaciones
-                            WHERE estudiante_id=? AND tipo='académico' AND p2 > 0
-                        """, (est_id,)).fetchall()
-                        acad_p1 = round(sum(r[0] for r in p1s)/len(p1s), 2) if p1s else 0
-                        acad_p2 = round(sum(r[0] for r in p2s)/len(p2s), 2) if p2s else 0
-
-                        # Safe update — handles old DBs missing tiene_notas column
-                        try:
-                            conn.execute("""
-                                UPDATE estudiantes
-                                   SET p_acad=?, acad_p1=?, acad_p2=?, tiene_notas=1
-                                 WHERE id=?
-                            """, (p_acad_nuevo, acad_p1, acad_p2, est_id))
-                        except Exception:
-                            conn.execute("""
-                                UPDATE estudiantes SET p_acad=?, acad_p1=?, acad_p2=?
-                                WHERE id=?
-                            """, (p_acad_nuevo, acad_p1, acad_p2, est_id))
-                        # Update seccion/ciclo from boletín data
-                        try:
-                            conn.execute(
-                                "UPDATE estudiantes SET seccion=?, ciclo=? WHERE id=?",
-                                (est.get('seccion', 'A'), est.get('ciclo', 'segundo_ciclo'), est_id)
-                            )
-                        except Exception: pass
+                    # Recalcular p_acad/acad_p1-4 del estudiante — vía la función
+                    # canónica (filtra por año escolar + grado actual; antes esto
+                    # promediaba TODO el historial académico del estudiante, de
+                    # cualquier año/grado, sin distinción).
+                    try:
+                        recalcular_kpis_estudiante(conn, est_id)
+                    except Exception: pass
+                    # Update seccion/ciclo from boletín data
+                    try:
+                        conn.execute(
+                            "UPDATE estudiantes SET seccion=?, ciclo=? WHERE id=?",
+                            (est.get('seccion', 'A'), est.get('ciclo', 'segundo_ciclo'), est_id)
+                        )
+                    except Exception: pass
 
                     total_est += 1
                     clave = f"{est['grado']} {est['mencion']}".strip()

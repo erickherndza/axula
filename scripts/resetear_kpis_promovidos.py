@@ -48,11 +48,22 @@ from core.helpers import obtener_notas_estudiante, _anio_escolar_actual  # noqa:
 
 CAMPOS_RESET = [
     "p_acad", "acad_p1", "acad_p2", "acad_p3", "acad_p4",
-    "asistencia_p1", "asistencia_p2", "asistencia_p3", "asistencia_p4",
-    "fotografia_p1", "fotografia_p2", "fotografia_p3", "fotografia_p4",
-    "lv_p1", "lv_p2", "lv_p3", "lv_p4",
-    "diseno_p1", "diseno_p2", "diseno_p3", "diseno_p4",
-    "p_foto", "p_lv", "p_diseno", "prom_modulos",
+    "asistencia", "asistencia_p1", "asistencia_p2", "asistencia_p3", "asistencia_p4",
+    "prom_modulos",
+    "fotografia_p1", "fotografia_p2", "fotografia_p3", "fotografia_p4", "p_foto",
+    "lv_p1", "lv_p2", "lv_p3", "lv_p4", "p_lv",
+    "diseno_p1", "diseno_p2", "diseno_p3", "diseno_p4", "p_diseno",
+    "instrumento_p1", "instrumento_p2", "instrumento_p3", "instrumento_p4", "p_instrumento",
+    "canto_p1", "canto_p2", "canto_p3", "canto_p4", "p_canto",
+    "lenguaje_musical_p1", "lenguaje_musical_p2", "lenguaje_musical_p3",
+    "lenguaje_musical_p4", "p_lenguaje_musical",
+    "entrenamiento_p1", "entrenamiento_p2", "entrenamiento_p3", "entrenamiento_p4", "p_entrenamiento",
+    "expresion_p1", "expresion_p2", "expresion_p3", "expresion_p4", "p_expresion",
+    "historia_teatro_p1", "historia_teatro_p2", "historia_teatro_p3",
+    "historia_teatro_p4", "p_historia_teatro",
+    "dibujo_p1", "dibujo_p2", "dibujo_p3", "dibujo_p4", "p_dibujo",
+    "pintura_p1", "pintura_p2", "pintura_p3", "pintura_p4", "p_pintura",
+    "historia_arte_p1", "historia_arte_p2", "historia_arte_p3", "historia_arte_p4", "p_historia_arte",
 ]
 
 

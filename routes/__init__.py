@@ -21,6 +21,7 @@ from .archivos import archivos_bp
 from .asistente import asistente_bp
 from .usuarios import usuarios_bp
 from .poa import poa_bp
+from .promocion import promocion_bp
 
 ALL_BLUEPRINTS = [
     auth_bp,
@@ -43,4 +44,5 @@ ALL_BLUEPRINTS = [
     asistente_bp,
     usuarios_bp,
     poa_bp,
+    promocion_bp,
 ]

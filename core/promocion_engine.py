@@ -678,20 +678,59 @@ def ejecutar_promocion_estudiante(
             mencion = partes[1] if len(partes) > 1 else ""
             nuevo_curso = f"{sig_grado} {mencion}".strip() if mencion else sig_grado
 
-            # Actualiza grado, curso y resetea KPIs y asistencia — nuevo año desde cero
+            # Actualiza grado, curso y resetea KPIs, asistencia y módulos técnicos
+            # de TODAS las menciones — nuevo año/grado desde cero. Sin esto, un
+            # estudiante promovido sigue mostrando en su perfil las notas del
+            # grado anterior porque estas columnas son un caché, no se recalculan
+            # solas al cambiar de grado.
             db.execute(
                 """UPDATE estudiantes
                    SET grado          = ?,
                        curso          = ?,
+                       tiene_notas    = 0,
                        p_acad         = NULL,
-                       acad_p1        = NULL,
-                       acad_p2        = NULL,
-                       acad_p3        = NULL,
-                       acad_p4        = NULL,
-                       asistencia_p1  = NULL,
-                       asistencia_p2  = NULL,
-                       asistencia_p3  = NULL,
-                       asistencia_p4  = NULL
+                       acad_p1        = NULL, acad_p2        = NULL,
+                       acad_p3        = NULL, acad_p4        = NULL,
+                       asistencia     = NULL,
+                       asistencia_p1  = NULL, asistencia_p2  = NULL,
+                       asistencia_p3  = NULL, asistencia_p4  = NULL,
+                       prom_modulos   = NULL,
+                       fotografia_p1  = NULL, fotografia_p2  = NULL,
+                       fotografia_p3  = NULL, fotografia_p4  = NULL,
+                       p_foto         = NULL,
+                       lv_p1          = NULL, lv_p2          = NULL,
+                       lv_p3          = NULL, lv_p4          = NULL,
+                       p_lv           = NULL,
+                       diseno_p1      = NULL, diseno_p2      = NULL,
+                       diseno_p3      = NULL, diseno_p4      = NULL,
+                       p_diseno       = NULL,
+                       instrumento_p1 = NULL, instrumento_p2 = NULL,
+                       instrumento_p3 = NULL, instrumento_p4 = NULL,
+                       p_instrumento  = NULL,
+                       canto_p1       = NULL, canto_p2       = NULL,
+                       canto_p3       = NULL, canto_p4       = NULL,
+                       p_canto        = NULL,
+                       lenguaje_musical_p1 = NULL, lenguaje_musical_p2 = NULL,
+                       lenguaje_musical_p3 = NULL, lenguaje_musical_p4 = NULL,
+                       p_lenguaje_musical  = NULL,
+                       entrenamiento_p1 = NULL, entrenamiento_p2 = NULL,
+                       entrenamiento_p3 = NULL, entrenamiento_p4 = NULL,
+                       p_entrenamiento  = NULL,
+                       expresion_p1   = NULL, expresion_p2   = NULL,
+                       expresion_p3   = NULL, expresion_p4   = NULL,
+                       p_expresion    = NULL,
+                       historia_teatro_p1 = NULL, historia_teatro_p2 = NULL,
+                       historia_teatro_p3 = NULL, historia_teatro_p4 = NULL,
+                       p_historia_teatro  = NULL,
+                       dibujo_p1      = NULL, dibujo_p2      = NULL,
+                       dibujo_p3      = NULL, dibujo_p4      = NULL,
+                       p_dibujo       = NULL,
+                       pintura_p1     = NULL, pintura_p2     = NULL,
+                       pintura_p3     = NULL, pintura_p4     = NULL,
+                       p_pintura      = NULL,
+                       historia_arte_p1 = NULL, historia_arte_p2 = NULL,
+                       historia_arte_p3 = NULL, historia_arte_p4 = NULL,
+                       p_historia_arte  = NULL
                    WHERE id = ?""",
                 (sig_grado, nuevo_curso, est_id),
             )
