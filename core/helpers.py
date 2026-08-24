@@ -28,6 +28,7 @@ __all__ = [
     "_calcular_indice_conductual",
     "_calcular_nota_final_con_recuperacion",
     "_color_nota",
+    "catalogo_materias_grado",
     "_construir_prompt_asignacion",
     "_crear_notificacion",
     "_delete_recovery_token",
@@ -2041,6 +2042,42 @@ def _calcular_bienestar_emocional(conn, est_id):
     score = sum(v * w for v, w in components) / total_w if components else 100.0
 
     return round(max(0.0, min(100.0, score)), 1)
+
+
+_ACAD_ESTANDAR = {
+    "lengua española", "inglés", "ingles", "matemática", "matematica",
+    "ciencias sociales", "ciencias de la naturaleza", "ciencias naturales",
+    "formación integral humana y religiosa", "fihr",
+    "educación física", "educacion fisica",
+}
+
+
+def catalogo_materias_grado(grado: str, curso: str) -> list:
+    """Catálogo de materias (PLAN_ARTES) para el grado/mención de un
+    estudiante, con notas vacías. Se usa cuando el estudiante aún no tiene
+    calificaciones cargadas para su grado/año actual (recién promovido, año
+    escolar recién iniciado), para que la UI muestre qué materias le
+    corresponden en vez de una pantalla en blanco.
+    """
+    from core.constants import PLAN_ARTES
+
+    grado_key = (grado or "").strip().lower()
+    curso_up  = (curso or "").strip().upper()
+    partes    = curso_up.split(None, 1)
+    mencion   = partes[1].strip() if len(partes) > 1 else ""
+
+    plan_grado = PLAN_ARTES.get(mencion, {}).get(grado_key, [])
+    catalogo = []
+    for nombre, _horas in plan_grado:
+        es_acad = nombre.lower().strip() in _ACAD_ESTANDAR
+        catalogo.append({
+            "materia": nombre,
+            "tipo": "académico" if es_acad else "técnico",
+            "p1": None, "p2": None, "p3": None, "p4": None,
+            "promedio": None,
+            "fecha_carga": None,
+        })
+    return catalogo
 
 
 def obtener_notas_estudiante(conn, est_id, anio=None, grado=None):

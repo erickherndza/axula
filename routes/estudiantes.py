@@ -1842,11 +1842,12 @@ def get_materias_estudiante(estudiante_id):
         conn.row_factory = sqlite3.Row
         anio = _anio_escolar_actual()
 
-        # Obtener grado actual del estudiante
+        # Obtener grado/curso actual del estudiante
         est_row = conn.execute(
-            "SELECT grado FROM estudiantes WHERE id=?", (estudiante_id,)
+            "SELECT grado, curso FROM estudiantes WHERE id=?", (estudiante_id,)
         ).fetchone()
         grado_actual = (est_row["grado"] if est_row else "") or ""
+        curso_actual = (est_row["curso"] if est_row else "") or ""
 
         rows = conn.execute("""
             SELECT materia, p1, p2, p3, p4, promedio, fecha_carga, fuente,
@@ -1862,6 +1863,10 @@ def get_materias_estudiante(estudiante_id):
         """, (estudiante_id, anio, grado_actual)).fetchall()
     resultado = _dedup_materias([dict(r) for r in rows])
     resultado.sort(key=lambda r: (0 if r["tipo"] == "académico" else 1, r["materia"].lower()))
+    if not resultado:
+        # Sin notas cargadas para el grado/año actual — mostrar el catálogo
+        # oficial de materias del grado en blanco, en vez de vacío.
+        resultado = catalogo_materias_grado(grado_actual, curso_actual)
     resultado = _rls.filtrar_materias_profesor(resultado)
     return jsonify(resultado)
 
@@ -1897,9 +1902,10 @@ def get_indicadores_materias(estudiante_id):
     with sqlite3.connect(DATABASE, timeout=10) as conn:
         conn.row_factory = sqlite3.Row
         est_row = conn.execute(
-            "SELECT grado FROM estudiantes WHERE id=?", (estudiante_id,)
+            "SELECT grado, curso FROM estudiantes WHERE id=?", (estudiante_id,)
         ).fetchone()
         grado_actual = (est_row["grado"] if est_row else "") or ""
+        curso_actual = (est_row["curso"] if est_row else "") or ""
         anio = _anio_escolar_actual()
         rows = conn.execute("""
             SELECT materia,
@@ -1913,7 +1919,12 @@ def get_indicadores_materias(estudiante_id):
             ORDER BY materia
         """, (estudiante_id, anio, grado_actual, grado_actual.upper())).fetchall()
 
-    result = _rls.filtrar_materias_profesor([dict(r) for r in rows])
+    result = [dict(r) for r in rows]
+    if not result:
+        # Sin notas cargadas para el grado/año actual — mostrar el catálogo
+        # oficial de materias del grado en blanco, en vez de vacío.
+        result = catalogo_materias_grado(grado_actual, curso_actual)
+    result = _rls.filtrar_materias_profesor(result)
     return jsonify(result)
 
 
