@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Coherencia Horizontal — {{ matriz.grado }}{% if matriz.seccion %} {{ matriz.seccion }}{% endif %}</title>
+<style>
+    * { box-sizing: border-box; }
+    body {
+        font-family: -apple-system, 'Segoe UI', Arial, sans-serif;
+        color: #1a1a1a;
+        background: #fff;
+        margin: 0;
+        padding: 32px 40px;
+        font-size: 12px;
+        line-height: 1.5;
+    }
+    .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        border-bottom: 2px solid #038C8C;
+        padding-bottom: 16px;
+        margin-bottom: 20px;
+    }
+    .centro-nombre { font-size: 16px; font-weight: 800; color: #024959; }
+    .centro-detalle { font-size: 11px; color: #555; margin-top: 2px; }
+    .doc-titulo {
+        font-size: 17px; font-weight: 800; color: #038C8C;
+        text-transform: uppercase; letter-spacing: .5px; text-align: right;
+    }
+    .doc-sub { font-size: 10px; color: #777; text-align: right; margin-top: 2px; }
+    .est-datos {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px 24px;
+        background: #F7F4EF;
+        border: 1px solid #E8E1D8;
+        border-radius: 10px;
+        padding: 14px 18px;
+        margin-bottom: 24px;
+        font-size: 11px;
+    }
+    .est-datos b { display: block; font-size: 9px; color: #777; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 2px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    th, td { padding: 8px 10px; border: 1px solid #E8E1D8; text-align: left; font-size: 11px; vertical-align: top; }
+    th { background: #F0EBE3; font-weight: 700; color: #024959; font-size: 9px; text-transform: uppercase; letter-spacing: .3px; }
+    .sin-datos { color: #999; font-style: italic; padding: 20px; text-align: center; }
+    .footer { margin-top: 28px; padding-top: 12px; border-top: 1px solid #E8E1D8; font-size: 9px; color: #999; text-align: center; }
+    @media print { body { padding: 16px 24px; } .btn-imprimir { display: none; } }
+    .btn-imprimir {
+        position: fixed; top: 16px; right: 16px; background: #038C8C; color: #fff;
+        border: none; padding: 10px 18px; border-radius: 8px; font-weight: 700;
+        cursor: pointer; font-size: 12px;
+    }
+</style>
+</head>
+<body>
+
+<button class="btn-imprimir" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>
+
+<div class="header">
+    <div>
+        <div class="centro-nombre">{{ matriz.centro or centro.nombre }}</div>
+        <div class="centro-detalle">{{ centro.modalidad }}</div>
+    </div>
+    <div>
+        <div class="doc-titulo">Coherencia Horizontal</div>
+        <div class="doc-sub">Planeamiento curricular MINERD · Ord. 04-2023</div>
+    </div>
+</div>
+
+<div class="est-datos">
+    <div><b>Grado</b>{{ matriz.grado }}</div>
+    <div><b>Sección</b>{{ matriz.seccion or '—' }}</div>
+    <div><b>Mención</b>{{ matriz.mencion or '—' }}</div>
+    <div><b>Período</b>{{ matriz.periodo or '—' }}</div>
+    <div><b>Año Escolar</b>{{ matriz.anio_escolar }}</div>
+    <div><b>Docente</b>{{ matriz.docente_nombre }}</div>
+</div>
+
+{% if filas %}
+<table>
+    <thead>
+        <tr>
+            <th style="width:14%">Área / Asignatura</th>
+            <th style="width:18%">Competencia(s) Fundamental(es)</th>
+            <th style="width:22%">Contenido / Unidad</th>
+            <th style="width:22%">Indicador de logro</th>
+            <th style="width:24%">Articulación horizontal</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for f in filas %}
+        <tr>
+            <td><strong>{{ f.area }}</strong></td>
+            <td>{{ f.competencias or '—' }}</td>
+            <td>{{ f.contenido }}</td>
+            <td>{{ f.indicador or '—' }}</td>
+            <td>{{ f.articulacion or '—' }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="sin-datos">Esta matriz todavía no tiene filas registradas.</div>
+{% endif %}
+
+<div class="footer">
+    Generado por Axula · {{ matriz.centro or centro.nombre }} · Coherencia Horizontal · Ordenanza 04-2023 MINERD
+</div>
+
+</body>
+</html>

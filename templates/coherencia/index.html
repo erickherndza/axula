@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Coherencia Horizontal — Axula</title>
+<link rel="stylesheet" href="/static/theme.css">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-height:100vh}
+.top{display:flex;align-items:center;justify-content:space-between;padding:14px 28px;
+     background:var(--surface);border-bottom:1px solid var(--border)}
+.top h1{font-family:var(--font-display);font-size:1.2rem;font-weight:800}
+.top .r{display:flex;gap:12px;align-items:center;font-size:.85rem;color:var(--muted)}
+.top a{color:var(--accent);text-decoration:none;font-weight:600;font-size:.85rem}
+.c{max-width:900px;margin:0 auto;padding:28px 24px}
+.page-head{display:flex;align-items:center;justify-content:space-between;
+           margin-bottom:24px;flex-wrap:wrap;gap:12px}
+.page-head h2{font-size:1.1rem;font-weight:700}
+.page-head p{font-size:.82rem;color:var(--muted);margin-top:2px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;
+     border:none;font-weight:600;cursor:pointer;font-size:.84rem;text-decoration:none;
+     transition:opacity .15s}
+.btn:hover{opacity:.88}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-sm{padding:5px 12px;font-size:.78rem}
+.btn-navy{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+.btn-danger{background:rgba(224,72,72,.12);color:#E04848;border:1px solid rgba(224,72,72,.3)}
+.flash{padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:.85rem;font-weight:500}
+.flash.success{background:rgba(3,140,140,.1);color:var(--accent);border-left:3px solid var(--accent)}
+.flash.error{background:rgba(224,72,72,.12);color:#F8A0A0;border-left:3px solid var(--danger)}
+.mx-grid{display:flex;flex-direction:column;gap:12px}
+.mx-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;
+          padding:18px 20px;display:flex;align-items:center;
+          justify-content:space-between;gap:12px;flex-wrap:wrap;
+          transition:border-color .15s}
+.mx-card:hover{border-color:var(--accent)}
+.mx-card .title{font-size:.95rem;font-weight:700;margin-bottom:4px}
+.mx-card .meta{font-size:.78rem;color:var(--muted)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.72rem;
+       font-weight:700;background:var(--surface2);color:var(--muted)}
+.card-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.empty{text-align:center;padding:60px 24px;color:var(--muted)}
+.empty i{font-size:2.5rem;display:block;margin-bottom:14px;opacity:.3}
+.intro{font-size:.82rem;color:var(--muted);line-height:1.6;margin-bottom:20px;
+       background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+</style>
+<script src="/static/theme.js"></script>
+</head>
+<body>
+
+<div class="top">
+  <h1><i class="fas fa-diagram-project" style="color:var(--accent);margin-right:8px"></i>Coherencia Horizontal</h1>
+  <div class="r">
+    <span>{{ current_user.nombre }}</span>
+    <a href="/profesor"><i class="fas fa-arrow-left"></i> Portal</a>
+  </div>
+</div>
+
+<div class="c">
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="flash {{ cat }}">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <div class="intro">
+    <strong>Coherencia Horizontal</strong> es el principio MINERD que exige que todas las
+    asignaturas de un mismo grado estén alineadas entre sí — en vez de trabajar aisladas.
+    Cada matriz documenta, para una sección y período, cómo se articula el Componente
+    Artístico con el Componente Académico (Ord. 04-2023).
+  </div>
+
+  <div class="page-head">
+    <div>
+      <h2>Mis Matrices</h2>
+      <p>{% if es_admin %}Todas las matrices registradas en el centro{% else %}Matrices de {{ current_user.nombre }}{% endif %}</p>
+    </div>
+    <a href="/coherencia/nueva" class="btn btn-primary"><i class="fas fa-plus"></i> Nueva Matriz</a>
+  </div>
+
+  {% if matrices %}
+  <div class="mx-grid">
+    {% for m in matrices %}
+    <div class="mx-card">
+      <div>
+        <div class="title">{{ m.grado }}{% if m.seccion %} — Sección {{ m.seccion }}{% endif %}{% if m.mencion %} · {{ m.mencion }}{% endif %}</div>
+        <div class="meta">
+          {% if m.periodo %}{{ m.periodo }} · {% endif %}Año {{ m.anio_escolar }}
+          {% if es_admin %} · <strong style="color:var(--text)">{{ m.docente_nombre }}</strong>{% endif %}
+          · {{ m.fecha_creacion[:10] }}
+        </div>
+      </div>
+      <div class="card-actions">
+        <span class="badge">{{ m.n_filas }} fila{{ 's' if m.n_filas != 1 else '' }}</span>
+        <a href="/coherencia/{{ m.id }}/editar" class="btn btn-navy btn-sm">
+          <i class="fas fa-pen"></i> Abrir
+        </a>
+        <a href="/coherencia/{{ m.id }}/imprimir" target="_blank" class="btn btn-navy btn-sm">
+          <i class="fas fa-file-pdf"></i>
+        </a>
+        <form method="POST" action="/coherencia/{{ m.id }}/eliminar" style="margin:0"
+              onsubmit="return confirm('¿Eliminar esta matriz y todas sus filas? No se puede deshacer.')">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button type="submit" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i></button>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% else %}
+  <div class="empty">
+    <i class="fas fa-diagram-project"></i>
+    <p style="margin-bottom:20px">Aún no hay ninguna matriz de Coherencia Horizontal creada.</p>
+    <a href="/coherencia/nueva" class="btn btn-primary"><i class="fas fa-plus"></i> Crear primera matriz</a>
+  </div>
+  {% endif %}
+
+</div>
+</body>
+</html>

@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{ matriz.grado }}{% if matriz.seccion %} {{ matriz.seccion }}{% endif %} — Coherencia Horizontal — Axula</title>
+<link rel="stylesheet" href="/static/theme.css">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-height:100vh}
+.top{display:flex;align-items:center;justify-content:space-between;padding:14px 28px;
+     background:var(--surface);border-bottom:1px solid var(--border)}
+.top h1{font-family:var(--font-display);font-size:1.2rem;font-weight:800}
+.top .r{display:flex;gap:12px;align-items:center;font-size:.85rem;color:var(--muted)}
+.top a{color:var(--accent);text-decoration:none;font-weight:600;font-size:.85rem}
+.c{max-width:1200px;margin:0 auto;padding:28px 24px}
+.flash{padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:.85rem}
+.flash.error{background:rgba(224,72,72,.12);color:#F8A0A0;border-left:3px solid var(--danger)}
+.flash.success{background:rgba(3,140,140,.1);color:var(--accent);border-left:3px solid var(--accent)}
+
+.header-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+             padding:18px 22px;margin-bottom:20px;display:flex;justify-content:space-between;
+             align-items:flex-start;flex-wrap:wrap;gap:14px}
+.header-card h2{font-size:1.05rem;font-weight:800;margin-bottom:6px}
+.header-meta{display:flex;gap:14px;flex-wrap:wrap;font-size:.8rem;color:var(--muted)}
+.header-meta b{color:var(--text)}
+.header-actions{display:flex;gap:8px;align-items:center}
+
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;
+     border:none;font-weight:600;cursor:pointer;font-size:.84rem;text-decoration:none;
+     transition:opacity .15s}
+.btn:hover{opacity:.88}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-navy{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+.btn-danger{background:transparent;color:#E04848;border:none;padding:4px 8px}
+.btn-sm{padding:5px 12px;font-size:.78rem}
+
+.section-label{font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;
+              letter-spacing:.06em;margin:22px 0 10px}
+
+.tbl-wrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+th{background:var(--surface2);text-align:left;padding:10px 12px;font-size:.72rem;
+   font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);
+   border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:top;line-height:1.5}
+tr:last-child td{border-bottom:none}
+.col-area{min-width:150px;font-weight:600}
+.col-long{min-width:220px}
+td.empty-cell{color:var(--muted)}
+
+.empty{text-align:center;padding:40px 24px;color:var(--muted)}
+.empty i{font-size:2rem;display:block;margin-bottom:10px;opacity:.3}
+
+.add-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+          padding:18px 20px;margin-top:14px}
+.add-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.f{display:flex;flex-direction:column;gap:5px}
+.f label{font-size:.72rem;font-weight:700;color:var(--muted);
+         text-transform:uppercase;letter-spacing:.05em}
+.f input,.f textarea{padding:9px 12px;border-radius:8px;border:1px solid var(--border);
+                   background:var(--surface2);color:var(--text);
+                   font-size:.85rem;font-family:var(--font-body);width:100%}
+.f input:focus,.f textarea:focus{outline:none;border-color:var(--accent)}
+.f textarea{resize:vertical;min-height:52px}
+
+.readonly-note{background:var(--surface2);border:1px solid var(--border);border-radius:10px;
+               padding:14px 16px;color:var(--muted);font-size:.82rem;margin-top:14px}
+</style>
+<script src="/static/theme.js"></script>
+</head>
+<body>
+
+<div class="top">
+  <h1><i class="fas fa-diagram-project" style="color:var(--accent);margin-right:8px"></i>Coherencia Horizontal</h1>
+  <div class="r">
+    <a href="/coherencia"><i class="fas fa-arrow-left"></i> Mis Matrices</a>
+    <a href="/profesor"><i class="fas fa-chalkboard-teacher"></i> Portal</a>
+  </div>
+</div>
+
+<div class="c">
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="flash {{ cat }}">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <div class="header-card">
+    <div>
+      <h2>{{ matriz.grado }}{% if matriz.seccion %} — Sección {{ matriz.seccion }}{% endif %}</h2>
+      <div class="header-meta">
+        {% if matriz.mencion %}<span><b>Mención:</b> {{ matriz.mencion }}</span>{% endif %}
+        {% if matriz.periodo %}<span><b>Período:</b> {{ matriz.periodo }}</span>{% endif %}
+        <span><b>Año escolar:</b> {{ matriz.anio_escolar }}</span>
+        {% if matriz.centro %}<span><b>Centro:</b> {{ matriz.centro }}</span>{% endif %}
+        {% if es_admin and not puede_editar %}<span><b>Docente:</b> {{ matriz.docente_nombre }}</span>{% endif %}
+      </div>
+    </div>
+    <div class="header-actions">
+      <a href="/coherencia/{{ matriz.id }}/imprimir" target="_blank" class="btn btn-navy btn-sm">
+        <i class="fas fa-file-pdf"></i> Imprimir / PDF
+      </a>
+    </div>
+  </div>
+
+  <p class="section-label">Matriz de articulación ({{ filas|length }} fila{{ 's' if filas|length != 1 else '' }})</p>
+
+  <div class="tbl-wrap">
+    {% if filas %}
+    <table>
+      <thead>
+        <tr>
+          <th class="col-area">Área / Asignatura</th>
+          <th class="col-long">Competencia(s) Fundamental(es)</th>
+          <th class="col-long">Contenido / Unidad</th>
+          <th class="col-long">Indicador de logro</th>
+          <th class="col-long">Articulación horizontal</th>
+          {% if puede_editar %}<th style="width:36px"></th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for f in filas %}
+        <tr>
+          <td class="col-area">{{ f.area }}</td>
+          <td>{{ f.competencias or '—' }}</td>
+          <td>{{ f.contenido }}</td>
+          <td>{{ f.indicador or '—' }}</td>
+          <td>{{ f.articulacion or '—' }}</td>
+          {% if puede_editar %}
+          <td>
+            <form method="POST" style="margin:0"
+                  onsubmit="return confirm('¿Eliminar esta fila?')">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <input type="hidden" name="accion" value="eliminar_fila">
+              <input type="hidden" name="fila_id" value="{{ f.id }}">
+              <button type="submit" class="btn-danger" title="Eliminar fila"><i class="fas fa-trash"></i></button>
+            </form>
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty">
+      <i class="fas fa-table"></i>
+      <p>Todavía no hay filas en esta matriz.</p>
+    </div>
+    {% endif %}
+  </div>
+
+  {% if puede_editar %}
+  <div class="add-card">
+    <p class="section-label" style="margin-top:0">Agregar fila</p>
+    <form method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="accion" value="agregar_fila">
+      <div class="add-grid">
+        <div class="f">
+          <label for="area">Área / Asignatura <span style="color:var(--danger)">*</span></label>
+          <input type="text" id="area" name="area" placeholder="Ej. Diseño Web, Lengua Española…" required>
+        </div>
+        <div class="f">
+          <label for="competencias">Competencia(s) Fundamental(es)</label>
+          <input type="text" id="competencias" name="competencias" placeholder="Ej. Comunicativa, Pensamiento Lógico…">
+        </div>
+      </div>
+      <div class="f" style="margin-bottom:12px">
+        <label for="contenido">Contenido / Unidad del período <span style="color:var(--danger)">*</span></label>
+        <textarea id="contenido" name="contenido" placeholder="Ej. Estructura de una landing page" required></textarea>
+      </div>
+      <div class="add-grid" style="margin-bottom:0">
+        <div class="f">
+          <label for="indicador">Indicador de logro</label>
+          <textarea id="indicador" name="indicador" placeholder="Ej. Diseña una landing page funcional siguiendo principios UX"></textarea>
+        </div>
+        <div class="f">
+          <label for="articulacion">Punto de articulación horizontal</label>
+          <textarea id="articulacion" name="articulacion" placeholder="Ej. Se conecta con Lengua Española: redacción del copy de la página"></textarea>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-top:14px">
+        <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Agregar fila</button>
+      </div>
+    </form>
+  </div>
+  {% else %}
+  <div class="readonly-note">
+    <i class="fas fa-eye"></i> Estás viendo esta matriz en modo solo lectura — pertenece a {{ matriz.docente_nombre }}.
+  </div>
+  {% endif %}
+
+</div>
+</body>
+</html>

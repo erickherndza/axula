@@ -1115,6 +1115,37 @@ CREATE TABLE IF NOT EXISTS notas_competencias_ce (
     )
     """,
     """CREATE INDEX IF NOT EXISTS idx_poa_docente ON poa(docente_id)""",
+    # — Coherencia Horizontal (planeamiento curricular MINERD, Ord. 04-2023) —
+    """
+    CREATE TABLE IF NOT EXISTS coherencia_horizontal (
+        id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+        docente_id          INTEGER NOT NULL,
+        anio_escolar        TEXT    NOT NULL DEFAULT '2025-2026',
+        centro              TEXT,
+        grado               TEXT    NOT NULL,
+        seccion             TEXT,
+        mencion             TEXT,
+        periodo             TEXT,
+        fecha_creacion      TEXT DEFAULT (datetime('now')),
+        fecha_actualizacion TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (docente_id) REFERENCES usuarios(id)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS coherencia_horizontal_fila (
+        id           INTEGER PRIMARY KEY AUTOINCREMENT,
+        matriz_id    INTEGER NOT NULL,
+        area         TEXT    NOT NULL,
+        competencias TEXT,
+        contenido    TEXT    NOT NULL,
+        indicador    TEXT,
+        articulacion TEXT,
+        orden        INTEGER DEFAULT 0,
+        FOREIGN KEY (matriz_id) REFERENCES coherencia_horizontal(id) ON DELETE CASCADE
+    )
+    """,
+    """CREATE INDEX IF NOT EXISTS idx_coherencia_docente ON coherencia_horizontal(docente_id)""",
+    """CREATE INDEX IF NOT EXISTS idx_coherencia_fila_matriz ON coherencia_horizontal_fila(matriz_id)""",
 ]
 
 

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nueva Matriz — Coherencia Horizontal — Axula</title>
+<link rel="stylesheet" href="/static/theme.css">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-height:100vh}
+.top{display:flex;align-items:center;justify-content:space-between;padding:14px 28px;
+     background:var(--surface);border-bottom:1px solid var(--border)}
+.top h1{font-family:var(--font-display);font-size:1.2rem;font-weight:800}
+.top .r{display:flex;gap:12px;align-items:center;font-size:.85rem;color:var(--muted)}
+.top a{color:var(--accent);text-decoration:none;font-weight:600;font-size:.85rem}
+.c{max-width:600px;margin:0 auto;padding:36px 24px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.card-head{padding:18px 22px;border-bottom:1px solid var(--border)}
+.card-head h2{font-size:.95rem;font-weight:700;margin-bottom:3px}
+.card-head p{font-size:.8rem;color:var(--muted)}
+.card-body{padding:22px;display:flex;flex-direction:column;gap:16px}
+.card-foot{padding:12px 22px;border-top:1px solid var(--border);
+           display:flex;justify-content:flex-end;gap:10px;background:var(--surface2)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.f{display:flex;flex-direction:column;gap:5px}
+.f label{font-size:.72rem;font-weight:700;color:var(--muted);
+         text-transform:uppercase;letter-spacing:.05em}
+.f input,.f select,.f textarea{padding:9px 12px;border-radius:8px;border:1px solid var(--border);
+                   background:var(--surface2);color:var(--text);
+                   font-size:.875rem;font-family:var(--font-body);width:100%}
+.f input:focus,.f select:focus,.f textarea:focus{outline:none;border-color:var(--accent)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:8px;
+     border:none;font-weight:600;cursor:pointer;font-size:.84rem;text-decoration:none;
+     transition:opacity .15s}
+.btn:hover{opacity:.88}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
+.flash{padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:.85rem}
+.flash.error{background:rgba(224,72,72,.12);color:#F8A0A0;border-left:3px solid var(--danger)}
+.flash.success{background:rgba(3,140,140,.1);color:var(--accent);border-left:3px solid var(--accent)}
+</style>
+<script src="/static/theme.js"></script>
+</head>
+<body>
+
+<div class="top">
+  <h1><i class="fas fa-diagram-project" style="color:var(--accent);margin-right:8px"></i>Coherencia Horizontal</h1>
+  <div class="r">
+    <a href="/coherencia"><i class="fas fa-arrow-left"></i> Mis Matrices</a>
+    <a href="/profesor"><i class="fas fa-chalkboard-teacher"></i> Portal</a>
+  </div>
+</div>
+
+<div class="c">
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="flash {{ cat }}">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <div class="card">
+    <div class="card-head">
+      <h2>Nueva Matriz de Coherencia Horizontal</h2>
+      <p>Completa el encabezado. Luego agregarás las filas de articulación entre asignaturas.</p>
+    </div>
+
+    <form method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="card-body">
+
+        <div class="f">
+          <label for="centro">Centro Educativo</label>
+          <input type="text" id="centro" name="centro" value="{{ centro_nombre }}">
+        </div>
+
+        <div class="row2">
+          <div class="f">
+            <label for="grado">Grado <span style="color:var(--danger)">*</span></label>
+            <select id="grado" name="grado" required>
+              <option value="4TO" {% if grado_prof == '4to' %}selected{% endif %}>4to</option>
+              <option value="5TO" {% if grado_prof == '5to' %}selected{% endif %}>5to</option>
+            </select>
+          </div>
+          <div class="f">
+            <label for="seccion">Sección</label>
+            <input type="text" id="seccion" name="seccion" placeholder="Ej. A, B…">
+          </div>
+        </div>
+
+        <div class="row2">
+          <div class="f">
+            <label for="mencion">Mención — Modalidad en Artes</label>
+            <select id="mencion" name="mencion">
+              <option value="">— Selecciona —</option>
+              <option value="MULTIMEDIA" {% if mencion_prof == 'MULTIMEDIA' %}selected{% endif %}>Multimedia (Artes Aplicadas)</option>
+              <option value="ARTES VISUALES" {% if mencion_prof == 'ARTES VISUALES' %}selected{% endif %}>Artes Visuales</option>
+              <option value="MÚSICA" {% if mencion_prof == 'MÚSICA' %}selected{% endif %}>Música</option>
+              <option value="TEATRO" {% if mencion_prof == 'TEATRO' %}selected{% endif %}>Teatro (Artes Escénicas)</option>
+              <option value="DANZA" {% if mencion_prof == 'DANZA' %}selected{% endif %}>Danza (Artes Escénicas)</option>
+            </select>
+          </div>
+          <div class="f">
+            <label for="periodo">Período de planificación</label>
+            <input type="text" id="periodo" name="periodo" placeholder="Ej. Primer trimestre, Unidad 2…">
+          </div>
+        </div>
+
+      </div>
+      <div class="card-foot">
+        <a href="/coherencia" class="btn btn-ghost">Cancelar</a>
+        <button type="submit" class="btn btn-primary">
+          Crear Matriz <i class="fas fa-arrow-right"></i>
+        </button>
+      </div>
+    </form>
+  </div>
+
+</div>
+</body>
+</html>
