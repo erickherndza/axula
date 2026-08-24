@@ -144,6 +144,133 @@ python3 -c "import app; print('OK')"
 
 ## Log de sesiones
 
+### 2026-08-23 (sesión 17 — retiro de estudiantes + auditoría profunda "notas de grado anterior" + reconexión del motor de promoción)
+
+**Disparador:** con el año escolar 2026-2027 arrancando al día siguiente (24-ago), Erick reportó
+que estudiantes ya promovidos (ej. 4TO→5TO Multimedia) seguían mostrando en `/perfil/<id>` las
+materias y notas de su grado anterior. Lo que empezó como "un bug" terminó siendo una auditoría
+completa del subsistema de grados/promoción — 9 bugs independientes, todos con causa raíz
+identificada y verificada con datos reales antes de cada fix (a pedido explícito del usuario:
+"no demos pasos a ciegas").
+
+**Parte 1 — Retiro/transferencia de estudiantes (feature nueva):**
+- `condicion` en `estudiantes` ya existía (`ACTIVO`/`RETIRADO`/`GRADUADO`) pero
+  `POST /api/estudiante/<id>/condicion` solo exigía `@login_required` — cualquier usuario logueado
+  podía retirar a un estudiante. Ahora exige `ROLES_DIRECTORA` (directora/superusuario).
+- Agregado estado `TRANSFERIDO`.
+- **Ningún listado de curso filtraba por condición** — un estudiante RETIRADO seguía apareciendo
+  en el dashboard, asistencia, asignaciones, evaluación por competencias, portal del profesor.
+  Agregado el filtro `condicion NOT IN ('RETIRADO','TRANSFERIDO')` en los 11 sitios que arman
+  esos listados (`routes/estudiantes.py::api_datos`, `asistencia.py` x2, `asignaciones.py` x2,
+  `evaluacion.py`, `profesor.py` x3, `dashboard.py`).
+- UI de "Editar → Estado" en `perfil.html` reducida de `es_coord or es_directora` a `es_admin`
+  (=ROLES_DIRECTORA) solo para el botón de condición — Reportes/Editar datos siguen visibles
+  a coordinador.
+
+**Parte 2 — Por qué las notas de 4TO seguían apareciendo en estudiantes ya en 5TO (8 causas):**
+
+1. **`perfil_estudiante()` y `boletin_view()` sin filtro de grado** — ambas leían
+   `materias_calificaciones` filtrando solo por `estudiante_id` (o por `anio_escolar` sin
+   `grado`). Fix: mismo patrón que ya usaba `boletin_estudiante()` — filtrar por
+   `anio_escolar actual` + `grado actual` del estudiante (NULL-tolerant para filas viejas
+   sin etiquetar). `commit 1c4aa8d`.
+2. **`obtener_notas_estudiante()` (core canónica, usada por `recalcular_kpis_estudiante` y el
+   motor de promoción) tampoco filtraba por grado** — ahora acepta `grado=` opcional.
+   `commit 1c4aa8d`.
+3. **`configuracion_centro.anio_escolar_activo` estaba en `"2027-2028"`** — un año adelantado
+   del real (hoy 23-ago-2026, año nuevo empieza 24-ago-2026 → debía ser `"2026-2027"`). No hay
+   ninguna pantalla en la app para editar este valor (el módulo `config` que lo hacía se eliminó
+   en la sesión 14) — se corrigió a mano en Render Shell con
+   `scripts/fijar_anio_escolar.py 2026-2027`. **Si el año escolar activo vuelve a quedar mal,
+   nada de lo demás en esta lista funciona correctamente** — es la pieza más crítica.
+4. **101 estudiantes tenían KPIs "cacheados" (`p_acad`, `acad_p1-4`, módulos técnicos de las 4
+   menciones) con valores de su grado anterior**, aunque las consultas ya estaban arregladas —
+   el fix de lectura no borra lo que ya quedó mal escrito de antes. Limpiado con
+   `scripts/resetear_kpis_promovidos.py --commit` (dry-run primero, siempre).
+5. **El motor de promoción (`core/promocion_engine.py`) estaba completamente desconectado.**
+   `routes/promocion.py` se borró en la purga institucional de la sesión 14 (está en la lista
+   de "módulos eliminados"), pero el botón "Promover" de `perfil.html` y el motor en
+   `core/promocion_engine.py` NUNCA se borraron — quedaron huérfanos. `/api/promocion/estudiante/
+   <id>` y `/api/promocion/ejecutar/<id>` daban 404 silencioso desde la sesión 14. Reconectado en
+   `routes/promocion.py` (nuevo, solo las 2 rutas que la UI ya esperaba). `commit 153f479`.
+6. **Sin el motor, la única forma alcanzable de cambiar `grado` era el editor genérico**
+   `PATCH /api/estudiante/<id>` (campo de texto libre en el modal "Editar datos") — sin ninguna
+   regla, sin resetear nada. Blindado: si ese endpoint cambia `grado`, ahora también limpia el
+   caché de KPIs. `commit 153f479`.
+7. **`/api/indicadores/materias/<id>` y `/api/indicadores/<id>`** (los que realmente alimentan
+   la sección "Módulos Técnicos" del perfil vía AJAX — NO `/api/materias/<id>`, que ya filtraba
+   bien) **no tenían filtro de año/grado en absoluto.** Esta fue la fuga que sobrevivió a los
+   primeros 3 fixes — se confirmó con datos reales de Diana (est_id 509) que sus 12 filas de
+   4TO/2025-2026 pasaban sin ningún filtro. `commit f69d46d`.
+8. **`/api/*` no mandaba ningún header de caché** — un fetch() GET podía quedar servido desde
+   caché heurística del navegador después de un deploy, mostrando datos viejos hasta hacer
+   hard-refresh. Agregado `Cache-Control: no-store` global a toda respuesta `/api/*` en
+   `app.py::security_headers`. `commit 5dc62dd`.
+9. **"Récord de Notas" (botón en `perfil.html`, visible a coordinación) apuntaba a
+   `/api/promocion/record-notas/<id>`, que nunca existió** — otra ruta huérfana de la purga de
+   la sesión 14. Reconstruida en `routes/promocion.py::record_notas()` + plantilla nueva
+   `templates/record_notas.html` (página imprimible, un bloque por año escolar — es la vista
+   correcta para ver materias de grados anteriores, separada del perfil normal que ahora solo
+   muestra el grado/año actual). Al reconstruirla salió un 9no bug heredado: la query original de
+   `historial_notas()` (que se extrajo a `core/helpers.py::construir_historial_notas()` para
+   reusarla) pedía columnas `nota_recuperacion`/`nota_completiva` que **nunca existieron** en
+   `materias_calificaciones` (son de `recuperaciones_pedagogicas`/`promocion_detalle_materias`) —
+   bug preexistente a esta sesión, nunca disparado porque nada llamaba ese endpoint en la
+   práctica hasta ahora. `commits b34a5f2` + `7e4f00b`.
+
+**Limpieza de deuda encontrada durante la auditoría (no bugs activos, pero riesgo real):**
+- Borrados 2 endpoints de promoción "legacy" que SET `grado` sin resetear nada y sin ningún
+  caller en templates (`/api/promover/<id>` en `routes/estudiantes.py`,
+  `/api/coordinador/promocion-preview` + `/api/coordinador/promocion-ejecutar` en
+  `routes/calificaciones.py`) — landmines si alguna vez se llamaban por error.
+- Borrado `routes/perfil.py` — 1133 líneas de blueprint duplicado de `routes/estudiantes.py`,
+  nunca registrado en `ALL_BLUEPRINTS`, cero referencias en el resto del repo.
+- 2 handlers de carga masiva (Excel multi-hoja y boletín escaneado en `routes/estudiantes.py`)
+  recalculaban `p_acad` promediando **todo el historial** de `materias_calificaciones` sin
+  filtrar año/grado — ahora delegan a `recalcular_kpis_estudiante()` (ya arreglada) en vez de
+  reinventar la lógica.
+- `feat(perfil)`: cuando un estudiante no tiene notas del grado/año actual, en vez de pantalla
+  vacía se muestra el catálogo oficial de materias de su grado/mención (`PLAN_ARTES`) en blanco —
+  nuevo helper `core/helpers.py::catalogo_materias_grado()`. `commit 4a0a146`.
+- A pedido de Erick: eliminadas del perfil las tarjetas KPI "Promedio Académico", "Bienestar
+  Emocional", "Índice Conductual" y el widget "Motor Conductual" (este último mostraba
+  "undefined pts" — dependía de `/api/conductual/<id>`, que **también** da 404 desde algún
+  refactor anterior; no se investigó más por no ser parte de lo reportado). Backend
+  (`calcular_motor_conductual`, columnas `score_conductual`/`semaforo`) intacto por si se
+  reactiva. `commit 679273a`.
+
+**LECCIÓN PERMANENTE — por qué este bug tenía 8 causas y no 1:**
+El patrón raíz es que `p_acad`/`acad_p1-4`/los ~40 campos de módulos técnicos en `estudiantes`
+son un **caché denormalizado**, no la fuente de verdad (`calificaciones_periodo` +
+`materias_calificaciones` sí lo son). Encontré **5 implementaciones independientes** que
+recalculan ese caché (una con su propio `MODULO_MAP` copiado y pegado 3 veces) y **3 caminos
+distintos** que pueden cambiar `estudiantes.grado` (el motor bueno + 2 legacy), y solo 1-2 de
+cada grupo invalidaban el caché correctamente. Cada vez que alguien agrega una pantalla nueva
+que lee/escribe notas sin pasar por `obtener_notas_estudiante()` / `recalcular_kpis_estudiante()`
+(las funciones canónicas, ya arregladas), el bug puede volver a aparecer en un lugar nuevo. Antes
+de escribir una consulta nueva contra `materias_calificaciones` o `calificaciones_periodo`,
+**usar las funciones canónicas de `core/helpers.py` en vez de escribir SQL ad-hoc.**
+
+**Scripts nuevos en `scripts/` (mantenimiento / diagnóstico, todos con modo dry-run):**
+- `resetear_kpis_promovidos.py [--commit]` — limpia KPIs cacheados de un grado anterior.
+- `fijar_anio_escolar.py <AAAA-AAAA>` — corrige `configuracion_centro.anio_escolar_activo`
+  (comando de una sola línea porque la shell web de Render corta líneas largas/multilínea).
+- `diag_materias_estudiante.py <est_id>` — imprime TODAS las filas de
+  `materias_calificaciones`/`calificaciones_periodo` de un estudiante, marca las que tienen
+  `grado`/`anio_escolar` en NULL.
+- `probar_api_materias.py <est_id>` — replica la query de `/api/materias/<id>` directo contra la
+  BD, sin HTTP, para descartar caché del navegador como causa de una discrepancia.
+
+**Pendiente para mañana (24-ago, arranque de año escolar 2026-2027):**
+- Cargar la lista oficial de estudiantes de 4TO y 5TO Multimedia para el año 2026-2027.
+- Verificar que `anio_escolar_activo` siga en `"2026-2027"` antes de cargar nada (Render Shell:
+  `SELECT anio_escolar_activo FROM configuracion_centro WHERE id=1`).
+- Al promover/matricular, usar el botón "Promover" de `perfil.html` (motor real) — NO editar
+  `grado` a mano por "Editar datos" salvo necesidad puntual (el blindaje del punto 5 ya cubre
+  ese caso, pero el motor real registra auditoría en `promociones`).
+- Pendiente sin resolver, no bloqueante: `/api/conductual/<id>` sigue en 404 (semáforo
+  conductual) — mismo patrón que el motor de promoción, no se tocó esta sesión.
+
 ### 2026-08-21 (sesión 16 — Groq deprecado + migración a Claude + fix crítico timeout Render)
 
 **Disparador:** el generador de planificación ABP (`/planificacion`) empezó a fallar con
