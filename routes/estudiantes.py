@@ -1890,11 +1890,17 @@ def get_materias_disponibles():
 @estudiantes_bp.route("/api/indicadores/materias/<int:estudiante_id>")
 @login_required
 def get_indicadores_materias(estudiante_id):
-    """Lista de materias disponibles para el estudiante con promedio."""
+    """Lista de materias disponibles para el estudiante con promedio.
+    Alimenta la sección "Módulos Técnicos" de /perfil/<id>."""
     from core.helpers import _get_profesor
     from core.auth import _normalizar_rol
     with sqlite3.connect(DATABASE, timeout=10) as conn:
         conn.row_factory = sqlite3.Row
+        est_row = conn.execute(
+            "SELECT grado FROM estudiantes WHERE id=?", (estudiante_id,)
+        ).fetchone()
+        grado_actual = (est_row["grado"] if est_row else "") or ""
+        anio = _anio_escolar_actual()
         rows = conn.execute("""
             SELECT materia,
                    COALESCE(p1,0) p1, COALESCE(p2,0) p2,
@@ -1902,8 +1908,10 @@ def get_indicadores_materias(estudiante_id):
                    COALESCE(promedio,0) promedio, fecha_carga
             FROM materias_calificaciones
             WHERE estudiante_id = ?
+              AND anio_escolar = ?
+              AND UPPER(TRIM(COALESCE(grado, ?))) = ?
             ORDER BY materia
-        """, (estudiante_id,)).fetchall()
+        """, (estudiante_id, anio, grado_actual, grado_actual.upper())).fetchall()
 
     result = _rls.filtrar_materias_profesor([dict(r) for r in rows])
     return jsonify(result)
@@ -1916,11 +1924,18 @@ def get_indicadores(estudiante_id):
     materia = request.args.get("materia", "")
     with sqlite3.connect(DATABASE, timeout=10) as conn:
         conn.row_factory = sqlite3.Row
+        est_row = conn.execute(
+            "SELECT grado FROM estudiantes WHERE id=?", (estudiante_id,)
+        ).fetchone()
+        grado_actual = (est_row["grado"] if est_row else "") or ""
+        anio = _anio_escolar_actual()
         row = conn.execute("""
             SELECT materia, p1, p2, p3, p4, promedio, fecha_carga
             FROM materias_calificaciones
             WHERE estudiante_id=? AND materia=?
-        """, (estudiante_id, materia)).fetchone()
+              AND anio_escolar = ?
+              AND UPPER(TRIM(COALESCE(grado, ?))) = ?
+        """, (estudiante_id, materia, anio, grado_actual, grado_actual.upper())).fetchone()
     if not row:
         return jsonify({"indicadores": [], "materia": materia, "promedio": 0})
     r = dict(row)
