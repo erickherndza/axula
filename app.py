@@ -188,6 +188,13 @@ def security_headers(response):
         elif ext in ('png', 'jpg', 'jpeg', 'gif', 'ico', 'svg', 'webp'):
             response.cache_control.max_age = 2592000
             response.cache_control.public = True
+    # /api/* nunca debe cachearse en el navegador — sin esto, un fetch() GET
+    # sin headers explícitos puede quedar servido desde caché heurística del
+    # browser después de un deploy, mostrando datos viejos (notas de un grado
+    # anterior) hasta que el usuario haga hard-refresh.
+    elif request.path.startswith('/api/'):
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
     return response
 
 _ultima_limpieza_tareas: float = 0.0  # timestamp Unix de la última limpieza
