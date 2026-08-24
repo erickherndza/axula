@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Récord de Notas — {{ e.nombre }} {{ e.apellido }}</title>
+<style>
+    * { box-sizing: border-box; }
+    body {
+        font-family: -apple-system, 'Segoe UI', Arial, sans-serif;
+        color: #1a1a1a;
+        background: #fff;
+        margin: 0;
+        padding: 32px 40px;
+        font-size: 13px;
+        line-height: 1.5;
+    }
+    .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        border-bottom: 2px solid #038C8C;
+        padding-bottom: 16px;
+        margin-bottom: 20px;
+    }
+    .centro-nombre { font-size: 16px; font-weight: 800; color: #024959; }
+    .centro-detalle { font-size: 11px; color: #555; margin-top: 2px; }
+    .doc-titulo {
+        font-size: 18px; font-weight: 800; color: #038C8C;
+        text-transform: uppercase; letter-spacing: .5px; text-align: right;
+    }
+    .est-datos {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px 24px;
+        background: #F7F4EF;
+        border: 1px solid #E8E1D8;
+        border-radius: 10px;
+        padding: 14px 18px;
+        margin-bottom: 24px;
+        font-size: 12px;
+    }
+    .est-datos b { display: block; font-size: 10px; color: #777; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 2px; }
+    .anio-bloque { margin-bottom: 28px; page-break-inside: avoid; }
+    .anio-header {
+        display: flex; align-items: center; justify-content: space-between;
+        background: #024959; color: #fff; padding: 8px 14px; border-radius: 8px 8px 0 0;
+        font-weight: 700; font-size: 13px;
+    }
+    .anio-resumen { font-size: 11px; font-weight: 500; opacity: .9; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 6px 10px; border: 1px solid #E8E1D8; text-align: center; font-size: 12px; }
+    th { background: #F0EBE3; font-weight: 700; color: #024959; font-size: 10px; text-transform: uppercase; letter-spacing: .3px; }
+    td:first-child, th:first-child { text-align: left; }
+    .grado-tag { font-size: 10px; color: #777; }
+    .aprobada { color: #2E9E68; font-weight: 700; }
+    .reprobada { color: #C9352B; font-weight: 700; }
+    .promocion-badge {
+        display: inline-block; margin-top: 8px; padding: 4px 12px;
+        border-radius: 20px; font-size: 11px; font-weight: 700;
+    }
+    .sin-datos { color: #999; font-style: italic; padding: 12px; text-align: center; }
+    .footer { margin-top: 32px; padding-top: 12px; border-top: 1px solid #E8E1D8; font-size: 10px; color: #999; text-align: center; }
+    @media print {
+        body { padding: 16px 24px; }
+        .anio-bloque { page-break-inside: avoid; }
+    }
+    .btn-imprimir {
+        position: fixed; top: 16px; right: 16px; background: #038C8C; color: #fff;
+        border: none; padding: 10px 18px; border-radius: 8px; font-weight: 700;
+        cursor: pointer; font-size: 12px;
+    }
+    @media print { .btn-imprimir { display: none; } }
+</style>
+</head>
+<body>
+
+<button class="btn-imprimir" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>
+
+<div class="header">
+    <div>
+        <div class="centro-nombre">{{ centro.nombre }}</div>
+        <div class="centro-detalle">{{ centro.modalidad }}</div>
+        <div class="centro-detalle">{{ centro.direccion }}</div>
+    </div>
+    <div class="doc-titulo">Récord de Notas</div>
+</div>
+
+<div class="est-datos">
+    <div><b>Estudiante</b>{{ e.nombre }} {{ e.apellido }}</div>
+    <div><b>Cédula / ID</b>{{ e.cedula or e.id_evaluacion or '—' }}</div>
+    <div><b>Grado actual</b>{{ e.grado }}</div>
+    <div><b>Mención / Curso</b>{{ e.curso or '—' }}</div>
+</div>
+
+{% if not historial %}
+<div class="sin-datos">Este estudiante todavía no tiene años escolares registrados en el sistema.</div>
+{% endif %}
+
+{% for anio_data in historial %}
+<div class="anio-bloque">
+    <div class="anio-header">
+        <span>Año Escolar {{ anio_data.anio_escolar }}</span>
+        <span class="anio-resumen">
+            {{ anio_data.total }} materia{{ 's' if anio_data.total != 1 else '' }} ·
+            {{ anio_data.aprobadas }} aprobada{{ 's' if anio_data.aprobadas != 1 else '' }} ·
+            {{ anio_data.reprobadas }} reprobada{{ 's' if anio_data.reprobadas != 1 else '' }}
+        </span>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>Materia</th>
+                <th>Grado</th>
+                <th>Tipo</th>
+                <th>P1</th>
+                <th>P2</th>
+                <th>P3</th>
+                <th>P4</th>
+                <th>Promedio</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for m in anio_data.materias %}
+            <tr>
+                <td>{{ m.materia }}</td>
+                <td class="grado-tag">{{ m.grado or '—' }}</td>
+                <td class="grado-tag">{{ m.tipo or 'académico' }}</td>
+                <td>{{ m.p1 if m.p1 else '—' }}</td>
+                <td>{{ m.p2 if m.p2 else '—' }}</td>
+                <td>{{ m.p3 if m.p3 else '—' }}</td>
+                <td>{{ m.p4 if m.p4 else '—' }}</td>
+                <td class="{{ 'aprobada' if m.aprobada else 'reprobada' }}">
+                    {{ m.promedio | round(1) if m.promedio else '—' }}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% if anio_data.promocion %}
+    {% set p = anio_data.promocion %}
+    {% set badge_color = '#2E9E68' if p.estado == 'PROMOVIDO' else ('#C48A1E' if p.estado == 'RECUPERACION' else '#C9352B') %}
+    <div class="promocion-badge" style="background:{{ badge_color }}22;color:{{ badge_color }};">
+        {{ p.estado }} — {{ p.grado_origen }} → {{ p.grado_destino }}
+    </div>
+    {% endif %}
+</div>
+{% endfor %}
+
+<div class="footer">
+    Generado por Axula · {{ centro.nombre }} ·
+    {{ now.strftime('%d/%m/%Y') if now else '' }}
+</div>
+
+</body>
+</html>

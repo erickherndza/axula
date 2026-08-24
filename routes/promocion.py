@@ -22,13 +22,15 @@ repo — no se reconstruye aquí porque nada la usa.
 
 import sqlite3
 import logging
+from datetime import datetime
 
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, render_template
 
-from core.constants import DATABASE
+from core.constants import DATABASE, ROLES_COORD
 from core.auth import login_required, get_usuario, _normalizar_rol
 from core.promocion_engine import evaluar_estudiante, ejecutar_promocion_estudiante
-from core.helpers import _anio_escolar_actual
+from core.helpers import _anio_escolar_actual, _get_config_centro, construir_historial_notas
+from core import rls as _rls
 
 logger = logging.getLogger("axula")
 
@@ -83,3 +85,32 @@ def promocion_ejecutar_individual(est_id):
 
     status = 200 if resultado.get("ok") else 400
     return jsonify(resultado), status
+
+
+@promocion_bp.route("/api/promocion/record-notas/<int:est_id>")
+@login_required
+def record_notas(est_id):
+    """Récord de notas imprimible: TODO el historial académico del
+    estudiante agrupado por año escolar, incluyendo grados anteriores —
+    a propósito, es la única vista que debe mostrar eso (en el resto del
+    perfil solo se ve el grado/año actual)."""
+    u = get_usuario()
+    rol_n = _normalizar_rol(u.get("rol", ""))
+    if rol_n not in ROLES_COORD:
+        return jsonify({"error": "Sin permisos. Solo coordinación/directora puede ver el récord de notas."}), 403
+
+    with sqlite3.connect(DATABASE, timeout=10) as conn:
+        conn.row_factory = sqlite3.Row
+        _rls.verificar_acceso_estudiante(conn, est_id)
+        est = conn.execute("SELECT * FROM estudiantes WHERE id=?", (est_id,)).fetchone()
+        if not est:
+            return "Estudiante no encontrado", 404
+        historial = construir_historial_notas(conn, est_id)
+
+    return render_template(
+        "record_notas.html",
+        e=dict(est),
+        historial=historial,
+        centro=_get_config_centro(),
+        now=datetime.now(),
+    )

@@ -29,6 +29,7 @@ __all__ = [
     "_calcular_nota_final_con_recuperacion",
     "_color_nota",
     "catalogo_materias_grado",
+    "construir_historial_notas",
     "_construir_prompt_asignacion",
     "_crear_notificacion",
     "_delete_recovery_token",
@@ -2042,6 +2043,54 @@ def _calcular_bienestar_emocional(conn, est_id):
     score = sum(v * w for v, w in components) / total_w if components else 100.0
 
     return round(max(0.0, min(100.0, score)), 1)
+
+
+def construir_historial_notas(conn, est_id):
+    """Notas del estudiante agrupadas por año escolar (todos los años, sin
+    filtrar por grado actual — a propósito, es EL histórico). Compartida
+    entre /api/calificaciones/historial-notas/<id> (JSON) y
+    /api/promocion/record-notas/<id> (HTML imprimible)."""
+    anios = conn.execute("""
+        SELECT DISTINCT COALESCE(anio_escolar, '2025-2026') as anio
+        FROM materias_calificaciones
+        WHERE estudiante_id=?
+        ORDER BY anio DESC
+    """, (est_id,)).fetchall()
+
+    historial = []
+    for anio_row in anios:
+        anio = anio_row["anio"]
+        rows = conn.execute("""
+            SELECT materia, tipo, grado,
+                   p1, p2, p3, p4, promedio,
+                   nota_recuperacion, nota_completiva
+            FROM materias_calificaciones
+            WHERE estudiante_id=? AND COALESCE(anio_escolar,'2025-2026')=?
+            ORDER BY tipo, materia
+        """, (est_id, anio)).fetchall()
+
+        materias = []
+        for r in rows:
+            m = dict(r)
+            prom = m.get("promedio") or 0
+            m["aprobada"] = prom >= 70
+            materias.append(m)
+
+        prom_row = conn.execute("""
+            SELECT estado, grado_origen, grado_destino
+            FROM promociones WHERE estudiante_id=? AND anio_escolar=?
+        """, (est_id, anio)).fetchone()
+
+        historial.append({
+            "anio_escolar": anio,
+            "materias": materias,
+            "total": len(materias),
+            "aprobadas": sum(1 for m in materias if m["aprobada"]),
+            "reprobadas": sum(1 for m in materias if not m["aprobada"] and (m.get("promedio") or 0) > 0),
+            "promocion": dict(prom_row) if prom_row else None,
+        })
+
+    return historial
 
 
 _ACAD_ESTANDAR = {

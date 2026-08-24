@@ -880,48 +880,7 @@ def historial_notas(est_id):
     with sqlite3.connect(DATABASE, timeout=10) as conn:
         conn.row_factory = sqlite3.Row
         _rls.verificar_acceso_estudiante(conn, est_id)
-
-        # Group by anio_escolar
-        anios = conn.execute("""
-            SELECT DISTINCT COALESCE(anio_escolar, '2025-2026') as anio
-            FROM materias_calificaciones
-            WHERE estudiante_id=?
-            ORDER BY anio DESC
-        """, (est_id,)).fetchall()
-
-        historial = []
-        for anio_row in anios:
-            anio = anio_row["anio"]
-            rows = conn.execute("""
-                SELECT materia, tipo, grado,
-                       p1, p2, p3, p4, promedio,
-                       nota_recuperacion, nota_completiva
-                FROM materias_calificaciones
-                WHERE estudiante_id=? AND COALESCE(anio_escolar,'2025-2026')=?
-                ORDER BY tipo, materia
-            """, (est_id, anio)).fetchall()
-
-            materias = []
-            for r in rows:
-                m = dict(r)
-                prom = m.get("promedio") or 0
-                m["aprobada"] = prom >= 70
-                materias.append(m)
-
-            # Get promotion result for this year
-            prom_row = conn.execute("""
-                SELECT estado, grado_origen, grado_destino
-                FROM promociones WHERE estudiante_id=? AND anio_escolar=?
-            """, (est_id, anio)).fetchone()
-
-            historial.append({
-                "anio_escolar": anio,
-                "materias": materias,
-                "total": len(materias),
-                "aprobadas": sum(1 for m in materias if m["aprobada"]),
-                "reprobadas": sum(1 for m in materias if not m["aprobada"] and (m.get("promedio") or 0) > 0),
-                "promocion": dict(prom_row) if prom_row else None,
-            })
+        historial = construir_historial_notas(conn, est_id)
 
     return jsonify({"ok": True, "historial": historial, "est_id": est_id})
 
