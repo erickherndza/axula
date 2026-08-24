@@ -2062,8 +2062,7 @@ def construir_historial_notas(conn, est_id):
         anio = anio_row["anio"]
         rows = conn.execute("""
             SELECT materia, tipo, grado,
-                   p1, p2, p3, p4, promedio,
-                   nota_recuperacion, nota_completiva
+                   p1, p2, p3, p4, promedio
             FROM materias_calificaciones
             WHERE estudiante_id=? AND COALESCE(anio_escolar,'2025-2026')=?
             ORDER BY tipo, materia
