@@ -207,67 +207,67 @@ def coherencia_editar(matriz_id):
 
         accion = request.form.get("accion")
 
-        # Verificar que el período pertenece a esta matriz (evita cross-matriz)
-        def _periodo_valido(pid):
-            if not pid:
-                return False
-            return conn.execute(
-                "SELECT 1 FROM coherencia_periodo WHERE id = ? AND matriz_id = ?",
-                (pid, matriz_id),
-            ).fetchone() is not None
+        if accion == "guardar_todo":
+            # Un solo formulario cubre los 4 períodos: por cada uno, guarda
+            # la Competencia Laboral y reemplaza sus filas de RAE completas
+            # (arrays paralelos por índice — todas las filas se mandan juntas
+            # desde el mismo <form>, sin recargar la página entre períodos).
+            filas_guardadas = 0
+            for numero, _titulo in PERIODOS:
+                prow = conn.execute(
+                    "SELECT id FROM coherencia_periodo WHERE matriz_id = ? AND numero = ?",
+                    (matriz_id, numero),
+                ).fetchone()
+                if not prow:
+                    continue
+                pid = prow["id"]
 
-        if accion == "guardar_competencia":
-            pid = request.form.get("periodo_id")
-            if _periodo_valido(pid):
                 conn.execute(
                     "UPDATE coherencia_periodo SET competencia_laboral = ? WHERE id = ?",
-                    (request.form.get("competencia_laboral", "").strip(), pid),
+                    (request.form.get(f"competencia_{numero}", "").strip(), pid),
                 )
-                conn.commit()
 
-        elif accion == "agregar_rae":
-            pid = request.form.get("periodo_id")
-            rae = request.form.get("rae", "").strip()
-            if not _periodo_valido(pid):
-                flash("Período inválido.", "error")
-            elif not rae:
-                flash("El Resultado de Aprendizaje Esperado (RAE) es obligatorio.", "error")
-            else:
-                orden = conn.execute(
-                    "SELECT COALESCE(MAX(orden), -1) + 1 FROM coherencia_rae WHERE periodo_id = ?",
-                    (pid,),
-                ).fetchone()[0]
-                conn.execute(
-                    """INSERT INTO coherencia_rae
-                       (periodo_id, rae, conceptos, procedimientos, actitudes,
-                        producto, recursos, orden)
-                       VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-                    (
-                        pid, rae,
-                        request.form.get("conceptos", "").strip(),
-                        request.form.get("procedimientos", "").strip(),
-                        request.form.get("actitudes", "").strip(),
-                        request.form.get("producto", "").strip(),
-                        request.form.get("recursos", "").strip(),
-                        orden,
-                    ),
-                )
-                conn.commit()
+                raes      = request.form.getlist(f"rae_{numero}[]")
+                conceptos = request.form.getlist(f"conceptos_{numero}[]")
+                proced    = request.form.getlist(f"procedimientos_{numero}[]")
+                actitudes = request.form.getlist(f"actitudes_{numero}[]")
+                productos = request.form.getlist(f"producto_{numero}[]")
+                recursos  = request.form.getlist(f"recursos_{numero}[]")
 
-        elif accion == "eliminar_rae":
+                conn.execute("DELETE FROM coherencia_rae WHERE periodo_id = ?", (pid,))
+                orden = 0
+                for i, rae_val in enumerate(raes):
+                    rae_val = (rae_val or "").strip()
+                    if not rae_val:
+                        continue  # fila vacía (agregada y no llenada) — se ignora
+                    conn.execute(
+                        """INSERT INTO coherencia_rae
+                           (periodo_id, rae, conceptos, procedimientos, actitudes,
+                            producto, recursos, orden)
+                           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                        (
+                            pid, rae_val,
+                            (conceptos[i] if i < len(conceptos) else "").strip(),
+                            (proced[i]    if i < len(proced)    else "").strip(),
+                            (actitudes[i] if i < len(actitudes) else "").strip(),
+                            (productos[i] if i < len(productos) else "").strip(),
+                            (recursos[i]  if i < len(recursos)  else "").strip(),
+                            orden,
+                        ),
+                    )
+                    orden += 1
+                    filas_guardadas += 1
+
             conn.execute(
-                """DELETE FROM coherencia_rae
-                   WHERE id = ? AND periodo_id IN
-                         (SELECT id FROM coherencia_periodo WHERE matriz_id = ?)""",
-                (request.form.get("rae_id"), matriz_id),
+                "UPDATE coherencia_horizontal SET fecha_actualizacion = datetime('now') WHERE id = ?",
+                (matriz_id,),
             )
             conn.commit()
+            flash(f"Matriz guardada — {filas_guardadas} RAE en total. Descargando Word…", "success")
+            return redirect(
+                url_for("coherencia_bp.coherencia_editar", matriz_id=matriz_id) + "?generado=1"
+            )
 
-        conn.execute(
-            "UPDATE coherencia_horizontal SET fecha_actualizacion = datetime('now') WHERE id = ?",
-            (matriz_id,),
-        )
-        conn.commit()
         return redirect(url_for("coherencia_bp.coherencia_editar", matriz_id=matriz_id))
 
     return render_template(

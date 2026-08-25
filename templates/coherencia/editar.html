@@ -14,7 +14,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-hei
 .top h1{font-family:var(--font-display);font-size:1.2rem;font-weight:800}
 .top .r{display:flex;gap:12px;align-items:center;font-size:.85rem;color:var(--muted)}
 .top a{color:var(--accent);text-decoration:none;font-weight:600;font-size:.85rem}
-.c{max-width:1280px;margin:0 auto;padding:26px 24px 60px}
+.c{max-width:1320px;margin:0 auto;padding:26px 24px 100px}
 .flash{padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:.85rem}
 .flash.error{background:rgba(224,72,72,.12);color:#F8A0A0;border-left:3px solid var(--danger)}
 .flash.success{background:rgba(3,140,140,.1);color:var(--accent);border-left:3px solid var(--accent)}
@@ -24,12 +24,17 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-hei
 .proposito b{color:var(--text)}
 
 .header-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;
-             padding:18px 22px;margin-bottom:22px;display:flex;justify-content:space-between;
+             padding:18px 22px;margin-bottom:18px;display:flex;justify-content:space-between;
              align-items:flex-start;flex-wrap:wrap;gap:14px}
 .header-card h2{font-size:1.05rem;font-weight:800;margin-bottom:6px}
 .header-meta{display:flex;gap:16px;flex-wrap:wrap;font-size:.8rem;color:var(--muted)}
 .header-meta b{color:var(--text)}
 .header-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+
+.instructivo{background:rgba(3,140,140,.08);border:1px solid rgba(3,140,140,.25);border-radius:10px;
+             padding:12px 16px;font-size:.8rem;color:var(--text);line-height:1.6;margin-bottom:20px;
+             display:flex;gap:10px;align-items:flex-start}
+.instructivo i{color:var(--accent);margin-top:2px}
 
 .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;
      border:none;font-weight:600;cursor:pointer;font-size:.84rem;text-decoration:none;
@@ -41,17 +46,12 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-hei
 .btn-danger{background:transparent;color:#E04848;border:none;padding:4px 8px;cursor:pointer}
 .btn-sm{padding:5px 12px;font-size:.78rem}
 
-/* ── Bloque de período ── */
 .periodo{background:var(--surface);border:1px solid var(--border);border-radius:12px;
-         margin-bottom:20px;overflow:hidden}
-.periodo-head{background:var(--surface2);padding:12px 18px;border-bottom:1px solid var(--border);
+         margin-bottom:18px;overflow:hidden}
+.periodo-head{background:#C1E4F5;color:#0d3d4d;padding:10px 18px;
               display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.periodo-head .titulo{font-size:.9rem;font-weight:800}
-.periodo-head .cuenta{font-size:.75rem;color:var(--muted)}
+.periodo-head .titulo{font-size:.88rem;font-weight:800}
 .periodo-body{padding:16px 18px}
-
-.comp-row{display:flex;gap:10px;align-items:flex-end;margin-bottom:16px;flex-wrap:wrap}
-.comp-row .f{flex:1;min-width:260px}
 
 .f{display:flex;flex-direction:column;gap:5px}
 .f label{font-size:.7rem;font-weight:700;color:var(--muted);
@@ -60,31 +60,31 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-hei
                    background:var(--surface2);color:var(--text);
                    font-size:.83rem;font-family:var(--font-body);width:100%}
 .f input:focus,.f textarea:focus{outline:none;border-color:var(--accent)}
-.f textarea{resize:vertical;min-height:48px}
+.f textarea{resize:vertical;min-height:40px}
 
-.tbl-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:10px;margin-bottom:14px}
-table{width:100%;border-collapse:collapse;font-size:.79rem;min-width:900px}
-th{background:#C1E4F5;color:#0d3d4d;text-align:center;padding:8px 10px;font-size:.68rem;
+.comp-f{margin-bottom:16px;max-width:640px}
+
+.tbl-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:10px;margin-bottom:10px}
+table{width:100%;border-collapse:collapse;font-size:.8rem;min-width:960px}
+th{background:var(--surface2);color:var(--text);text-align:center;padding:7px 8px;font-size:.66rem;
    font-weight:700;text-transform:uppercase;letter-spacing:.03em;
    border:1px solid var(--border)}
-td{padding:9px 10px;border:1px solid var(--border);vertical-align:top;line-height:1.5}
-tr:hover td{background:var(--surface2)}
-.col-rae{min-width:180px}
-.col-cont{min-width:150px}
-.col-sm{min-width:110px}
+td{padding:5px;border:1px solid var(--border);vertical-align:top}
+td textarea{min-height:44px}
+.col-rae{width:19%}
+.col-cont{width:15%}
+.col-sm{width:11%}
+.col-x{width:34px;text-align:center;vertical-align:middle}
 
-.sin-filas{padding:18px;text-align:center;color:var(--muted);font-size:.8rem;font-style:italic}
+.add-row-wrap{padding:8px 0 0}
 
-.add-form{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
-.add-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px}
-.add-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
-.add-title{font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;
-           letter-spacing:.06em;margin-bottom:10px}
 .readonly-note{background:var(--surface2);border:1px solid var(--border);border-radius:10px;
                padding:14px 16px;color:var(--muted);font-size:.82rem;margin-top:14px}
-@media(max-width:820px){
-  .add-grid,.add-grid-2{grid-template-columns:1fr}
-}
+
+.save-bar{position:sticky;bottom:0;background:var(--surface);border-top:1px solid var(--border);
+          padding:14px 0;margin-top:10px;display:flex;justify-content:flex-end;gap:10px;
+          box-shadow:0 -6px 16px rgba(0,0,0,.06)}
+.save-bar .hint{font-size:.75rem;color:var(--muted);margin-right:auto;align-self:center}
 </style>
 <script src="/static/theme.js"></script>
 </head>
@@ -130,134 +130,105 @@ tr:hover td{background:var(--surface2)}
     <b>Propósito:</b> {{ proposito }}
   </div>
 
-  {% for p in periodos %}
-  <div class="periodo">
-    <div class="periodo-head">
-      <span class="titulo">{{ p.titulo }}</span>
-      <span class="cuenta">{{ p.filas|length }} RAE registrado{{ 's' if p.filas|length != 1 else '' }}</span>
+  {% if puede_editar %}
+  <div class="instructivo">
+    <i class="fas fa-circle-info"></i>
+    <div>
+      Llena los 4 períodos (Competencia Laboral + filas de RAE) — usa <b>"+ Agregar fila"</b>
+      para sumar más RAE dentro de un período, sin que se borre lo que ya escribiste en los
+      demás. Cuando termines los 4, baja hasta el final y presiona
+      <b>una sola vez</b> "Guardar todo y generar Word" — guarda la matriz completa y descarga
+      el documento en un solo paso.
     </div>
-    <div class="periodo-body">
+  </div>
+  {% endif %}
 
-      <!-- Competencia Laboral del período -->
-      {% if puede_editar %}
-      <form method="POST" class="comp-row">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <input type="hidden" name="accion" value="guardar_competencia">
-        <input type="hidden" name="periodo_id" value="{{ p.id }}">
-        <div class="f">
-          <label>Competencia Laboral</label>
-          <input type="text" name="competencia_laboral" value="{{ p.competencia_laboral or '' }}"
-                 placeholder="Competencia laboral de este período…">
-        </div>
-        <button type="submit" class="btn btn-navy btn-sm"><i class="fas fa-save"></i> Guardar</button>
-      </form>
-      {% else %}
-      <div class="f" style="margin-bottom:16px">
-        <label>Competencia Laboral</label>
-        <div style="font-size:.85rem;padding:6px 0">{{ p.competencia_laboral or '—' }}</div>
+  <form method="POST" id="form-matriz">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="accion" value="guardar_todo">
+
+    {% for p in periodos %}
+    <div class="periodo">
+      <div class="periodo-head">
+        <span class="titulo">{{ p.titulo }}</span>
       </div>
-      {% endif %}
+      <div class="periodo-body">
 
-      <!-- Tabla de RAE -->
-      <div class="tbl-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th rowspan="2" class="col-rae">Resultados de aprendizaje esperados (RAE)</th>
-              <th colspan="3">Contenidos</th>
-              <th rowspan="2" class="col-sm">Producto</th>
-              <th rowspan="2" class="col-sm">Recursos</th>
-              {% if puede_editar %}<th rowspan="2" style="width:34px"></th>{% endif %}
-            </tr>
-            <tr>
-              <th class="col-cont">Conceptos</th>
-              <th class="col-cont">Procedimientos</th>
-              <th class="col-cont">Actitudes y valores</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% if p.filas %}
+        <div class="f comp-f">
+          <label>Competencia Laboral</label>
+          {% if puede_editar %}
+          <input type="text" name="competencia_{{ p.numero }}" value="{{ p.competencia_laboral or '' }}"
+                 placeholder="Competencia laboral de este período…">
+          {% else %}
+          <div style="font-size:.85rem;padding:6px 0">{{ p.competencia_laboral or '—' }}</div>
+          {% endif %}
+        </div>
+
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th rowspan="2" class="col-rae">Resultados de aprendizaje esperados (RAE)</th>
+                <th colspan="3">Contenidos</th>
+                <th rowspan="2" class="col-sm">Producto</th>
+                <th rowspan="2" class="col-sm">Recursos</th>
+                {% if puede_editar %}<th rowspan="2" class="col-x"></th>{% endif %}
+              </tr>
+              <tr>
+                <th class="col-cont">Conceptos</th>
+                <th class="col-cont">Procedimientos</th>
+                <th class="col-cont">Actitudes y valores</th>
+              </tr>
+            </thead>
+            <tbody id="filas-{{ p.numero }}">
+              {% if not puede_editar and not p.filas %}
+              <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:14px">Sin RAE registrados.</td></tr>
+              {% endif %}
               {% for f in p.filas %}
               <tr>
+                {% if puede_editar %}
+                <td><textarea name="rae_{{ p.numero }}[]">{{ f.rae }}</textarea></td>
+                <td><textarea name="conceptos_{{ p.numero }}[]">{{ f.conceptos or '' }}</textarea></td>
+                <td><textarea name="procedimientos_{{ p.numero }}[]">{{ f.procedimientos or '' }}</textarea></td>
+                <td><textarea name="actitudes_{{ p.numero }}[]">{{ f.actitudes or '' }}</textarea></td>
+                <td><textarea name="producto_{{ p.numero }}[]">{{ f.producto or '' }}</textarea></td>
+                <td><textarea name="recursos_{{ p.numero }}[]">{{ f.recursos or '' }}</textarea></td>
+                <td class="col-x"><button type="button" class="btn-danger" onclick="this.closest('tr').remove()" title="Quitar fila"><i class="fas fa-xmark"></i></button></td>
+                {% else %}
                 <td>{{ f.rae }}</td>
                 <td>{{ f.conceptos or '—' }}</td>
                 <td>{{ f.procedimientos or '—' }}</td>
                 <td>{{ f.actitudes or '—' }}</td>
                 <td>{{ f.producto or '—' }}</td>
                 <td>{{ f.recursos or '—' }}</td>
-                {% if puede_editar %}
-                <td style="text-align:center">
-                  <form method="POST" style="margin:0" onsubmit="return confirm('¿Eliminar este RAE?')">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                    <input type="hidden" name="accion" value="eliminar_rae">
-                    <input type="hidden" name="rae_id" value="{{ f.id }}">
-                    <button type="submit" class="btn-danger" title="Eliminar"><i class="fas fa-trash"></i></button>
-                  </form>
-                </td>
                 {% endif %}
               </tr>
               {% endfor %}
-            {% else %}
-              <tr>
-                <td colspan="{{ 7 if puede_editar else 6 }}" class="sin-filas">
-                  Sin RAE registrados en este período.
-                </td>
-              </tr>
-            {% endif %}
-          </tbody>
-        </table>
+            </tbody>
+          </table>
+        </div>
+
+        {% if puede_editar %}
+        <div class="add-row-wrap">
+          <button type="button" class="btn btn-navy btn-sm" onclick="agregarFila({{ p.numero }})">
+            <i class="fas fa-plus"></i> Agregar fila
+          </button>
+        </div>
+        {% endif %}
+
       </div>
-
-      <!-- Agregar RAE -->
-      {% if puede_editar %}
-      <div class="add-form">
-        <div class="add-title">Agregar RAE a este período</div>
-        <form method="POST">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-          <input type="hidden" name="accion" value="agregar_rae">
-          <input type="hidden" name="periodo_id" value="{{ p.id }}">
-
-          <div class="f" style="margin-bottom:12px">
-            <label>Resultado de aprendizaje esperado (RAE) <span style="color:var(--danger)">*</span></label>
-            <textarea name="rae" required placeholder="Ej. Identifica la estructura semántica de una página web"></textarea>
-          </div>
-
-          <div class="add-grid">
-            <div class="f">
-              <label>Conceptos</label>
-              <textarea name="conceptos" placeholder="Contenidos conceptuales…"></textarea>
-            </div>
-            <div class="f">
-              <label>Procedimientos</label>
-              <textarea name="procedimientos" placeholder="Contenidos procedimentales…"></textarea>
-            </div>
-            <div class="f">
-              <label>Actitudes y valores</label>
-              <textarea name="actitudes" placeholder="Contenidos actitudinales…"></textarea>
-            </div>
-          </div>
-
-          <div class="add-grid-2">
-            <div class="f">
-              <label>Producto</label>
-              <textarea name="producto" placeholder="Producto o evidencia esperada…"></textarea>
-            </div>
-            <div class="f">
-              <label>Recursos</label>
-              <textarea name="recursos" placeholder="Recursos necesarios…"></textarea>
-            </div>
-          </div>
-
-          <div style="display:flex;justify-content:flex-end;margin-top:6px">
-            <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-plus"></i> Agregar RAE</button>
-          </div>
-        </form>
-      </div>
-      {% endif %}
-
     </div>
-  </div>
-  {% endfor %}
+    {% endfor %}
+
+    {% if puede_editar %}
+    <div class="save-bar">
+      <span class="hint">Guarda los 4 períodos a la vez y descarga el Word actualizado.</span>
+      <button type="submit" class="btn btn-primary" id="btn-guardar-todo">
+        <i class="fas fa-floppy-disk"></i> Guardar todo y generar Word
+      </button>
+    </div>
+    {% endif %}
+  </form>
 
   {% if not puede_editar %}
   <div class="readonly-note">
@@ -266,5 +237,55 @@ tr:hover td{background:var(--surface2)}
   {% endif %}
 
 </div>
+
+<script>
+function agregarFila(numero) {
+  var tbody = document.getElementById('filas-' + numero);
+  var tr = document.createElement('tr');
+  var campos = ['rae', 'conceptos', 'procedimientos', 'actitudes', 'producto', 'recursos'];
+  campos.forEach(function(campo) {
+    var td = document.createElement('td');
+    var ta = document.createElement('textarea');
+    ta.name = campo + '_' + numero + '[]';
+    td.appendChild(ta);
+    tr.appendChild(td);
+  });
+  var tdX = document.createElement('td');
+  tdX.className = 'col-x';
+  var btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'btn-danger';
+  btn.title = 'Quitar fila';
+  btn.innerHTML = '<i class="fas fa-xmark"></i>';
+  btn.onclick = function() { tr.remove(); };
+  tdX.appendChild(btn);
+  tr.appendChild(tdX);
+  tbody.appendChild(tr);
+  tr.querySelector('textarea').focus();
+}
+
+document.getElementById('form-matriz') && document.getElementById('form-matriz').addEventListener('submit', function() {
+  var btn = document.getElementById('btn-guardar-todo');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando y generando Word…';
+  }
+});
+
+// Tras guardar, el servidor redirige aquí con ?generado=1 — disparamos la
+// descarga del Word en un iframe oculto, sin navegar fuera de esta página
+// (evita bloqueadores de pop-up y mantiene visible el mensaje de "guardado").
+if (window.location.search.indexOf('generado=1') !== -1) {
+  var f = document.createElement('iframe');
+  f.style.display = 'none';
+  f.src = '/coherencia/{{ matriz.id }}/docx';
+  document.body.appendChild(f);
+  // Limpiar el query param para que un refresh no vuelva a descargar
+  if (window.history && window.history.replaceState) {
+    window.history.replaceState({}, '', window.location.pathname);
+  }
+}
+</script>
+
 </body>
 </html>
