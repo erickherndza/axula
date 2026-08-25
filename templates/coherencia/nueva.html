@@ -14,7 +14,11 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-hei
 .top h1{font-family:var(--font-display);font-size:1.2rem;font-weight:800}
 .top .r{display:flex;gap:12px;align-items:center;font-size:.85rem;color:var(--muted)}
 .top a{color:var(--accent);text-decoration:none;font-weight:600;font-size:.85rem}
-.c{max-width:600px;margin:0 auto;padding:36px 24px}
+.c{max-width:640px;margin:0 auto;padding:36px 24px}
+.inst-header{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+             padding:18px 22px;margin-bottom:18px;text-align:center}
+.inst-header .centro{font-size:1rem;font-weight:800;color:var(--text);margin-bottom:2px}
+.inst-header .sub{font-size:.78rem;color:var(--muted)}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
 .card-head{padding:18px 22px;border-bottom:1px solid var(--border)}
 .card-head h2{font-size:.95rem;font-weight:700;margin-bottom:3px}
@@ -26,10 +30,11 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-hei
 .f{display:flex;flex-direction:column;gap:5px}
 .f label{font-size:.72rem;font-weight:700;color:var(--muted);
          text-transform:uppercase;letter-spacing:.05em}
-.f input,.f select,.f textarea{padding:9px 12px;border-radius:8px;border:1px solid var(--border);
+.f input,.f select{padding:9px 12px;border-radius:8px;border:1px solid var(--border);
                    background:var(--surface2);color:var(--text);
                    font-size:.875rem;font-family:var(--font-body);width:100%}
-.f input:focus,.f select:focus,.f textarea:focus{outline:none;border-color:var(--accent)}
+.f input:focus,.f select:focus{outline:none;border-color:var(--accent)}
+.hint{font-size:.72rem;color:var(--muted);margin-top:2px}
 .btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:8px;
      border:none;font-weight:600;cursor:pointer;font-size:.84rem;text-decoration:none;
      transition:opacity .15s}
@@ -39,6 +44,9 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-hei
 .flash{padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:.85rem}
 .flash.error{background:rgba(224,72,72,.12);color:#F8A0A0;border-left:3px solid var(--danger)}
 .flash.success{background:rgba(3,140,140,.1);color:var(--accent);border-left:3px solid var(--accent)}
+.periodos-note{background:var(--surface2);border:1px solid var(--border);border-radius:10px;
+               padding:12px 14px;font-size:.78rem;color:var(--muted);line-height:1.6}
+.periodos-note b{color:var(--text)}
 </style>
 <script src="/static/theme.js"></script>
 </head>
@@ -60,10 +68,15 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-hei
     {% endfor %}
   {% endwith %}
 
+  <div class="inst-header">
+    <div class="centro">{{ centro_nombre }}</div>
+    <div class="sub">Año escolar {{ anio }} · Coherencia Horizontal del Componente Especializado</div>
+  </div>
+
   <div class="card">
     <div class="card-head">
       <h2>Nueva Matriz de Coherencia Horizontal</h2>
-      <p>Completa el encabezado. Luego agregarás las filas de articulación entre asignaturas.</p>
+      <p>Completa la identificación. Los 4 períodos del calendario escolar se crean automáticamente.</p>
     </div>
 
     <form method="POST">
@@ -71,40 +84,59 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-hei
       <div class="card-body">
 
         <div class="f">
-          <label for="centro">Centro Educativo</label>
-          <input type="text" id="centro" name="centro" value="{{ centro_nombre }}">
+          <label for="asignatura">Asignatura <span style="color:var(--danger)">*</span></label>
+          {% if materias_prof %}
+          <select id="asignatura" name="asignatura" required>
+            <option value="">— Selecciona tu asignatura —</option>
+            {% for m in materias_prof %}
+            <option value="{{ m }}">{{ m }}</option>
+            {% endfor %}
+          </select>
+          <div class="hint">Tus asignaturas registradas. ¿Falta alguna? Actualízalas en /mi-perfil.</div>
+          {% else %}
+          <input type="text" id="asignatura" name="asignatura" required autofocus
+                 placeholder="Ej. Diseño Web, Fotografía…">
+          {% endif %}
         </div>
 
         <div class="row2">
+          <div class="f">
+            <label for="mencion">Mención</label>
+            <select id="mencion" name="mencion">
+              <option value="">— Selecciona —</option>
+              <option value="MULTIMEDIA" {% if mencion_prof == 'MULTIMEDIA' %}selected{% endif %}>Multimedia</option>
+              <option value="ARTES VISUALES" {% if mencion_prof == 'ARTES VISUALES' %}selected{% endif %}>Artes Visuales</option>
+              <option value="MÚSICA" {% if mencion_prof == 'MÚSICA' %}selected{% endif %}>Música</option>
+              <option value="TEATRO" {% if mencion_prof == 'TEATRO' %}selected{% endif %}>Teatro</option>
+              <option value="DANZA" {% if mencion_prof == 'DANZA' %}selected{% endif %}>Danza</option>
+            </select>
+          </div>
           <div class="f">
             <label for="grado">Grado <span style="color:var(--danger)">*</span></label>
             <select id="grado" name="grado" required>
               <option value="4TO" {% if grado_prof == '4to' %}selected{% endif %}>4to</option>
               <option value="5TO" {% if grado_prof == '5to' %}selected{% endif %}>5to</option>
+              <option value="6TO" {% if grado_prof == '6to' %}selected{% endif %}>6to</option>
             </select>
-          </div>
-          <div class="f">
-            <label for="seccion">Sección</label>
-            <input type="text" id="seccion" name="seccion" placeholder="Ej. A, B…">
           </div>
         </div>
 
         <div class="row2">
           <div class="f">
-            <label for="mencion">Mención — Modalidad en Artes</label>
-            <select id="mencion" name="mencion">
-              <option value="">— Selecciona —</option>
-              <option value="MULTIMEDIA" {% if mencion_prof == 'MULTIMEDIA' %}selected{% endif %}>Multimedia (Artes Aplicadas)</option>
-              <option value="ARTES VISUALES" {% if mencion_prof == 'ARTES VISUALES' %}selected{% endif %}>Artes Visuales</option>
-              <option value="MÚSICA" {% if mencion_prof == 'MÚSICA' %}selected{% endif %}>Música</option>
-              <option value="TEATRO" {% if mencion_prof == 'TEATRO' %}selected{% endif %}>Teatro (Artes Escénicas)</option>
-              <option value="DANZA" {% if mencion_prof == 'DANZA' %}selected{% endif %}>Danza (Artes Escénicas)</option>
-            </select>
+            <label for="seccion">Sección <span style="font-weight:400;text-transform:none">(opcional)</span></label>
+            <input type="text" id="seccion" name="seccion" placeholder="Ej. A, B…">
           </div>
           <div class="f">
-            <label for="periodo">Período de planificación</label>
-            <input type="text" id="periodo" name="periodo" placeholder="Ej. Primer trimestre, Unidad 2…">
+            <label for="centro">Centro Educativo</label>
+            <input type="text" id="centro" name="centro" value="{{ centro_nombre }}">
           </div>
+        </div>
+
+        <div class="periodos-note">
+          <i class="fas fa-calendar-days" style="color:var(--accent)"></i>
+          Se crearán los <b>4 períodos</b> del calendario escolar:
+          Agosto-Octubre · Noviembre-Enero · Febrero-Marzo · Abril-Junio.
+          En cada uno registrarás la Competencia Laboral y sus RAE.
         </div>
 
       </div>

@@ -67,10 +67,10 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-hei
   {% endwith %}
 
   <div class="intro">
-    <strong>Coherencia Horizontal</strong> es el principio MINERD que exige que todas las
-    asignaturas de un mismo grado estén alineadas entre sí — en vez de trabajar aisladas.
-    Cada matriz documenta, para una sección y período, cómo se articula el Componente
-    Artístico con el Componente Académico (Ord. 04-2023).
+    <strong>Coherencia Horizontal del Componente Especializado.</strong> Cada matriz documenta,
+    por asignatura y grado, los 4 períodos del año escolar con su Competencia Laboral y sus
+    Resultados de Aprendizaje Esperados (RAE), contenidos, producto y recursos.
+    Sigue la plantilla oficial del centro y se exporta a Word con ese mismo formato.
   </div>
 
   <div class="page-head">
@@ -86,23 +86,27 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-hei
     {% for m in matrices %}
     <div class="mx-card">
       <div>
-        <div class="title">{{ m.grado }}{% if m.seccion %} — Sección {{ m.seccion }}{% endif %}{% if m.mencion %} · {{ m.mencion }}{% endif %}</div>
+        <div class="title">{{ m.asignatura or 'Sin asignatura' }}</div>
         <div class="meta">
-          {% if m.periodo %}{{ m.periodo }} · {% endif %}Año {{ m.anio_escolar }}
+          {{ m.grado }}{% if m.seccion %} — {{ m.seccion }}{% endif %}{% if m.mencion %} · {{ m.mencion }}{% endif %}
+          · Año {{ m.anio_escolar }}
           {% if es_admin %} · <strong style="color:var(--text)">{{ m.docente_nombre }}</strong>{% endif %}
           · {{ m.fecha_creacion[:10] }}
         </div>
       </div>
       <div class="card-actions">
-        <span class="badge">{{ m.n_filas }} fila{{ 's' if m.n_filas != 1 else '' }}</span>
+        <span class="badge">{{ m.n_filas }} RAE</span>
         <a href="/coherencia/{{ m.id }}/editar" class="btn btn-navy btn-sm">
           <i class="fas fa-pen"></i> Abrir
         </a>
-        <a href="/coherencia/{{ m.id }}/imprimir" target="_blank" class="btn btn-navy btn-sm">
-          <i class="fas fa-file-pdf"></i>
+        <a href="/coherencia/{{ m.id }}/docx" class="btn btn-navy btn-sm" title="Descargar Word">
+          <i class="fas fa-file-word"></i>
+        </a>
+        <a href="/coherencia/{{ m.id }}/imprimir" target="_blank" class="btn btn-navy btn-sm" title="Vista previa">
+          <i class="fas fa-print"></i>
         </a>
         <form method="POST" action="/coherencia/{{ m.id }}/eliminar" style="margin:0"
-              onsubmit="return confirm('¿Eliminar esta matriz y todas sus filas? No se puede deshacer.')">
+              onsubmit="return confirm('¿Eliminar esta matriz y todos sus RAE? No se puede deshacer.')">
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
           <button type="submit" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i></button>
         </form>

@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{{ matriz.grado }}{% if matriz.seccion %} {{ matriz.seccion }}{% endif %} — Coherencia Horizontal — Axula</title>
+<title>{{ matriz.asignatura }} — Coherencia Horizontal — Axula</title>
 <link rel="stylesheet" href="/static/theme.css">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -14,59 +14,77 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-hei
 .top h1{font-family:var(--font-display);font-size:1.2rem;font-weight:800}
 .top .r{display:flex;gap:12px;align-items:center;font-size:.85rem;color:var(--muted)}
 .top a{color:var(--accent);text-decoration:none;font-weight:600;font-size:.85rem}
-.c{max-width:1200px;margin:0 auto;padding:28px 24px}
+.c{max-width:1280px;margin:0 auto;padding:26px 24px 60px}
 .flash{padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:.85rem}
 .flash.error{background:rgba(224,72,72,.12);color:#F8A0A0;border-left:3px solid var(--danger)}
 .flash.success{background:rgba(3,140,140,.1);color:var(--accent);border-left:3px solid var(--accent)}
 
+.proposito{background:var(--surface2);border:1px solid var(--border);border-radius:10px;
+           padding:13px 16px;font-size:.8rem;color:var(--muted);line-height:1.65;margin-bottom:18px}
+.proposito b{color:var(--text)}
+
 .header-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;
-             padding:18px 22px;margin-bottom:20px;display:flex;justify-content:space-between;
+             padding:18px 22px;margin-bottom:22px;display:flex;justify-content:space-between;
              align-items:flex-start;flex-wrap:wrap;gap:14px}
 .header-card h2{font-size:1.05rem;font-weight:800;margin-bottom:6px}
-.header-meta{display:flex;gap:14px;flex-wrap:wrap;font-size:.8rem;color:var(--muted)}
+.header-meta{display:flex;gap:16px;flex-wrap:wrap;font-size:.8rem;color:var(--muted)}
 .header-meta b{color:var(--text)}
-.header-actions{display:flex;gap:8px;align-items:center}
+.header-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 
 .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;
      border:none;font-weight:600;cursor:pointer;font-size:.84rem;text-decoration:none;
      transition:opacity .15s}
 .btn:hover{opacity:.88}
 .btn-primary{background:var(--accent);color:#fff}
+.btn-word{background:#2B579A;color:#fff}
 .btn-navy{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
-.btn-danger{background:transparent;color:#E04848;border:none;padding:4px 8px}
+.btn-danger{background:transparent;color:#E04848;border:none;padding:4px 8px;cursor:pointer}
 .btn-sm{padding:5px 12px;font-size:.78rem}
 
-.section-label{font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;
-              letter-spacing:.06em;margin:22px 0 10px}
+/* ── Bloque de período ── */
+.periodo{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+         margin-bottom:20px;overflow:hidden}
+.periodo-head{background:var(--surface2);padding:12px 18px;border-bottom:1px solid var(--border);
+              display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.periodo-head .titulo{font-size:.9rem;font-weight:800}
+.periodo-head .cuenta{font-size:.75rem;color:var(--muted)}
+.periodo-body{padding:16px 18px}
 
-.tbl-wrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow-x:auto}
-table{width:100%;border-collapse:collapse;font-size:.82rem}
-th{background:var(--surface2);text-align:left;padding:10px 12px;font-size:.72rem;
-   font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);
-   border-bottom:1px solid var(--border);white-space:nowrap}
-td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:top;line-height:1.5}
-tr:last-child td{border-bottom:none}
-.col-area{min-width:150px;font-weight:600}
-.col-long{min-width:220px}
-td.empty-cell{color:var(--muted)}
+.comp-row{display:flex;gap:10px;align-items:flex-end;margin-bottom:16px;flex-wrap:wrap}
+.comp-row .f{flex:1;min-width:260px}
 
-.empty{text-align:center;padding:40px 24px;color:var(--muted)}
-.empty i{font-size:2rem;display:block;margin-bottom:10px;opacity:.3}
-
-.add-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;
-          padding:18px 20px;margin-top:14px}
-.add-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
 .f{display:flex;flex-direction:column;gap:5px}
-.f label{font-size:.72rem;font-weight:700;color:var(--muted);
+.f label{font-size:.7rem;font-weight:700;color:var(--muted);
          text-transform:uppercase;letter-spacing:.05em}
-.f input,.f textarea{padding:9px 12px;border-radius:8px;border:1px solid var(--border);
+.f input,.f textarea{padding:8px 11px;border-radius:8px;border:1px solid var(--border);
                    background:var(--surface2);color:var(--text);
-                   font-size:.85rem;font-family:var(--font-body);width:100%}
+                   font-size:.83rem;font-family:var(--font-body);width:100%}
 .f input:focus,.f textarea:focus{outline:none;border-color:var(--accent)}
-.f textarea{resize:vertical;min-height:52px}
+.f textarea{resize:vertical;min-height:48px}
 
+.tbl-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:10px;margin-bottom:14px}
+table{width:100%;border-collapse:collapse;font-size:.79rem;min-width:900px}
+th{background:#C1E4F5;color:#0d3d4d;text-align:center;padding:8px 10px;font-size:.68rem;
+   font-weight:700;text-transform:uppercase;letter-spacing:.03em;
+   border:1px solid var(--border)}
+td{padding:9px 10px;border:1px solid var(--border);vertical-align:top;line-height:1.5}
+tr:hover td{background:var(--surface2)}
+.col-rae{min-width:180px}
+.col-cont{min-width:150px}
+.col-sm{min-width:110px}
+
+.sin-filas{padding:18px;text-align:center;color:var(--muted);font-size:.8rem;font-style:italic}
+
+.add-form{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+.add-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px}
+.add-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.add-title{font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;
+           letter-spacing:.06em;margin-bottom:10px}
 .readonly-note{background:var(--surface2);border:1px solid var(--border);border-radius:10px;
                padding:14px 16px;color:var(--muted);font-size:.82rem;margin-top:14px}
+@media(max-width:820px){
+  .add-grid,.add-grid-2{grid-template-columns:1fr}
+}
 </style>
 <script src="/static/theme.js"></script>
 </head>
@@ -90,106 +108,160 @@ td.empty-cell{color:var(--muted)}
 
   <div class="header-card">
     <div>
-      <h2>{{ matriz.grado }}{% if matriz.seccion %} — Sección {{ matriz.seccion }}{% endif %}</h2>
+      <h2>{{ matriz.asignatura or 'Sin asignatura' }}</h2>
       <div class="header-meta">
+        <span><b>Docente:</b> {{ matriz.docente_nombre }}</span>
         {% if matriz.mencion %}<span><b>Mención:</b> {{ matriz.mencion }}</span>{% endif %}
-        {% if matriz.periodo %}<span><b>Período:</b> {{ matriz.periodo }}</span>{% endif %}
+        <span><b>Grado:</b> {{ matriz.grado }}{% if matriz.seccion %} — {{ matriz.seccion }}{% endif %}</span>
         <span><b>Año escolar:</b> {{ matriz.anio_escolar }}</span>
-        {% if matriz.centro %}<span><b>Centro:</b> {{ matriz.centro }}</span>{% endif %}
-        {% if es_admin and not puede_editar %}<span><b>Docente:</b> {{ matriz.docente_nombre }}</span>{% endif %}
       </div>
     </div>
     <div class="header-actions">
+      <a href="/coherencia/{{ matriz.id }}/docx" class="btn btn-word btn-sm">
+        <i class="fas fa-file-word"></i> Descargar Word
+      </a>
       <a href="/coherencia/{{ matriz.id }}/imprimir" target="_blank" class="btn btn-navy btn-sm">
-        <i class="fas fa-file-pdf"></i> Imprimir / PDF
+        <i class="fas fa-print"></i> Vista previa
       </a>
     </div>
   </div>
 
-  <p class="section-label">Matriz de articulación ({{ filas|length }} fila{{ 's' if filas|length != 1 else '' }})</p>
+  <div class="proposito">
+    <b>Propósito:</b> {{ proposito }}
+  </div>
 
-  <div class="tbl-wrap">
-    {% if filas %}
-    <table>
-      <thead>
-        <tr>
-          <th class="col-area">Área / Asignatura</th>
-          <th class="col-long">Competencia(s) Fundamental(es)</th>
-          <th class="col-long">Contenido / Unidad</th>
-          <th class="col-long">Indicador de logro</th>
-          <th class="col-long">Articulación horizontal</th>
-          {% if puede_editar %}<th style="width:36px"></th>{% endif %}
-        </tr>
-      </thead>
-      <tbody>
-        {% for f in filas %}
-        <tr>
-          <td class="col-area">{{ f.area }}</td>
-          <td>{{ f.competencias or '—' }}</td>
-          <td>{{ f.contenido }}</td>
-          <td>{{ f.indicador or '—' }}</td>
-          <td>{{ f.articulacion or '—' }}</td>
-          {% if puede_editar %}
-          <td>
-            <form method="POST" style="margin:0"
-                  onsubmit="return confirm('¿Eliminar esta fila?')">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-              <input type="hidden" name="accion" value="eliminar_fila">
-              <input type="hidden" name="fila_id" value="{{ f.id }}">
-              <button type="submit" class="btn-danger" title="Eliminar fila"><i class="fas fa-trash"></i></button>
-            </form>
-          </td>
-          {% endif %}
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    {% else %}
-    <div class="empty">
-      <i class="fas fa-table"></i>
-      <p>Todavía no hay filas en esta matriz.</p>
+  {% for p in periodos %}
+  <div class="periodo">
+    <div class="periodo-head">
+      <span class="titulo">{{ p.titulo }}</span>
+      <span class="cuenta">{{ p.filas|length }} RAE registrado{{ 's' if p.filas|length != 1 else '' }}</span>
     </div>
-    {% endif %}
-  </div>
+    <div class="periodo-body">
 
-  {% if puede_editar %}
-  <div class="add-card">
-    <p class="section-label" style="margin-top:0">Agregar fila</p>
-    <form method="POST">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <input type="hidden" name="accion" value="agregar_fila">
-      <div class="add-grid">
+      <!-- Competencia Laboral del período -->
+      {% if puede_editar %}
+      <form method="POST" class="comp-row">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="accion" value="guardar_competencia">
+        <input type="hidden" name="periodo_id" value="{{ p.id }}">
         <div class="f">
-          <label for="area">Área / Asignatura <span style="color:var(--danger)">*</span></label>
-          <input type="text" id="area" name="area" placeholder="Ej. Diseño Web, Lengua Española…" required>
+          <label>Competencia Laboral</label>
+          <input type="text" name="competencia_laboral" value="{{ p.competencia_laboral or '' }}"
+                 placeholder="Competencia laboral de este período…">
         </div>
-        <div class="f">
-          <label for="competencias">Competencia(s) Fundamental(es)</label>
-          <input type="text" id="competencias" name="competencias" placeholder="Ej. Comunicativa, Pensamiento Lógico…">
-        </div>
+        <button type="submit" class="btn btn-navy btn-sm"><i class="fas fa-save"></i> Guardar</button>
+      </form>
+      {% else %}
+      <div class="f" style="margin-bottom:16px">
+        <label>Competencia Laboral</label>
+        <div style="font-size:.85rem;padding:6px 0">{{ p.competencia_laboral or '—' }}</div>
       </div>
-      <div class="f" style="margin-bottom:12px">
-        <label for="contenido">Contenido / Unidad del período <span style="color:var(--danger)">*</span></label>
-        <textarea id="contenido" name="contenido" placeholder="Ej. Estructura de una landing page" required></textarea>
+      {% endif %}
+
+      <!-- Tabla de RAE -->
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th rowspan="2" class="col-rae">Resultados de aprendizaje esperados (RAE)</th>
+              <th colspan="3">Contenidos</th>
+              <th rowspan="2" class="col-sm">Producto</th>
+              <th rowspan="2" class="col-sm">Recursos</th>
+              {% if puede_editar %}<th rowspan="2" style="width:34px"></th>{% endif %}
+            </tr>
+            <tr>
+              <th class="col-cont">Conceptos</th>
+              <th class="col-cont">Procedimientos</th>
+              <th class="col-cont">Actitudes y valores</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if p.filas %}
+              {% for f in p.filas %}
+              <tr>
+                <td>{{ f.rae }}</td>
+                <td>{{ f.conceptos or '—' }}</td>
+                <td>{{ f.procedimientos or '—' }}</td>
+                <td>{{ f.actitudes or '—' }}</td>
+                <td>{{ f.producto or '—' }}</td>
+                <td>{{ f.recursos or '—' }}</td>
+                {% if puede_editar %}
+                <td style="text-align:center">
+                  <form method="POST" style="margin:0" onsubmit="return confirm('¿Eliminar este RAE?')">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <input type="hidden" name="accion" value="eliminar_rae">
+                    <input type="hidden" name="rae_id" value="{{ f.id }}">
+                    <button type="submit" class="btn-danger" title="Eliminar"><i class="fas fa-trash"></i></button>
+                  </form>
+                </td>
+                {% endif %}
+              </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="{{ 7 if puede_editar else 6 }}" class="sin-filas">
+                  Sin RAE registrados en este período.
+                </td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
       </div>
-      <div class="add-grid" style="margin-bottom:0">
-        <div class="f">
-          <label for="indicador">Indicador de logro</label>
-          <textarea id="indicador" name="indicador" placeholder="Ej. Diseña una landing page funcional siguiendo principios UX"></textarea>
-        </div>
-        <div class="f">
-          <label for="articulacion">Punto de articulación horizontal</label>
-          <textarea id="articulacion" name="articulacion" placeholder="Ej. Se conecta con Lengua Española: redacción del copy de la página"></textarea>
-        </div>
+
+      <!-- Agregar RAE -->
+      {% if puede_editar %}
+      <div class="add-form">
+        <div class="add-title">Agregar RAE a este período</div>
+        <form method="POST">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="accion" value="agregar_rae">
+          <input type="hidden" name="periodo_id" value="{{ p.id }}">
+
+          <div class="f" style="margin-bottom:12px">
+            <label>Resultado de aprendizaje esperado (RAE) <span style="color:var(--danger)">*</span></label>
+            <textarea name="rae" required placeholder="Ej. Identifica la estructura semántica de una página web"></textarea>
+          </div>
+
+          <div class="add-grid">
+            <div class="f">
+              <label>Conceptos</label>
+              <textarea name="conceptos" placeholder="Contenidos conceptuales…"></textarea>
+            </div>
+            <div class="f">
+              <label>Procedimientos</label>
+              <textarea name="procedimientos" placeholder="Contenidos procedimentales…"></textarea>
+            </div>
+            <div class="f">
+              <label>Actitudes y valores</label>
+              <textarea name="actitudes" placeholder="Contenidos actitudinales…"></textarea>
+            </div>
+          </div>
+
+          <div class="add-grid-2">
+            <div class="f">
+              <label>Producto</label>
+              <textarea name="producto" placeholder="Producto o evidencia esperada…"></textarea>
+            </div>
+            <div class="f">
+              <label>Recursos</label>
+              <textarea name="recursos" placeholder="Recursos necesarios…"></textarea>
+            </div>
+          </div>
+
+          <div style="display:flex;justify-content:flex-end;margin-top:6px">
+            <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-plus"></i> Agregar RAE</button>
+          </div>
+        </form>
       </div>
-      <div style="display:flex;justify-content:flex-end;margin-top:14px">
-        <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Agregar fila</button>
-      </div>
-    </form>
+      {% endif %}
+
+    </div>
   </div>
-  {% else %}
+  {% endfor %}
+
+  {% if not puede_editar %}
   <div class="readonly-note">
-    <i class="fas fa-eye"></i> Estás viendo esta matriz en modo solo lectura — pertenece a {{ matriz.docente_nombre }}.
+    <i class="fas fa-eye"></i> Modo solo lectura — esta matriz pertenece a {{ matriz.docente_nombre }}.
   </div>
   {% endif %}
 

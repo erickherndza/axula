@@ -1115,7 +1115,11 @@ CREATE TABLE IF NOT EXISTS notas_competencias_ce (
     )
     """,
     """CREATE INDEX IF NOT EXISTS idx_poa_docente ON poa(docente_id)""",
-    # — Coherencia Horizontal (planeamiento curricular MINERD, Ord. 04-2023) —
+    # — Coherencia Horizontal del Componente Especializado (plantilla oficial CBJ) —
+    # Estructura tomada del .docx que entregó el coordinador:
+    #   Encabezado: Docente · Asignatura · Mención · Grado
+    #   4 períodos fijos, cada uno con 1 Competencia Laboral y N filas de
+    #   RAE | Conceptos | Procedimientos | Actitudes y valores | Producto | Recursos
     """
     CREATE TABLE IF NOT EXISTS coherencia_horizontal (
         id                  INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1126,26 +1130,39 @@ CREATE TABLE IF NOT EXISTS notas_competencias_ce (
         seccion             TEXT,
         mencion             TEXT,
         periodo             TEXT,
+        asignatura          TEXT,
         fecha_creacion      TEXT DEFAULT (datetime('now')),
         fecha_actualizacion TEXT DEFAULT (datetime('now')),
         FOREIGN KEY (docente_id) REFERENCES usuarios(id)
     )
     """,
     """
-    CREATE TABLE IF NOT EXISTS coherencia_horizontal_fila (
-        id           INTEGER PRIMARY KEY AUTOINCREMENT,
-        matriz_id    INTEGER NOT NULL,
-        area         TEXT    NOT NULL,
-        competencias TEXT,
-        contenido    TEXT    NOT NULL,
-        indicador    TEXT,
-        articulacion TEXT,
-        orden        INTEGER DEFAULT 0,
-        FOREIGN KEY (matriz_id) REFERENCES coherencia_horizontal(id) ON DELETE CASCADE
+    CREATE TABLE IF NOT EXISTS coherencia_periodo (
+        id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+        matriz_id           INTEGER NOT NULL,
+        numero              INTEGER NOT NULL,   -- 1..4
+        competencia_laboral TEXT DEFAULT '',
+        FOREIGN KEY (matriz_id) REFERENCES coherencia_horizontal(id) ON DELETE CASCADE,
+        UNIQUE (matriz_id, numero)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS coherencia_rae (
+        id             INTEGER PRIMARY KEY AUTOINCREMENT,
+        periodo_id     INTEGER NOT NULL,
+        rae            TEXT    NOT NULL,
+        conceptos      TEXT DEFAULT '',
+        procedimientos TEXT DEFAULT '',
+        actitudes      TEXT DEFAULT '',
+        producto       TEXT DEFAULT '',
+        recursos       TEXT DEFAULT '',
+        orden          INTEGER DEFAULT 0,
+        FOREIGN KEY (periodo_id) REFERENCES coherencia_periodo(id) ON DELETE CASCADE
     )
     """,
     """CREATE INDEX IF NOT EXISTS idx_coherencia_docente ON coherencia_horizontal(docente_id)""",
-    """CREATE INDEX IF NOT EXISTS idx_coherencia_fila_matriz ON coherencia_horizontal_fila(matriz_id)""",
+    """CREATE INDEX IF NOT EXISTS idx_coherencia_periodo_matriz ON coherencia_periodo(matriz_id)""",
+    """CREATE INDEX IF NOT EXISTS idx_coherencia_rae_periodo ON coherencia_rae(periodo_id)""",
 ]
 
 
@@ -1356,6 +1373,16 @@ MIGRACIONES_ESPECIALES = [
     ("Agregar area a poa",
      "ALTER TABLE poa ADD COLUMN area TEXT DEFAULT ''",
      "area", "poa"),
+    # ── Coherencia Horizontal — rediseño a la plantilla oficial del coordinador ──
+    # La v1 (2026-08-24) usaba una matriz genérica área/competencias/contenido/
+    # indicador/articulacion. La plantilla real del centro es por período con
+    # RAE + Contenidos(3) + Producto + Recursos, así que se agregó 'asignatura'
+    # al encabezado y se crearon coherencia_periodo / coherencia_rae.
+    # NOTA: la tabla coherencia_horizontal_fila (v1) queda vestigial en BDs que
+    # ya la crearon — sin uso en el código. No se dropea automáticamente.
+    ("Agregar asignatura a coherencia_horizontal",
+     "ALTER TABLE coherencia_horizontal ADD COLUMN asignatura TEXT DEFAULT ''",
+     "asignatura", "coherencia_horizontal"),
     # ← AGREGA MIGRACIONES PUNTUALES AQUÍ
 ]
 
