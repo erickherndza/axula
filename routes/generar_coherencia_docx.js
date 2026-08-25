@@ -224,6 +224,16 @@ async function generarDocx(data, outputPath) {
   });
 
   const doc = new Document({
+    // Metadatos reales del documento. El .docx NO lleva ninguna protección
+    // (sin documentProtection / readOnly / "marcar como final") — es
+    // plenamente editable. Si Word lo abre en "Vista protegida" es por el
+    // Mark-of-the-Web que el navegador pone a todo archivo descargado:
+    // se resuelve con "Habilitar edición" o guardándolo antes de abrirlo.
+    creator: data.docente || 'Axula',
+    lastModifiedBy: data.docente || 'Axula',
+    title: `Coherencia Horizontal — ${data.asignatura || ''} ${data.grado || ''}`.trim(),
+    description: 'Coherencia Horizontal del Componente Especializado — '
+               + `${data.centro || ''} — Año escolar ${data.anio_escolar || ''}`,
     styles: {
       default: { document: { run: { font: 'Arial', size: 18 } } },
     },
