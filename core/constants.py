@@ -1379,7 +1379,9 @@ MIGRACIONES_ESPECIALES = [
     # RAE + Contenidos(3) + Producto + Recursos, así que se agregó 'asignatura'
     # al encabezado y se crearon coherencia_periodo / coherencia_rae.
     # NOTA: la tabla coherencia_horizontal_fila (v1) queda vestigial en BDs que
-    # ya la crearon — sin uso en el código. No se dropea automáticamente.
+    # ya la crearon — sin uso en el código y fuera de TABLAS_NUEVAS, así que no
+    # se recrea al reiniciar. Se limpia con:
+    #     python3 scripts/dropear_coherencia_fila_v1.py --commit
     ("Agregar asignatura a coherencia_horizontal",
      "ALTER TABLE coherencia_horizontal ADD COLUMN asignatura TEXT DEFAULT ''",
      "asignatura", "coherencia_horizontal"),
