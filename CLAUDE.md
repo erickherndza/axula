@@ -80,6 +80,9 @@ Power BI light mode · Teal: #038C8C, #024959, #012840
 - Cuaderno anecdótico (`/casos`) — abierto al profesor
 - **Carga masiva de notas desde PDF** — scripts/cargar_notas_pdf.py (2026-06-27)
 - **Competencias Modalidad Artes** — scripts/sembrar_competencias_arte.py (2026-08-11)
+- **Coherencia Horizontal del Componente Especializado** (`/coherencia`) — matriz curricular
+  por período (RAE/Contenidos/Producto/Recursos) siguiendo la plantilla oficial del centro,
+  con exportación a Word editable (2026-08-25/26)
 
 ## Datos cargados en BD (año escolar 2025-2026)
 
@@ -143,6 +146,76 @@ python3 -c "import app; print('OK')"
 - Todos los overrides centralizados en `static/theme.css` (al final del archivo)
 
 ## Log de sesiones
+
+### 2026-08-25/26 (sesión 18 — fix selector de grado en Planificación + módulo nuevo "Coherencia Horizontal")
+
+**Fix rápido — Estrategias Didácticas solo mostraba materias de 4to** (commit `585ae91`):
+El tab "Estrategias Didácticas" de `/planificacion` nunca tuvo un `<select id="e-grado">` —
+solo mención y asignatura. `actualizarMaterias('e')` leía `document.getElementById('e-grado')`,
+no encontraba el elemento, y caía al fallback hardcodeado `'4to'`. Un profesor de 4to Y 5to
+(como Erick) nunca podía generar estrategias para materias de 5to. Los tabs "Planificación de
+Clase" (`p-grado`) y "Crear Rúbrica" (`r-grado`) sí tenían el selector — misma familia de bug
+que la sesión 17 (una copia del formulario evolucionó, la otra fosilizó). Agregado
+`<select id="e-grado">` idéntico a los otros dos. Sin cambios de backend — el nombre de la
+materia ya es único por grado dentro de cada mención.
+
+**Módulo nuevo — Coherencia Horizontal del Componente Especializado** (`/coherencia`):
+
+El coordinador pidió una sección para documentar, por asignatura y grado, cómo se articulan
+las materias del componente especializado con el resto del currículo — siguiendo una plantilla
+Word oficial del centro. Se armó en varias vueltas, cada una corrigiendo algo real:
+
+1. **v1 (commit `2e8d684`)** — construida solo a partir del mandato en texto (sin ver la
+   plantilla real): matriz genérica área/competencias/contenido/indicador/articulación,
+   modelada sobre `routes/poa.py` (mismo patrón: encabezado + filas, dueño edita lo suyo /
+   admin ve todo). Quedó **completamente descartada** un día después al leer el `.docx` real.
+2. **Rediseño a la plantilla real (commit `962b52b`)** — el coordinador entregó
+   "Coherencia Horizontal componente especializado.docx"; se leyó su XML directamente (no se
+   asumió nada) y la estructura real es por completo distinta: encabezado institucional fijo +
+   Propósito + identificación (Docente/Asignatura/Mención/Grado) + **4 períodos fijos del
+   calendario** (Ago-Oct, Nov-Ene, Feb-Mar, Abr-Jun), cada uno con 1 Competencia Laboral y N
+   filas de RAE | Conceptos · Procedimientos · Actitudes y valores | Producto | Recursos.
+   Tablas nuevas `coherencia_periodo` + `coherencia_rae` (reemplazan a `coherencia_horizontal_fila`
+   de la v1, que quedó vestigial — limpiada con `scripts/dropear_coherencia_fila_v1.py --commit`,
+   commit `590e574`). Los 4 períodos se crean solos al crear la matriz, el docente no los agrega.
+3. **Exportación a Word** (`routes/generar_coherencia_docx.js`, mismo commit `962b52b`) — reutiliza
+   el mecanismo ya existente del generador ABP (`routes/planificacion.py::exportar_planificacion_docx`
+   → subprocess a Node con la librería `docx`), no se inventó uno nuevo. Anchos de columna,
+   sombreado (`C1E4F5`) y `gridSpan`/`vMerge` calcados celda por celda del XML original —
+   verificado comparando el `.docx` generado contra el original antes de dar el commit por bueno.
+4. **"Documento en modo solo lectura"** (sin cambio de código) — el `.docx` generado nunca tuvo
+   ninguna protección (`documentProtection`, `writeProtection`, "marcar como final" — todos
+   ausentes, verificado descomprimiendo el archivo). Lo que se veía era la Vista Protegida de
+   Word, que se activa sola en cualquier archivo con Mark-of-the-Web (descargado del navegador).
+   Se resuelve del lado del usuario ("Habilitar edición", o guardar el archivo antes de abrirlo
+   en vez de abrirlo directo desde la barra de descargas) — no es arreglable desde el servidor.
+   Se aprovechó para agregarle metadatos reales (`creator`/`title`/`description` — antes salía
+   "Un-named") — commit `8ad8773`.
+5. **Bug real de UX — "lleno los 4 períodos y solo se guarda uno"** (commit `fd9a6cb`): cada
+   período tenía su propio `<form>` independiente (Competencia Laboral) y su propio mini-form de
+   "agregar RAE" — llenar varios y enviar solo el último perdía el resto, porque cada submit
+   recargaba toda la página. Rediseñado a **un solo `<form>`** con los 4 períodos dentro; "+
+   Agregar fila" ahora es 100% cliente (JS clona una fila editable sin recargar la página); un
+   único botón al final ("Guardar todo y generar Word") guarda los 4 períodos completos en un
+   solo POST (arrays paralelos `rae_N[]`/`conceptos_N[]`/etc. por índice — filas vacías
+   agregadas y no llenadas se descartan solas) y dispara la descarga del `.docx` actualizado vía
+   un iframe oculto tras el redirect, sin salir de la página ni bloqueo de pop-ups.
+6. **Tipografía del documento** (commit `025a2d4`) — a pedido: títulos (encabezado, Docente/
+   Asignatura/Mención/Grado, título de cada período, Competencia Laboral, encabezados de
+   columna) en **Times New Roman 12pt**; todo el copy (lo que escribe el docente) en
+   **Arial 12pt**. Verificado leyendo `rFonts`/`sz` de cada `<w:r>` del XML resultante, no solo
+   visualmente.
+
+**LECCIÓN — verificar contra el artefacto real antes de construir, no contra el mandato en
+texto:** la v1 de este módulo se descartó por completo porque se construyó a partir de la
+descripción en prosa del mandato (`MEJORAS/coherencia_1.md`) sin haber visto todavía el `.docx`
+de la plantilla real. En cuanto el coordinador lo entregó, quedó claro que la estructura no se
+parecía en nada. Cuando el usuario menciona que existe un documento/plantilla/ejemplo de
+referencia, pedirlo y leerlo (`unzip` + parseo del XML para `.docx`) **antes** de diseñar el
+schema o la UI — no asumir la estructura a partir de la descripción.
+
+**Pendiente:** ninguno conocido para este módulo. Erick debe seguir cargando la lista oficial de
+estudiantes de 4to y 5to Multimedia para el año 2026-2027 (pendiente heredado de la sesión 17).
 
 ### 2026-08-23 (sesión 17 — retiro de estudiantes + auditoría profunda "notas de grado anterior" + reconexión del motor de promoción)
 
