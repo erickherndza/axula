@@ -47,15 +47,26 @@ const W = {
 const borde  = { style: BorderStyle.SINGLE, size: 4, color: C.BORDER };
 const bordes = { top: borde, bottom: borde, left: borde, right: borde };
 
+// Tipografía a pedido del docente: títulos en Times New Roman 12pt,
+// texto de contenido ("copy") en Arial 12pt. Ambos a 24 half-points (12pt).
+const FONT_TITULO = 'Times New Roman';
+const FONT_COPY   = 'Arial';
+const SIZE_DEFAULT = 24; // 12pt
+
 function run(text, opts = {}) {
   return new TextRun({
     text: String(text == null ? '' : text),
-    font: 'Arial',
-    size: opts.size || 18,          // 9pt = 18 half-points
+    font: opts.font || FONT_COPY,
+    size: opts.size || SIZE_DEFAULT,
     bold: opts.bold || false,
     color: opts.color || C.BLACK,
     italics: opts.italics || false,
   });
+}
+
+/** Atajo: run() con la tipografía de título (Times New Roman). */
+function runTitulo(text, opts = {}) {
+  return run(text, { ...opts, font: FONT_TITULO });
 }
 
 function para(children, opts = {}) {
@@ -66,12 +77,13 @@ function para(children, opts = {}) {
   });
 }
 
-/** Convierte texto multilínea en varios párrafos (respeta saltos de línea). */
+/** Convierte texto multilínea en varios párrafos (respeta saltos de línea).
+ *  Texto de contenido ("copy") → Arial, tipografía por defecto de run(). */
 function parasDeTexto(texto, opts = {}) {
   const t = String(texto == null ? '' : texto);
   const lineas = t.split('\n');
   if (lineas.length === 1 && lineas[0] === '') return [para(run(''), opts)];
-  return lineas.map(l => para(run(l, { size: opts.size || 17 }), opts));
+  return lineas.map(l => para(run(l), opts));
 }
 
 function celda(children, bgColor, widthDxa, opts = {}) {
@@ -88,10 +100,10 @@ function celda(children, bgColor, widthDxa, opts = {}) {
   return new TableCell(cfg);
 }
 
-/** Celda de encabezado (sombreada, negrita, centrada). */
+/** Celda de encabezado (sombreada, negrita, centrada). Título → Times New Roman. */
 function celdaHdr(texto, widthDxa, opts = {}) {
   return celda(
-    para(run(texto, { bold: true, size: opts.size || 17 }), { align: AlignmentType.CENTER }),
+    para(runTitulo(texto, { bold: true }), { align: AlignmentType.CENTER }),
     C.HEADER, widthDxa, opts
   );
 }
@@ -118,23 +130,23 @@ function espacio(before = 120) {
   return new Paragraph({ children: [], spacing: { before } });
 }
 
-// ── ENCABEZADO INSTITUCIONAL (header del .docx original) ───────────────────
+// ── ENCABEZADO INSTITUCIONAL (header del .docx original) — título ──────────
 function encabezado(d) {
   return [
-    para(run('CENTRO EDUCATIVO EN ARTES BENITO JUAREZ', { bold: true, size: 24 }),
+    para(runTitulo('CENTRO EDUCATIVO EN ARTES BENITO JUAREZ', { bold: true }),
          { align: AlignmentType.CENTER, before: 0, after: 40 }),
-    para(run(`AÑO ESCOLAR ${d.anio_escolar || ''}`, { bold: true, size: 20 }),
+    para(runTitulo(`AÑO ESCOLAR ${d.anio_escolar || ''}`, { bold: true }),
          { align: AlignmentType.CENTER, before: 0, after: 40 }),
-    para(run('COHERENCIA HORIZONTAL DEL COMPONENTE ESPECIALIZADO.', { bold: true, size: 20 }),
+    para(runTitulo('COHERENCIA HORIZONTAL DEL COMPONENTE ESPECIALIZADO.', { bold: true }),
          { align: AlignmentType.CENTER, before: 0, after: 120 }),
   ];
 }
 
-// ── PROPÓSITO ──────────────────────────────────────────────────────────────
+// ── PROPÓSITO — label en título, texto en copy ──────────────────────────────
 function proposito(d) {
   return para([
-    run('Propósito: ', { bold: true, size: 18 }),
-    run(d.proposito || '', { size: 18 }),
+    runTitulo('Propósito: ', { bold: true }),
+    run(d.proposito || ''),
   ], { align: AlignmentType.JUSTIFIED, before: 60, after: 140 });
 }
 
@@ -161,7 +173,7 @@ function tablaPeriodo(p) {
   const rows = [
     // Título del período — ancho completo
     fila(celda(
-      para(run(p.titulo || '', { bold: true, size: 18 }), { align: AlignmentType.CENTER }),
+      para(runTitulo(p.titulo || '', { bold: true }), { align: AlignmentType.CENTER }),
       C.HEADER, W.TOTAL, { span: 6 }
     )),
     // Competencia Laboral — label + valor a 5 columnas
@@ -235,7 +247,7 @@ async function generarDocx(data, outputPath) {
     description: 'Coherencia Horizontal del Componente Especializado — '
                + `${data.centro || ''} — Año escolar ${data.anio_escolar || ''}`,
     styles: {
-      default: { document: { run: { font: 'Arial', size: 18 } } },
+      default: { document: { run: { font: FONT_COPY, size: SIZE_DEFAULT } } },
     },
     sections: [{
       properties: {
