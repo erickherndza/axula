@@ -48,14 +48,22 @@ def _norm_header(s):
 
 
 def _parsear_grado_seccion(valor):
-    """'4TO' → ('4to', None) · '4TO B' → ('4to', 'B') · '1er.' → ('1ro', None)"""
+    """
+    '4TO' → ('4TO', None) · '4TO B' → ('4TO', 'B') · '1er.' → ('1RO', None)
+
+    Devuelve el grado en MAYÚSCULAS — es el formato que ya usan los ~800
+    estudiantes existentes en `estudiantes.grado` (verificado contra la BD
+    real de producción: '4TO', '5TO', '3ERO', etc., nunca en minúscula).
+    Escribir en minúscula generaba estudiantes "duplicados" invisibles para
+    el resto del sistema, que compara grados con `=` en varios lugares.
+    """
     grado, seccion = None, None
     resto = []
     for tok in str(valor or "").split():
         t = tok.strip().lower().rstrip(".")
         t = _GRADO_ALIAS.get(t, t)
         if t in GRADOS_VALIDOS:
-            grado = t
+            grado = t.upper()
         else:
             resto.append(tok.strip())
     if resto:
@@ -170,7 +178,19 @@ def leer_listado(path):
 
 
 def buscar_existente(conn, alumno, grado, mencion):
-    """cédula exacta → nombre+apellido exacto → fuzzy dentro del mismo grado+mención."""
+    """
+    cédula exacta (global) → nombre+apellido exacto (mismo grado+mención) →
+    fuzzy (mismo grado+mención).
+
+    El nombre+apellido exacto SIEMPRE debe ir acotado al grado/mención
+    objetivo — sin eso, un alumno sin cédula en el archivo puede coincidir
+    por nombre con un estudiante de OTRO grado que ya está en la BD (pasó
+    en producción: 27 alumnos de "4to Multimedia" con nombre exacto igual
+    a estudiantes ya cargados en '3ERO', que habrían quedado reasignados
+    por error). La comparación de grado es case-insensitive porque los
+    datos reales usan MAYÚSCULA ('4TO') pero eso no debe ser un requisito
+    silencioso — mejor comparar sin depender de la case.
+    """
     if alumno["cedula"]:
         row = conn.execute(
             "SELECT id, nombre, apellido, cedula, grado, curso, condicion FROM estudiantes WHERE cedula=?",
@@ -179,26 +199,26 @@ def buscar_existente(conn, alumno, grado, mencion):
         if row:
             return row
 
+    if mencion:
+        scope_sql = "UPPER(grado)=UPPER(?) AND (mencion=? OR mencion IS NULL OR mencion='')"
+        scope_params = (grado, mencion)
+    else:
+        scope_sql = "UPPER(grado)=UPPER(?)"
+        scope_params = (grado,)
+
     row = conn.execute(
-        """SELECT id, nombre, apellido, cedula, grado, curso, condicion FROM estudiantes
-           WHERE lower(nombre)=lower(?) AND lower(apellido)=lower(?)""",
-        (alumno["nombre"], alumno["apellido"])
+        f"""SELECT id, nombre, apellido, cedula, grado, curso, condicion FROM estudiantes
+           WHERE {scope_sql} AND lower(nombre)=lower(?) AND lower(apellido)=lower(?)""",
+        scope_params + (alumno["nombre"], alumno["apellido"])
     ).fetchone()
     if row:
         return row
 
     clave = norm(alumno["nombre"] + " " + alumno["apellido"])
-    if mencion:
-        candidatos = conn.execute(
-            """SELECT id, nombre, apellido, cedula, grado, curso, condicion FROM estudiantes
-               WHERE grado=? AND (mencion=? OR mencion IS NULL OR mencion='')""",
-            (grado, mencion)
-        ).fetchall()
-    else:
-        candidatos = conn.execute(
-            "SELECT id, nombre, apellido, cedula, grado, curso, condicion FROM estudiantes WHERE grado=?",
-            (grado,)
-        ).fetchall()
+    candidatos = conn.execute(
+        f"SELECT id, nombre, apellido, cedula, grado, curso, condicion FROM estudiantes WHERE {scope_sql}",
+        scope_params
+    ).fetchall()
     mejor, mejor_score = None, 0.0
     for c in candidatos:
         score = SequenceMatcher(None, clave, norm(c["nombre"] + " " + c["apellido"])).ratio()
@@ -217,7 +237,7 @@ def construir_plan(conn, grado, seccion, mencion, alumnos):
        cambios: [...], advertencia: str|None, estudiante_id: int|None}
     """
     curso = f"{grado} {mencion}".strip() if mencion else grado
-    ciclo = "primer_ciclo" if grado in ("1ro", "2do", "3ro") else "segundo_ciclo"
+    ciclo = "primer_ciclo" if grado.upper() in ("1RO", "2DO", "3RO") else "segundo_ciclo"
 
     plan = []
     for alumno in alumnos:
