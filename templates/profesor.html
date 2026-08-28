@@ -267,8 +267,8 @@ main{max-width:1200px;margin:0 auto;padding:28px 24px;}
 [data-theme="light"] .ab3.jus{background:#EDF4FF;border-color:#BDD9FF;}
 
 /* ── CONTROLES PASE ── */
-.pase-top-bar{display:flex;gap:8px;align-items:flex-end;margin-bottom:10px;}
-.pase-top-bar .fld{flex:1;}
+.pase-top-bar{display:flex;gap:8px;align-items:flex-end;margin-bottom:10px;flex-wrap:wrap;}
+.pase-top-bar .fld{flex:1;min-width:110px;}
 .btn-icon{
   width:38px;height:38px;border-radius:9px;border:1px solid var(--border);
   background:var(--hover);color:var(--muted);cursor:pointer;flex-shrink:0;
@@ -789,18 +789,29 @@ main{max-width:1200px;margin:0 auto;padding:28px 24px;}
         <div id="lista-hoy-indicator"></div>
       </div>
 
-      <!-- Controles compactos: fecha + materia en una línea -->
+      <!-- Controles compactos: fecha + grado + materia + sección en una línea -->
       <div class="pase-top-bar">
         <div class="fld">
           <label>Fecha</label>
           <input type="date" id="lista-fecha" value="{{ fecha_hoy }}">
         </div>
+        <div class="fld">
+          <label>Grado</label>
+          <select id="lista-grado" onchange="onGradoChangePase();">
+            {% for g in grados_prof %}
+            <option value="{{ g }}">{{ g }}</option>
+            {% endfor %}
+          </select>
+        </div>
         <div class="fld" style="flex:2;">
           <label>Materia</label>
           <select id="lista-materia" onchange="onMateriaChange();">
-            {% for asig, horas in plan %}
-            <option value="{{ asig }}" data-horas="{{ horas }}">{{ asig }}</option>
-            {% endfor %}
+          </select>
+        </div>
+        <div class="fld">
+          <label>Sección</label>
+          <select id="lista-seccion" onchange="onSeccionChangePase();">
+            <option value="">Todas</option>
           </select>
         </div>
         <button class="btn-icon" id="btn-pase-cfg" onclick="togglePaseCfg()" title="Horas y período">
@@ -875,7 +886,7 @@ main{max-width:1200px;margin:0 auto;padding:28px 24px;}
       <!-- Lista de estudiantes -->
       <div class="lista-grid" id="lista-container">
         {% for est in estudiantes %}
-        <div class="est-row" data-id="{{ est.id }}">
+        <div class="est-row" data-id="{{ est.id }}" data-grado="{{ est.grado or '' }}" data-seccion="{{ est.seccion or '' }}">
           <div class="est-ini">{{ est.nombre[0] }}{{ est.apellido[0] }}</div>
           <div style="flex:1;min-width:0;">
             <div class="est-nombre">{{ est.apellido }}, {{ est.nombre }}</div>
@@ -1733,8 +1744,10 @@ main{max-width:1200px;margin:0 auto;padding:28px 24px;}
 <script>
 var ESTUDIANTES = {{ estudiantes | tojson }};
 var PLAN = {{ plan | tojson }};
+var PLAN_POR_GRADO = {{ plan_por_grado | tojson }};  // {grado: [[asig,horas],...]} — Pase de Lista
 var ESTADOS = {};  // {estudiante_id: {estado, observacion}}
 var MODO_PASE = 'ausentes'; // 'ausentes' | 'presentes'
+var _PASE_SEARCH_Q = '';    // texto de búsqueda actual del pase de lista
 
 // ── UTILIDADES ──────────────────────────────────────────────────────────────
 function tk(msg, tipo) {
@@ -1855,10 +1868,13 @@ function marcarTodos(estado) {
 }
 
 function resetPase() {
-    ESTADOS = {};
+    // Solo limpia lo que está visible ahora mismo (el grado/sección actual) —
+    // así no se pierden marcas hechas en otro grado que aún no se ha guardado.
     document.querySelectorAll('#lista-container .est-row').forEach(function(row){
+        if (row.style.display === 'none') return;
         row.querySelectorAll('.ab3').forEach(function(b){ b.classList.remove('sel'); });
         row.classList.remove('estado-a','estado-t','estado-j');
+        delete ESTADOS[parseInt(row.dataset.id)];
     });
     actualizarContadores();
 }
@@ -1871,31 +1887,36 @@ function togglePaseCfg() {
 }
 
 function filtrarPase(q) {
-    var qn = q.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-    document.querySelectorAll('#lista-container .est-row').forEach(function(row){
-        var nombre = (row.querySelector('.est-nombre')||{}).textContent||'';
-        var norm   = nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-        row.style.display = (!q || norm.includes(qn)) ? '' : 'none';
-    });
+    _PASE_SEARCH_Q = q || '';
+    aplicarFiltrosPase();
 }
 
 function exportarCSV(e) {
     e.preventDefault();
     var fecha   = document.getElementById('lista-fecha').value;
     var materia = document.getElementById('lista-materia').value;
+    var grado   = document.getElementById('lista-grado')   ? document.getElementById('lista-grado').value   : '';
+    var seccion = document.getElementById('lista-seccion') ? document.getElementById('lista-seccion').value : '';
     if (!fecha || !materia) { tk('Selecciona fecha y materia primero', 'warn'); return; }
-    // Descarga el pase de lista completo del día: todos los estudiantes con su estado
+    // Descarga el pase de lista del día para el grado/sección seleccionados
     window.location.href = '/api/asistencia/export-csv?fecha=' + encodeURIComponent(fecha)
-        + '&materia=' + encodeURIComponent(materia);
+        + '&materia=' + encodeURIComponent(materia)
+        + '&grado=' + encodeURIComponent(grado)
+        + '&seccion=' + encodeURIComponent(seccion);
     tk('Descargando lista del ' + fecha + '…', 'success');
 }
 
 function actualizarContadores() {
     var counts = {presente:0,tardanza:0,ausente:0,justificado:0};
-    var total  = ESTUDIANTES.length;
-    var marcados = Object.keys(ESTADOS).length;
+    var visiblesIds = new Set(_estudiantesVisiblesPase().map(function(e){ return e.id; }));
+    var total  = visiblesIds.size;
+    var marcados = 0;
 
-    Object.values(ESTADOS).forEach(function(e){
+    Object.keys(ESTADOS).forEach(function(idStr){
+        var id = Number(idStr);
+        if (!visiblesIds.has(id)) return;  // marca de otro grado/sección — no cuenta aquí
+        marcados++;
+        var e = ESTADOS[idStr];
         if (counts[e.estado] !== undefined) counts[e.estado]++;
     });
     counts.presente = total - marcados; // los no marcados son presentes
@@ -1928,18 +1949,26 @@ function actualizarContadores() {
 async function guardarAsistencia() {
     var fecha   = document.getElementById('lista-fecha').value;
     var materia = document.getElementById('lista-materia').value;
+    var grado   = document.getElementById('lista-grado')   ? document.getElementById('lista-grado').value   : '';
+    var seccion = document.getElementById('lista-seccion') ? document.getElementById('lista-seccion').value : '';
     var horas   = parseInt(document.getElementById('lista-horas').value);
     var periodoStr = document.getElementById('lista-periodo').value;  // "P1","P2"...
     var periodo = parseInt(periodoStr.replace('P',''));  // convertir a int: 1,2,3,4
 
     if (!fecha || !materia) { tk('Selecciona fecha y materia', 'warn'); return; }
 
+    // Solo se guarda el grado (y sección, si hay una elegida) que está
+    // visible ahora mismo — así una materia que se imparte en más de un
+    // grado nunca mezcla estudiantes de otro curso en el mismo registro.
+    var visibles = _estudiantesVisiblesPase();
+    if (!visibles.length) { tk('No hay estudiantes para este grado/sección', 'warn'); return; }
+
     var btn = document.getElementById('btn-guardar');
     btn.textContent = 'Guardando…'; btn.disabled = true;
 
     // Construir lista: marcados explícitos, los demás = presente
     var marcadosSet = new Set(Object.keys(ESTADOS).map(Number));
-    var registros = ESTUDIANTES.map(function(est){
+    var registros = visibles.map(function(est){
         if (marcadosSet.has(est.id)) {
             return { estudiante_id: est.id, estado: ESTADOS[est.id].estado, observacion: ESTADOS[est.id].observacion };
         }
@@ -1950,7 +1979,7 @@ async function guardarAsistencia() {
         var res = await fetch('/api/asistencia', {
             method: 'POST',
             headers: {'Content-Type':'application/json'},
-            body: JSON.stringify({ fecha, materia, horas_clase: horas, periodo, registros })
+            body: JSON.stringify({ fecha, materia, grado, seccion, horas_clase: horas, periodo, registros })
         });
         var d = await res.json();
         if (d.ok) {
@@ -2382,9 +2411,93 @@ document.addEventListener('DOMContentLoaded', function() {
             + '<option value="P4"' + (pActual==='P4'?' selected':'') + '>P4 — Cuarto Período</option>';
     }
     
+    // Pase de lista: poblar Materia (según grado) y Sección, y aplicar filtro inicial
+    poblarSeccionesPase();
+    onGradoChangePase();
+
     // Check if list was already passed today on load
     verificarListaHoy();
 });
+
+// ─── PASE DE LISTA: filtrado por Grado + Materia + Sección ─────────────────
+// El roster completo (ESTUDIANTES) puede incluir varios grados/secciones del
+// mismo profesor (ej: 4to y 5to Multimedia). Sin este filtro, pasar lista de
+// una materia guardaba asistencia para TODOS los estudiantes del profesor,
+// mezclando cursos que no comparten esa clase.
+
+function poblarMateriasPase() {
+    var gradoSel   = document.getElementById('lista-grado');
+    var materiaSel = document.getElementById('lista-materia');
+    if (!materiaSel) return;
+    var grado = gradoSel ? gradoSel.value : '';
+    var materias = PLAN_POR_GRADO[grado] || PLAN;
+    var actual = materiaSel.value;
+    materiaSel.innerHTML = materias.map(function(m){
+        return '<option value="' + m[0].replace(/"/g,'&quot;') + '" data-horas="' + m[1] + '">' + m[0] + '</option>';
+    }).join('');
+    // Conservar la materia seleccionada si sigue existiendo en el grado nuevo
+    if (materias.some(function(m){ return m[0] === actual; })) materiaSel.value = actual;
+}
+
+function _norm_gs(s) { return (s || '').trim().toLowerCase(); }
+
+function poblarSeccionesPase() {
+    var gradoSel   = document.getElementById('lista-grado');
+    var seccionSel = document.getElementById('lista-seccion');
+    if (!seccionSel) return;
+    var grado = gradoSel ? gradoSel.value : '';
+    var secciones = Array.from(new Set(
+        ESTUDIANTES.filter(function(e){ return !grado || _norm_gs(e.grado) === _norm_gs(grado); })
+                   .map(function(e){ return e.seccion; })
+                   .filter(Boolean)
+    )).sort();
+    var actual = seccionSel.value;
+    seccionSel.innerHTML = '<option value="">Todas</option>' + secciones.map(function(s){
+        return '<option value="' + s.replace(/"/g,'&quot;') + '">' + s + '</option>';
+    }).join('');
+    if (secciones.includes(actual)) seccionSel.value = actual;
+}
+
+function onGradoChangePase() {
+    poblarMateriasPase();
+    poblarSeccionesPase();
+    aplicarFiltrosPase();
+    onMateriaChange();
+}
+
+function onSeccionChangePase() {
+    aplicarFiltrosPase();
+    verificarListaHoy();
+}
+
+// Estudiantes actualmente visibles en el pase de lista (según grado + sección
+// seleccionados). Es el conjunto que realmente se guarda al pasar lista.
+function _estudiantesVisiblesPase() {
+    var gradoSel   = document.getElementById('lista-grado');
+    var seccionSel = document.getElementById('lista-seccion');
+    var grado   = gradoSel ? gradoSel.value : '';
+    var seccion = seccionSel ? seccionSel.value : '';
+    return ESTUDIANTES.filter(function(e){
+        if (grado && _norm_gs(e.grado) !== _norm_gs(grado)) return false;
+        if (seccion && _norm_gs(e.seccion) !== _norm_gs(seccion)) return false;
+        return true;
+    });
+}
+
+function aplicarFiltrosPase() {
+    var visibles = _estudiantesVisiblesPase();
+    var idsVisibles = new Set(visibles.map(function(e){ return e.id; }));
+    var qn = _PASE_SEARCH_Q.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    document.querySelectorAll('#lista-container .est-row').forEach(function(row){
+        var estId = parseInt(row.dataset.id);
+        var enGradoSeccion = idsVisibles.has(estId);
+        var nombre = (row.querySelector('.est-nombre')||{}).textContent||'';
+        var norm   = nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+        var coincideBusqueda = !qn || norm.includes(qn);
+        row.style.display = (enGradoSeccion && coincideBusqueda) ? '' : 'none';
+    });
+    actualizarContadores();
+}
 
 // ─── AUTO-HORAS POR MATERIA ───────────────────────────────────────────────
 function onMateriaChange() {
@@ -2403,9 +2516,14 @@ function onMateriaChange() {
 async function verificarListaHoy() {
     var materia = document.getElementById('lista-materia');
     if (!materia) return;
+    var grado   = document.getElementById('lista-grado')   ? document.getElementById('lista-grado').value   : '';
+    var seccion = document.getElementById('lista-seccion') ? document.getElementById('lista-seccion').value : '';
     var hoy = new Date().toISOString().split('T')[0];
     try {
-        var res = await fetch('/api/asistencia?fecha_ini='+hoy+'&fecha_fin='+hoy+'&materia='+encodeURIComponent(materia.value));
+        var res = await fetch('/api/asistencia?fecha_ini='+hoy+'&fecha_fin='+hoy
+            + '&materia='+encodeURIComponent(materia.value)
+            + '&grado='+encodeURIComponent(grado)
+            + '&seccion='+encodeURIComponent(seccion));
         var data = await res.json();
         var indicator = document.getElementById('lista-hoy-indicator');
         if (!indicator) return;

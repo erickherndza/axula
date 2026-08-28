@@ -280,7 +280,7 @@ def portal_profesor():
       menciones_prof = alcance["menciones"]
       filtro_men     = alcance["filtro_mencion"]
 
-      q = ("SELECT id, nombre, apellido, curso, grado FROM estudiantes "
+      q = ("SELECT id, nombre, apellido, curso, grado, seccion FROM estudiantes "
            "WHERE (condicion IS NULL OR condicion NOT IN ('RETIRADO','TRANSFERIDO'))")
       params = []
       if grados_prof:
@@ -306,32 +306,55 @@ def portal_profesor():
           s = (s or "").strip().lower()
           return _ud.normalize("NFKD", s).encode("ascii", "ignore").decode("ascii")
 
-      plan_set = {}   # nombre_asig → horas (deduplicado)
+      asigs_raw  = (prof.get("asignaturas") or prof.get("materia") or "").strip()
+      asigs_prof = [_norm_asig(a) for a in asigs_raw.split("|") if a.strip()]
+
+      def _coincide(nombre_plan):
+          n = _norm_asig(nombre_plan)
+          return any(ap in n or n in ap for ap in asigs_prof)
+
+      # Plan por grado — SIN aplanar: cada materia conserva a qué grado(s)
+      # pertenece, para que Pase de Lista pueda filtrar la matrícula por
+      # grado exacto y no mezclar estudiantes de grados distintos que
+      # comparten profesor/mención (ej: "Lengua Española" en 4to Y 5to).
+      plan_por_grado = {}   # {grado: [[asig, horas], ...]}
+      plan_set = {}          # nombre_asig → horas (deduplicado, para vista "Plan de Estudio")
       for gk in (grados_prof if grados_prof else ["4to"]):
           mencion_key = menciones_prof[0].upper() if (filtro_men and menciones_prof) else "MULTIMEDIA"
           plan_mencion = PLAN_ARTES.get(mencion_key, PLAN_MULTIMEDIA)
-          for asig, horas in plan_mencion.get(gk.lower(), plan_mencion.get("4to", [])):
+          materias_gk = plan_mencion.get(gk.lower(), plan_mencion.get("4to", []))
+          if asigs_prof and rol_norm == "profesor":
+              materias_gk_filtradas = [(a, h) for a, h in materias_gk if _coincide(a)]
+              # Sin coincidencia en este grado: no es materia de este profesor
+              # en este grado (ej: técnica que solo existe en otro grado) —
+              # dejar la lista vacía en vez de mostrar el plan completo.
+              materias_gk = materias_gk_filtradas
+          plan_por_grado[gk] = [[a, h] for a, h in materias_gk]
+          for asig, horas in materias_gk:
               if asig not in plan_set:
                   plan_set[asig] = horas
       plan = list(plan_set.items())
 
-      # Filtrar plan a las asignaturas del profesor — coincidencia tolerante (inclusión)
-      asigs_raw  = (prof.get("asignaturas") or prof.get("materia") or "").strip()
-      asigs_prof = [_norm_asig(a) for a in asigs_raw.split("|") if a.strip()]
-      if asigs_prof and rol_norm == "profesor":
-          def _coincide(nombre_plan):
-              n = _norm_asig(nombre_plan)
-              return any(ap in n or n in ap for ap in asigs_prof)
-          plan_filtrado = [(asig, h) for asig, h in plan if _coincide(asig)]
-          if plan_filtrado:
-              plan = plan_filtrado
-          else:
-              # Sin coincidencia: avisar en log, mostrar todo el plan
-              logger.warning(
-                  f"[portal_profesor] Profesor id={prof.get('id')} — "
-                  f"asignaturas '{asigs_raw}' no coinciden con el plan {[a for a,_ in plan]}. "
-                  "Se muestra el plan completo."
-              )
+      if asigs_prof and rol_norm == "profesor" and not plan:
+          # Ningún grado tuvo coincidencia — avisar y mostrar el plan completo
+          # sin filtrar (mismo fallback que antes) para no dejar al profesor
+          # sin nada que seleccionar.
+          logger.warning(
+              f"[portal_profesor] Profesor id={prof.get('id')} — "
+              f"asignaturas '{asigs_raw}' no coinciden con ningún grado del plan. "
+              "Se muestra el plan completo sin filtrar."
+          )
+          plan_por_grado = {}
+          plan_set = {}
+          for gk in (grados_prof if grados_prof else ["4to"]):
+              mencion_key = menciones_prof[0].upper() if (filtro_men and menciones_prof) else "MULTIMEDIA"
+              plan_mencion = PLAN_ARTES.get(mencion_key, PLAN_MULTIMEDIA)
+              materias_gk = plan_mencion.get(gk.lower(), plan_mencion.get("4to", []))
+              plan_por_grado[gk] = [[a, h] for a, h in materias_gk]
+              for asig, horas in materias_gk:
+                  if asig not in plan_set:
+                      plan_set[asig] = horas
+          plan = list(plan_set.items())
 
       from datetime import date as _date
       return render_template(
@@ -339,6 +362,8 @@ def portal_profesor():
           profesor=prof,
           estudiantes=estudiantes,
           plan=plan,
+          plan_por_grado=plan_por_grado,
+          grados_prof=grados_prof,
           fecha_hoy=_date.today().isoformat(),
           current_user=get_usuario()
       )
