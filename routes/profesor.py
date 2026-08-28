@@ -398,6 +398,36 @@ def portal_profesor():
 #  que el proceso siga vivo desde que se subió el archivo.
 # ══════════════════════════════════════════════════════════════════════════════
 
+def _validar_grado_mencion_profesor(grado, mencion):
+    """
+    Un profesor solo puede cargar listados de SU propio grado/mención — con
+    30+ profesores en el sistema (a partir del próximo año escolar), sin
+    este chequeo cualquiera podría subir el listado de otro grado/mención
+    y pisar datos que no le corresponden. Admin/directora/coordinación no
+    tienen esta restricción. Retorna (ok: bool, error: str|None).
+    """
+    prof = _get_profesor()
+    if not prof or _normalizar_rol(prof.get("rol", "")) in ROLES_COORD:
+        return True, None
+
+    alcance = _resolver_alcance_profesor(prof)
+    grados_prof    = [g.upper() for g in alcance["grados"]]
+    menciones_prof = [m.upper() for m in alcance["menciones"]]
+
+    if grados_prof and grado.upper() not in grados_prof:
+        return False, (
+            f"Este listado es de {grado} y tu perfil solo cubre "
+            f"{', '.join(alcance['grados'])}. Si el grado es correcto, "
+            "contacta al coordinador para que ajuste tu perfil."
+        )
+    if alcance["filtro_mencion"] and menciones_prof and mencion and mencion.upper() not in menciones_prof:
+        return False, (
+            f"Este listado es de mención {mencion} y tu perfil solo cubre "
+            f"{', '.join(alcance['menciones'])}."
+        )
+    return True, None
+
+
 @profesor_bp.route("/api/profesor/preview-listado-estudiantes", methods=["POST"])
 @login_required
 @rate_limited(max_calls=10, window=3600)
@@ -420,6 +450,10 @@ def preview_listado_estudiantes():
 
     if not alumnos:
         return jsonify({"error": "No se encontraron filas de alumnos en el archivo."}), 400
+
+    ok, err = _validar_grado_mencion_profesor(grado, mencion)
+    if not ok:
+        return jsonify({"error": err}), 403
 
     with sqlite3.connect(DATABASE, timeout=10) as conn:
         conn.row_factory = sqlite3.Row
@@ -452,6 +486,10 @@ def confirmar_listado_estudiantes():
     for a in alumnos:
         if not isinstance(a, dict) or not a.get("nombre") or not a.get("apellido"):
             return jsonify({"error": "El listado recibido está incompleto. Vuelve a subir el archivo."}), 400
+
+    ok, err = _validar_grado_mencion_profesor(grado, mencion)
+    if not ok:
+        return jsonify({"error": err}), 403
 
     with sqlite3.connect(DATABASE, timeout=10) as conn:
         conn.row_factory = sqlite3.Row
