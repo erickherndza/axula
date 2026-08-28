@@ -2611,6 +2611,19 @@ tr:hover td{background:var(--hover)}
           <div class="upload-status" id="status-listado"></div>
         </div>
 
+        <!-- Listado de Estudiantes (formato nuevo: una hoja, GRADO:/ÁREA:) -->
+        <div class="upload-card">
+          <h3>👥 Listado de Estudiantes</h3>
+          <p>Listado oficial de un solo grado/mención ("GRADO:" / "ÁREA:" + tabla de alumnos). Muestra vista previa antes de guardar — no duplica alumnos ya cargados.</p>
+          <div class="upload-drop" onclick="document.getElementById('file-listado-est').click()">
+            <input type="file" id="file-listado-est" accept=".xlsx,.xls,.xlsm" onchange="previewListadoEstudiantes(this)">
+            <div style="font-size:24px;margin-bottom:8px;">👥</div>
+            <div style="font-size:13px;font-weight:600;">Haz clic o arrastra aquí</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px;">Listado_Estudiantes_*.xlsx</div>
+          </div>
+          <div class="upload-status" id="status-listado-est"></div>
+        </div>
+
         <!-- Boletín Oficial -->
         <div class="upload-card">
           <h3>📝 Boletín Oficial</h3>
@@ -2750,6 +2763,43 @@ tr:hover td{background:var(--hover)}
           <!-- ── /Google Calendar ──────────────────────────────── -->
         </div>
 
+      </div>
+
+      <!-- Vista previa del Listado de Estudiantes (oculta hasta subir un archivo) -->
+      <div id="listado-est-preview-wrap" style="display:none;margin-top:16px;padding:14px;
+           background:var(--surface2);border:1px solid var(--border);border-radius:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+          <div>
+            <strong id="listado-est-preview-titulo" style="font-size:13px;"></strong>
+            <div id="listado-est-preview-resumen" style="font-size:11px;color:var(--muted);margin-top:2px;"></div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button onclick="cancelarListadoEstudiantes()"
+              style="background:transparent;border:1px solid var(--border);color:var(--muted);
+                     padding:6px 14px;border-radius:8px;font-size:11px;cursor:pointer;font-family:inherit;">
+              Cancelar
+            </button>
+            <button id="btn-confirmar-listado-est" onclick="confirmarListadoEstudiantes()"
+              style="background:var(--accent);color:#000;border:none;padding:6px 14px;
+                     border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">
+              <i class="fas fa-check"></i> Confirmar carga
+            </button>
+          </div>
+        </div>
+        <div style="max-height:340px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;">
+          <table style="width:100%;border-collapse:collapse;font-size:12px;">
+            <thead>
+              <tr style="background:var(--hover);position:sticky;top:0;">
+                <th style="text-align:left;padding:6px 10px;">#</th>
+                <th style="text-align:left;padding:6px 10px;">Nombre</th>
+                <th style="text-align:left;padding:6px 10px;">Apellido</th>
+                <th style="text-align:left;padding:6px 10px;">Acción</th>
+                <th style="text-align:left;padding:6px 10px;">Detalle</th>
+              </tr>
+            </thead>
+            <tbody id="listado-est-preview-body"></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -4330,6 +4380,89 @@ function cargarListado(input) {
       }
     })
     .catch(function(e) { mostrarStatus('status-listado', '✗ Error: ' + e.message, 'err'); });
+}
+
+// ── Listado de Estudiantes (formato adaptativo GRADO:/ÁREA:): preview → confirmar ──
+var _listadoEstToken = null;
+
+function previewListadoEstudiantes(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var fd = new FormData();
+  fd.append('file', file);
+  mostrarStatus('status-listado-est', '⏳ Leyendo listado...', 'ok');
+  fetch('/api/profesor/preview-listado-estudiantes', {method:'POST', body:fd})
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      input.value = '';
+      if (!d.ok) {
+        mostrarStatus('status-listado-est', '✗ ' + (d.error || 'No se pudo leer el archivo'), 'err');
+        return;
+      }
+      mostrarStatus('status-listado-est', '✓ ' + d.total + ' alumno(s) encontrados — revisa la vista previa abajo', 'ok');
+      _listadoEstToken = d.token;
+      document.getElementById('listado-est-preview-titulo').textContent = 'Vista previa — ' + d.curso;
+      document.getElementById('listado-est-preview-resumen').textContent =
+        d.total + ' alumno(s) en el archivo · ' + d.nuevos + ' nuevo(s) · ' + d.actualizados + ' actualizarían datos existentes';
+      var body = document.getElementById('listado-est-preview-body');
+      body.innerHTML = d.plan.map(function(p) {
+        var accionTxt = p.accion === 'nuevo'
+          ? '<span style="color:#22c55e;font-weight:700;">Nuevo</span>'
+          : '<span style="color:#60b8f0;font-weight:700;">Actualiza</span>';
+        var detalle = (p.cambios && p.cambios.length) ? p.cambios.join(', ') : (p.accion === 'nuevo' ? '—' : 'sin cambios');
+        if (p.advertencia) detalle += '<br><span style="color:#f7b731;">⚠ ' + p.advertencia + '</span>';
+        return '<tr style="border-top:1px solid var(--border);">'
+          + '<td style="padding:5px 10px;color:var(--muted);">' + p.no + '</td>'
+          + '<td style="padding:5px 10px;">' + p.nombre + '</td>'
+          + '<td style="padding:5px 10px;">' + p.apellido + '</td>'
+          + '<td style="padding:5px 10px;">' + accionTxt + '</td>'
+          + '<td style="padding:5px 10px;font-size:11px;color:var(--muted);">' + detalle + '</td>'
+          + '</tr>';
+      }).join('');
+      document.getElementById('listado-est-preview-wrap').style.display = 'block';
+    })
+    .catch(function(e) {
+      input.value = '';
+      mostrarStatus('status-listado-est', '✗ Error de conexión: ' + e.message, 'err');
+    });
+}
+
+function cancelarListadoEstudiantes() {
+  _listadoEstToken = null;
+  document.getElementById('listado-est-preview-wrap').style.display = 'none';
+  mostrarStatus('status-listado-est', '', 'ok');
+}
+
+function confirmarListadoEstudiantes() {
+  if (!_listadoEstToken) return;
+  var btn = document.getElementById('btn-confirmar-listado-est');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+  fetch('/api/profesor/confirmar-listado-estudiantes', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({token: _listadoEstToken})
+  })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-check"></i> Confirmar carga';
+      if (d.ok) {
+        var msg = '✓ Guardado: ' + d.nuevos + ' nuevo(s), ' + d.actualizados + ' actualizado(s)';
+        mostrarStatus('status-listado-est', msg, 'ok');
+        toast(msg, 'ok');
+        document.getElementById('listado-est-preview-wrap').style.display = 'none';
+        _listadoEstToken = null;
+        clearCache(); cargarDatos(true);
+      } else {
+        mostrarStatus('status-listado-est', '✗ ' + (d.error || 'Error al guardar'), 'err');
+      }
+    })
+    .catch(function(e) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-check"></i> Confirmar carga';
+      mostrarStatus('status-listado-est', '✗ Error de conexión: ' + e.message, 'err');
+    });
 }
 
 function cargarPlantilla(input) {
