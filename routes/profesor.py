@@ -28,7 +28,6 @@ from core.ia import _get_groq_client, groq_client, construir_prompt, construir_p
 from core.excel import _parsear_boletin_bj, _buscar_o_crear_estudiante, _detectar_mencion_listado, _limpiar_nota
 from core.pdf import _generar_pdf_acuerdo
 from core.importar_listado import leer_listado_workbook, construir_plan, aplicar_carga
-import uuid
 import openpyxl
 
 logger = logging.getLogger("axula")
@@ -388,18 +387,16 @@ def portal_profesor():
 #  Flujo preview → confirmar, igual que otras cargas masivas del sistema:
 #  el navegador sube el .xlsx, el servidor arma un plan sin escribir en BD,
 #  el profesor lo revisa y solo entonces confirma con un segundo POST.
+#
+#  Sin estado en el servidor entre los dos pasos a propósito: el primer
+#  diseño guardaba el plan en un dict en memoria bajo un token, pero este
+#  servicio corre con gunicorn --workers 1 y cualquier redeploy (frecuente
+#  en este proyecto) reinicia el proceso y borra ese dict — el "Confirmar
+#  carga" fallaba en silencio si el deploy caía justo entre subir el
+#  archivo y confirmar. Ahora el navegador reenvía grado/sección/mención/
+#  alumnos tal como los recibió del preview, así confirmar no depende de
+#  que el proceso siga vivo desde que se subió el archivo.
 # ══════════════════════════════════════════════════════════════════════════════
-
-_LISTADO_PREVIEW_CACHE = {}
-_LISTADO_PREVIEW_TTL = 900  # 15 minutos — tiempo de sobra para revisar el preview
-
-
-def _limpiar_previews_vencidos():
-    ahora = _time.time()
-    vencidos = [t for t, e in _LISTADO_PREVIEW_CACHE.items() if ahora - e["ts"] > _LISTADO_PREVIEW_TTL]
-    for t in vencidos:
-        _LISTADO_PREVIEW_CACHE.pop(t, None)
-
 
 @profesor_bp.route("/api/profesor/preview-listado-estudiantes", methods=["POST"])
 @login_required
@@ -428,16 +425,10 @@ def preview_listado_estudiantes():
         conn.row_factory = sqlite3.Row
         curso, ciclo, plan = construir_plan(conn, grado, seccion, mencion, alumnos)
 
-    _limpiar_previews_vencidos()
-    token = uuid.uuid4().hex
-    _LISTADO_PREVIEW_CACHE[token] = {
-        "grado": grado, "seccion": seccion, "mencion": mencion, "alumnos": alumnos,
-        "ts": _time.time(), "user_id": session.get("user_id"),
-    }
-
     return jsonify({
-        "ok": True, "token": token,
+        "ok": True,
         "grado": grado, "seccion": seccion, "mencion": mencion, "curso": curso,
+        "alumnos": alumnos,   # se reenvía tal cual al confirmar — ver nota arriba
         "total": len(alumnos),
         "nuevos": sum(1 for p in plan if p["accion"] == "nuevo"),
         "actualizados": sum(1 for p in plan if p["accion"] == "actualiza"),
@@ -449,21 +440,22 @@ def preview_listado_estudiantes():
 @login_required
 @rate_limited(max_calls=10, window=3600)
 def confirmar_listado_estudiantes():
-    """Aplica un plan previamente generado por /preview-listado-estudiantes."""
+    """Aplica el plan que /preview-listado-estudiantes le devolvió al navegador."""
     d = request.get_json(silent=True) or {}
-    token = d.get("token", "")
-    _limpiar_previews_vencidos()
-    entry = _LISTADO_PREVIEW_CACHE.pop(token, None)
-    if not entry:
-        return jsonify({"error": "La vista previa expiró o no existe. Vuelve a subir el archivo."}), 400
-    if entry["user_id"] != session.get("user_id"):
-        return jsonify({"error": "Esta vista previa pertenece a otra sesión."}), 403
+    grado   = (d.get("grado") or "").strip()
+    seccion = d.get("seccion")
+    mencion = d.get("mencion")
+    alumnos = d.get("alumnos")
+
+    if not grado or not isinstance(alumnos, list) or not alumnos:
+        return jsonify({"error": "Faltan datos del listado. Vuelve a subir el archivo."}), 400
+    for a in alumnos:
+        if not isinstance(a, dict) or not a.get("nombre") or not a.get("apellido"):
+            return jsonify({"error": "El listado recibido está incompleto. Vuelve a subir el archivo."}), 400
 
     with sqlite3.connect(DATABASE, timeout=10) as conn:
         conn.row_factory = sqlite3.Row
-        nuevos, actualizados = aplicar_carga(
-            conn, entry["grado"], entry["seccion"], entry["mencion"], entry["alumnos"]
-        )
+        nuevos, actualizados = aplicar_carga(conn, grado, seccion, mencion, alumnos)
 
     cache_bust()  # el roster cambió — invalida cachés de listados/dashboard
     return jsonify({"ok": True, "nuevos": nuevos, "actualizados": actualizados})

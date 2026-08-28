@@ -4065,7 +4065,12 @@ async function eliminarAsignacion(id, btn) {
   }
 
   // ── Listado de Estudiantes: preview → confirmar ───────────────────────────
-  var _listadoToken = null;
+  // No se guarda un token del servidor: se reenvía grado/sección/mención/
+  // alumnos tal como los devolvió el preview. Así "Confirmar carga" no
+  // depende de que el proceso siga vivo desde que se subió el archivo —
+  // un redeploy de Render (frecuente en este proyecto) entre subir y
+  // confirmar ya no hace que la carga se pierda en silencio.
+  var _listadoDatos = null;
 
   function profPreviewListado(input) {
     if (!input.files[0]) return;
@@ -4081,7 +4086,7 @@ async function eliminarAsignacion(id, btn) {
           return;
         }
         profSetStatus('prof-status-listado', '✓ ' + d.total + ' alumno(s) encontrados — revisa la vista previa abajo', 'ok');
-        _listadoToken = d.token;
+        _listadoDatos = { grado: d.grado, seccion: d.seccion, mencion: d.mencion, alumnos: d.alumnos };
         var titulo = document.getElementById('listado-preview-titulo');
         var resumen = document.getElementById('listado-preview-resumen');
         titulo.textContent = 'Vista previa — ' + d.curso;
@@ -4110,20 +4115,20 @@ async function eliminarAsignacion(id, btn) {
   }
 
   function profCancelarListado() {
-    _listadoToken = null;
+    _listadoDatos = null;
     document.getElementById('listado-preview-wrap').style.display = 'none';
     profSetStatus('prof-status-listado', '', '');
   }
 
   function profConfirmarListado() {
-    if (!_listadoToken) return;
+    if (!_listadoDatos) return;
     var btn = document.getElementById('btn-confirmar-listado');
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
     fetch('/api/profesor/confirmar-listado-estudiantes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: _listadoToken })
+      body: JSON.stringify(_listadoDatos)
     })
       .then(function(r) { return r.json(); })
       .then(function(d) {
@@ -4134,7 +4139,7 @@ async function eliminarAsignacion(id, btn) {
           profSetStatus('prof-status-listado', msg, 'ok');
           tk(msg, 'success');
           document.getElementById('listado-preview-wrap').style.display = 'none';
-          _listadoToken = null;
+          _listadoDatos = null;
         } else {
           profSetStatus('prof-status-listado', '✗ ' + (d.error || 'Error al guardar'), 'err');
         }

@@ -4383,7 +4383,12 @@ function cargarListado(input) {
 }
 
 // ── Listado de Estudiantes (formato adaptativo GRADO:/ÁREA:): preview → confirmar ──
-var _listadoEstToken = null;
+// No se guarda un token del servidor: se reenvía grado/sección/mención/
+// alumnos tal como los devolvió el preview. Así "Confirmar carga" no
+// depende de que el proceso siga vivo desde que se subió el archivo — un
+// redeploy de Render (frecuente en este proyecto) entre subir y confirmar
+// ya no hace que la carga se pierda en silencio.
+var _listadoEstDatos = null;
 
 function previewListadoEstudiantes(input) {
   var file = input.files[0];
@@ -4400,7 +4405,7 @@ function previewListadoEstudiantes(input) {
         return;
       }
       mostrarStatus('status-listado-est', '✓ ' + d.total + ' alumno(s) encontrados — revisa la vista previa abajo', 'ok');
-      _listadoEstToken = d.token;
+      _listadoEstDatos = { grado: d.grado, seccion: d.seccion, mencion: d.mencion, alumnos: d.alumnos };
       document.getElementById('listado-est-preview-titulo').textContent = 'Vista previa — ' + d.curso;
       document.getElementById('listado-est-preview-resumen').textContent =
         d.total + ' alumno(s) en el archivo · ' + d.nuevos + ' nuevo(s) · ' + d.actualizados + ' actualizarían datos existentes';
@@ -4428,20 +4433,20 @@ function previewListadoEstudiantes(input) {
 }
 
 function cancelarListadoEstudiantes() {
-  _listadoEstToken = null;
+  _listadoEstDatos = null;
   document.getElementById('listado-est-preview-wrap').style.display = 'none';
   mostrarStatus('status-listado-est', '', 'ok');
 }
 
 function confirmarListadoEstudiantes() {
-  if (!_listadoEstToken) return;
+  if (!_listadoEstDatos) return;
   var btn = document.getElementById('btn-confirmar-listado-est');
   btn.disabled = true;
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
   fetch('/api/profesor/confirmar-listado-estudiantes', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({token: _listadoEstToken})
+    body: JSON.stringify(_listadoEstDatos)
   })
     .then(function(r) { return r.json(); })
     .then(function(d) {
@@ -4452,7 +4457,7 @@ function confirmarListadoEstudiantes() {
         mostrarStatus('status-listado-est', msg, 'ok');
         toast(msg, 'ok');
         document.getElementById('listado-est-preview-wrap').style.display = 'none';
-        _listadoEstToken = null;
+        _listadoEstDatos = null;
         clearCache(); cargarDatos(true);
       } else {
         mostrarStatus('status-listado-est', '✗ ' + (d.error || 'Error al guardar'), 'err');
