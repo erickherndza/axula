@@ -27,6 +27,9 @@ from core.helpers import _get_profesor, _render_perfil_staff, _resolver_alcance_
 from core.ia import _get_groq_client, groq_client, construir_prompt, construir_prompt_planificacion, construir_prompt_rubrica, construir_prompt_estrategia
 from core.excel import _parsear_boletin_bj, _buscar_o_crear_estudiante, _detectar_mencion_listado, _limpiar_nota
 from core.pdf import _generar_pdf_acuerdo
+from core.importar_listado import leer_listado_workbook, construir_plan, aplicar_carga
+import uuid
+import openpyxl
 
 logger = logging.getLogger("axula")
 
@@ -380,6 +383,90 @@ def portal_profesor():
             </body></html>""", 500
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+#  LISTADO DE ESTUDIANTES (formato oficial "GRADO:"/"ÁREA:" — ver core/importar_listado.py)
+#  Flujo preview → confirmar, igual que otras cargas masivas del sistema:
+#  el navegador sube el .xlsx, el servidor arma un plan sin escribir en BD,
+#  el profesor lo revisa y solo entonces confirma con un segundo POST.
+# ══════════════════════════════════════════════════════════════════════════════
+
+_LISTADO_PREVIEW_CACHE = {}
+_LISTADO_PREVIEW_TTL = 900  # 15 minutos — tiempo de sobra para revisar el preview
+
+
+def _limpiar_previews_vencidos():
+    ahora = _time.time()
+    vencidos = [t for t, e in _LISTADO_PREVIEW_CACHE.items() if ahora - e["ts"] > _LISTADO_PREVIEW_TTL]
+    for t in vencidos:
+        _LISTADO_PREVIEW_CACHE.pop(t, None)
+
+
+@profesor_bp.route("/api/profesor/preview-listado-estudiantes", methods=["POST"])
+@login_required
+@rate_limited(max_calls=10, window=3600)
+def preview_listado_estudiantes():
+    """Lee el Excel subido y arma el plan de carga SIN escribir en BD."""
+    if "file" not in request.files:
+        return jsonify({"error": "No se recibió archivo"}), 400
+    file = request.files["file"]
+    if not file.filename.lower().endswith((".xlsx", ".xls", ".xlsm")):
+        return jsonify({"error": "Formato no válido. Sube el archivo .xlsx del listado"}), 400
+
+    try:
+        wb = openpyxl.load_workbook(BytesIO(file.read()), data_only=True)
+        grado, seccion, mencion, alumnos = leer_listado_workbook(wb)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        logger.error(f"[preview_listado_estudiantes] error leyendo archivo: {e}")
+        return jsonify({"error": "No se pudo leer el archivo. Verifica que sea el listado oficial."}), 400
+
+    if not alumnos:
+        return jsonify({"error": "No se encontraron filas de alumnos en el archivo."}), 400
+
+    with sqlite3.connect(DATABASE, timeout=10) as conn:
+        conn.row_factory = sqlite3.Row
+        curso, ciclo, plan = construir_plan(conn, grado, seccion, mencion, alumnos)
+
+    _limpiar_previews_vencidos()
+    token = uuid.uuid4().hex
+    _LISTADO_PREVIEW_CACHE[token] = {
+        "grado": grado, "seccion": seccion, "mencion": mencion, "alumnos": alumnos,
+        "ts": _time.time(), "user_id": session.get("user_id"),
+    }
+
+    return jsonify({
+        "ok": True, "token": token,
+        "grado": grado, "seccion": seccion, "mencion": mencion, "curso": curso,
+        "total": len(alumnos),
+        "nuevos": sum(1 for p in plan if p["accion"] == "nuevo"),
+        "actualizados": sum(1 for p in plan if p["accion"] == "actualiza"),
+        "plan": plan,
+    })
+
+
+@profesor_bp.route("/api/profesor/confirmar-listado-estudiantes", methods=["POST"])
+@login_required
+@rate_limited(max_calls=10, window=3600)
+def confirmar_listado_estudiantes():
+    """Aplica un plan previamente generado por /preview-listado-estudiantes."""
+    d = request.get_json(silent=True) or {}
+    token = d.get("token", "")
+    _limpiar_previews_vencidos()
+    entry = _LISTADO_PREVIEW_CACHE.pop(token, None)
+    if not entry:
+        return jsonify({"error": "La vista previa expiró o no existe. Vuelve a subir el archivo."}), 400
+    if entry["user_id"] != session.get("user_id"):
+        return jsonify({"error": "Esta vista previa pertenece a otra sesión."}), 403
+
+    with sqlite3.connect(DATABASE, timeout=10) as conn:
+        conn.row_factory = sqlite3.Row
+        nuevos, actualizados = aplicar_carga(
+            conn, entry["grado"], entry["seccion"], entry["mencion"], entry["alumnos"]
+        )
+
+    cache_bust()  # el roster cambió — invalida cachés de listados/dashboard
+    return jsonify({"ok": True, "nuevos": nuevos, "actualizados": actualizados})
 
 
 

@@ -1740,6 +1740,49 @@ main{max-width:1200px;margin:0 auto;padding:28px 24px;}
           <div class="upload-status" id="prof-status-registro"></div>
         </div>
 
+        <!-- Listado de Estudiantes -->
+        <div class="upload-card">
+          <h3><i class="fas fa-users" style="color:#f7b731;margin-right:6px;"></i>Listado de Estudiantes</h3>
+          <p>Listado oficial de un grado/mención ("GRADO:" / "ÁREA:" + tabla de alumnos). Muestra una vista previa antes de guardar — no duplica alumnos ya cargados.</p>
+          <div class="upload-drop" onclick="document.getElementById('prof-file-listado').click()">
+            <input type="file" id="prof-file-listado" accept=".xlsx,.xls,.xlsm" onchange="profPreviewListado(this)">
+            <div style="font-size:22px;margin-bottom:8px;">👥</div>
+            <div style="font-size:12px;font-weight:600;">Haz clic o arrastra aquí</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:4px;">Listado_Estudiantes_*.xlsx</div>
+          </div>
+          <div class="upload-status" id="prof-status-listado"></div>
+        </div>
+
+      </div>
+
+      <!-- Vista previa del Listado de Estudiantes (oculta hasta subir un archivo) -->
+      <div id="listado-preview-wrap" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+          <div>
+            <strong id="listado-preview-titulo" style="font-size:13px;"></strong>
+            <div id="listado-preview-resumen" style="font-size:11px;color:var(--muted);margin-top:2px;"></div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn-sec" onclick="profCancelarListado()">Cancelar</button>
+            <button class="btn-primary" id="btn-confirmar-listado" onclick="profConfirmarListado()">
+              <i class="fas fa-check"></i> Confirmar carga
+            </button>
+          </div>
+        </div>
+        <div style="max-height:340px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;">
+          <table style="width:100%;border-collapse:collapse;font-size:12px;">
+            <thead>
+              <tr style="background:var(--hover);position:sticky;top:0;">
+                <th style="text-align:left;padding:6px 10px;">#</th>
+                <th style="text-align:left;padding:6px 10px;">Nombre</th>
+                <th style="text-align:left;padding:6px 10px;">Apellido</th>
+                <th style="text-align:left;padding:6px 10px;">Acción</th>
+                <th style="text-align:left;padding:6px 10px;">Detalle</th>
+              </tr>
+            </thead>
+            <tbody id="listado-preview-body"></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
@@ -4018,6 +4061,88 @@ async function eliminarAsignacion(id, btn) {
       })
       .catch(function(e) {
         profSetStatus('prof-status-registro', '✗ Error de conexión: ' + e.message, 'err');
+      });
+  }
+
+  // ── Listado de Estudiantes: preview → confirmar ───────────────────────────
+  var _listadoToken = null;
+
+  function profPreviewListado(input) {
+    if (!input.files[0]) return;
+    var fd = new FormData();
+    fd.append('file', input.files[0]);
+    profSetStatus('prof-status-listado', '⏳ Leyendo listado...', 'ok');
+    fetch('/api/profesor/preview-listado-estudiantes', { method: 'POST', body: fd })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        input.value = '';
+        if (!d.ok) {
+          profSetStatus('prof-status-listado', '✗ ' + (d.error || 'No se pudo leer el archivo'), 'err');
+          return;
+        }
+        profSetStatus('prof-status-listado', '✓ ' + d.total + ' alumno(s) encontrados — revisa la vista previa abajo', 'ok');
+        _listadoToken = d.token;
+        var titulo = document.getElementById('listado-preview-titulo');
+        var resumen = document.getElementById('listado-preview-resumen');
+        titulo.textContent = 'Vista previa — ' + d.curso;
+        resumen.textContent = d.total + ' alumno(s) en el archivo · ' + d.nuevos + ' nuevo(s) · ' + d.actualizados + ' actualizarían datos existentes';
+        var body = document.getElementById('listado-preview-body');
+        body.innerHTML = d.plan.map(function(p) {
+          var accionTxt = p.accion === 'nuevo'
+            ? '<span style="color:#22c55e;font-weight:700;">Nuevo</span>'
+            : '<span style="color:#60b8f0;font-weight:700;">Actualiza</span>';
+          var detalle = (p.cambios && p.cambios.length) ? p.cambios.join(', ') : (p.accion === 'nuevo' ? '—' : 'sin cambios');
+          if (p.advertencia) detalle += '<br><span style="color:#f7b731;">⚠ ' + p.advertencia + '</span>';
+          return '<tr style="border-top:1px solid var(--border);">'
+            + '<td style="padding:5px 10px;color:var(--muted);">' + p.no + '</td>'
+            + '<td style="padding:5px 10px;">' + p.nombre + '</td>'
+            + '<td style="padding:5px 10px;">' + p.apellido + '</td>'
+            + '<td style="padding:5px 10px;">' + accionTxt + '</td>'
+            + '<td style="padding:5px 10px;font-size:11px;color:var(--muted);">' + detalle + '</td>'
+            + '</tr>';
+        }).join('');
+        document.getElementById('listado-preview-wrap').style.display = 'block';
+      })
+      .catch(function(e) {
+        input.value = '';
+        profSetStatus('prof-status-listado', '✗ Error de conexión: ' + e.message, 'err');
+      });
+  }
+
+  function profCancelarListado() {
+    _listadoToken = null;
+    document.getElementById('listado-preview-wrap').style.display = 'none';
+    profSetStatus('prof-status-listado', '', '');
+  }
+
+  function profConfirmarListado() {
+    if (!_listadoToken) return;
+    var btn = document.getElementById('btn-confirmar-listado');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+    fetch('/api/profesor/confirmar-listado-estudiantes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: _listadoToken })
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check"></i> Confirmar carga';
+        if (d.ok) {
+          var msg = '✓ Guardado: ' + d.nuevos + ' nuevo(s), ' + d.actualizados + ' actualizado(s)';
+          profSetStatus('prof-status-listado', msg, 'ok');
+          tk(msg, 'success');
+          document.getElementById('listado-preview-wrap').style.display = 'none';
+          _listadoToken = null;
+        } else {
+          profSetStatus('prof-status-listado', '✗ ' + (d.error || 'Error al guardar'), 'err');
+        }
+      })
+      .catch(function(e) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check"></i> Confirmar carga';
+        profSetStatus('prof-status-listado', '✗ Error de conexión: ' + e.message, 'err');
       });
   }
   </script>
