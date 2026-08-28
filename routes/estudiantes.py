@@ -1093,6 +1093,24 @@ def cargar_listado():
             return jsonify({"error": "No se encontraron hojas de grados reconocidos. "
                                      "Verifica que es el Listado correcto del liceo."}), 400
 
+        # Este endpoint espera hojas nombradas EXACTAMENTE como el grado (ej. "4TO",
+        # "5TO (2)") — el LISTADO institucional multi-mención. Si el nombre de hoja
+        # trae texto extra (ej. "Estudiantes 4TO MULTIMEDIA", formato de archivo
+        # nuevo de un solo grado/mención), usarlo tal cual como `grado` corrompe
+        # curso/grado en `estudiantes` (bug real: sesión del 28-ago-2026 — ver
+        # CLAUDE.md). Se rechaza antes de escribir nada.
+        _hojas_invalidas = [
+            s for s in grados_objetivo
+            if not re.fullmatch(r"(1RO|2DO|3RO|4TO|5TO|6TO|1ER|3ER)(\s*\(\d+\))?", s.strip().upper())
+        ]
+        if _hojas_invalidas:
+            return jsonify({"error":
+                f"La(s) hoja(s) {', '.join(_hojas_invalidas)} no tienen el formato esperado "
+                "de este cargador (nombre de hoja = solo el grado, ej. \"4TO\"). "
+                "Si es un listado de un solo grado/mención con encabezado \"GRADO:\"/\"ÁREA:\", "
+                "usa la tarjeta \"Listado de Estudiantes\" en su lugar — no este \"Listado del Liceo\"."
+            }), 400
+
         # Si es profesor, filtrar solo las hojas de su grado y mención
         if _prof_grado:
             grados_filtrados = [s for s in grados_objetivo if _prof_grado in s.upper()]
