@@ -153,6 +153,7 @@ def listar_asistencia():
     fecha_fin = request.args.get("fecha_fin", "")
     grado     = request.args.get("grado", "").strip()
     seccion   = request.args.get("seccion", "").strip()
+    modalidad = request.args.get("modalidad", "").strip()
 
     q = """
         SELECT a.*, e.nombre, e.apellido, e.curso
@@ -174,10 +175,12 @@ def listar_asistencia():
     if periodo:  q += " AND a.periodo=?";         params.append(int(periodo))
     if fecha_ini: q += " AND a.fecha>=?";          params.append(fecha_ini)
     if fecha_fin: q += " AND a.fecha<=?";          params.append(fecha_fin)
-    # grado/sección de la clase, para no mezclar cursos que comparten
-    # materia+profesor (ej: "Lengua Española" en 4to y 5to a la vez)
-    if grado:    q += " AND e.grado=?";           params.append(grado)
-    if seccion:  q += " AND e.seccion=?";         params.append(seccion)
+    # grado/sección/modalidad de la clase, para no mezclar cursos que
+    # comparten materia+profesor (ej: "Lengua Española" en 4to y 5to a la
+    # vez, o "Fotografía" repartida entre varias menciones)
+    if grado:     q += " AND e.grado=?";          params.append(grado)
+    if seccion:   q += " AND e.seccion=?";        params.append(seccion)
+    if modalidad: q += " AND e.curso LIKE ?";     params.append(f"%{modalidad}%")
 
     q += " ORDER BY a.fecha DESC, e.apellido"
 
@@ -195,12 +198,13 @@ def registrar_asistencia():
     prof = _get_profesor()
     d = request.get_json(silent=True) or {}
 
-    materia  = d.get("materia", "").strip()
-    periodo  = d.get("periodo", 1)
-    fecha    = d.get("fecha", "")
-    horas    = d.get("horas_clase", 1)
-    grado    = d.get("grado", "").strip()
-    seccion  = d.get("seccion", "").strip()
+    materia   = d.get("materia", "").strip()
+    periodo   = d.get("periodo", 1)
+    fecha     = d.get("fecha", "")
+    horas     = d.get("horas_clase", 1)
+    grado     = d.get("grado", "").strip()
+    seccion   = d.get("seccion", "").strip()
+    modalidad = d.get("modalidad", "").strip()
     registros= d.get("registros", [])  # [{estudiante_id, estado, observacion}]
 
     if not materia or not fecha or not registros:
@@ -210,31 +214,40 @@ def registrar_asistencia():
 
     with sqlite3.connect(DATABASE, timeout=10) as conn:
         conn.row_factory = sqlite3.Row
-        # Si el pase de lista declaró un grado/sección específico, verificar
-        # que cada estudiante realmente pertenezca a ese curso — evita que un
-        # registro mal armado en el cliente mezcle estudiantes de otro grado
-        # o sección bajo la misma materia.
+        # Si el pase de lista declaró un grado/sección/modalidad específico,
+        # verificar que cada estudiante realmente pertenezca a ese curso —
+        # evita que un registro mal armado en el cliente mezcle estudiantes
+        # de otro grado, sección o mención bajo la misma materia (ej: una
+        # materia técnica repartida entre varias menciones).
         omitidos = 0
-        if grado or seccion:
-            grado_n   = grado.strip().lower()
-            seccion_n = seccion.strip().lower()
+        if grado or seccion or modalidad:
+            grado_n     = grado.strip().lower()
+            seccion_n   = seccion.strip().lower()
+            modalidad_n = modalidad.strip().lower()
             est_ids = [r.get("estudiante_id") for r in registros if r.get("estudiante_id")]
             placeholders = ",".join("?" * len(est_ids))
             cursos = {
-                row["id"]: ((row["grado"] or "").strip().lower(), (row["seccion"] or "").strip().lower())
+                row["id"]: (
+                    (row["grado"] or "").strip().lower(),
+                    (row["seccion"] or "").strip().lower(),
+                    (row["curso"] or "").strip().lower(),
+                )
                 for row in conn.execute(
-                    f"SELECT id, grado, seccion FROM estudiantes WHERE id IN ({placeholders})",
+                    f"SELECT id, grado, seccion, curso FROM estudiantes WHERE id IN ({placeholders})",
                     est_ids
                 ).fetchall()
             } if est_ids else {}
             registros_validos = []
             for r in registros:
                 est_id = r.get("estudiante_id")
-                est_grado, est_seccion = cursos.get(est_id, ("", ""))
+                est_grado, est_seccion, est_curso = cursos.get(est_id, ("", "", ""))
                 if grado_n and est_grado != grado_n:
                     omitidos += 1
                     continue
                 if seccion_n and est_seccion != seccion_n:
+                    omitidos += 1
+                    continue
+                if modalidad_n and modalidad_n not in est_curso:
                     omitidos += 1
                     continue
                 registros_validos.append(r)
@@ -282,8 +295,8 @@ def registrar_asistencia():
         resp["omitidos"] = omitidos
         logger.warning(
             f"[registrar_asistencia] prof_id={prof_id} materia={materia!r} "
-            f"grado={grado!r} seccion={seccion!r} — {omitidos} registro(s) omitido(s) "
-            f"por no pertenecer a ese grado/sección"
+            f"grado={grado!r} seccion={seccion!r} modalidad={modalidad!r} — "
+            f"{omitidos} registro(s) omitido(s) por no pertenecer a ese grado/sección/modalidad"
         )
     return jsonify(resp)
 
@@ -382,10 +395,11 @@ def exportar_asistencia_csv():
     import csv, io
     prof    = _get_profesor()
     prof_id = prof["id"] if prof else session.get("user_id")
-    fecha   = request.args.get("fecha", "").strip()
-    materia = request.args.get("materia", "").strip()
-    grado   = request.args.get("grado", "").strip()
-    seccion = request.args.get("seccion", "").strip()
+    fecha     = request.args.get("fecha", "").strip()
+    materia   = request.args.get("materia", "").strip()
+    grado     = request.args.get("grado", "").strip()
+    seccion   = request.args.get("seccion", "").strip()
+    modalidad = request.args.get("modalidad", "").strip()
 
     q = """
         SELECT a.fecha, e.apellido, e.nombre, e.grado, e.curso,
@@ -395,10 +409,11 @@ def exportar_asistencia_csv():
         WHERE a.profesor_id = ?
     """
     params = [prof_id]
-    if materia: q += " AND a.materia = ?";     params.append(materia)
-    if fecha:   q += " AND a.fecha = ?";       params.append(fecha)
-    if grado:   q += " AND e.grado = ?";       params.append(grado)
-    if seccion: q += " AND e.seccion = ?";     params.append(seccion)
+    if materia:   q += " AND a.materia = ?";   params.append(materia)
+    if fecha:     q += " AND a.fecha = ?";     params.append(fecha)
+    if grado:     q += " AND e.grado = ?";     params.append(grado)
+    if seccion:   q += " AND e.seccion = ?";   params.append(seccion)
+    if modalidad: q += " AND e.curso LIKE ?";  params.append(f"%{modalidad}%")
     q += " ORDER BY a.fecha, e.apellido, e.nombre"
 
     with sqlite3.connect(DATABASE, timeout=10) as conn:

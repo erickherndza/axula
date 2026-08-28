@@ -803,12 +803,17 @@ main{max-width:1200px;margin:0 auto;padding:28px 24px;}
             {% endfor %}
           </select>
         </div>
+        <div class="fld" id="fld-modalidad" style="display:none;">
+          <label>Modalidad</label>
+          <select id="lista-modalidad" onchange="onModalidadChangePase();">
+          </select>
+        </div>
         <div class="fld" style="flex:2;">
           <label>Materia</label>
           <select id="lista-materia" onchange="onMateriaChange();">
           </select>
         </div>
-        <div class="fld">
+        <div class="fld" id="fld-seccion">
           <label>Sección</label>
           <select id="lista-seccion" onchange="onSeccionChangePase();">
             <option value="">Todas</option>
@@ -1744,10 +1749,13 @@ main{max-width:1200px;margin:0 auto;padding:28px 24px;}
 <script>
 var ESTUDIANTES = {{ estudiantes | tojson }};
 var PLAN = {{ plan | tojson }};
-var PLAN_POR_GRADO = {{ plan_por_grado | tojson }};  // {grado: [[asig,horas],...]} — Pase de Lista
+var PLAN_POR_GRADO_MENCION = {{ plan_por_grado_mencion | tojson }};  // {grado: {mencion: [[asig,horas],...]}} — Pase de Lista
+var MENCIONES_PROF = {{ menciones_prof | tojson }};  // menciones que cubre este profesor
+var FILTRO_MEN = {{ filtro_men | tojson }};           // true = profesor técnico (mención obligatoria)
 var ESTADOS = {};  // {estudiante_id: {estado, observacion}}
 var MODO_PASE = 'ausentes'; // 'ausentes' | 'presentes'
 var _PASE_SEARCH_Q = '';    // texto de búsqueda actual del pase de lista
+var PRIMER_CICLO_GRADOS = ['1ro','2do','3ro'];
 
 // ── UTILIDADES ──────────────────────────────────────────────────────────────
 function tk(msg, tipo) {
@@ -1895,14 +1903,15 @@ function exportarCSV(e) {
     e.preventDefault();
     var fecha   = document.getElementById('lista-fecha').value;
     var materia = document.getElementById('lista-materia').value;
-    var grado   = document.getElementById('lista-grado')   ? document.getElementById('lista-grado').value   : '';
-    var seccion = document.getElementById('lista-seccion') ? document.getElementById('lista-seccion').value : '';
+    var grado   = document.getElementById('lista-grado') ? document.getElementById('lista-grado').value : '';
+    var ms      = _modalidadSeccionActualesPase();
     if (!fecha || !materia) { tk('Selecciona fecha y materia primero', 'warn'); return; }
-    // Descarga el pase de lista del día para el grado/sección seleccionados
+    // Descarga el pase de lista del día para el grado/modalidad/sección seleccionados
     window.location.href = '/api/asistencia/export-csv?fecha=' + encodeURIComponent(fecha)
         + '&materia=' + encodeURIComponent(materia)
         + '&grado=' + encodeURIComponent(grado)
-        + '&seccion=' + encodeURIComponent(seccion);
+        + '&modalidad=' + encodeURIComponent(ms.modalidad)
+        + '&seccion=' + encodeURIComponent(ms.seccion);
     tk('Descargando lista del ' + fecha + '…', 'success');
 }
 
@@ -1949,19 +1958,19 @@ function actualizarContadores() {
 async function guardarAsistencia() {
     var fecha   = document.getElementById('lista-fecha').value;
     var materia = document.getElementById('lista-materia').value;
-    var grado   = document.getElementById('lista-grado')   ? document.getElementById('lista-grado').value   : '';
-    var seccion = document.getElementById('lista-seccion') ? document.getElementById('lista-seccion').value : '';
+    var grado   = document.getElementById('lista-grado') ? document.getElementById('lista-grado').value : '';
+    var ms      = _modalidadSeccionActualesPase();
     var horas   = parseInt(document.getElementById('lista-horas').value);
     var periodoStr = document.getElementById('lista-periodo').value;  // "P1","P2"...
     var periodo = parseInt(periodoStr.replace('P',''));  // convertir a int: 1,2,3,4
 
     if (!fecha || !materia) { tk('Selecciona fecha y materia', 'warn'); return; }
 
-    // Solo se guarda el grado (y sección, si hay una elegida) que está
-    // visible ahora mismo — así una materia que se imparte en más de un
-    // grado nunca mezcla estudiantes de otro curso en el mismo registro.
+    // Solo se guarda el grado + modalidad/sección que está visible ahora
+    // mismo — así una materia que se imparte en más de un grado o en más
+    // de una mención nunca mezcla estudiantes de otro curso en el registro.
     var visibles = _estudiantesVisiblesPase();
-    if (!visibles.length) { tk('No hay estudiantes para este grado/sección', 'warn'); return; }
+    if (!visibles.length) { tk('No hay estudiantes para este grado/modalidad/sección', 'warn'); return; }
 
     var btn = document.getElementById('btn-guardar');
     btn.textContent = 'Guardando…'; btn.disabled = true;
@@ -1979,7 +1988,7 @@ async function guardarAsistencia() {
         var res = await fetch('/api/asistencia', {
             method: 'POST',
             headers: {'Content-Type':'application/json'},
-            body: JSON.stringify({ fecha, materia, grado, seccion, horas_clase: horas, periodo, registros })
+            body: JSON.stringify({ fecha, materia, grado, modalidad: ms.modalidad, seccion: ms.seccion, horas_clase: horas, periodo, registros })
         });
         var d = await res.json();
         if (d.ok) {
@@ -2411,35 +2420,71 @@ document.addEventListener('DOMContentLoaded', function() {
             + '<option value="P4"' + (pActual==='P4'?' selected':'') + '>P4 — Cuarto Período</option>';
     }
     
-    // Pase de lista: poblar Materia (según grado) y Sección, y aplicar filtro inicial
-    poblarSeccionesPase();
+    // Pase de lista: poblar Modalidad/Sección/Materia según el grado inicial
     onGradoChangePase();
 
     // Check if list was already passed today on load
     verificarListaHoy();
 });
 
-// ─── PASE DE LISTA: filtrado por Grado + Materia + Sección ─────────────────
-// El roster completo (ESTUDIANTES) puede incluir varios grados/secciones del
-// mismo profesor (ej: 4to y 5to Multimedia). Sin este filtro, pasar lista de
-// una materia guardaba asistencia para TODOS los estudiantes del profesor,
-// mezclando cursos que no comparten esa clase.
+// ─── PASE DE LISTA: filtrado por Grado + Modalidad/Sección + Materia ───────
+// El roster completo (ESTUDIANTES) puede incluir varios grados/secciones/
+// menciones del mismo profesor (ej: 4to y 5to Multimedia, o un profesor
+// técnico que reparte la misma materia en varias menciones). Sin este
+// filtro, pasar lista de una materia guardaba asistencia para TODOS los
+// estudiantes del profesor, mezclando cursos que no comparten esa clase.
+//
+// Segundo ciclo (4to-6to): la modalidad (mención — Multimedia/Teatro/
+// Música/Artes Visuales/Danza) es la que separa los cursos técnicos.
+// Primer ciclo (1ro-3ro): no hay mención, se separa por Sección (A,B,C…).
+
+function _norm_gs(s) { return (s || '').trim().toLowerCase(); }
+function _esPrimerCicloPase(grado) { return PRIMER_CICLO_GRADOS.indexOf(grado) !== -1; }
+
+function poblarModalidadesPase() {
+    var modSel = document.getElementById('lista-modalidad');
+    if (!modSel) return;
+    var actual = modSel.value;
+    var opciones = MENCIONES_PROF.slice();
+    var html = FILTRO_MEN ? '' : '<option value="">Todas</option>';
+    html += opciones.map(function(m){
+        return '<option value="' + m.replace(/"/g,'&quot;') + '">' + m + '</option>';
+    }).join('');
+    modSel.innerHTML = html;
+    if (opciones.includes(actual) || (!FILTRO_MEN && actual === '')) modSel.value = actual;
+}
 
 function poblarMateriasPase() {
     var gradoSel   = document.getElementById('lista-grado');
+    var modSel     = document.getElementById('lista-modalidad');
     var materiaSel = document.getElementById('lista-materia');
     if (!materiaSel) return;
-    var grado = gradoSel ? gradoSel.value : '';
-    var materias = PLAN_POR_GRADO[grado] || PLAN;
+    var grado     = gradoSel ? gradoSel.value : '';
+    var primero   = _esPrimerCicloPase(grado);
+    var modalidad = (!primero && modSel) ? modSel.value : '';
+    var porGrado  = PLAN_POR_GRADO_MENCION[grado] || {};
+    var materias;
+    if (modalidad && porGrado[modalidad]) {
+        materias = porGrado[modalidad];
+    } else {
+        // Sin modalidad elegida (o primer ciclo): unión de todas las
+        // modalidades disponibles para este grado, deduplicada.
+        var vistas = {};
+        materias = [];
+        Object.keys(porGrado).forEach(function(mk){
+            porGrado[mk].forEach(function(m){
+                if (!vistas[m[0]]) { vistas[m[0]] = true; materias.push(m); }
+            });
+        });
+        if (!materias.length) materias = PLAN;
+    }
     var actual = materiaSel.value;
     materiaSel.innerHTML = materias.map(function(m){
         return '<option value="' + m[0].replace(/"/g,'&quot;') + '" data-horas="' + m[1] + '">' + m[0] + '</option>';
     }).join('');
-    // Conservar la materia seleccionada si sigue existiendo en el grado nuevo
+    // Conservar la materia seleccionada si sigue existiendo en el grado/modalidad nuevos
     if (materias.some(function(m){ return m[0] === actual; })) materiaSel.value = actual;
 }
-
-function _norm_gs(s) { return (s || '').trim().toLowerCase(); }
 
 function poblarSeccionesPase() {
     var gradoSel   = document.getElementById('lista-grado');
@@ -2459,10 +2504,27 @@ function poblarSeccionesPase() {
 }
 
 function onGradoChangePase() {
+    var grado   = document.getElementById('lista-grado').value;
+    var primero = _esPrimerCicloPase(grado);
+    var fldMod  = document.getElementById('fld-modalidad');
+    var fldSec  = document.getElementById('fld-seccion');
+    // Segundo ciclo → Modalidad (mención) es el filtro relevante.
+    // Primer ciclo → no hay mención, se usa Sección.
+    if (fldMod) fldMod.style.display = primero ? 'none' : '';
+    if (fldSec) fldSec.style.display = primero ? '' : 'none';
+
+    if (!primero) poblarModalidadesPase();
     poblarMateriasPase();
     poblarSeccionesPase();
     aplicarFiltrosPase();
     onMateriaChange();
+}
+
+function onModalidadChangePase() {
+    poblarMateriasPase();
+    aplicarFiltrosPase();
+    onMateriaChange();
+    verificarListaHoy();
 }
 
 function onSeccionChangePase() {
@@ -2470,16 +2532,33 @@ function onSeccionChangePase() {
     verificarListaHoy();
 }
 
-// Estudiantes actualmente visibles en el pase de lista (según grado + sección
-// seleccionados). Es el conjunto que realmente se guarda al pasar lista.
-function _estudiantesVisiblesPase() {
+// Estudiantes actualmente visibles en el pase de lista (según grado +
+// modalidad/sección seleccionados). Es el conjunto que realmente se guarda
+// al pasar lista.
+
+// Modalidad y sección "activas" según el ciclo del grado elegido — solo una
+// de las dos aplica a la vez (modalidad en 2do ciclo, sección en 1ro).
+function _modalidadSeccionActualesPase() {
     var gradoSel   = document.getElementById('lista-grado');
+    var modSel     = document.getElementById('lista-modalidad');
     var seccionSel = document.getElementById('lista-seccion');
-    var grado   = gradoSel ? gradoSel.value : '';
-    var seccion = seccionSel ? seccionSel.value : '';
+    var grado      = gradoSel ? gradoSel.value : '';
+    var primero    = _esPrimerCicloPase(grado);
+    return {
+        modalidad: (!primero && modSel) ? modSel.value : '',
+        seccion:   primero ? (seccionSel ? seccionSel.value : '') : '',
+    };
+}
+
+function _estudiantesVisiblesPase() {
+    var gradoSel = document.getElementById('lista-grado');
+    var grado    = gradoSel ? gradoSel.value : '';
+    var ms       = _modalidadSeccionActualesPase();
+    var modalidad = ms.modalidad, seccion = ms.seccion;
     return ESTUDIANTES.filter(function(e){
         if (grado && _norm_gs(e.grado) !== _norm_gs(grado)) return false;
         if (seccion && _norm_gs(e.seccion) !== _norm_gs(seccion)) return false;
+        if (modalidad && !_norm_gs(e.curso).includes(_norm_gs(modalidad))) return false;
         return true;
     });
 }
@@ -2490,11 +2569,11 @@ function aplicarFiltrosPase() {
     var qn = _PASE_SEARCH_Q.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
     document.querySelectorAll('#lista-container .est-row').forEach(function(row){
         var estId = parseInt(row.dataset.id);
-        var enGradoSeccion = idsVisibles.has(estId);
+        var enFiltro = idsVisibles.has(estId);
         var nombre = (row.querySelector('.est-nombre')||{}).textContent||'';
         var norm   = nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
         var coincideBusqueda = !qn || norm.includes(qn);
-        row.style.display = (enGradoSeccion && coincideBusqueda) ? '' : 'none';
+        row.style.display = (enFiltro && coincideBusqueda) ? '' : 'none';
     });
     actualizarContadores();
 }
@@ -2516,14 +2595,15 @@ function onMateriaChange() {
 async function verificarListaHoy() {
     var materia = document.getElementById('lista-materia');
     if (!materia) return;
-    var grado   = document.getElementById('lista-grado')   ? document.getElementById('lista-grado').value   : '';
-    var seccion = document.getElementById('lista-seccion') ? document.getElementById('lista-seccion').value : '';
+    var grado = document.getElementById('lista-grado') ? document.getElementById('lista-grado').value : '';
+    var ms    = _modalidadSeccionActualesPase();
     var hoy = new Date().toISOString().split('T')[0];
     try {
         var res = await fetch('/api/asistencia?fecha_ini='+hoy+'&fecha_fin='+hoy
             + '&materia='+encodeURIComponent(materia.value)
             + '&grado='+encodeURIComponent(grado)
-            + '&seccion='+encodeURIComponent(seccion));
+            + '&modalidad='+encodeURIComponent(ms.modalidad)
+            + '&seccion='+encodeURIComponent(ms.seccion));
         var data = await res.json();
         var indicator = document.getElementById('lista-hoy-indicator');
         if (!indicator) return;
