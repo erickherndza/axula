@@ -155,18 +155,28 @@ de distintos grados/menciones bajo el mismo profesor, (2) separador `|` en mater
 terminaba de reflejarse en la plataforma, y (4) un fix de sesiones anteriores había dejado notas
 inconsistentes entre grados. Se resolvió todo en cadena porque cada arreglo destapó el siguiente.
 
-**1 — Separador de materias `|` → `,` → `;` (mi_perfil.html, usuarios.html):**
-Cambié el separador visible de `|` a `,` a pedido explícito. El almacenamiento en BD sigue
-pipe-delimitado (muchísimos otros lugares del código hacen `.split('|')` sobre `materia`/
-`asignaturas`) — la conversión coma↔pipe ocurre solo en el borde (leer para mostrar, escribir al
-guardar). **Casi reintroduje un bug ya resuelto**: el historial (`commit b34d3b9`, jun-2026)
-muestra que el separador YA fue coma antes y se cambió A pipe justamente porque materias reales
-del catálogo (ej. "Lenguaje Visual, Dibujo y Creación de Personajes", MULTIMEDIA 4to) tienen coma
-en su propio nombre — usar coma como separador de UI las parte en dos. Lo detecté revisando
-`git log` antes de cerrar la sesión y cambié el separador visible a `;` (no aparece en ningún
-nombre de materia del catálogo, y sigue sin ser el `|` que Erick quería evitar).
-**LECCIÓN: antes de cambiar un formato de separador/delimitador, revisar `git log` por si ya se
-intentó y se revirtió — el motivo suele seguir vigente.**
+**1 — Separador de materias `|` → `,` → `;` → REVERTIDO a `|` (mi_perfil.html, usuarios.html):**
+Cambié el separador visible de `|` a `,` a pedido explícito. El almacenamiento en BD siguió
+pipe-delimitado en todo momento (muchísimos otros lugares del código hacen `.split('|')` sobre
+`materia`/`asignaturas`) — la conversión coma↔pipe ocurría solo en el borde (leer para mostrar,
+escribir al guardar). Detecté a medio camino que esto **casi reintroducía un bug ya resuelto**:
+el historial (`commit b34d3b9`, jun-2026) muestra que el separador YA fue coma antes y se cambió
+A pipe justamente porque materias reales del catálogo (ej. "Lenguaje Visual, Dibujo y Creación de
+Personajes", MULTIMEDIA 4to) tienen coma en su propio nombre — usar coma como separador de UI las
+parte en dos. Cambié el separador visible a `;` como remedio (no aparece en ningún nombre de
+materia del catálogo). **Pero el usuario reportó que esto rompió Pase de Lista de un perfil de
+profesor recién creado con varias materias ("solo se cargan dos")** — `portal_profesor()` sigue
+parseando `materia`/`asignaturas` con `.split('|')` sin cambios; un perfil guardado durante la
+ventana de hoy con `,`/`;` en vez de `|` quedó con el campo entero como una sola cadena larga en
+vez de varias materias separadas. Revertido `mi_perfil.html`/`usuarios.html` al estado exacto
+previo a esta sesión (`commit 791db03`, `commit 2887270`) — separador `|`, sin conversión de
+formato. **Si algún perfil quedó guardado con el separador equivocado durante la sesión de hoy,
+hay que volver a guardar sus materias a mano ahora que `|` está de vuelta.**
+**LECCIÓN — dos capas:** (1) antes de cambiar un formato de separador/delimitador, revisar
+`git log` por si ya se intentó y se revirtió, el motivo suele seguir vigente; (2) un cambio de
+formato en la UI de un campo que otro código YA parsea con un delimitador fijo (`portal_profesor()`
+usa `.split('|')`) no es solo cosmético — hay que rastrear TODOS los lugares que leen ese campo
+antes de tocar cómo se escribe, no solo el punto de entrada/salida que se está editando.
 
 **2 — Pase de Lista mezclaba estudiantes de distinto grado/sección/mención (`routes/profesor.py`,
 `routes/asistencia.py`, `templates/profesor.html`):**
