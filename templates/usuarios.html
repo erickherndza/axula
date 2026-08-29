@@ -145,8 +145,8 @@
     </div>
     <div class="frow">
       <div class="fg" style="flex:2">
-        <label>Materias <span style="font-weight:400;color:var(--muted)">(separar con |)</span></label>
-        <input id="edit-materia" type="text" placeholder="Fotografía|Diseño Web">
+        <label>Materias <span style="font-weight:400;color:var(--muted)">(separar con ;)</span></label>
+        <input id="edit-materia" type="text" placeholder="Fotografía; Diseño Web">
       </div>
       <div class="fg">
         <label>Grado(s)</label>
@@ -293,7 +293,7 @@ function abrirEditar(id) {
   document.getElementById('edit-username').value = u.username || '';
   document.getElementById('edit-rol').value      = u.rol      || 'profesor';
   document.getElementById('edit-tipo').value     = u.tipo_docencia || 'ambas';
-  document.getElementById('edit-materia').value  = u.materia  || '';
+  document.getElementById('edit-materia').value  = (u.materia || '').split('|').map(function(m){ return m.trim(); }).filter(Boolean).join('; ');
   document.getElementById('edit-grado').value    = u.grado    || '';
   document.getElementById('edit-mencion').value  = u.mencion  || '';
   document.getElementById('edit-ciclo').value    = u.ciclo    || '';
@@ -328,7 +328,7 @@ async function guardar() {
     username:      document.getElementById('edit-username').value.trim(),
     rol:           document.getElementById('edit-rol').value,
     tipo_docencia: document.getElementById('edit-tipo').value,
-    materia:       document.getElementById('edit-materia').value.trim(),
+    materia:       document.getElementById('edit-materia').value.split(';').map(function(m){ return m.trim(); }).filter(Boolean).join('|'),
     grado:         document.getElementById('edit-grado').value.trim(),
     mencion:       document.getElementById('edit-mencion').value.trim(),
     ciclo:         document.getElementById('edit-ciclo').value || null,

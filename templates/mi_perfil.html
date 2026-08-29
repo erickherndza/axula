@@ -813,12 +813,14 @@ main{max-width:1100px;margin:0 auto;padding:28px 24px}
       </div>
       <div class="form-row">
         <div class="form-group" style="flex:2">
-          <label class="form-label">Materias <span style="color:var(--muted);font-weight:400">(separadas por |)</span></label>
+          <label class="form-label">Materias <span style="color:var(--muted);font-weight:400">(separadas por ;)</span></label>
           <input class="form-input" id="edit-materia" type="text"
-                 placeholder="Fotografía|Diseño Web|Diseño Gráfico"
-                 value="{{ staff.materia or '' }}">
+                 placeholder="Fotografía; Diseño Web; Diseño Gráfico"
+                 value="{{ (staff.materia or '').split('|') | map('trim') | reject('equalto', '') | join('; ') }}">
           <div style="font-size:10px;color:var(--muted);margin-top:4px">
-            Agrega o elimina materias. Separa cada una con <code>|</code>
+            Agrega o elimina materias. Separa cada una con <code>;</code> — no uses coma:
+            algunas materias ya tienen coma en su propio nombre (ej. "Lenguaje Visual, Dibujo
+            y Creación de Personajes") y se cortarían mal.
           </div>
           <!-- chips en vivo -->
           <div id="materia-chips" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:8px"></div>
@@ -914,7 +916,7 @@ document.addEventListener('keydown', function(e) {
   function renderChips() {
     var chips = document.getElementById('materia-chips');
     if (!chips) return;
-    var mats = inp.value.split('|').map(function(m){ return m.trim(); }).filter(Boolean);
+    var mats = inp.value.split(';').map(function(m){ return m.trim(); }).filter(Boolean);
     chips.innerHTML = mats.map(function(m, i){
       return '<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 9px;'
            + 'border-radius:20px;background:var(--surface2);border:1px solid var(--border);'
@@ -932,9 +934,9 @@ document.addEventListener('keydown', function(e) {
 function eliminarMateria(idx) {
   var inp = document.getElementById('edit-materia');
   if (!inp) return;
-  var mats = inp.value.split('|').map(function(m){ return m.trim(); }).filter(Boolean);
+  var mats = inp.value.split(';').map(function(m){ return m.trim(); }).filter(Boolean);
   mats.splice(idx, 1);
-  inp.value = mats.join('|');
+  inp.value = mats.join('; ');
   inp.dispatchEvent(new Event('input'));
 }
 
@@ -947,7 +949,7 @@ async function guardarPerfil() {
   };
   var matEl = document.getElementById('edit-materia');
   var gradoEl = document.getElementById('edit-grado');
-  if (matEl) data.materia = matEl.value.trim();
+  if (matEl) data.materia = matEl.value.split(';').map(function(m){ return m.trim(); }).filter(Boolean).join('|');
   if (gradoEl) data.grado = gradoEl.value.trim();
 
   try {
