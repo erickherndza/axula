@@ -4076,6 +4076,16 @@ async function eliminarAsignacion(id, btn) {
   var _listadoDatos = null;
 
   function _renderBloquePreview(b) {
+    if (b.sin_mencion_detectada) {
+      return '<tr><td colspan="5" style="padding:10px;background:rgba(239,68,68,.12);'
+        + 'border:1px solid rgba(239,68,68,.4);border-radius:6px;">'
+        + '<strong style="color:#ef4444;">⚠ ' + b.grado + (b.seccion ? ' Sec.' + b.seccion : '')
+        + ' — SIN MENCIÓN EN EL ARCHIVO (' + b.plan.length + ' alumno(s))</strong><br>'
+        + '<span style="font-size:11px;color:var(--muted);">Este grupo no tiene la fila "DATOS DEL ALUMNO / GRADO / MENCIÓN" '
+        + 'en el archivo — no se puede saber a qué mención pertenece. <strong>No se guardará.</strong> '
+        + 'Pide al coordinador que agregue el encabezado faltante y vuelve a subir el archivo.</span>'
+        + '</td></tr>';
+    }
     var titulo = b.grado + (b.seccion ? ' Sec.' + b.seccion : '') + (b.mencion ? ' — ' + b.mencion : '');
     var filas = b.plan.map(function(p) {
       var accionTxt = p.accion === 'nuevo'
@@ -4111,12 +4121,15 @@ async function eliminarAsignacion(id, btn) {
         var msg = '✓ ' + d.total + ' alumno(s) encontrados en ' + d.bloques.length + ' grado(s)/mención(es) — revisa la vista previa abajo';
         profSetStatus('prof-status-listado', msg, 'ok');
         _listadoDatos = { bloques: d.bloques.map(function(b) {
-          return { grado: b.grado, seccion: b.seccion, mencion: b.mencion, alumnos: b.alumnos };
+          return { grado: b.grado, seccion: b.seccion, mencion: b.mencion, alumnos: b.alumnos, sin_mencion_detectada: b.sin_mencion_detectada };
         }) };
         var titulo = document.getElementById('listado-preview-titulo');
         var resumen = document.getElementById('listado-preview-resumen');
         titulo.textContent = 'Vista previa — ' + d.bloques.length + ' grado(s)/mención(es)';
         var resumenTxt = d.total + ' alumno(s) · ' + d.nuevos + ' nuevo(s) · ' + d.actualizados + ' actualizarían datos existentes';
+        var sinMencion = d.bloques.filter(function(b){ return b.sin_mencion_detectada; })
+          .reduce(function(sum,b){ return sum + b.plan.length; }, 0);
+        if (sinMencion) resumenTxt += ' · ⚠ ' + sinMencion + ' alumno(s) sin mención detectada (no se guardarán)';
         if (d.bloques_omitidos) resumenTxt += ' · ' + d.bloques_omitidos + ' bloque(s) del archivo omitidos (no son de tu grado/mención)';
         resumen.textContent = resumenTxt;
         var body = document.getElementById('listado-preview-body');
@@ -4151,6 +4164,7 @@ async function eliminarAsignacion(id, btn) {
         btn.innerHTML = '<i class="fas fa-check"></i> Confirmar carga';
         if (d.ok) {
           var msg = '✓ Guardado: ' + d.nuevos + ' nuevo(s), ' + d.actualizados + ' actualizado(s)';
+          if (d.omitidos_sin_mencion) msg += ' · ⚠ ' + d.omitidos_sin_mencion + ' sin mención NO se guardaron';
           profSetStatus('prof-status-listado', msg, 'ok');
           tk(msg, 'success');
           document.getElementById('listado-preview-wrap').style.display = 'none';

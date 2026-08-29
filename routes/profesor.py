@@ -465,6 +465,7 @@ def preview_listado_estudiantes():
     for b, r in zip(bloques, resumen):
         respuesta_bloques.append({
             "grado": r["grado"], "seccion": r["seccion"], "mencion": r["mencion"], "curso": r["curso"],
+            "sin_mencion_detectada": r["sin_mencion_detectada"],
             "alumnos": b["alumnos"],   # se reenvía tal cual al confirmar — ver nota arriba
             "nuevos": r["nuevos"], "actualizados": r["actualizados"], "plan": r["plan"],
         })
@@ -499,6 +500,7 @@ def confirmar_listado_estudiantes():
         bloques.append({
             "grado": b["grado"], "seccion": b.get("seccion"),
             "mencion": b.get("mencion"), "alumnos": b["alumnos"],
+            "sin_mencion_detectada": bool(b.get("sin_mencion_detectada")),
         })
 
     bloques, omitidos = _filtrar_bloques_por_profesor(bloques)
@@ -507,12 +509,14 @@ def confirmar_listado_estudiantes():
 
     with sqlite3.connect(DATABASE, timeout=10) as conn:
         conn.row_factory = sqlite3.Row
-        nuevos, actualizados = aplicar_carga_multi(conn, bloques)
+        nuevos, actualizados, omitidos_sin_mencion = aplicar_carga_multi(conn, bloques)
 
     cache_bust()  # el roster cambió — invalida cachés de listados/dashboard
     resp = {"ok": True, "nuevos": nuevos, "actualizados": actualizados}
     if omitidos:
         resp["omitidos"] = omitidos
+    if omitidos_sin_mencion:
+        resp["omitidos_sin_mencion"] = omitidos_sin_mencion
     return jsonify(resp)
 
 

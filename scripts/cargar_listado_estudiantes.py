@@ -62,6 +62,11 @@ def main():
     resumen = construir_plan_multi(conn, bloques)
     for r in resumen:
         etiqueta_bloque = f"{r['grado']}" + (f" Sec.{r['seccion']}" if r['seccion'] else "") + (f" {r['mencion']}" if r['mencion'] else "")
+        if r["sin_mencion_detectada"]:
+            print(f"=== ⚠ {etiqueta_bloque} — SIN MENCIÓN EN EL ARCHIVO ({len(r['plan'])} alumno(s)) — NO SE GUARDARÁ ===")
+            print("    Este grupo no tiene la fila 'DATOS DEL ALUMNO / GRADO / MENCIÓN' en el archivo.")
+            print("    Pide al coordinador que agregue el encabezado faltante y vuelve a cargar.")
+            continue
         print(f"=== {etiqueta_bloque} — {len(r['plan'])} alumno(s): {r['nuevos']} nuevo(s), {r['actualizados']} actualizado(s) ===")
         if not COMMIT:
             for p in r["plan"]:
@@ -71,15 +76,18 @@ def main():
                 if p["advertencia"]:
                     print(f"              ⚠ {p['advertencia']}")
 
-    nuevos_total = sum(r["nuevos"] for r in resumen)
-    actualizados_total = sum(r["actualizados"] for r in resumen)
+    nuevos_total = sum(r["nuevos"] for r in resumen if not r["sin_mencion_detectada"])
+    actualizados_total = sum(r["actualizados"] for r in resumen if not r["sin_mencion_detectada"])
+    omitidos_sin_mencion = sum(len(r["plan"]) for r in resumen if r["sin_mencion_detectada"])
 
     if COMMIT:
-        nuevos_total, actualizados_total = aplicar_carga_multi(conn, bloques)
+        nuevos_total, actualizados_total, omitidos_sin_mencion = aplicar_carga_multi(conn, bloques)
         print(f"\n✓ Guardado: {nuevos_total} nuevo(s), {actualizados_total} actualizado(s) en {len(bloques)} bloque(s).")
     else:
         print(f"\n(dry-run) Se crearían {nuevos_total} nuevo(s), se actualizarían {actualizados_total} en total.")
         print("Corre de nuevo con --commit para aplicar los cambios.")
+    if omitidos_sin_mencion:
+        print(f"⚠ {omitidos_sin_mencion} alumno(s) NO se guardaron por falta de mención en el archivo.")
 
     conn.close()
 

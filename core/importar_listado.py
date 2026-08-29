@@ -249,7 +249,30 @@ def _detectar_fila_encabezado(ws, fila_desde, fila_hasta):
     return mejor_fila, mejor_cols
 
 
+def _es_fila_encabezado(row):
+    """True si esta fila por sí sola ya parece un encabezado de tabla
+    (No./Nombre/Apellido) — usado para detectar un SEGUNDO encabezado
+    incrustado dentro de un bloque, sin su propio 'DATOS DEL ALUMNO'."""
+    cols = {}
+    for cell in row:
+        clave = HEADER_MAP.get(_norm_header(cell.value))
+        if clave and clave not in cols:
+            cols[clave] = cell.column
+    return COLUMNAS_REQUERIDAS.issubset(cols.keys())
+
+
 def _leer_alumnos_bloque(ws, fila_header, fila_fin_exclusiva, cols):
+    """
+    Lee los alumnos de un bloque. Si encuentra OTRA fila de encabezado
+    (No./Nombre/Apellido) antes de fila_fin_exclusiva, se detiene ahí —
+    en el LISTADO institucional real, algunos grupos de alumnos vienen con
+    su propio encabezado de columnas pero SIN la fila "DATOS DEL ALUMNO /
+    GRADO / MENCIÓN" que le correspondería (defecto del archivo, no del
+    parser). Seguir leyendo de largo fusionaría ese grupo con la mención
+    del bloque anterior de forma silenciosa e incorrecta — mejor cortar
+    ahí y que el llamador arme un bloque aparte marcado "mención
+    desconocida" en vez de adivinar. Devuelve (alumnos, fila_del_corte|None).
+    """
     def _val(row, clave):
         col = cols.get(clave)
         return row[col - 1].value if col else None
@@ -257,6 +280,8 @@ def _leer_alumnos_bloque(ws, fila_header, fila_fin_exclusiva, cols):
     alumnos = []
     for row in ws.iter_rows(min_row=fila_header + 1, max_row=fila_fin_exclusiva - 1):
         no = _val(row, "no")
+        if not isinstance(no, (int, float)) and _es_fila_encabezado(row):
+            return alumnos, row[0].row
         if not isinstance(no, (int, float)) or not (1 <= no <= 999):
             continue
         nombre   = str(_val(row, "nombre") or "").strip()
@@ -278,7 +303,7 @@ def _leer_alumnos_bloque(ws, fila_header, fila_fin_exclusiva, cols):
             "no": int(no), "nombre": nombre, "apellido": apellido,
             "edad": edad, "cedula": cedula,
         })
-    return alumnos
+    return alumnos, None
 
 
 def leer_listado_workbook(wb):
@@ -307,14 +332,34 @@ def leer_listado_workbook(wb):
         if not fila_header:
             continue  # bloque sin tabla de alumnos debajo (encabezado suelto) — se ignora
 
-        alumnos = _leer_alumnos_bloque(ws, fila_header, fin, cols)
-        if not alumnos:
-            continue
-        alumnos = resolver_duplicados_intra_bloque(alumnos)
-
-        resultado.append({
-            "grado": grado, "seccion": seccion, "mencion": mencion, "alumnos": alumnos,
-        })
+        # Un bloque puede traer, sin avisar, un SEGUNDO grupo de alumnos con
+        # su propio encabezado de columnas pero sin su propia fila "DATOS
+        # DEL ALUMNO / GRADO / MENCIÓN" (defecto real encontrado en el
+        # LISTADO institucional: un grupo de 37 alumnos de 5TO quedó pegado
+        # dentro de "MULTIMEDIA" sin encabezado propio). Cada corte de
+        # _leer_alumnos_bloque() se procesa como su propio bloque —el
+        # primero con la mención real, los siguientes con mención=None y
+        # marcados para revisión manual en vez de heredar la anterior.
+        primero = True
+        fila_actual, fin_actual = fila_header, fin
+        while fila_actual:
+            alumnos, fila_corte = _leer_alumnos_bloque(ws, fila_actual, fin_actual, cols)
+            if alumnos:
+                alumnos = resolver_duplicados_intra_bloque(alumnos)
+                resultado.append({
+                    "grado": grado, "seccion": seccion,
+                    "mencion": mencion if primero else None,
+                    "sin_mencion_detectada": (not primero),
+                    "alumnos": alumnos,
+                })
+            primero = False
+            if not fila_corte:
+                break
+            _, cols_sub = _detectar_fila_encabezado(ws, fila_corte, fin_actual)
+            if not cols_sub:
+                break
+            cols = cols_sub
+            fila_actual = fila_corte
 
     if not resultado:
         detalle = f" ({'; '.join(errores_grado)})" if errores_grado else ""
@@ -563,14 +608,15 @@ def construir_plan_multi(conn, bloques):
     """
     Igual que construir_plan pero para una LISTA de bloques (un archivo
     institucional con varios grados/menciones). Devuelve una lista de
-    dicts por bloque: {grado, seccion, mencion, curso, nuevos, actualizados,
-    plan}.
+    dicts por bloque: {grado, seccion, mencion, curso, sin_mencion_detectada,
+    nuevos, actualizados, plan}.
     """
     resultado = []
     for b in bloques:
         curso, ciclo, plan = construir_plan(conn, b["grado"], b["seccion"], b["mencion"], b["alumnos"])
         resultado.append({
             "grado": b["grado"], "seccion": b["seccion"], "mencion": b["mencion"], "curso": curso,
+            "sin_mencion_detectada": bool(b.get("sin_mencion_detectada")),
             "nuevos": sum(1 for p in plan if p["accion"] == "nuevo"),
             "actualizados": sum(1 for p in plan if p["accion"] == "actualiza"),
             "plan": plan,
@@ -579,10 +625,19 @@ def construir_plan_multi(conn, bloques):
 
 
 def aplicar_carga_multi(conn, bloques):
-    """Igual que aplicar_carga pero para una lista de bloques. Devuelve (nuevos, actualizados) totales."""
-    nuevos_total = actualizados_total = 0
+    """
+    Igual que aplicar_carga pero para una lista de bloques. Los bloques
+    marcados sin_mencion_detectada (ver leer_listado_workbook) NO se
+    escriben — no hay forma confiable de saber a qué mención pertenecen,
+    y adivinar es exactamente lo que causó el bug real que motivó este
+    chequeo. Devuelve (nuevos, actualizados, omitidos_sin_mencion).
+    """
+    nuevos_total = actualizados_total = omitidos_sin_mencion = 0
     for b in bloques:
+        if b.get("sin_mencion_detectada"):
+            omitidos_sin_mencion += len(b["alumnos"])
+            continue
         n, a = aplicar_carga(conn, b["grado"], b["seccion"], b["mencion"], b["alumnos"])
         nuevos_total += n
         actualizados_total += a
-    return nuevos_total, actualizados_total
+    return nuevos_total, actualizados_total, omitidos_sin_mencion
