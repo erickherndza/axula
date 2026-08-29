@@ -4383,12 +4383,35 @@ function cargarListado(input) {
 }
 
 // ── Listado de Estudiantes (formato adaptativo GRADO:/ÁREA:): preview → confirmar ──
-// No se guarda un token del servidor: se reenvía grado/sección/mención/
-// alumnos tal como los devolvió el preview. Así "Confirmar carga" no
-// depende de que el proceso siga vivo desde que se subió el archivo — un
-// redeploy de Render (frecuente en este proyecto) entre subir y confirmar
-// ya no hace que la carga se pierda en silencio.
+// Soporta desde un archivo de un solo grado/mención hasta el LISTADO
+// institucional completo (varios bloques grado/sección/mención por
+// archivo) — ver core/importar_listado.py. No se guarda un token del
+// servidor: se reenvían los bloques (grado/sección/mención/alumnos) tal
+// como los devolvió el preview. Así "Confirmar carga" no depende de que
+// el proceso siga vivo desde que se subió el archivo — un redeploy de
+// Render (frecuente en este proyecto) entre subir y confirmar ya no hace
+// que la carga se pierda en silencio.
 var _listadoEstDatos = null;
+
+function _renderBloquePreviewEst(b) {
+  var titulo = b.grado + (b.seccion ? ' Sec.' + b.seccion : '') + (b.mencion ? ' — ' + b.mencion : '');
+  var filas = b.plan.map(function(p) {
+    var accionTxt = p.accion === 'nuevo'
+      ? '<span style="color:#22c55e;font-weight:700;">Nuevo</span>'
+      : '<span style="color:#60b8f0;font-weight:700;">Actualiza</span>';
+    var detalle = (p.cambios && p.cambios.length) ? p.cambios.join(', ') : (p.accion === 'nuevo' ? '—' : 'sin cambios');
+    if (p.advertencia) detalle += '<br><span style="color:#f7b731;">⚠ ' + p.advertencia + '</span>';
+    return '<tr style="border-top:1px solid var(--border);">'
+      + '<td style="padding:5px 10px;color:var(--muted);">' + p.no + '</td>'
+      + '<td style="padding:5px 10px;">' + p.nombre + '</td>'
+      + '<td style="padding:5px 10px;">' + p.apellido + '</td>'
+      + '<td style="padding:5px 10px;">' + accionTxt + '</td>'
+      + '<td style="padding:5px 10px;font-size:11px;color:var(--muted);">' + detalle + '</td>'
+      + '</tr>';
+  }).join('');
+  return '<tr><td colspan="5" style="padding:8px 10px;background:var(--hover);font-weight:700;font-size:12px;">'
+    + titulo + ' — ' + b.plan.length + ' alumno(s)</td></tr>' + filas;
+}
 
 function previewListadoEstudiantes(input) {
   var file = input.files[0];
@@ -4404,26 +4427,17 @@ function previewListadoEstudiantes(input) {
         mostrarStatus('status-listado-est', '✗ ' + (d.error || 'No se pudo leer el archivo'), 'err');
         return;
       }
-      mostrarStatus('status-listado-est', '✓ ' + d.total + ' alumno(s) encontrados — revisa la vista previa abajo', 'ok');
-      _listadoEstDatos = { grado: d.grado, seccion: d.seccion, mencion: d.mencion, alumnos: d.alumnos };
-      document.getElementById('listado-est-preview-titulo').textContent = 'Vista previa — ' + d.curso;
-      document.getElementById('listado-est-preview-resumen').textContent =
-        d.total + ' alumno(s) en el archivo · ' + d.nuevos + ' nuevo(s) · ' + d.actualizados + ' actualizarían datos existentes';
+      var msg = '✓ ' + d.total + ' alumno(s) encontrados en ' + d.bloques.length + ' grado(s)/mención(es) — revisa la vista previa abajo';
+      mostrarStatus('status-listado-est', msg, 'ok');
+      _listadoEstDatos = { bloques: d.bloques.map(function(b) {
+        return { grado: b.grado, seccion: b.seccion, mencion: b.mencion, alumnos: b.alumnos };
+      }) };
+      document.getElementById('listado-est-preview-titulo').textContent = 'Vista previa — ' + d.bloques.length + ' grado(s)/mención(es)';
+      var resumenTxt = d.total + ' alumno(s) · ' + d.nuevos + ' nuevo(s) · ' + d.actualizados + ' actualizarían datos existentes';
+      if (d.bloques_omitidos) resumenTxt += ' · ' + d.bloques_omitidos + ' bloque(s) del archivo omitidos (no son de tu grado/mención)';
+      document.getElementById('listado-est-preview-resumen').textContent = resumenTxt;
       var body = document.getElementById('listado-est-preview-body');
-      body.innerHTML = d.plan.map(function(p) {
-        var accionTxt = p.accion === 'nuevo'
-          ? '<span style="color:#22c55e;font-weight:700;">Nuevo</span>'
-          : '<span style="color:#60b8f0;font-weight:700;">Actualiza</span>';
-        var detalle = (p.cambios && p.cambios.length) ? p.cambios.join(', ') : (p.accion === 'nuevo' ? '—' : 'sin cambios');
-        if (p.advertencia) detalle += '<br><span style="color:#f7b731;">⚠ ' + p.advertencia + '</span>';
-        return '<tr style="border-top:1px solid var(--border);">'
-          + '<td style="padding:5px 10px;color:var(--muted);">' + p.no + '</td>'
-          + '<td style="padding:5px 10px;">' + p.nombre + '</td>'
-          + '<td style="padding:5px 10px;">' + p.apellido + '</td>'
-          + '<td style="padding:5px 10px;">' + accionTxt + '</td>'
-          + '<td style="padding:5px 10px;font-size:11px;color:var(--muted);">' + detalle + '</td>'
-          + '</tr>';
-      }).join('');
+      body.innerHTML = d.bloques.map(_renderBloquePreviewEst).join('');
       document.getElementById('listado-est-preview-wrap').style.display = 'block';
     })
     .catch(function(e) {

@@ -27,7 +27,7 @@ from core.helpers import _get_profesor, _render_perfil_staff, _resolver_alcance_
 from core.ia import _get_groq_client, groq_client, construir_prompt, construir_prompt_planificacion, construir_prompt_rubrica, construir_prompt_estrategia
 from core.excel import _parsear_boletin_bj, _buscar_o_crear_estudiante, _detectar_mencion_listado, _limpiar_nota
 from core.pdf import _generar_pdf_acuerdo
-from core.importar_listado import leer_listado_workbook, construir_plan, aplicar_carga
+from core.importar_listado import leer_listado_workbook, construir_plan_multi, aplicar_carga_multi
 import openpyxl
 
 logger = logging.getLogger("axula")
@@ -398,34 +398,35 @@ def portal_profesor():
 #  que el proceso siga vivo desde que se subió el archivo.
 # ══════════════════════════════════════════════════════════════════════════════
 
-def _validar_grado_mencion_profesor(grado, mencion):
+def _bloque_en_alcance_profesor(grado, mencion, alcance):
+    grados_prof    = [g.upper() for g in alcance["grados"]]
+    menciones_prof = [m.upper() for m in alcance["menciones"]]
+    if grados_prof and grado.upper() not in grados_prof:
+        return False
+    if alcance["filtro_mencion"] and menciones_prof and mencion and mencion.upper() not in menciones_prof:
+        return False
+    return True
+
+
+def _filtrar_bloques_por_profesor(bloques):
     """
-    Un profesor solo puede cargar listados de SU propio grado/mención — con
-    30+ profesores en el sistema (a partir del próximo año escolar), sin
-    este chequeo cualquiera podría subir el listado de otro grado/mención
-    y pisar datos que no le corresponden. Admin/directora/coordinación no
-    tienen esta restricción. Retorna (ok: bool, error: str|None).
+    Un profesor solo puede cargar/ver bloques de SU propio grado/mención —
+    con 30+ profesores en el sistema (a partir del próximo año escolar),
+    sin este filtro cualquiera podría subir/pisar el listado de otro
+    grado/mención. El LISTADO institucional trae TODOS los grados en un
+    solo archivo (una hoja por grado, un bloque por mención/sección), así
+    que en vez de rechazar el archivo completo se descartan en silencio
+    los bloques que no le pertenecen — igual que hacía el cargador viejo
+    con las hojas. Admin/directora/coordinación no tienen este filtro.
+    Retorna (bloques_permitidos, cantidad_omitida).
     """
     prof = _get_profesor()
     if not prof or _normalizar_rol(prof.get("rol", "")) in ROLES_COORD:
-        return True, None
+        return bloques, 0
 
     alcance = _resolver_alcance_profesor(prof)
-    grados_prof    = [g.upper() for g in alcance["grados"]]
-    menciones_prof = [m.upper() for m in alcance["menciones"]]
-
-    if grados_prof and grado.upper() not in grados_prof:
-        return False, (
-            f"Este listado es de {grado} y tu perfil solo cubre "
-            f"{', '.join(alcance['grados'])}. Si el grado es correcto, "
-            "contacta al coordinador para que ajuste tu perfil."
-        )
-    if alcance["filtro_mencion"] and menciones_prof and mencion and mencion.upper() not in menciones_prof:
-        return False, (
-            f"Este listado es de mención {mencion} y tu perfil solo cubre "
-            f"{', '.join(alcance['menciones'])}."
-        )
-    return True, None
+    permitidos = [b for b in bloques if _bloque_en_alcance_profesor(b["grado"], b["mencion"], alcance)]
+    return permitidos, len(bloques) - len(permitidos)
 
 
 @profesor_bp.route("/api/profesor/preview-listado-estudiantes", methods=["POST"])
@@ -441,32 +442,40 @@ def preview_listado_estudiantes():
 
     try:
         wb = openpyxl.load_workbook(BytesIO(file.read()), data_only=True)
-        grado, seccion, mencion, alumnos = leer_listado_workbook(wb)
+        bloques = leer_listado_workbook(wb)
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
     except Exception as e:
         logger.error(f"[preview_listado_estudiantes] error leyendo archivo: {e}")
         return jsonify({"error": "No se pudo leer el archivo. Verifica que sea el listado oficial."}), 400
 
-    if not alumnos:
-        return jsonify({"error": "No se encontraron filas de alumnos en el archivo."}), 400
-
-    ok, err = _validar_grado_mencion_profesor(grado, mencion)
-    if not ok:
-        return jsonify({"error": err}), 403
+    bloques, omitidos = _filtrar_bloques_por_profesor(bloques)
+    if not bloques:
+        msg = "No se encontraron filas de alumnos en el archivo."
+        if omitidos:
+            msg = (f"El archivo tiene {omitidos} grado(s)/mención(es), pero ninguno "
+                   "corresponde a tu perfil. Si esto no es correcto, contacta al coordinador.")
+        return jsonify({"error": msg}), 400
 
     with sqlite3.connect(DATABASE, timeout=10) as conn:
         conn.row_factory = sqlite3.Row
-        curso, ciclo, plan = construir_plan(conn, grado, seccion, mencion, alumnos)
+        resumen = construir_plan_multi(conn, bloques)
+
+    respuesta_bloques = []
+    for b, r in zip(bloques, resumen):
+        respuesta_bloques.append({
+            "grado": r["grado"], "seccion": r["seccion"], "mencion": r["mencion"], "curso": r["curso"],
+            "alumnos": b["alumnos"],   # se reenvía tal cual al confirmar — ver nota arriba
+            "nuevos": r["nuevos"], "actualizados": r["actualizados"], "plan": r["plan"],
+        })
 
     return jsonify({
         "ok": True,
-        "grado": grado, "seccion": seccion, "mencion": mencion, "curso": curso,
-        "alumnos": alumnos,   # se reenvía tal cual al confirmar — ver nota arriba
-        "total": len(alumnos),
-        "nuevos": sum(1 for p in plan if p["accion"] == "nuevo"),
-        "actualizados": sum(1 for p in plan if p["accion"] == "actualiza"),
-        "plan": plan,
+        "bloques": respuesta_bloques,
+        "bloques_omitidos": omitidos,
+        "total": sum(len(rb["alumnos"]) for rb in respuesta_bloques),
+        "nuevos": sum(rb["nuevos"] for rb in respuesta_bloques),
+        "actualizados": sum(rb["actualizados"] for rb in respuesta_bloques),
     })
 
 
@@ -474,29 +483,37 @@ def preview_listado_estudiantes():
 @login_required
 @rate_limited(max_calls=10, window=3600)
 def confirmar_listado_estudiantes():
-    """Aplica el plan que /preview-listado-estudiantes le devolvió al navegador."""
+    """Aplica los bloques que /preview-listado-estudiantes le devolvió al navegador."""
     d = request.get_json(silent=True) or {}
-    grado   = (d.get("grado") or "").strip()
-    seccion = d.get("seccion")
-    mencion = d.get("mencion")
-    alumnos = d.get("alumnos")
-
-    if not grado or not isinstance(alumnos, list) or not alumnos:
+    bloques_in = d.get("bloques")
+    if not isinstance(bloques_in, list) or not bloques_in:
         return jsonify({"error": "Faltan datos del listado. Vuelve a subir el archivo."}), 400
-    for a in alumnos:
-        if not isinstance(a, dict) or not a.get("nombre") or not a.get("apellido"):
-            return jsonify({"error": "El listado recibido está incompleto. Vuelve a subir el archivo."}), 400
 
-    ok, err = _validar_grado_mencion_profesor(grado, mencion)
-    if not ok:
-        return jsonify({"error": err}), 403
+    bloques = []
+    for b in bloques_in:
+        if not isinstance(b, dict) or not b.get("grado") or not isinstance(b.get("alumnos"), list) or not b["alumnos"]:
+            return jsonify({"error": "El listado recibido está incompleto. Vuelve a subir el archivo."}), 400
+        for a in b["alumnos"]:
+            if not isinstance(a, dict) or not a.get("nombre") or not a.get("apellido"):
+                return jsonify({"error": "El listado recibido está incompleto. Vuelve a subir el archivo."}), 400
+        bloques.append({
+            "grado": b["grado"], "seccion": b.get("seccion"),
+            "mencion": b.get("mencion"), "alumnos": b["alumnos"],
+        })
+
+    bloques, omitidos = _filtrar_bloques_por_profesor(bloques)
+    if not bloques:
+        return jsonify({"error": "Ninguno de los grados/menciones de este listado corresponde a tu perfil."}), 403
 
     with sqlite3.connect(DATABASE, timeout=10) as conn:
         conn.row_factory = sqlite3.Row
-        nuevos, actualizados = aplicar_carga(conn, grado, seccion, mencion, alumnos)
+        nuevos, actualizados = aplicar_carga_multi(conn, bloques)
 
     cache_bust()  # el roster cambió — invalida cachés de listados/dashboard
-    return jsonify({"ok": True, "nuevos": nuevos, "actualizados": actualizados})
+    resp = {"ok": True, "nuevos": nuevos, "actualizados": actualizados}
+    if omitidos:
+        resp["omitidos"] = omitidos
+    return jsonify(resp)
 
 
 

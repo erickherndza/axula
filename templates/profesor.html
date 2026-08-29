@@ -4065,12 +4065,35 @@ async function eliminarAsignacion(id, btn) {
   }
 
   // ── Listado de Estudiantes: preview → confirmar ───────────────────────────
-  // No se guarda un token del servidor: se reenvía grado/sección/mención/
-  // alumnos tal como los devolvió el preview. Así "Confirmar carga" no
-  // depende de que el proceso siga vivo desde que se subió el archivo —
-  // un redeploy de Render (frecuente en este proyecto) entre subir y
-  // confirmar ya no hace que la carga se pierda en silencio.
+  // Soporta desde un archivo de un solo grado/mención hasta el LISTADO
+  // institucional completo (varios bloques grado/sección/mención por
+  // archivo) — ver core/importar_listado.py. No se guarda un token del
+  // servidor: se reenvían los bloques (grado/sección/mención/alumnos) tal
+  // como los devolvió el preview. Así "Confirmar carga" no depende de que
+  // el proceso siga vivo desde que se subió el archivo — un redeploy de
+  // Render (frecuente en este proyecto) entre subir y confirmar ya no hace
+  // que la carga se pierda en silencio.
   var _listadoDatos = null;
+
+  function _renderBloquePreview(b) {
+    var titulo = b.grado + (b.seccion ? ' Sec.' + b.seccion : '') + (b.mencion ? ' — ' + b.mencion : '');
+    var filas = b.plan.map(function(p) {
+      var accionTxt = p.accion === 'nuevo'
+        ? '<span style="color:#22c55e;font-weight:700;">Nuevo</span>'
+        : '<span style="color:#60b8f0;font-weight:700;">Actualiza</span>';
+      var detalle = (p.cambios && p.cambios.length) ? p.cambios.join(', ') : (p.accion === 'nuevo' ? '—' : 'sin cambios');
+      if (p.advertencia) detalle += '<br><span style="color:#f7b731;">⚠ ' + p.advertencia + '</span>';
+      return '<tr style="border-top:1px solid var(--border);">'
+        + '<td style="padding:5px 10px;color:var(--muted);">' + p.no + '</td>'
+        + '<td style="padding:5px 10px;">' + p.nombre + '</td>'
+        + '<td style="padding:5px 10px;">' + p.apellido + '</td>'
+        + '<td style="padding:5px 10px;">' + accionTxt + '</td>'
+        + '<td style="padding:5px 10px;font-size:11px;color:var(--muted);">' + detalle + '</td>'
+        + '</tr>';
+    }).join('');
+    return '<tr><td colspan="5" style="padding:8px 10px;background:var(--hover);font-weight:700;font-size:12px;">'
+      + titulo + ' — ' + b.plan.length + ' alumno(s)</td></tr>' + filas;
+  }
 
   function profPreviewListado(input) {
     if (!input.files[0]) return;
@@ -4085,27 +4108,19 @@ async function eliminarAsignacion(id, btn) {
           profSetStatus('prof-status-listado', '✗ ' + (d.error || 'No se pudo leer el archivo'), 'err');
           return;
         }
-        profSetStatus('prof-status-listado', '✓ ' + d.total + ' alumno(s) encontrados — revisa la vista previa abajo', 'ok');
-        _listadoDatos = { grado: d.grado, seccion: d.seccion, mencion: d.mencion, alumnos: d.alumnos };
+        var msg = '✓ ' + d.total + ' alumno(s) encontrados en ' + d.bloques.length + ' grado(s)/mención(es) — revisa la vista previa abajo';
+        profSetStatus('prof-status-listado', msg, 'ok');
+        _listadoDatos = { bloques: d.bloques.map(function(b) {
+          return { grado: b.grado, seccion: b.seccion, mencion: b.mencion, alumnos: b.alumnos };
+        }) };
         var titulo = document.getElementById('listado-preview-titulo');
         var resumen = document.getElementById('listado-preview-resumen');
-        titulo.textContent = 'Vista previa — ' + d.curso;
-        resumen.textContent = d.total + ' alumno(s) en el archivo · ' + d.nuevos + ' nuevo(s) · ' + d.actualizados + ' actualizarían datos existentes';
+        titulo.textContent = 'Vista previa — ' + d.bloques.length + ' grado(s)/mención(es)';
+        var resumenTxt = d.total + ' alumno(s) · ' + d.nuevos + ' nuevo(s) · ' + d.actualizados + ' actualizarían datos existentes';
+        if (d.bloques_omitidos) resumenTxt += ' · ' + d.bloques_omitidos + ' bloque(s) del archivo omitidos (no son de tu grado/mención)';
+        resumen.textContent = resumenTxt;
         var body = document.getElementById('listado-preview-body');
-        body.innerHTML = d.plan.map(function(p) {
-          var accionTxt = p.accion === 'nuevo'
-            ? '<span style="color:#22c55e;font-weight:700;">Nuevo</span>'
-            : '<span style="color:#60b8f0;font-weight:700;">Actualiza</span>';
-          var detalle = (p.cambios && p.cambios.length) ? p.cambios.join(', ') : (p.accion === 'nuevo' ? '—' : 'sin cambios');
-          if (p.advertencia) detalle += '<br><span style="color:#f7b731;">⚠ ' + p.advertencia + '</span>';
-          return '<tr style="border-top:1px solid var(--border);">'
-            + '<td style="padding:5px 10px;color:var(--muted);">' + p.no + '</td>'
-            + '<td style="padding:5px 10px;">' + p.nombre + '</td>'
-            + '<td style="padding:5px 10px;">' + p.apellido + '</td>'
-            + '<td style="padding:5px 10px;">' + accionTxt + '</td>'
-            + '<td style="padding:5px 10px;font-size:11px;color:var(--muted);">' + detalle + '</td>'
-            + '</tr>';
-        }).join('');
+        body.innerHTML = d.bloques.map(_renderBloquePreview).join('');
         document.getElementById('listado-preview-wrap').style.display = 'block';
       })
       .catch(function(e) {
