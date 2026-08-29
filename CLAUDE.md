@@ -147,6 +147,159 @@ python3 -c "import app; print('OK')"
 
 ## Log de sesiones
 
+### 2026-08-28 (sesión 19 — Pase de Lista Grado+Modalidad, cargador adaptativo de Listado de Estudiantes, resets de notas/estudiantes)
+
+**Disparador:** varios hilos que terminaron entrelazados — (1) pase de lista mezclaba estudiantes
+de distintos grados/menciones bajo el mismo profesor, (2) separador `|` en materias de
+`/mi-perfil` y `/usuarios` poco práctico, (3) el listado oficial de 4to Multimedia 2026-2027 no
+terminaba de reflejarse en la plataforma, y (4) un fix de sesiones anteriores había dejado notas
+inconsistentes entre grados. Se resolvió todo en cadena porque cada arreglo destapó el siguiente.
+
+**1 — Separador de materias `|` → `,` → `;` (mi_perfil.html, usuarios.html):**
+Cambié el separador visible de `|` a `,` a pedido explícito. El almacenamiento en BD sigue
+pipe-delimitado (muchísimos otros lugares del código hacen `.split('|')` sobre `materia`/
+`asignaturas`) — la conversión coma↔pipe ocurre solo en el borde (leer para mostrar, escribir al
+guardar). **Casi reintroduje un bug ya resuelto**: el historial (`commit b34d3b9`, jun-2026)
+muestra que el separador YA fue coma antes y se cambió A pipe justamente porque materias reales
+del catálogo (ej. "Lenguaje Visual, Dibujo y Creación de Personajes", MULTIMEDIA 4to) tienen coma
+en su propio nombre — usar coma como separador de UI las parte en dos. Lo detecté revisando
+`git log` antes de cerrar la sesión y cambié el separador visible a `;` (no aparece en ningún
+nombre de materia del catálogo, y sigue sin ser el `|` que Erick quería evitar).
+**LECCIÓN: antes de cambiar un formato de separador/delimitador, revisar `git log` por si ya se
+intentó y se revirtió — el motivo suele seguir vigente.**
+
+**2 — Pase de Lista mezclaba estudiantes de distinto grado/sección/mención (`routes/profesor.py`,
+`routes/asistencia.py`, `templates/profesor.html`):**
+`portal_profesor()` cargaba TODOS los estudiantes del alcance del profesor en una sola lista al
+entrar a `/profesor`, y `guardarAsistencia()` guardaba asistencia para esa lista completa sin
+filtrar por la materia/grado seleccionados — un profesor con grado `4to,5to` que pasaba lista de
+una materia de 4to terminaba registrando (falsamente, como "presente") a los alumnos de 5to
+también. Fix en dos pasadas:
+  - Primera pasada: agregado selector de Grado + Sección en Pase de Lista, con filtrado real del
+    roster visible antes de guardar.
+  - Segunda pasada (la correcta): para clases técnicas, Sección casi nunca varía (todos los
+    alumnos por defecto quedan en `seccion='A'`) — el separador real es la **Modalidad** (mención:
+    Multimedia/Teatro/Música/Artes Visuales/Danza). Ahora Pase de Lista alterna automáticamente
+    entre Modalidad (2do ciclo) y Sección (1er ciclo) según el grado elegido. El backend
+    (`POST /api/asistencia`) valida server-side que cada `estudiante_id` corresponda al
+    grado/sección/modalidad declarados — defensa en profundidad, no confía ciegamente en lo que
+    mandó el navegador.
+
+**3 — Cargador adaptativo de "Listado de Estudiantes" — `core/importar_listado.py` (nuevo):**
+El importador viejo (`/api/cargar-listado`, en `routes/estudiantes.py`) espera el LISTADO
+institucional con una hoja POR GRADO nombrada literalmente "4TO"/"5TO (2)" — al subir un archivo
+de un solo grado/mención con hoja llamada "Estudiantes 4TO MULTIMEDIA", usaba ese nombre de hoja
+completo como si fuera el valor de `grado`, dejando `estudiantes.grado='Estudiantes 4TO
+MULTIMEDIA'` y `curso` con texto duplicado várias veces (bug real encontrado en producción,
+diagnosticado con `scripts/diag_curso_estudiante.py` contra la BD real de Render). Ahora ese
+endpoint viejo RECHAZA archivos con nombre de hoja no reconocido (`commit 2095dcb`) en vez de
+corromper datos en silencio.
+
+Se construyó un módulo nuevo (`core/importar_listado.py`) usado tanto por
+`scripts/cargar_listado_estudiantes.py` (CLI) como por dos endpoints nuevos en
+`routes/profesor.py` (`/api/profesor/preview-listado-estudiantes` y
+`/api/profesor/confirmar-listado-estudiantes`, con tarjeta de carga en `/profesor` Y en el
+dashboard admin — un profesor solo ve/aplica sus propios grados/menciones, admin/directora sin
+restricción). Flujo preview→confirmar: el servidor arma un plan sin escribir nada, el usuario lo
+revisa, y solo confirma con un segundo POST — mismo patrón que otras cargas masivas del sistema.
+
+Soporta DOS formatos del mismo tipo de archivo, detectados automáticamente sin que el usuario
+tenga que decir cuál es cuál:
+  - Un solo bloque por archivo ("Listado_Estudiantes_4TO_A_Multimedia.xlsx").
+  - El LISTADO institucional completo del año — una hoja por grado, y dentro de cada hoja varios
+    bloques "DATOS DEL ALUMNO" (uno por mención en 2do ciclo, uno por sección en 1er ciclo), con
+    el grado/mención en formato y posición inconsistentes ENTRE BLOQUES DEL MISMO ARCHIVO:
+    `'4TO A' + 'MUSICA'` (sección pegada al grado) vs. `'5TO' + 'A Musica'` (sección pegada a la
+    mención, al revés) vs. `'3ERO' + 'SECCION B'` (1er ciclo, sin mención). El algoritmo busca la
+    celda que dice "GRADO" en cada fila de encabezado y toma las siguientes celdas con valor (no
+    otra etiqueta) en orden — sin asumir columna fija.
+
+**Batería de bugs reales encontrados probando contra el archivo institucional completo (659-660
+alumnos, 20-22 bloques) — cada uno verificado con los datos reales antes de darlo por corregido:**
+
+1. **Token en memoria perdido en redeploy** (`commit d054fb7`) — el diseño original guardaba el
+   plan preview en un dict del proceso bajo un token de 15 min. Con `gunicorn --workers 1` y
+   varios redeploys seguidos (normal en una sesión de iteración rápida como esta), cualquier
+   deploy entre subir el archivo y tocar "Confirmar" borraba el dict — "Confirmar carga" fallaba
+   sin dejar rastro claro. Ahora el navegador reenvía los datos completos (grado/sección/mención/
+   alumnos) al confirmar, sin depender de estado del servidor entre los dos pasos.
+2. **Coincidencia por nombre sin acotar por grado** (`commit 984c8b6`) — el emparejamiento
+   nombre+apellido exacto (para alumnos sin cédula) no estaba limitado al grado/mención objetivo.
+   27 alumnos de "4to Multimedia" coincidían por nombre exacto con estudiantes YA existentes en
+   '3ERO' (personas reales distintas con el mismo nombre) — sin el fix, se habrían reasignado por
+   error. Ahora tanto el match exacto como el fuzzy están acotados a
+   `UPPER(grado)=UPPER(?) AND mencion` (comparación case-insensitive porque la BD real usa
+   MAYÚSCULA: `'4TO'`, `'3ERO'`, verificado con `scripts/diag_roster_profesor.py`).
+3. **Formato de grado equivocado** — el parser escribía `grado='4to'` minúscula; la BD real usa
+   `'4TO'`/`'5TO'`/`'3ERO'`/`'1ERO'` (2 letras de sufijo para 4to-6to y 2do, mala suerte 3 letras
+   para 1ro y 3ro — `_GRADO_SALIDA` en `core/importar_listado.py` mapea esto explícito).
+4. **Cédulas duplicadas entre estudiantes DISTINTOS** — 5 pares de alumnos con nombres
+   completamente distintos comparten cédula por error de tecleo real del coordinador. Sin
+   salvaguarda, se habrían fusionado en un solo registro (`cedula_en_conflicto()`: nombre muy
+   distinto pese a cédula igual, `SequenceMatcher <0.5` → a ambos se les quita la cédula del
+   archivo, quedan con ID provisional y advertencia visible en el preview).
+5. **Duplicados DENTRO del mismo bloque** — mismo alumno repetido, o cédula compartida entre dos
+   personas dentro del mismo bloque, no se detectaban porque el plan se calcula contra la BD
+   ANTES de escribir nada (dos ocurrencias en el mismo archivo no se ven entre sí sin un paso
+   previo) — `resolver_duplicados_intra_bloque()`.
+6. **El bug real que reportó el usuario** (`commit 404a771`) — "13 estudiantes de 5to aparecen en
+   Multimedia pero según el listado están en otra mención". Verificado celda por celda: dentro
+   del bloque "5TO MULTIMEDIA" el archivo real tiene, sin avisar, un SEGUNDO grupo de 17 alumnos
+   con su propia fila de encabezado de columnas ("No./NOMBRE/APELLIDO...") pero SIN la fila
+   "DATOS DEL ALUMNO / GRADO / MENCIÓN" que le correspondería — defecto del archivo del
+   coordinador, no dato mal leído. El parser, al no ver esa etiqueta, absorbía el grupo en
+   silencio dentro del bloque anterior. Ahora `_leer_alumnos_bloque()` detecta cuando aparece
+   OTRA fila de encabezado dentro de un bloque y corta ahí; el grupo restante se marca
+   `sin_mencion_detectada=True` y **no se escribe** (aplicar_carga_multi se niega a adivinar la
+   mención) — se muestra con advertencia roja explícita en el preview en vez de mezclarse.
+   Mismo defecto encontrado en "3ERO Sección B" (30 alumnos huérfanos más). Con el fix, "5TO
+   MULTIMEDIA" da exactamente 23 alumnos (el número real que confirmó el usuario) en vez de 40.
+
+**LECCIÓN PERMANENTE — con datos reales de coordinación, nunca asumir que un archivo tiene una
+estructura limpia y consistente:** cada uno de estos 6 bugs solo salió a la luz probando contra
+el archivo REAL completo (no un caso de prueba inventado) y varias veces contra la BD real de
+producción vía scripts de diagnóstico (`diag_curso_estudiante.py`, `diag_roster_profesor.py`,
+`diag_listado_vs_bd.py`, `diag_5to_multimedia.py`, `diag_ids.py` — todos de solo lectura, quedan
+en `scripts/` para la próxima vez que algo así no cuadre). Cuando el usuario reporta un número que
+no cuadra ("debería ser 23, dice 41"), verificar con una consulta exacta contra la BD real antes
+de teorizar — la causa real casi nunca es la primera hipótesis.
+
+**4 — Reset de notas y de estudiantes (a pedido explícito, no construido como botón en la app):**
+Un fix de sesiones anteriores dejó notas inconsistentes (algunos estudiantes promovidos, otros no,
+mezcla de datos entre grados) y sin notas no se puede evaluar promoción. Y las cargas repetidas
+del listado (algunas con el cargador viejo, corruptas) dejaron conteos inflados. Dos scripts,
+ambos dry-run por defecto + `--commit`, deliberadamente NO como botón en la UI (una operación de
+este tamaño no debería quedar a un clic de cualquier sesión activa):
+  - `scripts/resetear_notas_todos.py` — borra las 5 tablas donde el esquema guarda notas reales
+    (`materias_calificaciones`, `calificaciones_periodo`, `notas_componentes`,
+    `notas_competencias_ce`, `notas_actividad`) y resetea a 0 las ~50 columnas de `estudiantes`
+    que las cachean. NO toca asistencia, cuaderno anecdótico/casos/reportes (quedan en el
+    expediente de cada estudiante, confirmado con el usuario) ni historial de promociones.
+  - `scripts/resetear_estudiantes_todos.py` — borra `estudiantes` + las 24 tablas que dependen de
+    `estudiante_id`/`est_id` (lista obtenida EJECUTANDO `migrar_bd()` contra una BD temporal e
+    introspeccionando el esquema real vía `PRAGMA table_info` — no escrita a mano; así se
+    encontraron 2 tablas que un primer intento con regex sobre el archivo de definiciones se
+    había saltado: `inscripciones`, `retiros_traslados`). Mantiene intactos `usuarios` (cuentas de
+    login) y, a propósito, `expedientes_historicos` (el archivo digitalizado de 25+ años del
+    centro — vinculado a `estudiantes.id` de forma opcional, dataset categóricamente distinto al
+    roster del año actual, no algo que este reset deba destruir sin pedirlo aparte).
+
+**Scripts de diagnóstico nuevos en `scripts/` (todos de solo lectura):**
+`diag_curso_estudiante.py <nombre>`, `diag_roster_profesor.py <username>`,
+`diag_listado_vs_bd.py`, `diag_5to_multimedia.py`, `diag_ids.py <id1> <id2> ...`,
+`conteo_documentos.py`.
+
+**Pendiente para la próxima sesión:**
+- El coordinador debe confirmar la mención/sección real de los 47 alumnos huérfanos (17 de 5to +
+  30 de 3ero B — lista completa de nombres/cédulas ya entregada al usuario en esta sesión) y
+  agregar la fila de encabezado faltante en el Excel antes de recargar ese grupo.
+- Correr `scripts/resetear_estudiantes_todos.py --commit` de nuevo (los datos actuales en Render
+  todavía tienen los 40 de 5to Multimedia mezclados, de antes de este fix) y volver a cargar
+  `LISTADO AÑO 2026-2027.xlsx` ya corregido.
+- Verificar si el mismo defecto de "grupo sin encabezado" aparece en algún otro grado además de
+  3ero B y 5to — no se revisó exhaustivamente cada uno de los 20 bloques uno por uno, solo se
+  confirmó que el algoritmo ahora los detecta automáticamente si aparecen.
+
 ### 2026-08-25/26 (sesión 18 — fix selector de grado en Planificación + módulo nuevo "Coherencia Horizontal")
 
 **Fix rápido — Estrategias Didácticas solo mostraba materias de 4to** (commit `585ae91`):
