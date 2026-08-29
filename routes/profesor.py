@@ -304,6 +304,7 @@ def portal_profesor():
 
       # Plan: unión de todos los grados del profesor (multigrado)
       import unicodedata as _ud
+      from difflib import SequenceMatcher as _SM
       def _norm_asig(s):
           s = (s or "").strip().lower()
           return _ud.normalize("NFKD", s).encode("ascii", "ignore").decode("ascii")
@@ -312,8 +313,28 @@ def portal_profesor():
       asigs_prof = [_norm_asig(a) for a in asigs_raw.split("|") if a.strip()]
 
       def _coincide(nombre_plan):
+          # Sustring primero (rápido, exacto) — pero el nombre oficial que
+          # alguien tipeó en el perfil del profesor casi nunca es idéntico
+          # carácter por carácter al nombre abreviado del catálogo interno
+          # (ej. "Lenguaje Visual Dibujo y Creación de Personajes" sin coma
+          # vs "Lenguaje Visual, Dibujo y Creación de Personajes" del
+          # catálogo — bug real encontrado en producción: la materia entera
+          # desaparecía del plan del profesor por una sola coma de
+          # diferencia). Fuzzy como respaldo evita perder la materia por
+          # variaciones de redacción/puntuación en vez de fallar en
+          # silencio.
           n = _norm_asig(nombre_plan)
-          return any(ap in n or n in ap for ap in asigs_prof)
+          if any(ap in n or n in ap for ap in asigs_prof):
+              return True
+          # Umbral alto a propósito: nombres de materia distintos que solo
+          # comparten una palabra genérica ("Lenguaje...", "Historia...")
+          # dan ratio ~0.5-0.7 sin ser la misma materia — probado contra
+          # datos reales, un umbral bajo generaba falsos positivos
+          # (ej. "Lenguaje Visual y Artesanal" ~matcheaba con "Lenguaje
+          # Musical" y "Lengua Española"). 0.75 solo recupera diferencias
+          # de puntuación/tipeo menores (ej. una coma faltante), no nombres
+          # genuinamente distintos.
+          return any(_SM(None, ap, n).ratio() >= 0.75 for ap in asigs_prof)
 
       # Plan por grado + modalidad (mención) — SIN aplanar: cada materia
       # conserva a qué grado(s) y modalidad(es) pertenece, para que Pase de
