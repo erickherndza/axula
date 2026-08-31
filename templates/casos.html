@@ -354,6 +354,34 @@ main{max-width:1300px;margin:0 auto;padding:20px 24px}
   <div class="modal">
     <div class="modal-title">Abrir Nuevo Caso</div>
     <div class="modal-sub">El caso quedará vinculado al expediente del estudiante</div>
+
+    <!-- Contexto de la incidencia — misma composición que Pase de Lista,
+         para profesores con varios grados/menciones a la vez -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px">
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Grado *</label>
+        <select class="form-select" id="nc-grado" onchange="onGradoChangeCaso()">
+          {% for g in grados_prof %}
+          <option value="{{ g }}">{{ g }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group" id="nc-modalidad-wrap" style="display:none;margin-bottom:0">
+        <label class="form-label">Modalidad *</label>
+        <select class="form-select" id="nc-modalidad" onchange="onModalidadChangeCaso()"></select>
+      </div>
+      <div class="form-group" id="nc-seccion-wrap" style="display:none;margin-bottom:0">
+        <label class="form-label">Sección</label>
+        <select class="form-select" id="nc-seccion" onchange="onSeccionChangeCaso()">
+          <option value="">Todas</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Materia</label>
+        <select class="form-select" id="nc-materia"></select>
+      </div>
+    </div>
+
     <div class="form-group">
       <label class="form-label">Estudiante *</label>
       <input class="form-input" id="nc-buscar" placeholder="Buscar por nombre..." oninput="buscarEstudiante(this.value)">
@@ -524,6 +552,13 @@ var _filtroActual = 'todos';
 var _casoActual = null;
 var _acuerdoActual = null;
 
+// Selector Grado/Modalidad/Materia de "Nuevo Caso" — misma composición que
+// Pase de Lista (routes/profesor.py::portal_profesor / templates/profesor.html)
+var PLAN_POR_GRADO_MENCION = {{ plan_por_grado_mencion | tojson }};
+var MENCIONES_PROF  = {{ menciones_prof | tojson }};
+var FILTRO_MEN_CASO  = {{ filtro_men | tojson }};
+var PRIMER_CICLO_GRADOS_CASO = ['1ro','2do','3ro'];
+
 // ══════════════════════════════════════════════════════════════════════════════
 // UTILIDADES
 // ══════════════════════════════════════════════════════════════════════════════
@@ -645,6 +680,9 @@ function renderCasoDetalle(data) {
         '<div style="font-size:12px;color:var(--muted)">Estudiante: <a href="/perfil/' + est.id + '" style="color:var(--accent);text-decoration:none">' + esc(est.nombre + ' ' + est.apellido) + '</a> · ' +
         (est.grado||'') + ' ' + (est.curso||'') + '</div>' +
         '<div style="font-size:11px;color:var(--muted);margin-top:3px">Abierto: ' + fmtFecha(caso.creado_en) + ' · Por: ' + esc(caso.abierto_por_nombre||'sistema') + '</div>' +
+        (caso.materia || caso.grado ? '<div style="font-size:11px;color:var(--muted);margin-top:2px">' +
+            [caso.materia, caso.grado, caso.mencion, caso.seccion ? ('Sec. ' + caso.seccion) : null]
+                .filter(Boolean).map(esc).join(' · ') + '</div>' : '') +
         (caso.descripcion ? '<div style="font-size:12px;margin-top:8px;padding:10px;background:var(--surface2);border-radius:7px;line-height:1.6">' + esc(caso.descripcion) + '</div>' : '') +
         '</div>' +
         (caso.estado !== 'Resuelto' && caso.estado !== 'Cerrado' ?
@@ -741,13 +779,92 @@ function _accionBtn(casoId, tipo, icon, label) {
 // ══════════════════════════════════════════════════════════════════════════════
 // NUEVO CASO
 // ══════════════════════════════════════════════════════════════════════════════
-function abrirModalNuevoCaso() {
-    document.getElementById('nc-buscar').value   = '';
-    document.getElementById('nc-est-id').value   = '';
+function _esPrimerCicloCaso(grado) { return PRIMER_CICLO_GRADOS_CASO.indexOf(grado) !== -1; }
+
+function poblarModalidadesCaso() {
+    var sel = document.getElementById('nc-modalidad');
+    if (!sel) return;
+    var actual = sel.value;
+    var html = FILTRO_MEN_CASO ? '' : '<option value="">Todas</option>';
+    html += MENCIONES_PROF.map(function(m){
+        return '<option value="' + m.replace(/"/g,'&quot;') + '">' + m + '</option>';
+    }).join('');
+    sel.innerHTML = html;
+    if (MENCIONES_PROF.includes(actual) || (!FILTRO_MEN_CASO && actual === '')) sel.value = actual;
+}
+
+function poblarMateriasCaso() {
+    var grado     = document.getElementById('nc-grado').value;
+    var primero   = _esPrimerCicloCaso(grado);
+    var modSel    = document.getElementById('nc-modalidad');
+    var modalidad = (!primero && modSel) ? modSel.value : '';
+    var materiaSel = document.getElementById('nc-materia');
+    var porGrado  = PLAN_POR_GRADO_MENCION[grado] || {};
+    var materias;
+    if (modalidad && porGrado[modalidad]) {
+        materias = porGrado[modalidad];
+    } else {
+        var vistas = {};
+        materias = [];
+        Object.keys(porGrado).forEach(function(mk){
+            porGrado[mk].forEach(function(m){
+                if (!vistas[m[0]]) { vistas[m[0]] = true; materias.push(m); }
+            });
+        });
+    }
+    var actual = materiaSel.value;
+    materiaSel.innerHTML = '<option value="">— Sin materia específica —</option>' +
+        materias.map(function(m){ return '<option value="' + m[0].replace(/"/g,'&quot;') + '">' + m[0] + '</option>'; }).join('');
+    if (materias.some(function(m){ return m[0] === actual; })) materiaSel.value = actual;
+}
+
+async function poblarSeccionesCaso(grado) {
+    var sel = document.getElementById('nc-seccion');
+    if (!sel) return;
+    var actual = sel.value;
+    try {
+        var r = await fetch('/api/datos?grado=' + encodeURIComponent(grado));
+        var data = await r.json();
+        var secciones = Array.from(new Set(data.map(function(e){ return e.seccion; }).filter(Boolean))).sort();
+        sel.innerHTML = '<option value="">Todas</option>' + secciones.map(function(s){
+            return '<option value="' + s.replace(/"/g,'&quot;') + '">' + s + '</option>';
+        }).join('');
+        if (secciones.includes(actual)) sel.value = actual;
+    } catch(e) {}
+}
+
+function onGradoChangeCaso() {
+    var grado   = document.getElementById('nc-grado').value;
+    var primero = _esPrimerCicloCaso(grado);
+    document.getElementById('nc-modalidad-wrap').style.display = primero ? 'none' : '';
+    document.getElementById('nc-seccion-wrap').style.display   = primero ? '' : 'none';
+    if (!primero) poblarModalidadesCaso();
+    poblarMateriasCaso();
+    if (primero) poblarSeccionesCaso(grado);
+    limpiarEstudianteCaso();
+}
+
+function onModalidadChangeCaso() {
+    poblarMateriasCaso();
+    limpiarEstudianteCaso();
+}
+
+function onSeccionChangeCaso() {
+    limpiarEstudianteCaso();
+}
+
+function limpiarEstudianteCaso() {
+    document.getElementById('nc-est-id').value = '';
     document.getElementById('nc-est-nombre').textContent = '';
+    document.getElementById('nc-buscar').value = '';
+    document.getElementById('nc-resultados').style.display = 'none';
+}
+
+function abrirModalNuevoCaso() {
     document.getElementById('nc-titulo').value   = '';
     document.getElementById('nc-desc').value     = '';
-    document.getElementById('nc-resultados').style.display = 'none';
+    limpiarEstudianteCaso();
+    onGradoChangeCaso();  // pobla modalidad/sección/materia para el grado por defecto
     document.getElementById('modal-nuevo-caso').classList.add('open');
 }
 
@@ -756,7 +873,14 @@ function buscarEstudiante(q) {
     clearTimeout(_buscarTimer);
     if (q.length < 2) { document.getElementById('nc-resultados').style.display = 'none'; return; }
     _buscarTimer = setTimeout(async function() {
-        var r = await fetch('/api/datos?q=' + encodeURIComponent(q));
+        var grado     = document.getElementById('nc-grado').value;
+        var primero   = _esPrimerCicloCaso(grado);
+        var modSel    = document.getElementById('nc-modalidad');
+        var seccionSel = document.getElementById('nc-seccion');
+        var params = new URLSearchParams({q: q, grado: grado});
+        if (!primero && modSel && modSel.value) params.set('mencion', modSel.value);
+        if (primero && seccionSel && seccionSel.value) params.set('seccion', seccionSel.value);
+        var r = await fetch('/api/datos?' + params.toString());
         var data = await r.json();
         var box = document.getElementById('nc-resultados');
         if (!data.length) { box.style.display='none'; return; }
@@ -800,10 +924,20 @@ async function crearCaso() {
     var desc    = document.getElementById('nc-desc').value.trim();
     if (!estId) { tk('Selecciona un estudiante', 'err'); return; }
     if (!titulo){ tk('Escribe el título del caso', 'err'); return; }
+
+    var grado   = document.getElementById('nc-grado').value;
+    var primero = _esPrimerCicloCaso(grado);
+    var modSel     = document.getElementById('nc-modalidad');
+    var seccionSel = document.getElementById('nc-seccion');
+    var materia = document.getElementById('nc-materia').value;
+    var mencion = (!primero && modSel) ? modSel.value : '';
+    var seccion = (primero && seccionSel) ? seccionSel.value : '';
+
     try {
         var r = await fetch('/api/casos', {
             method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({estudiante_id:parseInt(estId), tipo, titulo, descripcion:desc})
+            body: JSON.stringify({estudiante_id:parseInt(estId), tipo, titulo, descripcion:desc,
+                                   materia:materia, grado:grado, mencion:mencion, seccion:seccion})
         });
         var d = await r.json();
         if (d.ok) {

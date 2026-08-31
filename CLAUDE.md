@@ -147,6 +147,58 @@ python3 -c "import app; print('OK')"
 
 ## Log de sesiones
 
+### 2026-08-31 (sesión 21b — Cuaderno Anecdótico: selector Grado/Modalidad/Materia, misma composición que Pase de Lista)
+
+**Disparador:** Erick reportó que el Cuaderno Anecdótico "solo está el de multimedia" — con
+profesores que ahora dan clases en varios grados y menciones a la vez (ej. Carlos David Caminero:
+Multimedia + Artes Visuales), el flujo de "Nuevo Caso" no tenía forma de decir en qué grado/
+mención/materia ocurrió la incidencia, y el buscador de estudiante no estaba realmente acotado
+al alcance real del profesor.
+
+**Causa raíz encontrada de paso — `/api/datos?q=...` estaba roto:** el buscador de estudiante del
+modal "Nuevo Caso" (`buscarEstudiante()`) mandaba `?q=texto`, pero `routes/estudiantes.py::api_datos()`
+**nunca leía el parámetro `q`** — el buscador en realidad mostraba siempre los primeros 8
+estudiantes del alcance del profesor por orden alfabético, sin importar lo que se escribiera.
+Corregido: filtro `nombre/apellido LIKE` agregado, y excluido del caché (`cache_key`) para que un
+resultado cacheado sin filtro no se sirva cuando sí hay `q`.
+
+**Feature — mismo selector Grado/Modalidad(Mención)/Sección/Materia que Pase de Lista:**
+- `core/helpers.py::resolver_plan_grado_mencion_profesor(prof)` (nuevo) — extrae la lógica que
+  ya tenía `routes/profesor.py::portal_profesor()` (plan por grado+mención, filtrado a las
+  materias del perfil del profesor con fuzzy-match ≥0.75, fallback al plan completo si nada
+  coincide) a un helper reusable, para no duplicarla en dos formularios que evolucionan por
+  separado (el mismo patrón de bug ya visto en sesiones anteriores — "una copia evoluciona, la
+  otra fosiliza"). `routes/profesor.py` NO se tocó — sigue con su lógica inline propia, para no
+  arriesgar una regresión en Pase de Lista ya probado en producción.
+- `routes/casos.py::casos_page()` — para rol `profesor`, usa el helper nuevo (acotado a su
+  propio alcance real). Para coordinación/dirección/psicóloga (que ya ven todos los casos del
+  centro), arma un catálogo completo (los 6 grados × las 5 menciones de 2do ciclo + materias de
+  PRIMER_CICLO para 1ro-3ro) sin restricción — mismo selector, sin acotar.
+- `templates/casos.html` — nuevo bloque en el modal "Nuevo Caso": Grado → Modalidad (2do ciclo) o
+  Sección (1er ciclo, poblada con un fetch a `/api/datos?grado=X` para sacar las secciones reales)
+  → Materia. El buscador de estudiante ahora manda `/api/datos?q=texto&grado=X&mencion=Y` (o
+  `&seccion=Z`) en vez de una búsqueda global sin acotar.
+- `routes/estudiantes.py::api_datos()` — el filtro de grado/mención para rol `profesor` antes
+  SIEMPRE aplicaba el alcance completo del profesor, ignorando cualquier `grado`/`mencion` que
+  llegara por query string. Ahora, si el valor pedido está DENTRO del alcance real del profesor,
+  acota a ese único grado/mención (nunca fuera de él — mismo principio de "acotar, no confiar
+  ciegamente" que ya usa `buscar_existente()` en `core/importar_listado.py`).
+- `casos.materia/grado/mencion/seccion` — 4 columnas nuevas (migración automática en
+  `core/database.py::migrar_bd()`, mismo patrón que `reportes.caso_id`/`calificaciones_periodo.grado`).
+  `POST /api/casos` las guarda; la fecha queda implícita en `casos.creado_en` (ya existía). El
+  detalle del caso (`renderCasoDetalle()`) ahora muestra esa línea de contexto si está presente.
+
+**Verificado localmente** (sin poder levantar el server completo — bloqueado por el mismo
+problema preexistente de Python 3.9 vs. sintaxis `list|None` en `core/rls.py`, no relacionado a
+este cambio): `resolver_plan_grado_mencion_profesor()` probado directo con un perfil simulado
+tipo Carlos (grado='4to,5to', mención='multimedia,artes_visuales') — devuelve correctamente
+Fotografía en 4to Multimedia Y Fotografía Artística en 4to Artes Visuales por separado, sin
+mezclarlas. Migración de `casos` corrida contra la BD local — las 4 columnas se agregan sin error.
+
+**Pendiente:** confirmar en producción que el modal "Nuevo Caso" muestra el selector correcto
+para un profesor multi-mención real (no solo el perfil simulado) y que el buscador de estudiante
+ya encuentra por texto en vez de solo listar los primeros 8 alfabéticos.
+
 ### 2026-08-31 (sesión 21 — Axula móvil: análisis UX + implementación Pase de Lista/Cuaderno + orden de lista = Excel)
 
 **Disparador:** Erick pidió una versión de Axula optimizada para smartphone/tablet en Pase de

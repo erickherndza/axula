@@ -341,6 +341,7 @@ def api_datos():
     ciclo      = request.args.get("ciclo", "").strip()
     solo_notas = request.args.get("solo_con_notas", "0") == "1"
     incluir_inactivos = request.args.get("incluir_inactivos", "0") == "1"
+    q_search   = request.args.get("q", "").strip()
 
     # ── Aplicar restricciones de acceso por rol ──────────────────────────
     _usr = _get_profesor()
@@ -367,11 +368,11 @@ def api_datos():
             if not ciclo:
                 ciclo = ciclo_usr
             # Caché por ciclo
-            if not grado and not mencion and not solo_notas and not incluir_inactivos:
+            if not grado and not mencion and not solo_notas and not incluir_inactivos and not q_search:
                 cache_key = f"api_datos_ciclo_{ciclo}"
         else:
             # Directora / coordinador_general / admin: ven TODO
-            if not grado and not mencion and not solo_notas and not ciclo and not incluir_inactivos:
+            if not grado and not mencion and not solo_notas and not ciclo and not incluir_inactivos and not q_search:
                 cache_key = "api_datos_all"
 
     # Intentar servir desde caché (solo para roles sin filtro forzado)
@@ -390,14 +391,25 @@ def api_datos():
     if not incluir_inactivos:
         query += " AND (condicion IS NULL OR condicion NOT IN ('RETIRADO','TRANSFERIDO'))"
 
-    # Profesores: usar alcance resuelto (multi-grado + mención canónica con acento)
+    # Profesores: usar alcance resuelto (multi-grado + mención canónica con acento).
+    # Si además mandan grado/mención por query string (ej. selector de Grado del
+    # Cuaderno Anecdótico), acotar a ESE grado/mención — pero solo si está dentro
+    # del alcance real del profesor, nunca fuera de él (mismo principio que el
+    # resto de los endpoints de profesor: acotar, no confiar ciegamente).
     if es_profesor:
-        if _prof_grados:
-            query += " AND (" + " OR ".join(["upper(grado) LIKE upper(?)" for _ in _prof_grados]) + ")"
-            params.extend([f"%{g}%" for g in _prof_grados])
-        if _prof_filtro_men and _prof_menciones:
-            query += " AND (" + " OR ".join(["upper(curso) LIKE upper(?)" for _ in _prof_menciones]) + ")"
-            params.extend([f"%{m}%" for m in _prof_menciones])
+        grados_efectivos = _prof_grados
+        if grado and any(grado.strip().lower() == g.strip().lower() for g in _prof_grados):
+            grados_efectivos = [grado.strip()]
+        if grados_efectivos:
+            query += " AND (" + " OR ".join(["upper(grado) LIKE upper(?)" for _ in grados_efectivos]) + ")"
+            params.extend([f"%{g}%" for g in grados_efectivos])
+
+        menciones_efectivas = _prof_menciones
+        if mencion and any(mencion.strip().lower() == m.strip().lower() for m in _prof_menciones):
+            menciones_efectivas = [mencion.strip()]
+        if _prof_filtro_men and menciones_efectivas:
+            query += " AND (" + " OR ".join(["upper(curso) LIKE upper(?)" for _ in menciones_efectivas]) + ")"
+            params.extend([f"%{m}%" for m in menciones_efectivas])
     else:
         if grado:
             query  += " AND upper(grado) LIKE upper(?)"
@@ -411,6 +423,10 @@ def api_datos():
     if seccion:
         query  += " AND upper(seccion)=upper(?)"
         params.append(seccion)
+    if q_search:
+        like = f"%{q_search}%"
+        query += " AND (nombre LIKE ? OR apellido LIKE ? OR (nombre || ' ' || apellido) LIKE ?)"
+        params.extend([like, like, like])
 
     query += " ORDER BY apellido, nombre"
 

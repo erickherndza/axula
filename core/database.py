@@ -288,6 +288,21 @@ def migrar_bd():
     except Exception as _e:
         logger.warning(f"[db] migración reportes.caso_id: {_e}")
 
+    # ── casos.materia/grado/mencion/seccion — contexto de la incidencia ──────
+    # Antes el Cuaderno Anecdótico solo guardaba estudiante+tipo+título/desc,
+    # sin registrar en qué materia/grado/mención (o sección, primer ciclo)
+    # ocurrió — necesario ahora que un mismo profesor puede dar clases en
+    # varios grados y menciones a la vez.
+    try:
+        cols_casos = [r[1] for r in conn.execute("PRAGMA table_info(casos)").fetchall()]
+        for col in ("materia", "grado", "mencion", "seccion"):
+            if col not in cols_casos:
+                conn.execute(f"ALTER TABLE casos ADD COLUMN {col} TEXT")
+        conn.commit()
+        logger.info("  ✓ casos.materia/grado/mencion/seccion verificadas")
+    except Exception as _e:
+        logger.warning(f"[db] migración casos.materia/grado/mencion/seccion: {_e}")
+
     # Fix puntual: sincronizar curso con grado para estudiantes promovidos
     # con código anterior que solo actualizaba grado pero no curso.
     # "4TO MULTIMEDIA" con grado=5TO → "5TO MULTIMEDIA"

@@ -69,6 +69,36 @@ def casos_page():
     else:
         sanciones = SANCIONES_PSICOLOGA
 
+    # ── Selector Grado/Modalidad(Mención)/Materia — misma composición que
+    # Pase de Lista, para que un profesor con varios grados/menciones a la
+    # vez pueda anotar una incidencia en el grado/materia correctos, en vez
+    # de que el Cuaderno Anecdótico solo alcance a una mención (bug real
+    # reportado: "solo está el de multimedia"). Un profesor queda acotado a
+    # su propio alcance (resolver_plan_grado_mencion_profesor, misma lógica
+    # que routes/profesor.py::portal_profesor); coordinación/dirección/
+    # psicóloga ya ven todos los casos del centro, así que reciben el
+    # catálogo completo sin restricción de grado/mención.
+    if rol_n == "profesor":
+        _plan_ctx = resolver_plan_grado_mencion_profesor(u)
+        plan_por_grado_mencion = _plan_ctx["plan_por_grado_mencion"]
+        grados_prof    = _plan_ctx["grados_prof"]
+        menciones_prof = _plan_ctx["menciones_prof"]
+        filtro_men     = _plan_ctx["filtro_men"]
+    else:
+        plan_por_grado_mencion = {}
+        for g in ("1ro", "2do", "3ro"):
+            plan_por_grado_mencion[g] = {
+                "TODAS": [[a, h] for a, h in PLAN_ARTES.get("PRIMER_CICLO", {}).get(g, [])]
+            }
+        for g in ("4to", "5to", "6to"):
+            plan_por_grado_mencion[g] = {
+                m: [[a, h] for a, h in PLAN_ARTES.get(m, {}).get(g, [])]
+                for m in ("MULTIMEDIA", "ARTES VISUALES", "MÚSICA", "TEATRO", "DANZA")
+            }
+        grados_prof    = ["1ro", "2do", "3ro", "4to", "5to", "6to"]
+        menciones_prof = ["MULTIMEDIA", "ARTES VISUALES", "MÚSICA", "TEATRO", "DANZA"]
+        filtro_men     = True
+
     return render_template(
         "casos.html",
         current_user  = u,
@@ -77,6 +107,11 @@ def casos_page():
         es_psicologa  = es_psicologa,
         sanciones     = sanciones,
         nivel_usuario = 3 if es_directora else 2 if es_coord else 1,
+        es_profesor    = (rol_n == "profesor"),
+        plan_por_grado_mencion = plan_por_grado_mencion,
+        grados_prof     = grados_prof,
+        menciones_prof  = menciones_prof,
+        filtro_men      = filtro_men,
     )
 
 
@@ -123,10 +158,16 @@ def listar_casos():
 def crear_caso():
     u = get_usuario()
     d = request.get_json(silent=True) or {}
-    est_id = d.get("estudiante_id")
-    tipo   = d.get("tipo", "conducta")
-    titulo = (d.get("titulo") or "").strip()
-    desc   = (d.get("descripcion") or "").strip()
+    est_id  = d.get("estudiante_id")
+    tipo    = d.get("tipo", "conducta")
+    titulo  = (d.get("titulo") or "").strip()
+    desc    = (d.get("descripcion") or "").strip()
+    # Contexto de la incidencia — en qué materia/grado/mención (o sección,
+    # primer ciclo) ocurrió. La fecha queda implícita en casos.creado_en.
+    materia = (d.get("materia") or "").strip() or None
+    grado   = (d.get("grado") or "").strip() or None
+    mencion = (d.get("mencion") or "").strip() or None
+    seccion = (d.get("seccion") or "").strip() or None
     if not est_id or not titulo:
         return jsonify({"error": "estudiante_id y titulo son requeridos"}), 400
 
@@ -134,10 +175,10 @@ def crear_caso():
         conn.row_factory = sqlite3.Row
         conn.execute("""
             INSERT INTO casos (estudiante_id, abierto_por, tipo, titulo, descripcion,
-                               origen_tipo, origen_id)
-            VALUES (?,?,?,?,?,?,?)
+                               origen_tipo, origen_id, materia, grado, mencion, seccion)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?)
         """, (est_id, u["id"], tipo, titulo, desc,
-              d.get("origen_tipo"), d.get("origen_id")))
+              d.get("origen_tipo"), d.get("origen_id"), materia, grado, mencion, seccion))
         conn.commit()
         caso_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
     return jsonify({"ok": True, "id": caso_id})

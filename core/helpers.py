@@ -60,6 +60,7 @@ __all__ = [
     "_registrar_ausencia_semanal",
     "_render_perfil_staff",
     "_resolver_alcance_profesor",
+    "resolver_plan_grado_mencion_profesor",
     "_semana_iso",
     "_send_recovery_email",
     "_validar_email_institucional",
@@ -1006,6 +1007,78 @@ def _resolver_alcance_profesor(profesor):
         filtro_mencion = False   # no filtrar por mención en la query
 
     return {"grados": grados, "menciones": menciones, "filtro_mencion": filtro_mencion}
+
+
+def resolver_plan_grado_mencion_profesor(prof):
+    """
+    Plan de materias por grado + mención para un profesor — mismo cálculo
+    que usa Pase de Lista (routes/profesor.py::portal_profesor) para su
+    selector Grado/Modalidad/Materia. Extraído aquí para que
+    routes/casos.py (Cuaderno Anecdótico) ofrezca la misma composición sin
+    duplicar la lógica de dos formularios que evolucionan por separado —
+    mismo tipo de bug que ya pasó antes con copias fosilizadas de un form.
+
+    Retorna dict:
+      plan_por_grado_mencion : {grado: {mencion: [[materia,horas],...]}}
+      grados_prof             : list[str]
+      menciones_prof          : list[str]
+      filtro_men               : bool
+
+    Filtra las materias a las asignadas en el perfil del profesor
+    (asignaturas/materia, separadas por '|', match por substring o difuso
+    ≥0.75); si ninguna coincide en ningún grado+mención cae al plan
+    completo sin filtrar, para no dejar al profesor sin nada que elegir.
+    """
+    from core.constants import PLAN_ARTES, PLAN_MULTIMEDIA
+    import unicodedata as _ud
+    from difflib import SequenceMatcher as _SM
+
+    alcance        = _resolver_alcance_profesor(prof)
+    grados_prof    = alcance["grados"]
+    menciones_prof = alcance["menciones"]
+    filtro_men     = alcance["filtro_mencion"]
+    mencion_list   = menciones_prof if (filtro_men and menciones_prof) else ["MULTIMEDIA"]
+    rol_norm       = _normalizar_rol(prof.get("rol", ""))
+
+    def _norm_asig(s):
+        s = (s or "").strip().lower()
+        return _ud.normalize("NFKD", s).encode("ascii", "ignore").decode("ascii")
+
+    asigs_raw  = (prof.get("asignaturas") or prof.get("materia") or "").strip()
+    asigs_prof = [_norm_asig(a) for a in asigs_raw.split("|") if a.strip()]
+
+    def _coincide(nombre_plan):
+        n = _norm_asig(nombre_plan)
+        if any(ap in n or n in ap for ap in asigs_prof):
+            return True
+        return any(_SM(None, ap, n).ratio() >= 0.75 for ap in asigs_prof)
+
+    def _construir(aplicar_filtro):
+        ppgm = {}
+        for gk in (grados_prof if grados_prof else ["4to"]):
+            ppgm[gk] = {}
+            for mk in mencion_list:
+                plan_mencion = PLAN_ARTES.get(mk.upper(), PLAN_MULTIMEDIA)
+                materias_gkm = plan_mencion.get(gk.lower(), plan_mencion.get("4to", []))
+                if aplicar_filtro and asigs_prof and rol_norm == "profesor":
+                    materias_gkm = [(a, h) for a, h in materias_gkm if _coincide(a)]
+                ppgm[gk][mk] = [[a, h] for a, h in materias_gkm]
+        return ppgm
+
+    plan_por_grado_mencion = _construir(aplicar_filtro=True)
+    tiene_algo = any(
+        materias for por_mencion in plan_por_grado_mencion.values()
+        for materias in por_mencion.values()
+    )
+    if asigs_prof and rol_norm == "profesor" and not tiene_algo:
+        plan_por_grado_mencion = _construir(aplicar_filtro=False)
+
+    return {
+        "plan_por_grado_mencion": plan_por_grado_mencion,
+        "grados_prof": grados_prof,
+        "menciones_prof": menciones_prof,
+        "filtro_men": filtro_men,
+    }
 
 
 def _validar_materia_profesor(nombre_materia, nombre_curso, profesor):
