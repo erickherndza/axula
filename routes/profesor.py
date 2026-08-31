@@ -291,7 +291,12 @@ def portal_profesor():
       if filtro_men and menciones_prof:
           q += " AND (" + " OR ".join(["curso LIKE ?" for _ in menciones_prof]) + ")"
           params.extend([f"%{m}%" for m in menciones_prof])
-      q += " ORDER BY grado, apellido, nombre"
+      # Mismo orden en que el coordinador los tiene en el listado oficial
+      # (columna orden_lista, poblada por scripts/aplicar_orden_listado.py) —
+      # así Pase de Lista coincide con el orden real con el que Erick pasa
+      # lista en clase. Estudiantes sin orden importado (orden_lista NULL)
+      # quedan al final de su bloque, por apellido/nombre.
+      q += " ORDER BY grado, curso, (orden_lista IS NULL), orden_lista, apellido, nombre"
 
       with sqlite3.connect(DATABASE, timeout=10) as conn:
           conn.row_factory = sqlite3.Row

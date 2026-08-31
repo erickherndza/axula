@@ -205,7 +205,7 @@ main{max-width:1200px;margin:0 auto;padding:28px 24px;}
 .btn-sec:hover{border-color:var(--accent);color:var(--accent);}
 
 /* ── LISTA DE ESTUDIANTES v3 ── */
-.lista-grid{display:flex;flex-direction:column;gap:5px;}
+.lista-grid{display:flex;flex-direction:column;gap:5px;padding-bottom:100px;}
 /* La fila es el contenedor — no clickeable, los botones sí */
 .est-row{
   display:flex;align-items:center;gap:10px;padding:10px 12px;
@@ -387,7 +387,7 @@ main{max-width:1200px;margin:0 auto;padding:28px 24px;}
   }
   .lista-controls .fld{width:100%;}
   .lista-controls .fld input,
-  .lista-controls .fld select{font-size:12px;padding:8px 10px;width:100%;}
+  .lista-controls .fld select{font-size:16px;padding:8px 10px;width:100%;}
   /* Botones de acción → fila completa abajo */
   .lista-controls > div:last-child{
     grid-column:1/-1;display:flex;gap:8px;
@@ -397,12 +397,23 @@ main{max-width:1200px;margin:0 auto;padding:28px 24px;}
     flex:1;justify-content:center;
   }
 
+  /* ── PASE DE LISTA — barra superior (Fecha/Grado/Modalidad/Materia/Sección) ── */
+  .pase-top-bar{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:end;}
+  .pase-top-bar .fld{width:100%;flex:none;min-width:0;}
+  .pase-top-bar .fld-materia{grid-column:1/-1;}
+  .pase-top-bar .fld input,
+  .pase-top-bar .fld select{font-size:16px;width:100%;}
+  .pase-top-bar .btn-icon,
+  .pase-top-bar #btn-export-csv{justify-self:start;}
+
   /* ── PASE v3 MOBILE ── */
-  .est-row{padding:10px 8px;gap:8px;}
+  .est-row{padding:10px 8px;gap:8px;flex-wrap:wrap;}
   .est-nombre{font-size:12px;}
   .est-ini{width:30px;height:30px;font-size:11px;}
   .est-curso{display:none;}
-  .ab3{padding:8px 8px;font-size:10px;}
+  /* Botones de estado en su propia fila completa, 44px de alto mínimo (Apple HIG / Material / WCAG 2.5.8) */
+  .asist-btns3{flex-basis:100%;gap:8px;}
+  .ab3{flex:1;min-height:44px;padding:8px 4px;font-size:12px;display:flex;align-items:center;justify-content:center;}
   .pase-counters span{font-size:10px;}
   .pase-search{width:100px;font-size:11px;}
   .csv-lbl{display:none;}            /* solo ícono en móvil */
@@ -808,7 +819,7 @@ main{max-width:1200px;margin:0 auto;padding:28px 24px;}
           <select id="lista-modalidad" onchange="onModalidadChangePase();">
           </select>
         </div>
-        <div class="fld" style="flex:2;">
+        <div class="fld fld-materia" style="flex:2;">
           <label>Materia</label>
           <select id="lista-materia" onchange="onMateriaChange();">
           </select>
@@ -868,7 +879,7 @@ main{max-width:1200px;margin:0 auto;padding:28px 24px;}
       <!-- Instrucción rápida -->
       <div style="font-size:10px;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:6px;">
         <i class="fas fa-hand-pointer" style="font-size:11px;"></i>
-        Toca una fila para marcar ausente · toca de nuevo para tardanza · otra vez para justificado · otra para quitar
+        Toca Ausente, Tarde o Excusa junto al nombre · sin marcar = Presente
       </div>
 
       <!-- Leyenda rápida: qué significa cada botón (MINERD) -->

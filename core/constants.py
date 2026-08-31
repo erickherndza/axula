@@ -80,14 +80,14 @@ PLAN_ARTES = {
         "4to": [
             ("Identidad, Cultura y Emprendimiento", 2), ("Historia del Arte Universal", 4),
             ("Lenguaje Plástico y Visual", 6), ("Dibujo Técnico y Artístico", 4),
-            ("Pintura y Técnicas Mixtas", 4),
+            ("Pintura y Técnicas Mixtas", 4), ("Fotografía Artística", 3),
             ("Lengua Española", 3), ("Inglés", 4), ("Matemática", 3),
             ("Ciencias Sociales", 2), ("Ciencias de la Naturaleza", 3),
             ("Formación Integral Humana y Religiosa", 1), ("Educación Física", 1),
         ],
         "5to": [
             ("Escultura y Cerámica", 5), ("Grabado y Serigrafía", 4),
-            ("Diseño y Comunicación Visual", 4), ("Fotografía Artística", 3),
+            ("Diseño y Comunicación Visual", 4),
             ("Apreciación del Arte Dominicano y del Caribe", 3),
             ("Lengua Española", 3), ("Inglés", 4), ("Matemática", 3),
             ("Ciencias Sociales", 2), ("Ciencias de la Naturaleza", 3),
@@ -209,6 +209,11 @@ COLUMNAS_ESTUDIANTES = [
     ("id_evaluacion",     "TEXT",    "''"),
     ("cedula",            "TEXT",    "''"),
     ("grado",             "TEXT",    "'4to'"),
+    # Posición del estudiante en el listado oficial del coordinador (Excel) —
+    # define el orden en que aparece en Pase de Lista dentro de su bloque
+    # grado+mención/sección. NULL = no proviene del listado importado
+    # (queda al final, ordenado por apellido/nombre como respaldo).
+    ("orden_lista",       "INTEGER", "NULL"),
     ("condicion",         "TEXT",    "'ACTIVO'"),
     ("edad",              "REAL",    0),
     # — Comportamiento (indicadores académicos) —

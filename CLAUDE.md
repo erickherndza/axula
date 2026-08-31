@@ -147,6 +147,77 @@ python3 -c "import app; print('OK')"
 
 ## Log de sesiones
 
+### 2026-08-29 (sesión 20 — fix Fotografía 4to/5to Artes Visuales + hallazgo: PLAN_ARTES no coincide con el currículo real en 3 de 4 menciones)
+
+**Disparador:** Erick reportó que en el perfil de Carlos David Caminero, el selector de materias
+de Artes Visuales (con grado=4to seleccionado) no mostraba ninguna opción de Fotografía, aunque
+Carlos sí la imparte ahí. Confirmado por Erick: "se imparte en 4to, ya en quinto no se da
+fotografía en artes visuales."
+
+**Fix aplicado — "Fotografía Artística" movida de 5to a 4to en `PLAN_ARTES["ARTES VISUALES"]`:**
+Corregido en los 3 lugares donde este catálogo vive duplicado (mismo patrón de "copias que
+fosilizan" ya visto en sesiones anteriores):
+- `core/constants.py` — `PLAN_ARTES["ARTES VISUALES"]["4to"/"5to"]`
+- `templates/index.html` — chips de materias en el modal Nuevo/Editar usuario (`mats-artes_visuales`)
+- `templates/planificacion.html` — catálogo JS del generador de planificación ABP
+
+**HALLAZGO IMPORTANTE — no confundir dos catálogos distintos que coexisten en el código:**
+- `PLAN_ARTES` (`core/constants.py`) — nombre + horas + grado, alimenta selectores de materia y
+  el motor de notas/KPIs.
+- `CURRICULUM_MULTIMEDIA` / `CURRICULUM_ARTES_VISUALES` / `CURRICULUM_MUSICA` / `CURRICULUM_TEATRO`
+  (`core/curriculo_*.py`) — contenido pedagógico real (introducción, RAE, contenidos
+  conceptuales/procedimentales/actitudinales) extraído de los 4 documentos oficiales del
+  Bachillerato en Artes (MINERD), usado por `core/curriculo.py` → `routes/planificacion.py` para
+  inyectar currículo oficial en los prompts de IA. Se nota que es extracción real (no inventada):
+  tiene artefactos de OCR como "Instrumento I –Percusión", "C anto Coral I", "Te oría y
+  Entrenamiento Musical III". **Este catálogo NO tiene campo `grado` por materia — solo `horas`.**
+
+**El problema real, más allá de Fotografía:** al comparar nombres de materia entre ambos
+catálogos para las 4 menciones:
+- **MULTIMEDIA** — coinciden bien (por eso el fix de Fotografía se pudo hacer con confianza).
+- **ARTES VISUALES** — **cero coincidencias.** `PLAN_ARTES` tiene 12 materias técnicas
+  ("Historia del Arte Universal", "Lenguaje Plástico y Visual", "Escultura y Cerámica"...) que NO
+  aparecen en el documento real (`CURRICULUM_ARTES_VISUALES` tiene 11 materias totalmente
+  distintas: "Modelado I/II", "Diseño Bi y Tridimensional", "Pintura Mural y Decorativa"...).
+- **MÚSICA** — mismo problema: `PLAN_ARTES` tiene 13 materias genéricas vs. 31 materias reales
+  en `CURRICULUM_MUSICA` (Instrumento I-Guitarra/Teclado/Viento/Percusión, Canto Coral I/II/III,
+  Armonía I, Refuerzo Sonoro, Tecnología Musical...).
+- **TEATRO** — también difiere (16 materias reales vs. 5 genéricas por grado en `PLAN_ARTES`).
+
+Conclusión: `PLAN_ARTES` para Artes Visuales/Música/Teatro parece haber sido construido con
+nombres genéricos en algún momento, no derivado de los documentos oficiales reales. El caso de
+Fotografía que reportó Erick es solo un síntoma puntual de un problema más grande en esas 3
+menciones.
+
+**Por qué no se pudo corregir de una vez — los 4 PDF originales ya no existen:**
+`scripts/indexar_curriculos.py` (script viejo, del sistema institucional) muestra que los 4
+documentos (`Bachillerato-multimedia.pdf`, `Bachillerato-en-musicapdf.pdf`,
+`Bachillerato-en-teatro.pdf`, `Bachillerato-artes-visuales.pdf`) se indexaron una sola vez a un
+sistema RAG (`core.rag.procesar_normativa`) desde la ruta vieja
+`/Users/erickhernandez/elearning/uploads/archivos/`, que ya no existe en este Mac. El módulo que
+guardaba ese texto completo (`normativa`) fue eliminado en la purga de la sesión 14. Verificado
+que `database.db` local no tiene ninguna tabla de normativa/RAG. Sin el campo `grado` en
+`core/curriculo_*.py` y sin los PDF originales ni su texto indexado, no hay forma confiable de
+reconstruir `PLAN_ARTES` para Artes Visuales/Música/Teatro sin adivinar — mismo tipo de error
+que ya se cometió una vez con Fotografía, pero multiplicado por ~58 materias.
+
+**PENDIENTE PARA LA PRÓXIMA SESIÓN:**
+Erick va a enviar los 4 documentos oficiales del Bachillerato en Artes (Multimedia ✓ ya
+correcto, Artes Visuales, Música, Teatro — estos 3 con discrepancias confirmadas) o al menos la
+sección/cuadro de "distribución del tiempo" (asignatura × grado × horas) de cada uno. Con eso:
+1. Reconstruir `PLAN_ARTES["ARTES VISUALES"]`, `PLAN_ARTES["MÚSICA"]`, `PLAN_ARTES["TEATRO"]` en
+   `core/constants.py` con los nombres y grados reales del documento.
+2. Replicar el mismo cambio en `templates/index.html` (chips `mats-artes_visuales`,
+   `mats-musica`, `mats-teatro`) y `templates/planificacion.html` (catálogo JS) — los 3 lugares
+   donde `PLAN_ARTES` vive duplicado, mismo patrón que el fix de Fotografía de esta sesión.
+3. Revisar si `core/curriculo_artes_visuales.py`/`_musica.py`/`_teatro.py` necesitan contenido
+   adicional para materias que `PLAN_ARTES` tenga y el currículo real no cubra (o viceversa).
+4. Confirmar con Erick si los perfiles de profesores de Artes Visuales/Música/Teatro ya
+   existentes en BD tienen materias asignadas con los nombres viejos/genéricos de `PLAN_ARTES` —
+   si es así, esos perfiles quedarán con materias "huérfanas" tras la migración de nombres y
+   habrá que reasignarlas a mano (mismo patrón de riesgo que `scripts/auditar_materias_profesores.py`
+   ya audita para Multimedia).
+
 ### 2026-08-28 (sesión 19 — Pase de Lista Grado+Modalidad, cargador adaptativo de Listado de Estudiantes, resets de notas/estudiantes)
 
 **Disparador:** varios hilos que terminaron entrelazados — (1) pase de lista mezclaba estudiantes

@@ -177,6 +177,37 @@ main{max-width:1300px;margin:0 auto;padding:20px 24px}
 .dd-item{padding:8px 12px;border-radius:7px;font-size:13px;color:var(--text);
   cursor:pointer;display:flex;align-items:center;gap:8px;transition:background .15s;}
 .dd-item:hover{background:var(--hover,rgba(255,255,255,.05));}
+
+/* ══════════════════════════════════════════════════════════════
+   MÓVIL — Cuaderno Anecdótico no tenía ninguna regla responsive
+   ══════════════════════════════════════════════════════════════ */
+@media(max-width:768px){
+  html,body{overflow-x:hidden;width:100%;}
+  main{padding:14px 12px;}
+
+  /* La columna lateral fija de 320px dejaba ~35-50px para el panel
+     principal en un teléfono — se apila en una sola columna. */
+  .casos-grid{grid-template-columns:1fr;gap:14px;min-height:0;}
+  .casos-sidebar{max-height:320px;}
+
+  .acciones-grid{grid-template-columns:repeat(2,1fr);}
+}
+
+@media(max-width:640px){
+  /* Modal como hoja inferior a ancho completo, en vez de caja
+     centrada de escritorio (520px) — evita el scroll doble. */
+  .modal-overlay{align-items:flex-end;}
+  .modal{
+    width:100%;max-width:100%;border-radius:16px 16px 0 0;
+    max-height:92vh;padding:20px 16px calc(20px + env(safe-area-inset-bottom));
+  }
+
+  /* 16px evita el zoom automático de iOS Safari al enfocar el campo */
+  .form-input,.form-select,.form-textarea{font-size:16px;}
+
+  /* Resultados del buscador de estudiante — más alto para el dedo */
+  .dd-item{padding:12px;}
+}
 </style>
 <script src="/static/theme.js"></script>
 
