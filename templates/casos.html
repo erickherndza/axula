@@ -355,6 +355,11 @@ main{max-width:1300px;margin:0 auto;padding:20px 24px}
     <div class="modal-title">Abrir Nuevo Caso</div>
     <div class="modal-sub">El caso quedará vinculado al expediente del estudiante</div>
 
+    <div class="form-group">
+      <label class="form-label">Fecha del incidente *</label>
+      <input class="form-input" type="date" id="nc-fecha" value="{{ fecha_hoy }}" max="{{ fecha_hoy }}">
+    </div>
+
     <!-- Contexto de la incidencia — misma composición que Pase de Lista,
          para profesores con varios grados/menciones a la vez -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px">
@@ -622,7 +627,7 @@ function renderLista() {
             '<div class="ci-header">' +
             '<span>' + (TIPO_EMOJI[c.tipo] || '📋') + '</span>' +
             '<span class="ci-nombre">' + esc(c.nombre_estudiante || '--') + '</span>' +
-            '<span class="ci-fecha">' + fmtFecha(c.creado_en) + '</span>' +
+            '<span class="ci-fecha">' + fmtFecha(c.fecha_incidente || c.creado_en) + '</span>' +
             '</div>' +
             '<div class="ci-titulo">' + esc(c.titulo) + '</div>' +
             '<div class="ci-footer">' +
@@ -679,7 +684,9 @@ function renderCasoDetalle(data) {
         '<div style="font-family:\'Syne\',sans-serif;font-size:16px;font-weight:700;margin-bottom:4px">' + esc(caso.titulo) + '</div>' +
         '<div style="font-size:12px;color:var(--muted)">Estudiante: <a href="/perfil/' + est.id + '" style="color:var(--accent);text-decoration:none">' + esc(est.nombre + ' ' + est.apellido) + '</a> · ' +
         (est.grado||'') + ' ' + (est.curso||'') + '</div>' +
-        '<div style="font-size:11px;color:var(--muted);margin-top:3px">Abierto: ' + fmtFecha(caso.creado_en) + ' · Por: ' + esc(caso.abierto_por_nombre||'sistema') + '</div>' +
+        '<div style="font-size:11px;color:var(--muted);margin-top:3px">' +
+            (caso.fecha_incidente ? 'Incidente: <strong style="color:var(--text)">' + fmtFecha(caso.fecha_incidente) + '</strong> · ' : '') +
+            'Registrado: ' + fmtFecha(caso.creado_en) + ' · Por: ' + esc(caso.abierto_por_nombre||'sistema') + '</div>' +
         (caso.materia || caso.grado ? '<div style="font-size:11px;color:var(--muted);margin-top:2px">' +
             [caso.materia, caso.grado, caso.mencion, caso.seccion ? ('Sec. ' + caso.seccion) : null]
                 .filter(Boolean).map(esc).join(' · ') + '</div>' : '') +
@@ -861,6 +868,10 @@ function limpiarEstudianteCaso() {
 }
 
 function abrirModalNuevoCaso() {
+    var hoy = new Date().toISOString().slice(0,10);
+    var fechaEl = document.getElementById('nc-fecha');
+    fechaEl.value = hoy;
+    fechaEl.max   = hoy;
     document.getElementById('nc-titulo').value   = '';
     document.getElementById('nc-desc').value     = '';
     limpiarEstudianteCaso();
@@ -918,26 +929,31 @@ function selEstudiante(id, nombre) {
 }
 
 async function crearCaso() {
+    var fecha   = document.getElementById('nc-fecha').value;
     var estId   = document.getElementById('nc-est-id').value;
     var titulo  = document.getElementById('nc-titulo').value.trim();
     var tipo    = document.getElementById('nc-tipo').value;
     var desc    = document.getElementById('nc-desc').value.trim();
+    var grado   = document.getElementById('nc-grado').value;
+    if (!fecha) { tk('Selecciona la fecha del incidente', 'err'); return; }
+    if (!grado) { tk('Selecciona el grado', 'err'); return; }
     if (!estId) { tk('Selecciona un estudiante', 'err'); return; }
     if (!titulo){ tk('Escribe el título del caso', 'err'); return; }
 
-    var grado   = document.getElementById('nc-grado').value;
     var primero = _esPrimerCicloCaso(grado);
     var modSel     = document.getElementById('nc-modalidad');
     var seccionSel = document.getElementById('nc-seccion');
     var materia = document.getElementById('nc-materia').value;
     var mencion = (!primero && modSel) ? modSel.value : '';
     var seccion = (primero && seccionSel) ? seccionSel.value : '';
+    if (!primero && !mencion) { tk('Selecciona la modalidad', 'err'); return; }
 
     try {
         var r = await fetch('/api/casos', {
             method:'POST', headers:{'Content-Type':'application/json'},
             body: JSON.stringify({estudiante_id:parseInt(estId), tipo, titulo, descripcion:desc,
-                                   materia:materia, grado:grado, mencion:mencion, seccion:seccion})
+                                   fecha_incidente:fecha, materia:materia, grado:grado,
+                                   mencion:mencion, seccion:seccion})
         });
         var d = await r.json();
         if (d.ok) {

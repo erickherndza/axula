@@ -112,6 +112,7 @@ def casos_page():
         grados_prof     = grados_prof,
         menciones_prof  = menciones_prof,
         filtro_men      = filtro_men,
+        fecha_hoy       = date.today().isoformat(),
     )
 
 
@@ -162,23 +163,33 @@ def crear_caso():
     tipo    = d.get("tipo", "conducta")
     titulo  = (d.get("titulo") or "").strip()
     desc    = (d.get("descripcion") or "").strip()
-    # Contexto de la incidencia — en qué materia/grado/mención (o sección,
-    # primer ciclo) ocurrió. La fecha queda implícita en casos.creado_en.
+    # Contexto de la incidencia — cuándo ocurrió (no necesariamente "hoy": el
+    # profesor puede estar registrando algo de un día anterior) y en qué
+    # materia/grado/mención (o sección, primer ciclo). fecha_incidente es
+    # distinta de creado_en (esa sigue siendo la marca de auditoría de
+    # cuándo se guardó el registro en el sistema).
+    fecha_incidente = (d.get("fecha_incidente") or "").strip()
     materia = (d.get("materia") or "").strip() or None
     grado   = (d.get("grado") or "").strip() or None
     mencion = (d.get("mencion") or "").strip() or None
     seccion = (d.get("seccion") or "").strip() or None
     if not est_id or not titulo:
         return jsonify({"error": "estudiante_id y titulo son requeridos"}), 400
+    if not fecha_incidente:
+        return jsonify({"error": "La fecha del incidente es requerida"}), 400
+    if not grado:
+        return jsonify({"error": "El grado es requerido"}), 400
 
     with sqlite3.connect(DATABASE, timeout=10) as conn:
         conn.row_factory = sqlite3.Row
         conn.execute("""
             INSERT INTO casos (estudiante_id, abierto_por, tipo, titulo, descripcion,
-                               origen_tipo, origen_id, materia, grado, mencion, seccion)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?)
+                               origen_tipo, origen_id, materia, grado, mencion, seccion,
+                               fecha_incidente)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
         """, (est_id, u["id"], tipo, titulo, desc,
-              d.get("origen_tipo"), d.get("origen_id"), materia, grado, mencion, seccion))
+              d.get("origen_tipo"), d.get("origen_id"), materia, grado, mencion, seccion,
+              fecha_incidente))
         conn.commit()
         caso_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
     return jsonify({"ok": True, "id": caso_id})

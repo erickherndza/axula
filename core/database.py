@@ -295,13 +295,17 @@ def migrar_bd():
     # varios grados y menciones a la vez.
     try:
         cols_casos = [r[1] for r in conn.execute("PRAGMA table_info(casos)").fetchall()]
-        for col in ("materia", "grado", "mencion", "seccion"):
+        for col in ("materia", "grado", "mencion", "seccion", "fecha_incidente"):
             if col not in cols_casos:
                 conn.execute(f"ALTER TABLE casos ADD COLUMN {col} TEXT")
         conn.commit()
-        logger.info("  ✓ casos.materia/grado/mencion/seccion verificadas")
+        # Backfill de fecha_incidente para casos abiertos antes de este campo —
+        # usar la fecha de creación como mejor aproximación disponible.
+        conn.execute("UPDATE casos SET fecha_incidente = date(creado_en) WHERE fecha_incidente IS NULL")
+        conn.commit()
+        logger.info("  ✓ casos.materia/grado/mencion/seccion/fecha_incidente verificadas")
     except Exception as _e:
-        logger.warning(f"[db] migración casos.materia/grado/mencion/seccion: {_e}")
+        logger.warning(f"[db] migración casos.materia/grado/mencion/seccion/fecha_incidente: {_e}")
 
     # Fix puntual: sincronizar curso con grado para estudiantes promovidos
     # con código anterior que solo actualizaba grado pero no curso.

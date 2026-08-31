@@ -185,8 +185,28 @@ resultado cacheado sin filtro no se sirva cuando sí hay `q`.
   ciegamente" que ya usa `buscar_existente()` en `core/importar_listado.py`).
 - `casos.materia/grado/mencion/seccion` — 4 columnas nuevas (migración automática en
   `core/database.py::migrar_bd()`, mismo patrón que `reportes.caso_id`/`calificaciones_periodo.grado`).
-  `POST /api/casos` las guarda; la fecha queda implícita en `casos.creado_en` (ya existía). El
-  detalle del caso (`renderCasoDetalle()`) ahora muestra esa línea de contexto si está presente.
+  `POST /api/casos` las guarda. El detalle del caso (`renderCasoDetalle()`) ahora muestra esa
+  línea de contexto si está presente.
+
+**Corrección en la misma sesión — fecha del incidente explícita, no implícita:** Erick aclaró que
+`creado_en` (cuándo se guardó el registro) NO es lo mismo que quería — necesita poder elegir la
+fecha en que **ocurrió** el incidente (puede ser un día anterior al que se registra), y que
+Fecha/Estudiante/Grado/Mención sean pasos obligatorios antes de poder guardar, no opcionales.
+- `casos.fecha_incidente` — columna nueva (TEXT, `YYYY-MM-DD`), separada de `creado_en` (que
+  sigue siendo la marca de auditoría real de cuándo se guardó). Backfill automático para casos
+  viejos: `fecha_incidente = date(creado_en)` como mejor aproximación disponible.
+- Modal "Nuevo Caso": campo Fecha (`<input type="date">`, tope en hoy — no se puede registrar un
+  incidente "futuro") como primer campo, encima del selector Grado/Modalidad/Materia.
+  `abrirModalNuevoCaso()` la resetea a la fecha real del día cada vez que se abre el modal (JS,
+  no el valor renderizado en la carga de la página — para no quedar desactualizada si la pestaña
+  lleva rato abierta).
+- `crearCaso()` ahora valida en el cliente: fecha, grado, modalidad (si es 2do ciclo) y
+  estudiante son obligatorios antes de permitir guardar — antes solo exigía estudiante+título.
+  `POST /api/casos` valida lo mismo server-side (`fecha_incidente` y `grado` requeridos, 400 si
+  faltan) — no confiar solo en la validación del cliente.
+- Listado lateral (`renderLista()`) y detalle del caso muestran `fecha_incidente` (fecha real del
+  incidente) en vez de `creado_en` — el detalle además muestra ambas por separado ("Incidente: X
+  · Registrado: Y") para no perder el dato de auditoría.
 
 **Verificado localmente** (sin poder levantar el server completo — bloqueado por el mismo
 problema preexistente de Python 3.9 vs. sintaxis `list|None` en `core/rls.py`, no relacionado a
