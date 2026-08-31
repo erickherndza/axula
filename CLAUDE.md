@@ -147,6 +147,67 @@ python3 -c "import app; print('OK')"
 
 ## Log de sesiones
 
+### 2026-08-31 (sesión 21 — Axula móvil: análisis UX + implementación Pase de Lista/Cuaderno + orden de lista = Excel)
+
+**Disparador:** Erick pidió una versión de Axula optimizada para smartphone/tablet en Pase de
+Lista y Cuaderno Anecdótico. Pidió explícitamente investigar estándares de UX/UI móvil primero,
+documentar el análisis, y solo implementar después de su revisión — flujo en 2 fases separadas.
+
+**Fase 1 — Análisis (agente en background, sin tocar código):** investigó estándares (Apple HIG,
+Material Design, WCAG 2.5.8, thumb-zone research de NN/g) y los aplicó al código real de
+`templates/profesor.html` y `templates/casos.html` (análisis estático — el resize del viewport de
+Chrome no se aplica de forma confiable en este entorno de automatización, tanto para el agente
+como para mí en el intento posterior de verificación visual; no vale la pena seguir intentándolo,
+usar análisis de código + confirmación del usuario en su propio teléfono). Documento publicado
+como Artifact con 6 hallazgos priorizados. Erick lo revisó y pidió implementar todo.
+
+**Fase 2 — Implementación (commit `cd66d62`):**
+- `.ab3` (botones Ausente/Tarde/Excusa): en móvil pasan a su propia fila completa (`flex-basis:100%`
+  en `.asist-btns3`) con `min-height:44px` — antes ~26px, bajo el mínimo táctil de Apple/Material/
+  WCAG 2.5.8. Se descartó agrandarlos en línea junto al nombre porque aplastaba `.est-nombre` a
+  unos pocos px de ancho — mejor bajarlos a una fila propia.
+- `.pase-top-bar` (Fecha/Grado/Modalidad/Materia/Sección): cuadrícula compacta 2 columnas en móvil,
+  mismo patrón que ya tenía `.lista-controls`. Materia (`.fld-materia`, clase nueva) ocupa la fila
+  completa por ser el campo que más cambia.
+- Fuente 16px en inputs/selects de ambas pantallas en móvil (antes 12-13px) — evita el zoom
+  automático de iOS Safari al enfocar un campo.
+- `templates/casos.html` no tenía NINGUNA regla `@media` — agregado bloque completo: `.casos-grid`
+  colapsa a 1 columna en móvil (antes 320px+resto, inutilizable en un teléfono), modal "Nuevo Caso"
+  se abre como hoja inferior a ancho completo en vez de caja centrada de escritorio.
+- Texto de ayuda corregido en Pase de Lista (describía una interacción de "toque cíclico" que no
+  existe en la UI real — quedó de una versión anterior del diseño).
+- **Bug real encontrado por Erick después del deploy** (no estaba en el análisis original): la
+  barra flotante fija de "Guardar lista" tapaba el último estudiante de la lista en móvil, porque
+  `position:fixed` no reserva espacio propio en el flujo del documento. Fix: `.lista-grid{padding-
+  bottom:100px}` — espacio de reserva permanente al final de la lista, aplica a todos los tamaños.
+
+**Feature nueva — orden de Pase de Lista = orden real del listado del coordinador:**
+Erick pidió que el orden de Pase de Lista coincida con "LISTADO AÑO 2026-2027.xlsx". Verificado:
+para 4to Multimedia el orden actual (alfabético por apellido) YA coincidía con el orden del Excel
+— pero por coincidencia, no por diseño (el Excel resultó estar también ordenado alfabéticamente
+en ese bloque). En vez de dejarlo como una coincidencia frágil, se hizo explícito:
+- Columna nueva `estudiantes.orden_lista` (INTEGER, NULL) en `core/constants.py::COLUMNAS_ESTUDIANTES`
+  — se auto-migra sola al reiniciar (mecanismo ya existente del proyecto, sin tocar la BD a mano).
+- `routes/profesor.py::portal_profesor()` — `ORDER BY grado, curso, (orden_lista IS NULL),
+  orden_lista, apellido, nombre` (agrupa por curso primero para no interleavear bloques de distinta
+  mención que comparten grado cuando un profesor técnico da varias; NULL-tolerant — quien no tenga
+  orden importado cae al final de su bloque, alfabético).
+- `scripts/aplicar_orden_listado.py` (nuevo) — lee el Excel con `core/importar_listado.py`
+  (mismo parser/matching de la sesión 19, reutilizado tal cual) y fija `orden_lista` = posición
+  del alumno dentro de su bloque. Dry-run por defecto. NO crea ni actualiza otros datos del
+  estudiante, solo el campo de orden — si el alumno del archivo no matchea nadie en BD, se reporta
+  y se omite (no crea duplicados).
+- **Confirmado por Erick en producción:** ambos fixes (barra flotante + orden de lista) funcionan
+  correctamente tras correr el script en Render Shell.
+
+**LECCIÓN — el resize de viewport de Chrome no funciona en este entorno:** tanto el agente de
+análisis como yo, en intentos independientes, confirmamos que `resize_window` no cambia el tamaño
+real de la ventana/viewport en esta configuración de automatización (probado sobre una ventana ya
+abierta y sobre una pestaña nueva propia — ninguna cambió de tamaño). No vale la pena seguir
+intentando emulación de dispositivo móvil por este camino; para verificar cambios de CSS responsive
+hay que confiar en el análisis estático del código (matemática de breakpoints/box model, que es
+determinística) y pedirle confirmación visual a Erick en su propio teléfono después del deploy.
+
 ### 2026-08-29 (sesión 20 — fix Fotografía 4to/5to Artes Visuales + hallazgo: PLAN_ARTES no coincide con el currículo real en 3 de 4 menciones)
 
 **Disparador:** Erick reportó que en el perfil de Carlos David Caminero, el selector de materias
