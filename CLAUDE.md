@@ -147,6 +147,56 @@ python3 -c "import app; print('OK')"
 
 ## Log de sesiones
 
+### 2026-09-01 (sesión 22b — 4to bug de la adecuación curricular: catálogo de materias de `/planificacion` seguía con nombres viejos)
+
+**Disparador:** Erick probó los cambios y reportó que "Crear Rúbrica" seguía mostrando materias
+viejas/inventadas que no correspondían al currículo ya corregido.
+
+**Causa raíz — un CUARTO catálogo hardcodeado, este en el frontend:**
+`templates/planificacion.html::MATERIAS_POR_MENCION` (JS puro, ~115 líneas) alimenta los 3
+selectores de materia de `/planificacion` (Planificación de Clase `p-`, Crear Rúbrica `r-`,
+Estrategias Didácticas `e-` — los 3 comparten `actualizarMaterias(prefix)`). Tenía los mismos
+nombres inventados que ya se habían corregido en `PLAN_ARTES` — nadie lo tocó porque es JS
+embebido en el template, no algo que `core/constants.py` alimente automáticamente.
+
+**Segundo problema, más profundo, que solo salió al revisar el flujo completo:** cada
+`<option>` de este catálogo tenía como `value` un slug hecho a mano con guion bajo (ej.
+`"Lenguaje_Plastico_Visual"`), no el nombre real de la materia — ese slug es literalmente lo que
+se manda al backend (`document.getElementById('r-materia').value`). Ni siquiera arreglando los
+textos visibles del catálogo se iba a resolver nada, porque el backend nunca iba a poder
+matchear un slug inventado contra los nombres reales de `core/curriculo_*.py`.
+
+**Tercer problema — `cargarIndicadores()` (la función que realmente llena "Crear Rúbrica" con
+indicadores) nunca mandaba `mencion` al backend:** `fetch('/api/planificacion/curriculo/' +
+materia)` sin `?mencion=`, y `routes/planificacion.py::obtener_curriculo()` cae a
+`request.args.get("mencion", "MULTIMEDIA")` — o sea, sin importar qué mención estuviera
+seleccionada, SIEMPRE buscaba en el currículo de Multimedia. Mismo bug en `cargarCurriculo()`
+(usada por Planificación de Clase) y en el fallback de `actualizarTemas()` — 3 funciones en
+total. Los 2 generadores que sí llamaban al backend con el prompt final (`generarRubrica()`,
+`generarEstrategia()`, `generarPlanificacion()`) YA mandaban `mencion` correctamente — el bug
+estaba solo en las funciones de preview/autocompletado, no en la generación final.
+
+**Fix (`templates/planificacion.html`):**
+- `MATERIAS_POR_MENCION` ya no es un objeto hardcodeado — se construye en el momento desde
+  `plan_tecnicas` (la misma variable que Flask ya inyecta para el tab ABP, derivada en vivo de
+  `PLAN_ARTES`), así que el `value` de cada `<option>` es el nombre EXACTO que
+  `core.curriculo.get_asignatura()` puede encontrar por match exacto de diccionario — no un slug
+  ni una suposición. Nunca más se desincroniza de `PLAN_ARTES`, porque ya no es una copia.
+- `cargarCurriculo()`, `cargarIndicadores()`, y el fallback de `actualizarTemas()` — las 3 ahora
+  mandan `?mencion=` (leído del `-mencion` select correspondiente) y usan `encodeURIComponent()`
+  en la URL (los nombres reales tienen espacios y acentos, los slugs viejos no — por eso nunca
+  hizo falta encodear antes, era un accidente que funcionaba).
+
+**LECCIÓN — un catálogo de materias hardcodeado en el FRONTEND es tan peligroso como uno en el
+backend:** esta sesión ya había encontrado y corregido 2 catálogos rotos en Python
+(`core/constants.py`, un dict local en `core/helpers.py`) — pero `templates/planificacion.html`
+tenía un tercero en JS que nadie relacionó con el mismo bug porque vive en un archivo distinto,
+en un lenguaje distinto. Antes de dar una corrección curricular por completa, buscar
+`grep -rn "Lenguaje Plástico\|Escultura y Cerámica\|Instrumento Principal"` (o cualquier nombre
+inventado conocido) en TODO el repo, no solo en `core/`.
+
+**Pendiente:** Erick va a volver a probar Crear Rúbrica con esta corrección.
+
 ### 2026-09-01 (sesión 22 — adecuación curricular real: PLAN_ARTES y core/curriculo_*.py reescritos contra los 4 PDF oficiales)
 
 **Disparador:** Erick trabajó por fuera (otra sesión/herramienta, con los 4 PDF oficiales del

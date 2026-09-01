@@ -799,7 +799,9 @@
         const box = document.getElementById(boxId);
         if (!materia) { box.classList.remove('show'); return; }
 
-        const res = await fetch(`/api/planificacion/curriculo/${materia}`);
+        const mencionEl = document.getElementById(selectId.replace('-materia', '-mencion'));
+        const mencion = mencionEl ? mencionEl.value : 'MULTIMEDIA';
+        const res = await fetch(`/api/planificacion/curriculo/${encodeURIComponent(materia)}?mencion=${encodeURIComponent(mencion)}`);
         const c = await res.json();
         if (c.error) { box.classList.remove('show'); return; }
 
@@ -837,7 +839,9 @@
         let c = window._curriculoCache;
         if (!c) {
             try {
-                const res = await fetch(`/api/planificacion/curriculo/${materia}`);
+                const mencionEl = document.getElementById('p-mencion');
+                const mencion = mencionEl ? mencionEl.value : 'MULTIMEDIA';
+                const res = await fetch(`/api/planificacion/curriculo/${encodeURIComponent(materia)}?mencion=${encodeURIComponent(mencion)}`);
                 c = await res.json();
                 window._curriculoCache = c;
             } catch(e) { return; }
@@ -878,11 +882,13 @@
 
     async function cargarIndicadores() {
         const materia = document.getElementById('r-materia').value;
+        const mencionEl = document.getElementById('r-mencion');
+        const mencion = mencionEl ? mencionEl.value : 'MULTIMEDIA';
         const cont = document.getElementById('r-indicadores');
         indicadorSeleccionado = '';
         if (!materia) return;
 
-        const res = await fetch(`/api/planificacion/curriculo/${materia}`);
+        const res = await fetch(`/api/planificacion/curriculo/${encodeURIComponent(materia)}?mencion=${encodeURIComponent(mencion)}`);
         const c = await res.json();
 
         cont.innerHTML = c.indicadores_logro.map(ind => `
@@ -1080,123 +1086,28 @@ async function verDetalleCurriculo(materia, card) {
     
 // ══════════════════════════════════════════════════════════════════════════════
 //  MATERIAS POR MENCIÓN Y GRADO — Currículo MINERD Modalidad Artes
+//  Antes era un objeto hardcodeado con nombres inventados que quedaron
+//  desactualizados en cuanto se corrigió el currículo real (PLAN_ARTES,
+//  core/constants.py) — el valor de cada <option> es el nombre EXACTO que
+//  usa core.curriculo.get_asignatura(), en vez de un slug hecho a mano que
+//  ya no coincidía con nada. Se construye desde plan_tecnicas (el mismo
+//  dato que ya usa el tab ABP, ver más abajo), así que siempre refleja el
+//  PLAN_ARTES real sin necesidad de mantener una copia aparte.
 // ══════════════════════════════════════════════════════════════════════════════
-var MATERIAS_POR_MENCION = {
-    "MULTIMEDIA": {
-        "4to": [
-            ["Fotografía", "📸 Fotografía"],
-            ["Lenguaje_Visual", "🎨 Lenguaje Visual, Dibujo y Creación de Personajes"],
-            ["Diseño", "🖥️ Diseño Básico y Expresión Visual"],
-            ["Identidad_Cultura_Emprendimiento", "🌍 Identidad, Cultura y Emprendimiento"],
-            ["Historia_Arte_Universal", "🏛️ Historia del Arte Universal y la Estética Digital"],
-        ],
-        "5to": [
-            ["Diseño_Web", "🌐 Diseño Web"],
-            ["Diseño_Grafico", "🖼️ Diseño Gráfico"],
-            ["Publicidad_Creatividad", "📢 Publicidad y Creatividad"],
-            ["Camara_Video", "🎥 Operación de Cámara de Video"],
-            ["Guion", "📝 Guión"],
-            ["Medios_Comunicacion", "📺 Medios de Comunicación"],
-        ],
-        "6to": [
-            ["Redes_Sociales", "📱 Redes Sociales"],
-            ["Produccion_Audiovisual", "🎬 Producción Audiovisual"],
-            ["Videoarte", "🎞️ Videoarte"],
-            ["Animacion", "✨ Animación"],
-            ["Edicion_Sonido", "🎵 Edición, Sonido y Musicalización"],
-        ],
-    },
-    "ARTES VISUALES": {
-        "4to": [
-            ["Identidad_Cultura_Emprendimiento", "🌍 Identidad, Cultura y Emprendimiento"],
-            ["Historia_Arte_Universal", "🏛️ Historia del Arte Universal"],
-            ["Lenguaje_Plastico_Visual", "🎨 Lenguaje Plástico y Visual"],
-            ["Dibujo_Tecnico_Artistico", "✏️ Dibujo Técnico y Artístico"],
-            ["Pintura_Tecnicas_Mixtas", "🖌️ Pintura y Técnicas Mixtas"],
-        ],
-        "5to": [
-            ["Escultura_Ceramica", "🏺 Escultura y Cerámica"],
-            ["Grabado_Serigrafia", "🖨️ Grabado y Serigrafía"],
-            ["Diseno_Comunicacion_Visual", "🎯 Diseño y Comunicación Visual"],
-            ["Fotografia_Artistica", "📸 Fotografía Artística"],
-            ["Apreciacion_Arte_Dominicano", "🇩🇴 Apreciación del Arte Dominicano y del Caribe"],
-        ],
-        "6to": [
-            ["Arte_Digital_Multimedia", "💻 Arte Digital y Multimedia"],
-            ["Gestion_Produccion_Artistica", "🏢 Gestión y Producción Artística"],
-            ["Proyecto_Artes_Visuales", "🎭 Proyecto de Producción en Artes Visuales"],
-            ["Taller_Restauracion", "🔧 Taller de Restauración y Patrimonio"],
-        ],
-    },
-    "MÚSICA": {
-        "4to": [
-            ["Identidad_Cultura_Emprendimiento", "🌍 Identidad, Cultura y Emprendimiento"],
-            ["Historia_Arte_Universal", "🏛️ Historia de la Música Universal"],
-            ["Teoria_Solfeo", "🎼 Teoría y Solfeo"],
-            ["Instrumento_Principal_I", "🎸 Instrumento Principal I"],
-            ["Coro_Conjunto_Musical_I", "🎤 Coro y Conjunto Musical I"],
-        ],
-        "5to": [
-            ["Instrumento_Principal_II", "🎸 Instrumento Principal II"],
-            ["Armonia_Contrapunto", "🎵 Armonía y Contrapunto"],
-            ["Coro_Conjunto_Musical_II", "🎤 Coro y Conjunto Musical II"],
-            ["Musica_Dominicana_Caribe", "🇩🇴 Música Dominicana y del Caribe"],
-            ["Composicion_Arreglos", "📝 Composición y Arreglos Básicos"],
-        ],
-        "6to": [
-            ["Instrumento_Principal_III", "🎸 Instrumento Principal III"],
-            ["Produccion_Musical_Digital", "🎧 Producción Musical Digital"],
-            ["Direccion_Coral", "🎼 Dirección Coral y Orquestal"],
-            ["Proyecto_Musical", "🎵 Proyecto Musical Emprendedor"],
-            ["Musica_Camara", "🎻 Música de Cámara"],
-        ],
-    },
-    "TEATRO": {
-        "4to": [
-            ["Identidad_Cultura_Emprendimiento", "🌍 Identidad, Cultura y Emprendimiento"],
-            ["Historia_Arte_Universal", "🏛️ Historia del Teatro Universal"],
-            ["Expresion_Corporal_Movimiento", "🕺 Expresión Corporal y Movimiento Escénico"],
-            ["Tecnica_Vocal_Diccion", "🎤 Técnica Vocal y Dicción"],
-            ["Actuacion_I", "🎭 Actuación I — Técnicas Básicas"],
-        ],
-        "5to": [
-            ["Actuacion_II", "🎭 Actuación II — Stanislavski y Métodos"],
-            ["Dramaturgia_Guion_Teatral", "📝 Dramaturgia y Guión Teatral"],
-            ["Escenografia_Iluminacion", "💡 Escenografía e Iluminación"],
-            ["Teatro_Dominicano", "🇩🇴 Teatro Dominicano y del Caribe"],
-            ["Montaje_Teatral_I", "🎬 Montaje Teatral I"],
-        ],
-        "6to": [
-            ["Actuacion_III", "🎭 Actuación III — Proyecto Escénico"],
-            ["Direccion_Teatral", "🎬 Dirección Teatral"],
-            ["Gestion_Produccion_Teatral", "🏢 Gestión Cultural y Producción Teatral"],
-            ["Montaje_Teatral_Final", "🎭 Montaje Teatral II — Obra Final"],
-        ],
-    },
-    "DANZA": {
-        "4to": [
-            ["Identidad_Cultura_Emprendimiento", "🌍 Identidad, Cultura y Emprendimiento"],
-            ["Historia_Arte_Universal", "🏛️ Historia de la Danza Universal"],
-            ["Tecnica_Danza_Clasica_I", "🩰 Técnica de Danza Clásica I"],
-            ["Tecnica_Danza_Folklorica_I", "💃 Técnica de Danza Folklórica Dominicana I"],
-            ["Expresion_Corporal_Danza", "🏃 Expresión Corporal y Acondicionamiento Físico"],
-        ],
-        "5to": [
-            ["Tecnica_Danza_Clasica_II", "🩰 Técnica de Danza Clásica II"],
-            ["Danza_Moderna_Contemporanea", "💃 Técnica de Danza Moderna y Contemporánea"],
-            ["Tecnica_Danza_Folklorica_II", "🇩🇴 Técnica de Danza Folklórica II"],
-            ["Composicion_Coreografica_I", "🎼 Composición Coreográfica I"],
-            ["Musica_Aplicada_Danza", "🎵 Música Aplicada a la Danza"],
-        ],
-        "6to": [
-            ["Tecnica_Danza_Clasica_III", "🩰 Técnica de Danza Clásica III"],
-            ["Composicion_Coreografica_II", "🎭 Composición Coreográfica II — Proyecto Final"],
-            ["Gestion_Danza", "🏢 Gestión y Producción en Danza"],
-            ["Danza_Urbana_Contemporanea", "🕺 Danza Urbana y Contemporánea"],
-            ["Montaje_Puesta_Escena", "🎬 Montaje y Puesta en Escena"],
-        ],
-    },
-};
+var MENCION_EMOJI_MAT = {'MULTIMEDIA':'🎬','ARTES VISUALES':'🎨','MÚSICA':'🎵','TEATRO':'🎭','DANZA':'💃'};
+var MATERIAS_POR_MENCION = (function(){
+    var plan = {{ plan_tecnicas | default({}) | tojson }};
+    var out = {};
+    Object.keys(plan).forEach(function(mencion){
+        out[mencion] = {};
+        Object.keys(plan[mencion]).forEach(function(grado){
+            out[mencion][grado] = plan[mencion][grado].map(function(m){
+                return [m.nombre, (MENCION_EMOJI_MAT[mencion] || '📚') + ' ' + m.nombre];
+            });
+        });
+    });
+    return out;
+})();
 
 function actualizarMaterias(prefix) {
     var mencionEl = document.getElementById(prefix + '-mencion');
