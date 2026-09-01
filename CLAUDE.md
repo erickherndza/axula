@@ -190,17 +190,16 @@ completo puede tener conclusiones erróneas sobre qué está "sin usar":** antes
 afirmación "esta función no se usa en ningún lado", grep contra el repo real, no contra la lista
 de archivos que esa sesión tuvo a mano.
 
-**Pendiente:** correr `python3 scripts/verificar_curriculo_ia.py` en Render Shell (nuevo script,
-solo lectura, construye los 4 prompts de IA para una materia de cada mención y confirma que
-ninguno queda con la línea de "Competencia" vacía — no llama a ningún proveedor de IA). El
-entorno local no puede correrlo (bloqueado por Flask no instalado fuera del venv del proyecto, y
-el venv local está en Python 3.9, incompatible con sintaxis `str | None` que ya usa
-`core/curriculo_musica.py` — mismo problema preexistente de `core/rls.py`, no nuevo).
+**Confirmado en Render:** `python3 scripts/verificar_curriculo_ia.py` corrido en producción —
+los 16 generadores probados (4 menciones × planificación/rúbrica/estrategia/asignación)
+encontraron contenido curricular real. El fix quedó completamente funcional en vivo.
 
 Sin tocar aún (fuera de alcance, ya señalado en `RESUMEN_CAMBIOS.md`): Danza intacta (sin PDF
 oficial), perfiles de profesores ya asignados con nombres de materia viejos/inventados (van a
 quedar huérfanos hasta reasignarlos a mano — correr `scripts/auditar_materias_profesores.py`
-contra Render para ver el alcance real), y el bloque de ~1100 líneas duplicado en
+contra Render para ver el alcance real; con los nombres de Artes Visuales/Música/Teatro
+reescritos casi por completo esta sesión, es probable que aparezcan bastantes más huérfanas que
+antes — pendiente para la próxima sesión), y el bloque de ~1100 líneas duplicado en
 `core/constants.py` (`CURRICULUM_ARTES`/`CLUSTER_META`/`DB_TABLAS_META`/`DEFAULTS_CENTRO`
 definidos dos veces — no afecta funcionamiento, es limpieza pendiente).
 
