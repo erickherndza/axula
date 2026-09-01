@@ -2709,12 +2709,21 @@ def _construir_prompt_asignacion(tipo, materia, grado, mencion, titulo=""):
     """
     Genera el prompt para producir un documento de asignación MINERD completo:
     mandato, preguntas orientadoras, producto esperado, fuentes y rúbrica/instrumento.
+
+    El currículo oficial se busca vía core.curriculo.get_asignatura(), que
+    despacha a la mención correcta (Multimedia/Artes Visuales/Música/Teatro) —
+    mismo mecanismo que ya usan las funciones de core/ia.py. Antes leía
+    CURRICULUM_ARTES con nombres de campo (competencia/descripcion/evidencias)
+    que nunca coincidían con el esquema real, así que esta función siempre
+    generaba el prompt sin ningún contexto curricular real.
     """
-    curriculum = CURRICULUM_ARTES.get(materia, {})
-    competencia  = curriculum.get("competencia", "")
-    descripcion  = curriculum.get("descripcion", "")
-    evidencias   = curriculum.get("evidencias", "")
-    indicadores  = curriculum.get("indicadores", [])
+    from core.curriculo import get_asignatura
+    curriculum = get_asignatura(mencion, materia)
+    competencia = curriculum.get("elemento_competencia", "")
+    # "indicadores" solo existe en el esquema de Multimedia; para las demás
+    # menciones el equivalente más cercano son los RAE (Resultados de
+    # Aprendizaje Esperados) — mismo fallback que usa core/ia.py.
+    indicadores = curriculum.get("indicadores", curriculum.get("rae", []))
     ind_str = "; ".join(indicadores[:3]) if indicadores else ""
 
     tipo_guia = {
@@ -2740,7 +2749,6 @@ Genera un documento de asignación COMPLETO y OFICIAL para:
 - Materia: {materia} | Grado: {grado} | Mención: {mencion}
 - {titulo_ctx}
 - Competencia curricular: {competencia}
-- Evidencias de aprendizaje: {evidencias}
 - Indicadores de logro: {ind_str}
 - Instrumento recomendado: {instrumento_guia}
 

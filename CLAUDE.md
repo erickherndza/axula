@@ -147,6 +147,63 @@ python3 -c "import app; print('OK')"
 
 ## Log de sesiones
 
+### 2026-09-01 (sesión 22 — adecuación curricular real: PLAN_ARTES y core/curriculo_*.py reescritos contra los 4 PDF oficiales)
+
+**Disparador:** Erick trabajó por fuera (otra sesión/herramienta, con los 4 PDF oficiales del
+Bachillerato en Artes) el arreglo completo del hallazgo de la sesión 20 — `PLAN_ARTES` para
+Artes Visuales/Música/Teatro tenía nombres de materia **inventados**, sin relación con los
+documentos reales (Multimedia sí estaba bien). Entregó el trabajo como `MEJORAS/RESUMEN_CAMBIOS.md`
++ 6 archivos para reemplazar en `core/`. Pidió analizar que el reemplazo se hiciera bien.
+
+**Verificado (con pruebas propias, no solo confiando en el resumen):**
+- Las 9 combinaciones grado×mención (Artes Visuales/Música/Teatro × 4to/5to/6to) en el
+  `PLAN_ARTES` corregido suman **exactamente 40h** cada una.
+- Las 80 materias técnicas específicas de las 4 menciones encuentran contenido real en
+  `core/curriculo_*.py` — **0 fallos de búsqueda** (probado cargando los módulos de currículo de
+  forma aislada con `importlib`, sin necesitar la app completa).
+- El combinador de "Instrumento I/II/III" (Música) sí une las 4 especializaciones
+  (Guitarra/Teclado/Viento/Percusión) en un solo resultado, confirmado.
+- El diff de `constants.py` es quirúrgico — solo las ~87 líneas de `PLAN_ARTES["ARTES VISUALES"/
+  "MÚSICA"/"TEATRO"]`, nada más del archivo se tocó (mis cambios de sesiones anteriores, como
+  `orden_lista`, siguen intactos).
+
+**2 problemas encontrados en la entrega, corregidos en esta sesión:**
+1. **Archivos en el lugar equivocado** — de los 6 archivos, 2 (`constants.py`, `ia.py`) habían
+   quedado sueltos en la **raíz del repo** en vez de `core/`, dejando `core/constants.py` y
+   `core/ia.py` (los que realmente usa la app) todavía con las versiones viejas rotas. Erick los
+   corrigió, pero dejó las 6 copias duplicadas sueltas en la raíz (byte-idénticas a las de
+   `core/`, verificado con `diff -q`) — borradas en esta sesión, eran basura pura.
+2. **`RESUMEN_CAMBIOS.md` no vio todo el repo — un tercer bug que no detectó:**
+   `core/helpers.py::_construir_prompt_asignacion()` (usada activamente por
+   `routes/asignaciones.py` para generar documentos de asignación) leía un **tercer diccionario**
+   independiente (`CURRICULUM_ARTES`, definido localmente en `helpers.py` línea 2651, con solo
+   10 materias de Multimedia) con el mismo problema de nombres de campo rotos
+   (`competencia`/`descripcion`/`evidencias` en vez de `elemento_competencia`/`rae`). El resumen
+   sí encontró este diccionario pero concluyó "no aparece usado por ninguna ruta" — estaba
+   equivocado porque no tenía `routes/asignaciones.py` en su contexto. Corregido para usar
+   `core.curriculo.get_asignatura()` igual que las 3 funciones de `core/ia.py` (mismo patrón
+   exacto). El diccionario viejo en `helpers.py` línea 2651 quedó huérfano (nada lo usa ya) —
+   no se borró, queda pendiente de limpieza.
+
+**LECCIÓN — un resumen de cambios generado por otra sesión/herramienta sin acceso al repo
+completo puede tener conclusiones erróneas sobre qué está "sin usar":** antes de confiar en la
+afirmación "esta función no se usa en ningún lado", grep contra el repo real, no contra la lista
+de archivos que esa sesión tuvo a mano.
+
+**Pendiente:** correr `python3 scripts/verificar_curriculo_ia.py` en Render Shell (nuevo script,
+solo lectura, construye los 4 prompts de IA para una materia de cada mención y confirma que
+ninguno queda con la línea de "Competencia" vacía — no llama a ningún proveedor de IA). El
+entorno local no puede correrlo (bloqueado por Flask no instalado fuera del venv del proyecto, y
+el venv local está en Python 3.9, incompatible con sintaxis `str | None` que ya usa
+`core/curriculo_musica.py` — mismo problema preexistente de `core/rls.py`, no nuevo).
+
+Sin tocar aún (fuera de alcance, ya señalado en `RESUMEN_CAMBIOS.md`): Danza intacta (sin PDF
+oficial), perfiles de profesores ya asignados con nombres de materia viejos/inventados (van a
+quedar huérfanos hasta reasignarlos a mano — correr `scripts/auditar_materias_profesores.py`
+contra Render para ver el alcance real), y el bloque de ~1100 líneas duplicado en
+`core/constants.py` (`CURRICULUM_ARTES`/`CLUSTER_META`/`DB_TABLAS_META`/`DEFAULTS_CENTRO`
+definidos dos veces — no afecta funcionamiento, es limpieza pendiente).
+
 ### 2026-08-31 (sesión 21b — Cuaderno Anecdótico: selector Grado/Modalidad/Materia, misma composición que Pase de Lista)
 
 **Disparador:** Erick reportó que el Cuaderno Anecdótico "solo está el de multimedia" — con

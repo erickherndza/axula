@@ -6,7 +6,7 @@ import re
 import time as _time
 import logging
 from datetime import datetime as _datetime
-from .constants import CURRICULUM_ARTES, CURRICULUM_MULTIMEDIA, PLAN_ARTES, PLAN_MULTIMEDIA
+from .curriculo import get_asignatura, formatear_contexto
 
 logger = logging.getLogger("axula")
 
@@ -254,14 +254,22 @@ Sé específico con la mención {mencion_label}. Máximo 300 palabras."""
 
 
 def construir_prompt_planificacion(materia, grado, tema, duracion_clases, nivel_grupo, mencion="MULTIMEDIA"):
-    """Genera un prompt para planificación de clase basado en el currículo MINERD."""
-    # Buscar en CURRICULUM_ARTES primero, luego fallback a CURRICULUM_MULTIMEDIA
-    curr = CURRICULUM_ARTES.get(materia, CURRICULUM_MULTIMEDIA.get(materia, {}))
-    mencion_real = curr.get("mencion", mencion)
+    """Genera un prompt para planificación de clase basado en el currículo MINERD.
 
-    saberes_c = "\n".join([f"  • {s}" for s in curr.get("saberes_conceptuales", [])[:6]])
-    saberes_p = "\n".join([f"  • {s}" for s in curr.get("saberes_procedimentales", [])[:4]])
-    indicadores = "\n".join([f"  • {s}" for s in curr.get("indicadores_logro", [])[:5]])
+    El currículo oficial se busca vía core.curriculo.get_asignatura(), que
+    despacha a la mención correcta (Multimedia/Artes Visuales/Música/Teatro)
+    y hace match tolerante a variaciones de nombre/acentos/kerning.
+    """
+    curr = get_asignatura(mencion, materia)
+    mencion_real = mencion
+
+    saberes_c = "\n".join([f"  • {s}" for s in curr.get("conceptuales", [])[:6]])
+    saberes_p = "\n".join([f"  • {s}" for s in curr.get("procedimentales", [])[:4]])
+    saberes_a = "\n".join([f"  • {s}" for s in curr.get("actitudinales", [])[:4]])
+    # "indicadores" solo existe en el esquema de Multimedia; para las demás
+    # menciones el equivalente más cercano son los RAE (Resultados de
+    # Aprendizaje Esperados).
+    indicadores = "\n".join([f"  • {s}" for s in curr.get("indicadores", curr.get("rae", []))[:5]])
 
     return f"""Eres un experto en planificación curricular para la Modalidad de Artes, mención {mencion_real} del bachillerato dominicano (MINERD).
 
@@ -271,7 +279,7 @@ Genera una planificación de clases completa y detallada basada en el currículo
 DATOS DE LA PLANIFICACIÓN
 ═══════════════════════════════════════
 Asignatura: {materia.replace('_', ' ')}
-Competencia oficial: {curr.get('competencia', '')}
+Competencia oficial: {curr.get('elemento_competencia', '')}
 Grado: {grado}
 Tema específico a trabajar: {tema}
 Duración: {duracion_clases} clases de 45 minutos
@@ -283,10 +291,11 @@ SABERES CONCEPTUALES DEL CURRÍCULO OFICIAL:
 SABERES PROCEDIMENTALES:
 {saberes_p}
 
+SABERES ACTITUDINALES:
+{saberes_a}
+
 INDICADORES DE LOGRO OFICIALES:
 {indicadores}
-
-Evidencia de desempeño esperada: {curr.get('evidencias', '')}
 ═══════════════════════════════════════
 
 Genera la planificación con estas secciones exactas:
@@ -327,11 +336,11 @@ Máximo 600 palabras."""
 
 def construir_prompt_rubrica(materia, indicador, nivel, mencion="MULTIMEDIA"):
     """Genera un prompt para crear una rúbrica de evaluación oficial."""
-    curr = CURRICULUM_ARTES.get(materia, CURRICULUM_MULTIMEDIA.get(materia, {}))
-    mencion_real = curr.get("mencion", mencion)
-    todos_indicadores = curr.get("indicadores_logro", [])
+    curr = get_asignatura(mencion, materia)
+    mencion_real = mencion
+    todos_indicadores = curr.get("indicadores", curr.get("rae", []))
 
-    return f"""Eres un experto en evaluación educativa para la Modalidad de Artes Multimedia del MINERD de República Dominicana.
+    return f"""Eres un experto en evaluación educativa para la Modalidad de Artes, mención {mencion_real}, del MINERD de República Dominicana.
 
 Crea una rúbrica de evaluación completa y lista para usar en el aula.
 
@@ -339,10 +348,9 @@ Crea una rúbrica de evaluación completa y lista para usar en el aula.
 DATOS DE LA RÚBRICA
 ═══════════════════════════════════════
 Asignatura: {materia.replace('_', ' ')}
-Competencia: {curr.get('competencia', '')}
+Competencia: {curr.get('elemento_competencia', '')}
 Indicador de logro a evaluar: {indicador}
 Grado: {nivel}
-Evidencia de desempeño: {curr.get('evidencias', '')}
 
 TODOS LOS INDICADORES DE ESTA ASIGNATURA:
 {chr(10).join([f'• {i}' for i in todos_indicadores])}
@@ -372,10 +380,10 @@ Máximo 400 palabras."""
 
 def construir_prompt_estrategia(materia, problema, perfil_grupo, mencion="MULTIMEDIA"):
     """Genera estrategias didácticas para superar dificultades específicas."""
-    curr = CURRICULUM_ARTES.get(materia, CURRICULUM_MULTIMEDIA.get(materia, {}))
-    mencion_real = curr.get("mencion", mencion)
+    curr = get_asignatura(mencion, materia)
+    mencion_real = mencion
 
-    return f"""Eres un orientador pedagógico especializado en la Modalidad de Artes Multimedia del bachillerato dominicano.
+    return f"""Eres un orientador pedagógico especializado en la Modalidad de Artes, mención {mencion_real}, del bachillerato dominicano.
 
 Un docente necesita estrategias didácticas para superar una dificultad específica en el aula.
 
@@ -383,7 +391,7 @@ Un docente necesita estrategias didácticas para superar una dificultad específ
 SITUACIÓN
 ═══════════════════════════════════════
 Asignatura: {materia.replace('_', ' ')}
-Competencia: {curr.get('competencia', '')}
+Competencia: {curr.get('elemento_competencia', '')}
 Dificultad o problema identificado: {problema}
 Perfil del grupo: {perfil_grupo}
 ═══════════════════════════════════════
