@@ -83,6 +83,15 @@ Power BI light mode · Teal: #038C8C, #024959, #012840
 - **Coherencia Horizontal del Componente Especializado** (`/coherencia`) — matriz curricular
   por período (RAE/Contenidos/Producto/Recursos) siguiendo la plantilla oficial del centro,
   con exportación a Word editable (2026-08-25/26)
+- **UX móvil de Pase de Lista y Cuaderno Anecdótico** — botones táctiles 44px, barra de
+  controles compacta, Cuaderno responsive (antes sin ningún `@media`), fecha del incidente
+  explícita y obligatoria, selector Grado/Modalidad/Materia en Cuaderno igual que Pase de Lista
+  (2026-08-31)
+- **Adecuación curricular real** — `PLAN_ARTES` y `core/curriculo_{teatro,musica,
+  artes_visuales,multimedia}.py` reescritos contra los 4 PDF oficiales MINERD (Danza pendiente,
+  sin PDF); reconectados los 4 generadores de IA (planificación/rúbrica/estrategia/asignación) y
+  el catálogo de materias de `/planificacion` — verificado en Render: 16/16 generadores con
+  contenido real, 0 profesores afectados (2026-09-01)
 
 ## Datos cargados en BD (año escolar 2025-2026)
 
@@ -244,14 +253,18 @@ de archivos que esa sesión tuvo a mano.
 los 16 generadores probados (4 menciones × planificación/rúbrica/estrategia/asignación)
 encontraron contenido curricular real. El fix quedó completamente funcional en vivo.
 
+**`scripts/auditar_materias_profesores.py` corrido contra Render — sin víctimas reales:** de 16
+profesores activos, solo 1 perfil salió con una materia "huérfana", y no por el cambio de
+currículo — es la cuenta de prueba `prof_artes_qa` (Luis Fernández Artes), cuyo campo de materia
+tiene una coma en vez de `|` como separador (`"Instrumento Principal I,Coro y Conjunto Musical
+I"`), así que nunca se dividió en dos materias — typo preexistente en datos de prueba, no
+relacionado a esta corrección. Carlos David Caminero (el caso multi-mención de sesiones
+anteriores) y Erick quedaron con sus materias 100% coincidentes. No hizo falta reasignar nada.
+
 Sin tocar aún (fuera de alcance, ya señalado en `RESUMEN_CAMBIOS.md`): Danza intacta (sin PDF
-oficial), perfiles de profesores ya asignados con nombres de materia viejos/inventados (van a
-quedar huérfanos hasta reasignarlos a mano — correr `scripts/auditar_materias_profesores.py`
-contra Render para ver el alcance real; con los nombres de Artes Visuales/Música/Teatro
-reescritos casi por completo esta sesión, es probable que aparezcan bastantes más huérfanas que
-antes — pendiente para la próxima sesión), y el bloque de ~1100 líneas duplicado en
-`core/constants.py` (`CURRICULUM_ARTES`/`CLUSTER_META`/`DB_TABLAS_META`/`DEFAULTS_CENTRO`
-definidos dos veces — no afecta funcionamiento, es limpieza pendiente).
+oficial), y el bloque de ~1100 líneas duplicado en `core/constants.py`
+(`CURRICULUM_ARTES`/`CLUSTER_META`/`DB_TABLAS_META`/`DEFAULTS_CENTRO` definidos dos veces — no
+afecta funcionamiento, es limpieza pendiente).
 
 ### 2026-08-31 (sesión 21b — Cuaderno Anecdótico: selector Grado/Modalidad/Materia, misma composición que Pase de Lista)
 
