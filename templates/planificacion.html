@@ -257,7 +257,7 @@
         <button class="tab-btn" onclick="setTab('estrategia', this)">
             <i class="fas fa-lightbulb"></i> Estrategias Didácticas
         </button>
-        <button class="tab-btn" onclick="setTab('abp', this)">
+        <button class="tab-btn" onclick="setTab('abp', this); cargarGuardadasABP()">
             <i class="fas fa-file-invoice"></i> Plantilla ABP MINERD
         </button>
         <button class="tab-btn" onclick="setTab('curriculo', this)">
@@ -646,6 +646,19 @@
                     <i class="fas fa-robot"></i>
                     Generar Planificación ABP con IA
                 </button>
+
+                <!-- Planificaciones ABP guardadas -->
+                <div style="margin-top:20px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;">
+                    <div style="font-family:var(--font-display);font-size:11px;font-weight:700;
+                                text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted);
+                                margin-bottom:10px;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-folder-open" style="color:var(--accent);"></i>
+                        Planificaciones ABP guardadas
+                    </div>
+                    <div id="abp-guardadas-list" style="display:flex;flex-direction:column;gap:6px;max-height:240px;overflow-y:auto;">
+                        <div style="font-size:11px;color:var(--text-muted);padding:8px;">Cargando...</div>
+                    </div>
+                </div>
             </div>
 
             <!-- COLUMNA DERECHA — Vista previa y acciones -->
@@ -1621,6 +1634,7 @@ async function generarPlanificacion() {
 
     // Plan actual generado por la IA — se guarda aquí para exportar
     let _planABP = null;
+    let _planABPId = null;
 
     // ── Cargar asignaturas técnicas según mención ────────────────────────────
     function abpCargarAsignaturas() {
@@ -1718,9 +1732,11 @@ async function generarPlanificacion() {
             pbar.style.width = '100%';
 
             _planABP = r3.plan;
+            _planABPId = null; // nueva generación → se guarda como registro nuevo
             setTimeout(() => {
                 document.getElementById('abp-loading').style.display = 'none';
                 renderPlanABP(_planABP);
+                guardarPlanABPActual();
             }, 400);
 
         } catch (err) {
@@ -1952,6 +1968,76 @@ async function generarPlanificacion() {
 
         // Mostrar panel
         document.getElementById('abp-preview').style.display = 'block';
+    }
+
+    // ── Guardado automático + historial de planificaciones ABP ──────────────
+    async function guardarPlanABPActual() {
+        if (!_planABP) return;
+        try {
+            const res = await fetch('/api/planificacion/abp/guardar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ plan: _planABP, id: _planABPId }),
+            });
+            const data = await res.json();
+            if (data.ok) {
+                _planABPId = data.id;
+                cargarGuardadasABP();
+            }
+        } catch (e) { /* guardado silencioso — no bloquea el flujo si falla */ }
+    }
+
+    async function cargarGuardadasABP() {
+        const box = document.getElementById('abp-guardadas-list');
+        try {
+            const res = await fetch('/api/planificacion/abp/historial');
+            const data = await res.json();
+            if (!data.length) {
+                box.innerHTML = '<div style="font-size:11px;color:var(--text-muted);padding:8px;">Aún no hay planificaciones ABP guardadas.</div>';
+                return;
+            }
+            box.innerHTML = data.map(item => {
+                const fecha = (item.creado_en || '').slice(0, 10);
+                const tit = item.titulo_proyecto || item.materia || 'Sin título';
+                return `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;
+                             padding:8px 10px;display:flex;justify-content:space-between;align-items:center;
+                             gap:8px;cursor:pointer;" onclick="cargarPlanABPGuardado(${item.id})">
+                    <div style="min-width:0;">
+                        <div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escABP(tit)}</div>
+                        <div style="font-size:10px;color:var(--text-muted);">${escABP(item.materia||'')} · ${escABP(item.grado||'')} · ${fecha}</div>
+                    </div>
+                    <button onclick="event.stopPropagation();eliminarPlanABPGuardado(${item.id})"
+                            style="background:transparent;border:none;color:var(--text-muted);cursor:pointer;font-size:13px;flex-shrink:0;padding:4px;"
+                            title="Eliminar">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>`;
+            }).join('');
+        } catch (e) {
+            box.innerHTML = '<div style="font-size:11px;color:var(--danger);padding:8px;">Error al cargar el historial.</div>';
+        }
+    }
+
+    async function cargarPlanABPGuardado(id) {
+        try {
+            const res = await fetch('/api/planificacion/abp/historial/' + id);
+            const data = await res.json();
+            if (!res.ok || data.error) { alert(data.error || 'Error al cargar la planificación'); return; }
+            _planABP = data.plan;
+            _planABPId = data.id;
+            document.getElementById('abp-estado-inicial').style.display = 'none';
+            document.getElementById('abp-loading').style.display = 'none';
+            renderPlanABP(_planABP);
+        } catch (e) { alert('Error de conexión'); }
+    }
+
+    async function eliminarPlanABPGuardado(id) {
+        if (!confirm('¿Eliminar esta planificación guardada? No se puede deshacer.')) return;
+        try {
+            await fetch('/api/planificacion/abp/historial/' + id, { method: 'DELETE' });
+            if (_planABPId === id) _planABPId = null;
+            cargarGuardadasABP();
+        } catch (e) {}
     }
 
     // ── Tabs internos del preview ───────────────────────────────────────────

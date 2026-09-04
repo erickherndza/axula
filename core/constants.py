@@ -414,6 +414,23 @@ TABLAS_NUEVAS = [
         profesor_id     INTEGER
     )
     """,
+    # — Historial de planificaciones ABP MINERD (tab "ABP MINERD" de /planificacion) —
+    # Guarda el JSON completo del plan (proyecto+curriculo+fases+instrumentos+docente)
+    # generado por Claude, separado de historial_planificaciones (que guarda texto
+    # plano de la Planificación de Clase clásica — estructura distinta, tabla distinta).
+    """
+    CREATE TABLE IF NOT EXISTS historial_planificaciones_abp (
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        profesor_id     INTEGER NOT NULL,
+        materia         TEXT,
+        grado           TEXT,
+        mencion         TEXT,
+        titulo_proyecto TEXT,
+        plan_json       TEXT NOT NULL,
+        creado_en       TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (profesor_id) REFERENCES usuarios(id)
+    )
+    """,
     # — Calificaciones dinámicas por materia (cualquier materia, cualquier grado) —
     """
     CREATE TABLE IF NOT EXISTS materias_calificaciones (

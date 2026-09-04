@@ -739,6 +739,106 @@ def exportar_planificacion_docx():
         return jsonify({"error": "Error al exportar el documento. Intenta de nuevo."}), 500
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+#  HISTORIAL DE PLANIFICACIONES ABP MINERD — guarda/recupera el JSON completo
+#  del plan generado (proyecto+curriculo+fases+instrumentos+docente), separado
+#  del historial de la Planificación de Clase clásica (guarda texto plano).
+# ══════════════════════════════════════════════════════════════════════════════
+
+@planificacion_bp.route("/api/planificacion/abp/guardar", methods=["POST"])
+@login_required
+def guardar_planificacion_abp():
+    """Guarda (o actualiza, si se manda id) el plan ABP generado."""
+    u = get_usuario()
+    d = request.get_json(silent=True) or {}
+    plan = d.get("plan")
+    pid  = d.get("id")
+    if not plan or not isinstance(plan, dict):
+        return jsonify({"error": "Se requiere el plan en formato JSON"}), 400
+
+    doc  = plan.get("docente") or {}
+    proy = plan.get("proyecto") or {}
+    materia = (doc.get("asignatura") or "").strip()
+    grado   = (doc.get("grado") or "").strip()
+    mencion = (doc.get("mencion") or "").strip()
+    titulo  = (proy.get("titulo") or "").strip()
+    plan_texto = _json.dumps(plan, ensure_ascii=False)
+
+    with sqlite3.connect(DATABASE, timeout=10) as conn:
+        conn.row_factory = sqlite3.Row
+        if pid:
+            existente = conn.execute(
+                "SELECT id FROM historial_planificaciones_abp WHERE id=? AND profesor_id=?",
+                (pid, u["id"])
+            ).fetchone()
+            if not existente:
+                return jsonify({"error": "Planificación no encontrada"}), 404
+            conn.execute("""
+                UPDATE historial_planificaciones_abp
+                SET materia=?, grado=?, mencion=?, titulo_proyecto=?, plan_json=?
+                WHERE id=?
+            """, (materia, grado, mencion, titulo, plan_texto, pid))
+            conn.commit()
+            return jsonify({"ok": True, "id": pid})
+        else:
+            conn.execute("""
+                INSERT INTO historial_planificaciones_abp
+                    (profesor_id, materia, grado, mencion, titulo_proyecto, plan_json)
+                VALUES (?,?,?,?,?,?)
+            """, (u["id"], materia, grado, mencion, titulo, plan_texto))
+            conn.commit()
+            rid = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+            return jsonify({"ok": True, "id": rid})
+
+
+@planificacion_bp.route("/api/planificacion/abp/historial", methods=["GET"])
+@login_required
+def historial_planificaciones_abp():
+    """Lista las planificaciones ABP guardadas por el profesor logueado."""
+    u = get_usuario()
+    with sqlite3.connect(DATABASE, timeout=10) as conn:
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute("""
+            SELECT id, materia, grado, mencion, titulo_proyecto, creado_en
+            FROM historial_planificaciones_abp
+            WHERE profesor_id=?
+            ORDER BY creado_en DESC, id DESC
+            LIMIT 50
+        """, (u["id"],)).fetchall()
+    return jsonify([dict(r) for r in rows])
+
+
+@planificacion_bp.route("/api/planificacion/abp/historial/<int:pid>", methods=["GET"])
+@login_required
+def get_planificacion_abp(pid):
+    u = get_usuario()
+    with sqlite3.connect(DATABASE, timeout=10) as conn:
+        conn.row_factory = sqlite3.Row
+        row = conn.execute(
+            "SELECT * FROM historial_planificaciones_abp WHERE id=? AND profesor_id=?",
+            (pid, u["id"])
+        ).fetchone()
+    if not row:
+        return jsonify({"error": "No encontrado"}), 404
+    d = dict(row)
+    try:
+        d["plan"] = _json.loads(d.pop("plan_json"))
+    except Exception:
+        return jsonify({"error": "El plan guardado está corrupto"}), 500
+    return jsonify(d)
+
+
+@planificacion_bp.route("/api/planificacion/abp/historial/<int:pid>", methods=["DELETE"])
+@login_required
+def eliminar_planificacion_abp(pid):
+    u = get_usuario()
+    with sqlite3.connect(DATABASE, timeout=10) as conn:
+        conn.execute(
+            "DELETE FROM historial_planificaciones_abp WHERE id=? AND profesor_id=?",
+            (pid, u["id"])
+        )
+        conn.commit()
+    return jsonify({"ok": True})
 
 
 # ── MIGRACIÓN AUTOMÁTICA DE BASE DE DATOS ───────────────────────────────────
