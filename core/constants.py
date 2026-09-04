@@ -69,6 +69,7 @@ CONDUCTA_CATALOGO = {
         ("salir_sin_autorizacion", "Salir del aula sin autorización"),
         ("sentarse_mal",           "Sentarse en la parte superior del pupitre"),
         ("hablar_interrumpir",     "Hablar o interrumpir la clase"),
+        ("tirar_basura",           "Tirar basura en el aula"),
     ],
     "grave": [
         ("malas_palabras",          "Malas palabras / insultar a un compañero"),
