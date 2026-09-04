@@ -48,6 +48,46 @@ DOMINIOS_INSTITUCIONALES = {"educacion.edu.do", "mail.educacion.edu.do", "minerd
 
 _CACHE_TTL = 90  # segundos
 
+# ── SISTEMA DE CONDUCTA (Strikes/Outs) ──────────────────────────────────────
+# Clasificación alineada a las "Normas del Sistema Educativo Dominicano para
+# la Convivencia Armoniosa" (MINERD/CONANI, 2da ed. 2013 — Ley 136-03 Arts.
+# 48-50). 3 niveles oficiales: Leve (Art.17), Grave (Art.19), Muy Grave
+# (Art.21 — lista CERRADA por la norma, ningún centro puede ampliarla).
+#
+# Mecánica Axula (beisbol):
+#   3 Strikes (falta leve)         → 1 Out
+#   1 falta grave                  → 1 Out directo
+#   3 Outs acumulados en el período → Reporte automático a coordinación
+#   1 falta muy grave               → Reporte automático inmediato (salta
+#                                      todo el conteo — así lo exige la norma:
+#                                      graves/muy graves van al Equipo de
+#                                      Gestión, no las resuelve el aula)
+CONDUCTA_CATALOGO = {
+    "leve": [
+        ("comer_en_aula",          "Comer en el aula"),
+        ("llegar_tarde",           "No estar en el aula al iniciar la clase"),
+        ("salir_sin_autorizacion", "Salir del aula sin autorización"),
+        ("sentarse_mal",           "Sentarse en la parte superior del pupitre"),
+        ("hablar_interrumpir",     "Hablar o interrumpir la clase"),
+    ],
+    "grave": [
+        ("malas_palabras",          "Malas palabras / insultar a un compañero"),
+        ("faltar_respeto_profesor", "Faltar el respeto a un profesor"),
+        ("hostigar",                "Hostigar a otro estudiante"),
+    ],
+    "muy_grave": [
+        ("bullying",       "Bullying / acoso escolar reiterado"),
+        ("pelear_agredir", "Pelear o agredir físicamente"),
+        ("amenazar",       "Amenazar a un estudiante o profesor"),
+    ],
+}
+
+CONDUCTA_NIVEL_LABEL = {
+    "leve":      "Falta Leve",
+    "grave":     "Falta Grave",
+    "muy_grave": "Falta Muy Grave",
+}
+
 PLAN_ARTES = {
     "MULTIMEDIA": {
         "4to": [
@@ -917,6 +957,34 @@ CREATE TABLE IF NOT EXISTS notas_competencias_ce (
         creado_en       TEXT DEFAULT (datetime('now')),
         FOREIGN KEY (caso_id)   REFERENCES casos(id),
         FOREIGN KEY (actor_id)  REFERENCES usuarios(id)
+    )
+    """,
+
+    # — Conducta (Strikes/Outs) — bitácora liviana de incidentes menores.
+    # No es un "caso" completo: cada strike/out individual vive aquí. Solo
+    # cuando escala (3 outs en el período, o una falta muy grave directa) se
+    # crea automáticamente una fila en `casos` (origen_tipo='conducta_registro',
+    # origen_id=este id), enlazada de vuelta via caso_id. —
+    """
+    CREATE TABLE IF NOT EXISTS conducta_registro (
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        estudiante_id   INTEGER NOT NULL,
+        docente_id      INTEGER NOT NULL,
+        nivel           TEXT NOT NULL,             -- 'leve'|'grave'|'muy_grave'
+        conducta        TEXT NOT NULL,             -- clave del catálogo CONDUCTA_CATALOGO
+        descripcion     TEXT,
+        fecha_incidente TEXT NOT NULL,
+        periodo         TEXT NOT NULL,             -- 'P1'|'P2'|'P3'|'P4'
+        anio_escolar    TEXT NOT NULL,
+        materia         TEXT,
+        grado           TEXT,
+        mencion         TEXT,
+        seccion         TEXT,
+        caso_id         INTEGER,                   -- si esta fila disparó un caso
+        creado_en       TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (estudiante_id) REFERENCES estudiantes(id),
+        FOREIGN KEY (docente_id)    REFERENCES usuarios(id),
+        FOREIGN KEY (caso_id)       REFERENCES casos(id)
     )
     """,
 

@@ -113,6 +113,8 @@ def casos_page():
         menciones_prof  = menciones_prof,
         filtro_men      = filtro_men,
         fecha_hoy       = date.today().isoformat(),
+        conducta_catalogo    = CONDUCTA_CATALOGO,
+        conducta_nivel_label = CONDUCTA_NIVEL_LABEL,
     )
 
 
@@ -193,6 +195,111 @@ def crear_caso():
         conn.commit()
         caso_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
     return jsonify({"ok": True, "id": caso_id})
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  CONDUCTA (Strikes/Outs) — bitácora liviana, distinta de /api/casos.
+#  3 Strikes (falta leve) = 1 Out · 1 falta grave = 1 Out directo ·
+#  3 Outs en el período = Reporte automático (crea un caso real) ·
+#  1 falta muy grave = Reporte automático inmediato (Art.21 MINERD).
+# ══════════════════════════════════════════════════════════════════════════════
+
+
+@casos_bp.route("/api/conducta/catalogo")
+@login_required
+def conducta_catalogo():
+    return jsonify({
+        "niveles": CONDUCTA_NIVEL_LABEL,
+        "catalogo": CONDUCTA_CATALOGO,
+    })
+
+
+@casos_bp.route("/api/conducta", methods=["POST"])
+@login_required
+def crear_conducta():
+    u = get_usuario()
+    d = request.get_json(silent=True) or {}
+    est_id  = d.get("estudiante_id")
+    nivel   = (d.get("nivel") or "").strip()
+    conducta_key = (d.get("conducta") or "").strip()
+    fecha_incidente = (d.get("fecha_incidente") or "").strip()
+    materia = (d.get("materia") or "").strip() or None
+    grado   = (d.get("grado") or "").strip() or None
+    mencion = (d.get("mencion") or "").strip() or None
+    seccion = (d.get("seccion") or "").strip() or None
+    descripcion = (d.get("descripcion") or "").strip() or None
+
+    if not est_id:
+        return jsonify({"error": "estudiante_id es requerido"}), 400
+    if nivel not in CONDUCTA_CATALOGO:
+        return jsonify({"error": "nivel inválido"}), 400
+    if conducta_key not in dict(CONDUCTA_CATALOGO[nivel]):
+        return jsonify({"error": "conducta inválida para ese nivel"}), 400
+    if not fecha_incidente:
+        return jsonify({"error": "La fecha del incidente es requerida"}), 400
+    if not grado:
+        return jsonify({"error": "El grado es requerido"}), 400
+    if fecha_incidente > date.today().isoformat():
+        return jsonify({"error": "La fecha del incidente no puede ser futura"}), 400
+
+    with sqlite3.connect(DATABASE, timeout=10) as conn:
+        conn.row_factory = sqlite3.Row
+        est = conn.execute("SELECT id FROM estudiantes WHERE id=?", (est_id,)).fetchone()
+        if not est:
+            return jsonify({"error": "Estudiante no encontrado"}), 404
+        resultado = registrar_conducta(
+            conn, est_id, u["id"], nivel, conducta_key, fecha_incidente,
+            materia=materia, grado=grado, mencion=mencion, seccion=seccion,
+            descripcion=descripcion,
+        )
+
+    return jsonify({"ok": True, **resultado})
+
+
+@casos_bp.route("/api/conducta/estudiante/<int:est_id>")
+@login_required
+def conducta_del_estudiante(est_id):
+    """Tally del período actual + historial de conducta de un estudiante."""
+    with sqlite3.connect(DATABASE, timeout=10) as conn:
+        conn.row_factory = sqlite3.Row
+        _rls.verificar_acceso_estudiante(conn, est_id)
+
+        anio    = _anio_escolar_actual()
+        periodo = _periodo_actual()
+
+        row = conn.execute("""
+            SELECT
+              SUM(CASE WHEN nivel='leve'  THEN 1 ELSE 0 END) AS n_leves,
+              SUM(CASE WHEN nivel='grave' THEN 1 ELSE 0 END) AS n_graves,
+              SUM(CASE WHEN nivel='muy_grave' THEN 1 ELSE 0 END) AS n_muy_graves
+            FROM conducta_registro
+            WHERE estudiante_id=? AND anio_escolar=? AND periodo=?
+        """, (est_id, anio, periodo)).fetchone()
+        n_leves       = row["n_leves"] or 0
+        n_graves      = row["n_graves"] or 0
+        n_muy_graves  = row["n_muy_graves"] or 0
+        outs_total    = (n_leves // 3) + n_graves
+
+        historial = conn.execute("""
+            SELECT r.*, u.nombre as docente_nombre
+            FROM conducta_registro r
+            JOIN usuarios u ON u.id = r.docente_id
+            WHERE r.estudiante_id=? AND r.anio_escolar=?
+            ORDER BY r.fecha_incidente DESC, r.creado_en DESC
+            LIMIT 50
+        """, (est_id, anio)).fetchall()
+
+    return jsonify({
+        "periodo": periodo,
+        "anio_escolar": anio,
+        "strikes_leves": n_leves,
+        "strikes_en_ciclo": (n_leves % 3) or (3 if n_leves else 0),
+        "faltas_graves": n_graves,
+        "faltas_muy_graves": n_muy_graves,
+        "outs_total": outs_total,
+        "outs_en_ciclo": outs_total % 3,
+        "historial": [dict(r) for r in historial],
+    })
 
 
 @casos_bp.route("/api/casos/<int:cid>")

@@ -53,7 +53,10 @@ __all__ = [
     "_notificar_reporte_nuevo",
     "_parse_ics_date",
     "_periodo_actual",
+    "_periodo_de_fecha",
     "_periodo_bloqueado",
+    "registrar_conducta",
+    "_crear_caso_desde_conducta",
     "_prompt_sanitize",
     "_psicologa_del_ciclo",
     "_recalcular_indicadores",
@@ -1414,6 +1417,162 @@ def _periodo_actual():
     if m in (11, 12, 1):    return "P2"
     if m in (2, 3, 4):      return "P3"
     return "P4"  # 5, 6, 7
+
+
+def _periodo_de_fecha(fecha_str):
+    """Igual que _periodo_actual() pero a partir de una fecha dada (YYYY-MM-DD)
+    en vez de la fecha de hoy — el docente puede registrar una conducta de un
+    día anterior."""
+    from datetime import date as _date
+    try:
+        m = int(fecha_str.split("-")[1])
+    except Exception:
+        m = _date.today().month
+    if m in (8, 9, 10):     return "P1"
+    if m in (11, 12, 1):    return "P2"
+    if m in (2, 3, 4):      return "P3"
+    return "P4"
+
+
+def _crear_caso_desde_conducta(conn, estudiante_id, docente_id, registro_id, titulo,
+                                descripcion, materia, grado, mencion, seccion,
+                                fecha_incidente, nivel_escala):
+    """Auto-genera un caso formal en /casos a partir de una escalada del
+    sistema de Conducta (3 Outs en el período, o una falta muy grave directa).
+    Mismo patrón de inserción que routes/casos.py::crear_caso()."""
+    conn.execute("""
+        INSERT INTO casos (estudiante_id, abierto_por, tipo, titulo, descripcion,
+                           estado, nivel_escala, origen_tipo, origen_id,
+                           materia, grado, mencion, seccion, fecha_incidente)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    """, (estudiante_id, docente_id, "conducta", titulo, descripcion,
+          "Abierto", nivel_escala, "conducta_registro", registro_id,
+          materia, grado, mencion, seccion, fecha_incidente))
+    conn.commit()
+    caso_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+
+    try:
+        est = conn.execute("SELECT ciclo, nombre, apellido FROM estudiantes WHERE id=?",
+                            (estudiante_id,)).fetchone()
+        ciclo_est = (est["ciclo"] if est else "") or "segundo_ciclo"
+        rol_coord = ("coordinador_segundo_ciclo" if ciclo_est == "segundo_ciclo"
+                     else "coordinador_primer_ciclo")
+        coord = conn.execute(
+            "SELECT id FROM usuarios WHERE rol=? AND activo=1 LIMIT 1", (rol_coord,)
+        ).fetchone()
+        if coord:
+            nombre_est = f"{est['nombre']} {est['apellido']}".strip() if est else ""
+            _crear_notificacion(
+                conn, coord["id"], "caso", caso_id, estudiante_id,
+                f"⚾ Caso de conducta generado — {nombre_est}",
+                f"{titulo}. {descripcion}"
+            )
+            conn.commit()
+    except Exception as _e:
+        logger.warning(f"[conducta] No se pudo notificar a coordinación: {_e}")
+
+    return caso_id
+
+
+def registrar_conducta(conn, estudiante_id, docente_id, nivel, conducta_key,
+                        fecha_incidente, materia=None, grado=None, mencion=None,
+                        seccion=None, descripcion=None):
+    """Registra un evento de conducta (strike/out/falta grave o muy grave) y
+    aplica la mecánica de beisbol: 3 Strikes (leve) = 1 Out, 1 falta grave =
+    1 Out directo, 3 Outs en el período = Reporte automático a coordinación.
+    Una falta muy grave (Art.21 MINERD — lista cerrada) salta todo el conteo
+    y genera el caso de inmediato.
+
+    Retorna un dict con el conteo resultante y, si aplica, el 'trigger'
+    ('out'|'reporte'|'muy_grave') y el caso_id generado.
+    """
+    from core.constants import CONDUCTA_CATALOGO
+
+    if nivel not in ("leve", "grave", "muy_grave"):
+        raise ValueError("nivel de conducta inválido")
+
+    anio    = _anio_escolar_actual()
+    periodo = _periodo_de_fecha(fecha_incidente)
+    conducta_label = dict(CONDUCTA_CATALOGO.get(nivel, [])).get(conducta_key, conducta_key)
+
+    conn.execute("""
+        INSERT INTO conducta_registro
+            (estudiante_id, docente_id, nivel, conducta, descripcion, fecha_incidente,
+             periodo, anio_escolar, materia, grado, mencion, seccion)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+    """, (estudiante_id, docente_id, nivel, conducta_key, descripcion, fecha_incidente,
+          periodo, anio, materia, grado, mencion, seccion))
+    conn.commit()
+    registro_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+
+    est = conn.execute("SELECT nombre, apellido FROM estudiantes WHERE id=?",
+                        (estudiante_id,)).fetchone()
+    nombre_est = f"{est['nombre']} {est['apellido']}".strip() if est else "El/la estudiante"
+
+    resultado = {
+        "registro_id": registro_id, "nivel": nivel, "conducta_label": conducta_label,
+        "periodo": periodo, "trigger": None, "caso_id": None,
+    }
+
+    if nivel == "muy_grave":
+        caso_id = _crear_caso_desde_conducta(
+            conn, estudiante_id, docente_id, registro_id,
+            titulo=f"Falta muy grave — {conducta_label}",
+            descripcion=(descripcion or
+                f"{nombre_est} incurrió en una falta muy grave ({conducta_label}) el "
+                f"{fecha_incidente}. Según el Art.21/35 de las Normas MINERD de "
+                f"Convivencia (Ley 136-03), se remite de inmediato al Equipo de "
+                f"Gestión para sanción y reunión con padres/tutores."),
+            materia=materia, grado=grado, mencion=mencion, seccion=seccion,
+            fecha_incidente=fecha_incidente, nivel_escala=3,
+        )
+        conn.execute("UPDATE conducta_registro SET caso_id=? WHERE id=?", (caso_id, registro_id))
+        conn.commit()
+        resultado["trigger"] = "muy_grave"
+        resultado["caso_id"] = caso_id
+        return resultado
+
+    # Tally del período actual (leve/grave) — 3 leves consumidas = 1 out,
+    # cada grave = 1 out directo.
+    row = conn.execute("""
+        SELECT
+          SUM(CASE WHEN nivel='leve'  THEN 1 ELSE 0 END) AS n_leves,
+          SUM(CASE WHEN nivel='grave' THEN 1 ELSE 0 END) AS n_graves
+        FROM conducta_registro
+        WHERE estudiante_id=? AND anio_escolar=? AND periodo=? AND nivel IN ('leve','grave')
+    """, (estudiante_id, anio, periodo)).fetchone()
+    n_leves  = row["n_leves"]  or 0
+    n_graves = row["n_graves"] or 0
+    outs_de_leves = n_leves // 3
+    total_outs    = outs_de_leves + n_graves
+
+    resultado["strikes_leves_total"] = n_leves
+    if nivel == "leve":
+        resto = n_leves % 3
+        resultado["strikes_en_ciclo"] = resto or 3  # al completar el 3ro, mostrar "3" no "0"
+    resultado["outs_total"] = total_outs
+
+    just_completed_out = (nivel == "leve" and n_leves % 3 == 0) or (nivel == "grave")
+    if just_completed_out:
+        resultado["trigger"] = "out"
+        if total_outs % 3 == 0:
+            caso_id = _crear_caso_desde_conducta(
+                conn, estudiante_id, docente_id, registro_id,
+                titulo=f"3 Outs acumulados — Período {periodo}",
+                descripcion=(
+                    f"{nombre_est} acumuló {total_outs} Outs en el período {periodo} "
+                    f"({anio}) por conducta reiterada en el aula. Se remite a "
+                    f"coordinación para aplicar sanción y coordinar reunión con "
+                    f"padres/tutores."),
+                materia=materia, grado=grado, mencion=mencion, seccion=seccion,
+                fecha_incidente=fecha_incidente, nivel_escala=2,
+            )
+            conn.execute("UPDATE conducta_registro SET caso_id=? WHERE id=?", (caso_id, registro_id))
+            conn.commit()
+            resultado["trigger"] = "reporte"
+            resultado["caso_id"] = caso_id
+
+    return resultado
 
 
 def _nota_estado(nota):

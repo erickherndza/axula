@@ -156,6 +156,93 @@ python3 -c "import app; print('OK')"
 
 ## Log de sesiones
 
+### 2026-09-04 (sesión 23 — Sistema de Conducta: Strikes/Outs, alineado a Normas MINERD de Convivencia)
+
+**Disparador:** Erick pidió un sistema de disciplina estilo beisbol para sus estudiantes — 3
+Strikes (conductas menores) = 1 Out (llamada de atención), 3 Outs en un período = reporte a
+coordinación para sanción y reunión con padres. Pidió verificar contra el Manual de Convivencia
+del MINERD para clasificar cuáles de sus conductas listadas son "faltas graves".
+
+**Investigación normativa:** el documento real es "Normas del Sistema Educativo Dominicano para
+la Convivencia Armoniosa en los Centros Educativos Públicos y Privados" (MINERD/CONANI, 2da ed.
+julio 2013, en cumplimiento Ley 136-03 Arts. 48-50) — descargado y leído completo (47 artículos).
+Clasifica 3 niveles: Leve (Art.17 — resuelve el docente en el aula, sin proceso), Grave (Art.19 —
+evalúa Equipo de Gestión), Muy Grave (Art.21 — **lista cerrada por ley**, Art.26 prohíbe que un
+centro agregue categorías nuevas a este nivel; van directo a Dirección/Distrito). Mapeo aplicado:
+- Leves (Strike): comer en el aula, llegar tarde, salir sin autorización (explícito Art.17.e),
+  sentarse mal, hablar/interrumpir (explícito Art.17.a/c/d).
+- Graves (Out directo): malas palabras/insultar a un compañero, faltar el respeto a un profesor
+  (ambas explícitas en Art.19.b — "palabras irrespetuosas hacia compañeros/as y/o autoridades"),
+  hostigar (si es un hecho aislado, no reiterado).
+- Muy graves (Reporte inmediato, salta todo el conteo): bullying/acoso reiterado (Art.21.a — la
+  definición oficial de bullying EXIGE reiteración; si "hostigar" se vuelve patrón deja de ser
+  grave y pasa a este nivel), pelear/agredir físicamente y amenazar (ambas bajo "Desafío o
+  agresión a miembro del centro educativo", Art.21.e).
+
+**Decisión de diseño — no meterlo dentro de `/casos` como un campo más:** antes de escribir
+código se auditó `routes/casos.py`/`core/constants.py` — `casos` ya es un sistema de gestión de
+casos disciplinarios maduro (ciclo de vida completo: `estado`, `nivel_escala`, timeline de
+`caso_acciones`, cierre con sanción formal, Acuerdo-Compromiso con firma digital de padres,
+notificación a coordinación), con las sanciones YA rotuladas en lenguaje MINERD
+("amonestacion_verbal (Falta leve)", "suspension_1_3 (Falta grave)", "suspension_4_7 (Falta muy
+grave)" — `routes/casos.py::casos_page()`). Meter cada "comió en el aula" ahí habría inundado la
+bandeja de psicóloga/coordinador con ruido que el Art.17/18 dice que nunca debe llegarles (las
+leves las resuelve el docente, sin proceso de consulta). Se encontró que `casos.origen_tipo`/
+`origen_id` ya existían en el esquema, pensados exactamente para que otro subsistema
+auto-generara un caso — nunca se había usado. Se aprovechó ese enganche.
+
+**Implementación:**
+- Tabla nueva `conducta_registro` (`core/constants.py::TABLAS_NUEVAS`) — bitácora liviana de cada
+  strike/out/falta individual (nivel, conducta, fecha_incidente, periodo P1-P4, año escolar,
+  contexto materia/grado/mención/sección, `caso_id` si disparó un caso). Índice
+  `idx_conducta_est_periodo` en `core/database.py`.
+- `CONDUCTA_CATALOGO` (`core/constants.py`) — las 11 conductas de Erick, agrupadas por los 3
+  niveles MINERD, cada una con clave estable + etiqueta legible.
+- `core/helpers.py::registrar_conducta()` — motor de conteo. 3 leves acumuladas en el período =
+  1 Out; cada grave = 1 Out directo; cuando el total de Outs del período es múltiplo de 3, llama
+  a `_crear_caso_desde_conducta()` (mismo patrón de INSERT que `crear_caso()`, con
+  `origen_tipo='conducta_registro'`) y notifica a coordinación — igual que hace
+  `agregar_accion_caso()` al escalar. Una falta muy grave salta todo el conteo y genera el caso
+  de inmediato (nivel_escala=3, directora/Equipo de Gestión), sin esperar a acumular nada — así
+  lo exige el Art.21/35 MINERD. `_periodo_de_fecha()` nuevo (variante de `_periodo_actual()` que
+  ya existía, pero a partir de la fecha del incidente, no de "hoy" — el docente puede registrar
+  algo de un día anterior).
+- 3 rutas nuevas en `routes/casos.py`: `GET /api/conducta/catalogo`, `POST /api/conducta`
+  (crea el evento, aplica la mecánica, retorna el conteo + qué disparó), `GET
+  /api/conducta/estudiante/<id>` (tally del período actual + historial completo del año, usado
+  por el modal y para futura consulta desde perfil).
+- `templates/casos.html` — botón "⚾ Conducta" junto a "Nuevo caso" (sidebar), modal propio con
+  selector Grado/Modalidad/Materia/Sección **reutilizando** `PLAN_POR_GRADO_MENCION` /
+  `MENCIONES_PROF` / `FILTRO_MEN_CASO` (las mismas variables globales que ya alimenta "Nuevo
+  Caso" — nunca un catálogo duplicado, lección de la sesión 22b), buscador de estudiante
+  (mismo endpoint `/api/datos` acotado), selector de Nivel → pobla la conducta específica desde
+  `CONDUCTA_CATALOGO` embebido server-side (sin fetch extra), y un tally en vivo
+  ("⚾ Período P1: 2/3 strikes · 1/3 outs") al seleccionar el estudiante. Al registrar, el toast
+  reacciona al `trigger` devuelto por el backend (strike normal / OUT / 🚨 reporte generado /
+  🚨 falta muy grave). Cuando el evento generó un caso, se recarga la lista y se abre
+  automáticamente (`verCaso()`) — el caso aparece con el badge "conducta" (⚠️) que ya existía en
+  `renderLista()`, sin tocar el render de la lista.
+
+**Verificado end-to-end antes de dar por bueno** (el `python3` local de este Mac es 3.9.6 y
+`core/curriculo_musica.py` usa sintaxis `str | None` de 3.10+ — bloqueo preexistente, documentado
+ya en sesión 21b, no relacionado a este cambio; se usó un venv temporal con `python3.12` del
+sistema, descartado al terminar):
+- `import app` completo sin errores, migración crea `conducta_registro` sin tocar nada más.
+- Simulación directa de `registrar_conducta()` contra una copia de la BD: 3 leves → 1er Out (sin
+  caso aún) → 1 grave → 2do Out → 3 leves más → 3er Out → genera caso "3 Outs acumulados —
+  Período P1" (nivel_escala=2). Una falta muy_grave aislada genera un 2do caso inmediato
+  (nivel_escala=3), confirmando que salta el conteo.
+- Round-trip HTTP completo con el test client de Flask (login simulado + CSRF real de la
+  página): `GET /api/conducta/catalogo`, `POST /api/conducta`, `GET
+  /api/conducta/estudiante/<id>` — los 3 devuelven 200 con el payload esperado.
+- No se pudo probar visualmente el modal en navegador dentro de esta sesión — pendiente que
+  Erick lo prueba en `/casos` y confirme que el flujo Grado→Modalidad→Materia→Estudiante→
+  Nivel→Conducta se siente igual de fluido que "Nuevo Caso".
+
+**Pendiente:** Erick debe probar el flujo completo en `/casos` (botón "⚾ Conducta") con un
+estudiante real, en varios grados/menciones si aplica, y confirmar que el caso auto-generado al
+llegar a 3 Outs o a una falta muy grave se ve bien en el detalle del caso normal.
+
 ### 2026-09-01 (sesión 22b — 4to bug de la adecuación curricular: catálogo de materias de `/planificacion` seguía con nombres viejos)
 
 **Disparador:** Erick probó los cambios y reportó que "Crear Rúbrica" seguía mostrando materias

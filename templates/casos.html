@@ -315,9 +315,14 @@ main{max-width:1300px;margin:0 auto;padding:20px 24px}
     <div class="casos-sidebar">
       <div class="sidebar-header">
         <span class="sidebar-title">Casos Activos</span>
-        <button class="btn-nuevo" onclick="abrirModalNuevoCaso()">
-          <i class="fas fa-plus"></i> Nuevo caso
-        </button>
+        <div style="display:flex;gap:6px">
+          <button class="btn-nuevo" style="background:var(--surface2);color:var(--text);border:1px solid var(--border)" onclick="abrirModalConducta()" title="3 Strikes = 1 Out · 3 Outs en el período = Reporte a coordinación">
+            ⚾ Conducta
+          </button>
+          <button class="btn-nuevo" onclick="abrirModalNuevoCaso()">
+            <i class="fas fa-plus"></i> Nuevo caso
+          </button>
+        </div>
       </div>
       <div class="casos-filtros">
         <button class="filtro-btn active" onclick="filtrarCasos('todos',this)">Todos</button>
@@ -415,6 +420,75 @@ main{max-width:1300px;margin:0 auto;padding:20px 24px}
     <div class="modal-actions">
       <button class="btn-cancel" onclick="cerrarModal('modal-nuevo-caso')">Cancelar</button>
       <button class="btn-save" onclick="crearCaso()">Abrir Caso</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: REGISTRAR CONDUCTA (Strikes/Outs) ═══ -->
+<div class="modal-overlay" id="modal-conducta">
+  <div class="modal">
+    <div class="modal-title">⚾ Registrar Conducta</div>
+    <div class="modal-sub">3 Strikes = 1 Out · 3 Outs en el período = Reporte a coordinación · Falta muy grave = Reporte inmediato</div>
+
+    <div class="form-group">
+      <label class="form-label">Fecha del incidente *</label>
+      <input class="form-input" type="date" id="cd-fecha" value="{{ fecha_hoy }}" max="{{ fecha_hoy }}">
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px">
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Grado *</label>
+        <select class="form-select" id="cd-grado" onchange="onGradoChangeConducta()">
+          {% for g in grados_prof %}
+          <option value="{{ g }}">{{ g }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group" id="cd-modalidad-wrap" style="display:none;margin-bottom:0">
+        <label class="form-label">Modalidad *</label>
+        <select class="form-select" id="cd-modalidad" onchange="onModalidadChangeConducta()"></select>
+      </div>
+      <div class="form-group" id="cd-seccion-wrap" style="display:none;margin-bottom:0">
+        <label class="form-label">Sección</label>
+        <select class="form-select" id="cd-seccion" onchange="onSeccionChangeConducta()">
+          <option value="">Todas</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Materia</label>
+        <select class="form-select" id="cd-materia"></select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Estudiante *</label>
+      <input class="form-input" id="cd-buscar" placeholder="Buscar por nombre..." oninput="buscarEstudianteConducta(this.value)">
+      <div id="cd-resultados" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;margin-top:4px;display:none;max-height:150px;overflow-y:auto"></div>
+      <input type="hidden" id="cd-est-id">
+      <div id="cd-est-nombre" style="font-size:11px;color:var(--accent);margin-top:4px"></div>
+      <div id="cd-tally" style="font-size:11px;color:var(--muted);margin-top:6px;display:none"></div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Nivel *</label>
+      <select class="form-select" id="cd-nivel" onchange="poblarConductasNivel()">
+        <option value="leve">Falta Leve (Strike)</option>
+        <option value="grave">Falta Grave (Out directo)</option>
+        <option value="muy_grave">Falta Muy Grave (Reporte inmediato)</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Conducta *</label>
+      <select class="form-select" id="cd-conducta"></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Nota adicional (opcional)</label>
+      <textarea class="form-textarea" id="cd-desc" placeholder="Detalles del incidente..."></textarea>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="cerrarModal('modal-conducta')">Cancelar</button>
+      <button class="btn-save" onclick="registrarConducta()">Registrar</button>
     </div>
   </div>
 </div>
@@ -563,6 +637,11 @@ var PLAN_POR_GRADO_MENCION = {{ plan_por_grado_mencion | tojson }};
 var MENCIONES_PROF  = {{ menciones_prof | tojson }};
 var FILTRO_MEN_CASO  = {{ filtro_men | tojson }};
 var PRIMER_CICLO_GRADOS_CASO = ['1ro','2do','3ro'];
+
+// Catálogo de conducta (Strikes/Outs) — mismo origen que /api/conducta/catalogo,
+// embebido de una vez para no requerir un fetch extra al abrir el modal.
+var CONDUCTA_CATALOGO    = {{ conducta_catalogo | tojson }};
+var CONDUCTA_NIVEL_LABEL = {{ conducta_nivel_label | tojson }};
 
 // ══════════════════════════════════════════════════════════════════════════════
 // UTILIDADES
@@ -966,6 +1045,204 @@ async function crearCaso() {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
+// CONDUCTA (Strikes/Outs) — bitácora liviana, separada de "Nuevo Caso".
+// Reutiliza PLAN_POR_GRADO_MENCION/MENCIONES_PROF/FILTRO_MEN_CASO (misma
+// fuente que "Nuevo Caso" — nunca un catálogo duplicado, ver sesión 22b).
+// ══════════════════════════════════════════════════════════════════════════════
+function _esPrimerCicloConducta(grado) { return PRIMER_CICLO_GRADOS_CASO.indexOf(grado) !== -1; }
+
+function poblarModalidadesConducta() {
+    var sel = document.getElementById('cd-modalidad');
+    if (!sel) return;
+    var actual = sel.value;
+    var html = FILTRO_MEN_CASO ? '' : '<option value="">Todas</option>';
+    html += MENCIONES_PROF.map(function(m){
+        return '<option value="' + m.replace(/"/g,'&quot;') + '">' + m + '</option>';
+    }).join('');
+    sel.innerHTML = html;
+    if (MENCIONES_PROF.includes(actual) || (!FILTRO_MEN_CASO && actual === '')) sel.value = actual;
+}
+
+function poblarMateriasConducta() {
+    var grado     = document.getElementById('cd-grado').value;
+    var primero   = _esPrimerCicloConducta(grado);
+    var modSel    = document.getElementById('cd-modalidad');
+    var modalidad = (!primero && modSel) ? modSel.value : '';
+    var materiaSel = document.getElementById('cd-materia');
+    var porGrado  = PLAN_POR_GRADO_MENCION[grado] || {};
+    var materias;
+    if (modalidad && porGrado[modalidad]) {
+        materias = porGrado[modalidad];
+    } else {
+        var vistas = {};
+        materias = [];
+        Object.keys(porGrado).forEach(function(mk){
+            porGrado[mk].forEach(function(m){
+                if (!vistas[m[0]]) { vistas[m[0]] = true; materias.push(m); }
+            });
+        });
+    }
+    var actual = materiaSel.value;
+    materiaSel.innerHTML = '<option value="">— Sin materia específica —</option>' +
+        materias.map(function(m){ return '<option value="' + m[0].replace(/"/g,'&quot;') + '">' + m[0] + '</option>'; }).join('');
+    if (materias.some(function(m){ return m[0] === actual; })) materiaSel.value = actual;
+}
+
+async function poblarSeccionesConducta(grado) {
+    var sel = document.getElementById('cd-seccion');
+    if (!sel) return;
+    var actual = sel.value;
+    try {
+        var r = await fetch('/api/datos?grado=' + encodeURIComponent(grado));
+        var data = await r.json();
+        var secciones = Array.from(new Set(data.map(function(e){ return e.seccion; }).filter(Boolean))).sort();
+        sel.innerHTML = '<option value="">Todas</option>' + secciones.map(function(s){
+            return '<option value="' + s.replace(/"/g,'&quot;') + '">' + s + '</option>';
+        }).join('');
+        if (secciones.includes(actual)) sel.value = actual;
+    } catch(e) {}
+}
+
+function onGradoChangeConducta() {
+    var grado   = document.getElementById('cd-grado').value;
+    var primero = _esPrimerCicloConducta(grado);
+    document.getElementById('cd-modalidad-wrap').style.display = primero ? 'none' : '';
+    document.getElementById('cd-seccion-wrap').style.display   = primero ? '' : 'none';
+    if (!primero) poblarModalidadesConducta();
+    poblarMateriasConducta();
+    if (primero) poblarSeccionesConducta(grado);
+    limpiarEstudianteConducta();
+}
+function onModalidadChangeConducta() { poblarMateriasConducta(); limpiarEstudianteConducta(); }
+function onSeccionChangeConducta()  { limpiarEstudianteConducta(); }
+
+function limpiarEstudianteConducta() {
+    document.getElementById('cd-est-id').value = '';
+    document.getElementById('cd-est-nombre').textContent = '';
+    document.getElementById('cd-buscar').value = '';
+    document.getElementById('cd-resultados').style.display = 'none';
+    var tallyEl = document.getElementById('cd-tally');
+    tallyEl.style.display = 'none';
+    tallyEl.textContent = '';
+}
+
+function poblarConductasNivel() {
+    var nivel = document.getElementById('cd-nivel').value;
+    var sel = document.getElementById('cd-conducta');
+    var opciones = CONDUCTA_CATALOGO[nivel] || [];
+    sel.innerHTML = opciones.map(function(o){
+        return '<option value="' + o[0] + '">' + esc(o[1]) + '</option>';
+    }).join('');
+}
+
+function abrirModalConducta() {
+    var hoy = new Date().toISOString().slice(0,10);
+    var fechaEl = document.getElementById('cd-fecha');
+    fechaEl.value = hoy;
+    fechaEl.max   = hoy;
+    document.getElementById('cd-desc').value  = '';
+    document.getElementById('cd-nivel').value = 'leve';
+    poblarConductasNivel();
+    limpiarEstudianteConducta();
+    onGradoChangeConducta();
+    document.getElementById('modal-conducta').classList.add('open');
+}
+
+var _buscarTimerConducta = null;
+function buscarEstudianteConducta(q) {
+    clearTimeout(_buscarTimerConducta);
+    if (q.length < 2) { document.getElementById('cd-resultados').style.display = 'none'; return; }
+    _buscarTimerConducta = setTimeout(async function() {
+        var grado      = document.getElementById('cd-grado').value;
+        var primero    = _esPrimerCicloConducta(grado);
+        var modSel     = document.getElementById('cd-modalidad');
+        var seccionSel = document.getElementById('cd-seccion');
+        var params = new URLSearchParams({q: q, grado: grado});
+        if (!primero && modSel && modSel.value) params.set('mencion', modSel.value);
+        if (primero && seccionSel && seccionSel.value) params.set('seccion', seccionSel.value);
+        var r = await fetch('/api/datos?' + params.toString());
+        var data = await r.json();
+        var box = document.getElementById('cd-resultados');
+        if (!data.length) { box.style.display='none'; return; }
+        box.innerHTML = data.slice(0,8).map(function(e) {
+            return '<div class="est-search-item-cd" data-id="' + e.id + '" data-nombre="' + esc(e.nombre+' '+e.apellido).replace(/"/g,'&quot;') + '" ' +
+                'style="padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:12px">' +
+                '<strong>' + esc(e.apellido + ', ' + e.nombre) + '</strong> ' +
+                '<span style="color:var(--muted)">' + esc(e.grado||'') + ' ' + esc(e.curso||'') + '</span></div>';
+        }).join('');
+        box.style.display = 'block';
+    }, 300);
+}
+
+document.addEventListener('click', function(ev) {
+    var estItemCd = ev.target.closest('.est-search-item-cd');
+    if (estItemCd) { selEstudianteConducta(parseInt(estItemCd.dataset.id), estItemCd.dataset.nombre); }
+});
+
+async function selEstudianteConducta(id, nombre) {
+    document.getElementById('cd-est-id').value = id;
+    document.getElementById('cd-est-nombre').textContent = '✓ ' + nombre;
+    document.getElementById('cd-buscar').value = nombre;
+    document.getElementById('cd-resultados').style.display = 'none';
+    try {
+        var r = await fetch('/api/conducta/estudiante/' + id);
+        var d = await r.json();
+        var tallyEl = document.getElementById('cd-tally');
+        tallyEl.textContent = '⚾ Período ' + d.periodo + ': ' + d.strikes_en_ciclo + '/3 strikes · ' +
+            d.outs_en_ciclo + '/3 outs' +
+            (d.faltas_muy_graves ? ' · ' + d.faltas_muy_graves + ' falta(s) muy grave(s)' : '');
+        tallyEl.style.display = 'block';
+    } catch(e) {}
+}
+
+async function registrarConducta() {
+    var fecha = document.getElementById('cd-fecha').value;
+    var estId = document.getElementById('cd-est-id').value;
+    var grado = document.getElementById('cd-grado').value;
+    var nivel = document.getElementById('cd-nivel').value;
+    var conducta = document.getElementById('cd-conducta').value;
+    var desc  = document.getElementById('cd-desc').value.trim();
+    if (!fecha)    { tk('Selecciona la fecha del incidente', 'err'); return; }
+    if (!grado)    { tk('Selecciona el grado', 'err'); return; }
+    if (!estId)    { tk('Selecciona un estudiante', 'err'); return; }
+    if (!conducta) { tk('Selecciona la conducta', 'err'); return; }
+
+    var primero = _esPrimerCicloConducta(grado);
+    var modSel     = document.getElementById('cd-modalidad');
+    var seccionSel = document.getElementById('cd-seccion');
+    var materia = document.getElementById('cd-materia').value;
+    var mencion = (!primero && modSel) ? modSel.value : '';
+    var seccion = (primero && seccionSel) ? seccionSel.value : '';
+    if (!primero && !mencion) { tk('Selecciona la modalidad', 'err'); return; }
+
+    try {
+        var r = await fetch('/api/conducta', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({estudiante_id:parseInt(estId), nivel:nivel, conducta:conducta,
+                                   descripcion:desc, fecha_incidente:fecha, materia:materia,
+                                   grado:grado, mencion:mencion, seccion:seccion})
+        });
+        var d = await r.json();
+        if (!d.ok) { tk(d.error||'Error', 'err'); return; }
+
+        if (d.trigger === 'muy_grave') {
+            tk('🚨 Falta muy grave — caso generado y enviado a coordinación', 'err');
+        } else if (d.trigger === 'reporte') {
+            tk('🚨 3 Outs acumulados — reporte generado para coordinación', 'err');
+        } else if (d.trigger === 'out') {
+            tk('⚾ OUT (' + d.outs_total + ' en el período)', 'warn');
+        } else if (nivel === 'leve') {
+            tk('Strike ' + d.strikes_en_ciclo + '/3 registrado', 'ok');
+        } else {
+            tk('Conducta registrada', 'ok');
+        }
+
+        cerrarModal('modal-conducta');
+        if (d.caso_id) { await cargarCasos(); verCaso(d.caso_id); }
+    } catch(e) { tk('Error de conexión', 'err'); }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
 // REGISTRAR ACCIÓN
 // ══════════════════════════════════════════════════════════════════════════════
 var ACCION_LABELS = {
@@ -1135,7 +1412,7 @@ async function cargarNotifCount() {
 
 // Cerrar modales al click fuera
 document.addEventListener('click', function(e) {
-    ['modal-nuevo-caso','modal-accion','modal-acuerdo','modal-cerrar'].forEach(function(id) {
+    ['modal-nuevo-caso','modal-conducta','modal-accion','modal-acuerdo','modal-cerrar'].forEach(function(id) {
         var m = document.getElementById(id);
         if (e.target === m) m.classList.remove('open');
     });

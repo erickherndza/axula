@@ -104,6 +104,7 @@ def migrar_bd():
             "CREATE INDEX IF NOT EXISTS idx_notif_dest ON notificaciones(destinatario_id, leida)",
             "CREATE INDEX IF NOT EXISTS idx_calif_est ON calificaciones_periodo(estudiante_id, periodo)",
             "CREATE INDEX IF NOT EXISTS idx_casos_est ON casos(estudiante_id, estado)",
+            "CREATE INDEX IF NOT EXISTS idx_conducta_est_periodo ON conducta_registro(estudiante_id, anio_escolar, periodo)",
             "CREATE INDEX IF NOT EXISTS idx_cuaderno_est ON cuaderno_anecdotico(estudiante_id)",
             "CREATE INDEX IF NOT EXISTS idx_reportes_est ON reportes(estudiante_id, estado)",
             "CREATE INDEX IF NOT EXISTS idx_ausencias_sem ON ausencias_semanales(estudiante_id, semana)",
