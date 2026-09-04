@@ -256,6 +256,113 @@ def crear_conducta():
     return jsonify({"ok": True, **resultado})
 
 
+@casos_bp.route("/api/conducta/lote", methods=["POST"])
+@login_required
+def crear_conducta_lote():
+    """Registra la MISMA conducta para varios estudiantes a la vez — para
+    incidentes colectivos donde nadie se responsabiliza individualmente
+    (ej. basura en el aula) y se opta por aplicar el strike a todo el curso.
+    Cada estudiante recibe su propio registro y su propio conteo de
+    strikes/outs — es equivalente a registrar uno por uno, pero en un solo
+    paso. Los registros quedan enlazados por `lote_id` para poder verlos
+    agrupados después."""
+    import uuid as _uuid
+    u = get_usuario()
+    d = request.get_json(silent=True) or {}
+    est_ids = d.get("estudiante_ids") or []
+    nivel   = (d.get("nivel") or "").strip()
+    conducta_key = (d.get("conducta") or "").strip()
+    fecha_incidente = (d.get("fecha_incidente") or "").strip()
+    materia = (d.get("materia") or "").strip() or None
+    grado   = (d.get("grado") or "").strip() or None
+    mencion = (d.get("mencion") or "").strip() or None
+    seccion = (d.get("seccion") or "").strip() or None
+    descripcion = (d.get("descripcion") or "").strip() or None
+
+    if not isinstance(est_ids, list) or not est_ids:
+        return jsonify({"error": "Selecciona al menos un estudiante"}), 400
+    if nivel not in CONDUCTA_CATALOGO:
+        return jsonify({"error": "nivel inválido"}), 400
+    if conducta_key not in dict(CONDUCTA_CATALOGO[nivel]):
+        return jsonify({"error": "conducta inválida para ese nivel"}), 400
+    if not fecha_incidente:
+        return jsonify({"error": "La fecha del incidente es requerida"}), 400
+    if not grado:
+        return jsonify({"error": "El grado es requerido"}), 400
+    if fecha_incidente > date.today().isoformat():
+        return jsonify({"error": "La fecha del incidente no puede ser futura"}), 400
+
+    conducta_label = dict(CONDUCTA_CATALOGO[nivel]).get(conducta_key, conducta_key)
+    if not descripcion:
+        descripcion = (
+            f"Incidente colectivo — {conducta_label}. Nadie se responsabilizó "
+            f"individualmente, se registra a todo el curso presente."
+        )
+
+    lote_id = _uuid.uuid4().hex[:12]
+
+    with sqlite3.connect(DATABASE, timeout=10) as conn:
+        conn.row_factory = sqlite3.Row
+
+        # Defensa en profundidad: no confiar en la lista que mandó el navegador
+        # sin más — verificar que cada estudiante realmente pertenezca al
+        # grado/sección/modalidad declarados (mismo patrón que /api/asistencia).
+        placeholders = ",".join("?" * len(est_ids))
+        filas = conn.execute(
+            f"SELECT id, nombre, apellido, grado, seccion, curso FROM estudiantes "
+            f"WHERE id IN ({placeholders})", est_ids
+        ).fetchall()
+        grado_n   = grado.strip().lower()
+        seccion_n = (seccion or "").strip().lower()
+        mencion_n = (mencion or "").strip().lower()
+
+        validos, omitidos = [], 0
+        for f in filas:
+            est_grado  = (f["grado"] or "").strip().lower()
+            est_seccion = (f["seccion"] or "").strip().lower()
+            est_curso  = (f["curso"] or "").strip().lower()
+            if est_grado != grado_n:
+                omitidos += 1
+                continue
+            if seccion_n and est_seccion != seccion_n:
+                omitidos += 1
+                continue
+            if mencion_n and mencion_n not in est_curso:
+                omitidos += 1
+                continue
+            validos.append(f)
+
+        if not validos:
+            return jsonify({"error": "Ningún estudiante coincide con el grado/sección/modalidad indicados"}), 400
+
+        outs, reportes, muy_graves = [], [], []
+        for f in validos:
+            nombre_completo = f"{f['nombre']} {f['apellido']}".strip()
+            r = registrar_conducta(
+                conn, f["id"], u["id"], nivel, conducta_key, fecha_incidente,
+                materia=materia, grado=grado, mencion=mencion, seccion=seccion,
+                descripcion=descripcion, lote_id=lote_id,
+            )
+            if r["trigger"] == "reporte":
+                reportes.append({"estudiante_id": f["id"], "nombre": nombre_completo, "caso_id": r["caso_id"]})
+            elif r["trigger"] == "muy_grave":
+                muy_graves.append({"estudiante_id": f["id"], "nombre": nombre_completo, "caso_id": r["caso_id"]})
+            elif r["trigger"] == "out":
+                outs.append({"estudiante_id": f["id"], "nombre": nombre_completo})
+
+    return jsonify({
+        "ok": True,
+        "lote_id": lote_id,
+        "nivel": nivel,
+        "conducta_label": conducta_label,
+        "total_aplicados": len(validos),
+        "total_omitidos": omitidos,
+        "outs": outs,
+        "reportes": reportes,
+        "muy_graves": muy_graves,
+    })
+
+
 @casos_bp.route("/api/conducta/estudiante/<int:est_id>")
 @login_required
 def conducta_del_estudiante(est_id):

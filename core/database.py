@@ -308,6 +308,18 @@ def migrar_bd():
     except Exception as _e:
         logger.warning(f"[db] migración casos.materia/grado/mencion/seccion/fecha_incidente: {_e}")
 
+    # ── conducta_registro.lote_id — agrupa registros de un incidente colectivo ─
+    # (ej. "nadie se hizo responsable de la basura" → 1 strike a todo el curso
+    # en una sola acción). NULL = registro individual normal.
+    try:
+        cols_cond = [r[1] for r in conn.execute("PRAGMA table_info(conducta_registro)").fetchall()]
+        if "lote_id" not in cols_cond:
+            conn.execute("ALTER TABLE conducta_registro ADD COLUMN lote_id TEXT")
+            conn.commit()
+            logger.info("  ✓ conducta_registro.lote_id agregado")
+    except Exception as _e:
+        logger.warning(f"[db] migración conducta_registro.lote_id: {_e}")
+
     # Fix puntual: sincronizar curso con grado para estudiantes promovidos
     # con código anterior que solo actualizaba grado pero no curso.
     # "4TO MULTIMEDIA" con grado=5TO → "5TO MULTIMEDIA"

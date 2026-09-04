@@ -461,12 +461,25 @@ main{max-width:1300px;margin:0 auto;padding:20px 24px}
     </div>
 
     <div class="form-group">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;font-weight:600;color:var(--text)">
+        <input type="checkbox" id="cd-todo-curso" onchange="onToggleTodoCursoConducta()">
+        ⚾ Aplicar a todo el curso (nadie se responsabilizó)
+      </label>
+    </div>
+
+    <div class="form-group" id="cd-estudiante-individual-wrap">
       <label class="form-label">Estudiante *</label>
       <input class="form-input" id="cd-buscar" placeholder="Buscar por nombre..." oninput="buscarEstudianteConducta(this.value)">
       <div id="cd-resultados" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;margin-top:4px;display:none;max-height:150px;overflow-y:auto"></div>
       <input type="hidden" id="cd-est-id">
       <div id="cd-est-nombre" style="font-size:11px;color:var(--accent);margin-top:4px"></div>
       <div id="cd-tally" style="font-size:11px;color:var(--muted);margin-top:6px;display:none"></div>
+    </div>
+
+    <div class="form-group" id="cd-roster-wrap" style="display:none">
+      <label class="form-label">Estudiantes del curso *</label>
+      <div id="cd-roster-list" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;max-height:200px;overflow-y:auto"></div>
+      <div id="cd-roster-count" style="font-size:11px;color:var(--muted);margin-top:4px"></div>
     </div>
 
     <div class="form-group">
@@ -1112,9 +1125,67 @@ function onGradoChangeConducta() {
     poblarMateriasConducta();
     if (primero) poblarSeccionesConducta(grado);
     limpiarEstudianteConducta();
+    if (document.getElementById('cd-todo-curso').checked) cargarRosterConducta();
 }
-function onModalidadChangeConducta() { poblarMateriasConducta(); limpiarEstudianteConducta(); }
-function onSeccionChangeConducta()  { limpiarEstudianteConducta(); }
+function onModalidadChangeConducta() {
+    poblarMateriasConducta();
+    limpiarEstudianteConducta();
+    if (document.getElementById('cd-todo-curso').checked) cargarRosterConducta();
+}
+function onSeccionChangeConducta() {
+    limpiarEstudianteConducta();
+    if (document.getElementById('cd-todo-curso').checked) cargarRosterConducta();
+}
+
+function onToggleTodoCursoConducta() {
+    var chk = document.getElementById('cd-todo-curso').checked;
+    document.getElementById('cd-estudiante-individual-wrap').style.display = chk ? 'none' : '';
+    document.getElementById('cd-roster-wrap').style.display = chk ? '' : 'none';
+    limpiarEstudianteConducta();
+    if (chk) cargarRosterConducta();
+}
+
+async function cargarRosterConducta() {
+    var grado      = document.getElementById('cd-grado').value;
+    var primero    = _esPrimerCicloConducta(grado);
+    var modSel     = document.getElementById('cd-modalidad');
+    var seccionSel = document.getElementById('cd-seccion');
+    if (!primero && (!modSel || !modSel.value)) {
+        document.getElementById('cd-roster-list').innerHTML =
+            '<div style="padding:8px;color:var(--muted);font-size:11px">Selecciona la modalidad primero</div>';
+        document.getElementById('cd-roster-count').textContent = '';
+        return;
+    }
+    var params = new URLSearchParams({grado: grado});
+    if (!primero && modSel && modSel.value) params.set('mencion', modSel.value);
+    if (primero && seccionSel && seccionSel.value) params.set('seccion', seccionSel.value);
+    var box = document.getElementById('cd-roster-list');
+    box.innerHTML = '<div style="padding:8px;color:var(--muted);font-size:11px">Cargando...</div>';
+    try {
+        var r = await fetch('/api/datos?' + params.toString());
+        var data = await r.json();
+        data.sort(function(a,b){ return (a.apellido||'').localeCompare(b.apellido||''); });
+        if (!data.length) {
+            box.innerHTML = '<div style="padding:8px;color:var(--muted);font-size:11px">Sin estudiantes en este alcance</div>';
+            document.getElementById('cd-roster-count').textContent = '';
+            return;
+        }
+        box.innerHTML = data.map(function(e){
+            return '<label style="display:flex;align-items:center;gap:6px;padding:6px 10px;font-size:12px;border-bottom:1px solid var(--border);cursor:pointer">' +
+                '<input type="checkbox" class="cd-roster-chk" value="' + e.id + '" checked onchange="_actualizarConteoRoster()">' +
+                esc(e.apellido + ', ' + e.nombre) + '</label>';
+        }).join('');
+        _actualizarConteoRoster();
+    } catch(e) {
+        box.innerHTML = '<div style="padding:8px;color:var(--danger);font-size:11px">Error cargando el curso</div>';
+    }
+}
+
+function _actualizarConteoRoster() {
+    var checked = document.querySelectorAll('.cd-roster-chk:checked').length;
+    var total   = document.querySelectorAll('.cd-roster-chk').length;
+    document.getElementById('cd-roster-count').textContent = checked + ' de ' + total + ' seleccionados';
+}
 
 function limpiarEstudianteConducta() {
     document.getElementById('cd-est-id').value = '';
@@ -1143,6 +1214,9 @@ function abrirModalConducta() {
     document.getElementById('cd-desc').value  = '';
     document.getElementById('cd-nivel').value = 'leve';
     poblarConductasNivel();
+    document.getElementById('cd-todo-curso').checked = false;
+    document.getElementById('cd-estudiante-individual-wrap').style.display = '';
+    document.getElementById('cd-roster-wrap').style.display = 'none';
     limpiarEstudianteConducta();
     onGradoChangeConducta();
     document.getElementById('modal-conducta').classList.add('open');
@@ -1197,14 +1271,13 @@ async function selEstudianteConducta(id, nombre) {
 
 async function registrarConducta() {
     var fecha = document.getElementById('cd-fecha').value;
-    var estId = document.getElementById('cd-est-id').value;
     var grado = document.getElementById('cd-grado').value;
     var nivel = document.getElementById('cd-nivel').value;
     var conducta = document.getElementById('cd-conducta').value;
     var desc  = document.getElementById('cd-desc').value.trim();
+    var todoCurso = document.getElementById('cd-todo-curso').checked;
     if (!fecha)    { tk('Selecciona la fecha del incidente', 'err'); return; }
     if (!grado)    { tk('Selecciona el grado', 'err'); return; }
-    if (!estId)    { tk('Selecciona un estudiante', 'err'); return; }
     if (!conducta) { tk('Selecciona la conducta', 'err'); return; }
 
     var primero = _esPrimerCicloConducta(grado);
@@ -1214,6 +1287,31 @@ async function registrarConducta() {
     var mencion = (!primero && modSel) ? modSel.value : '';
     var seccion = (primero && seccionSel) ? seccionSel.value : '';
     if (!primero && !mencion) { tk('Selecciona la modalidad', 'err'); return; }
+
+    if (todoCurso) {
+        var ids = Array.from(document.querySelectorAll('.cd-roster-chk:checked')).map(function(el){ return parseInt(el.value); });
+        if (!ids.length) { tk('Selecciona al menos un estudiante del curso', 'err'); return; }
+        try {
+            var rl = await fetch('/api/conducta/lote', {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({estudiante_ids:ids, nivel:nivel, conducta:conducta,
+                                       descripcion:desc, fecha_incidente:fecha, materia:materia,
+                                       grado:grado, mencion:mencion, seccion:seccion})
+            });
+            var dl = await rl.json();
+            if (!dl.ok) { tk(dl.error||'Error', 'err'); return; }
+            var msg = '⚾ ' + dl.total_aplicados + ' estudiante(s) registrados';
+            if (dl.muy_graves.length) msg += ' · 🚨 ' + dl.muy_graves.length + ' falta(s) muy grave(s)';
+            if (dl.reportes.length)   msg += ' · 🚨 ' + dl.reportes.length + ' reporte(s) generado(s)';
+            tk(msg, (dl.muy_graves.length || dl.reportes.length) ? 'err' : 'ok');
+            cerrarModal('modal-conducta');
+            if (dl.reportes.length || dl.muy_graves.length) await cargarCasos();
+        } catch(e) { tk('Error de conexión', 'err'); }
+        return;
+    }
+
+    var estId = document.getElementById('cd-est-id').value;
+    if (!estId) { tk('Selecciona un estudiante', 'err'); return; }
 
     try {
         var r = await fetch('/api/conducta', {

@@ -1476,7 +1476,7 @@ def _crear_caso_desde_conducta(conn, estudiante_id, docente_id, registro_id, tit
 
 def registrar_conducta(conn, estudiante_id, docente_id, nivel, conducta_key,
                         fecha_incidente, materia=None, grado=None, mencion=None,
-                        seccion=None, descripcion=None):
+                        seccion=None, descripcion=None, lote_id=None):
     """Registra un evento de conducta (strike/out/falta grave o muy grave) y
     aplica la mecánica de beisbol: 3 Strikes (leve) = 1 Out, 1 falta grave =
     1 Out directo, 3 Outs en el período = Reporte automático a coordinación.
@@ -1498,10 +1498,10 @@ def registrar_conducta(conn, estudiante_id, docente_id, nivel, conducta_key,
     conn.execute("""
         INSERT INTO conducta_registro
             (estudiante_id, docente_id, nivel, conducta, descripcion, fecha_incidente,
-             periodo, anio_escolar, materia, grado, mencion, seccion)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+             periodo, anio_escolar, materia, grado, mencion, seccion, lote_id)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
     """, (estudiante_id, docente_id, nivel, conducta_key, descripcion, fecha_incidente,
-          periodo, anio, materia, grado, mencion, seccion))
+          periodo, anio, materia, grado, mencion, seccion, lote_id))
     conn.commit()
     registro_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
 
