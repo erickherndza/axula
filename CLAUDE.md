@@ -156,6 +156,86 @@ python3 -c "import app; print('OK')"
 
 ## Log de sesiones
 
+### 2026-09-04/05 (sesión 24 — catálogo de Conducta ampliado, registro colectivo "todo el curso", guardado/historial de Planificación ABP MINERD)
+
+**1 — Catálogo de Conducta: "Tirar basura en el aula" agregada como falta Leve.**
+Erick probó el modal "⚾ Conducta" (sesión 23) y reportó que faltaban "malas palabras",
+"agredir a otro estudiante" y "tirar basura". Verificado: las 2 primeras YA existían en
+`CONDUCTA_CATALOGO` (`core/constants.py`) pero bajo Nivel **Grave**/**Muy Grave** respectivamente
+(así lo exige el Art.19/21 MINERD, no Leve) — confusión de UI porque el dropdown de conducta solo
+muestra las opciones del nivel seleccionado arriba. Lo que sí faltaba de verdad era "Tirar basura
+en el aula" — agregada al nivel Leve (`tirar_basura`). Verificado con `import app` en un venv
+Python 3.12 temporal (el Python 3.9 del sistema no soporta la sintaxis `str | None` que ya usa
+`core/curriculo_musica.py` — bloqueo preexistente, no relacionado).
+
+**2 — Registro de Conducta a TODO EL CURSO a la vez (feature nueva).**
+Disparador: "hace 2 días" un incidente de basura en el aula donde nadie se responsabilizó y nadie
+quiso decir quién fue — Erick pidió poder aplicar el mismo strike a todo el curso en vez de tener
+que registrar estudiante por estudiante.
+- `conducta_registro.lote_id` (columna nueva, migración automática en `core/database.py`) —
+  agrupa todos los registros que salieron de una misma acción colectiva. NULL = registro
+  individual normal (sin cambio de comportamiento para el flujo existente).
+- `core/helpers.py::registrar_conducta()` acepta `lote_id=None` opcional — mismo motor de
+  3-strikes/1-out/3-outs/falta-muy-grave para cada estudiante, sin duplicar lógica.
+- `POST /api/conducta/lote` (`routes/casos.py`) — recibe una lista de `estudiante_ids` + la misma
+  conducta/nivel/fecha/materia/grado/mención/sección, y llama `registrar_conducta()` una vez por
+  estudiante bajo el mismo `lote_id`. Re-valida server-side que cada estudiante realmente
+  pertenezca al grado/sección/modalidad declarados antes de aplicar (mismo patrón de defensa en
+  profundidad que `POST /api/asistencia` — nunca confiar ciegamente en la lista que mandó el
+  navegador), descartando a los que no calzan (`total_omitidos` en la respuesta).
+- `templates/casos.html` — el modal "⚾ Conducta" tiene un toggle **"Aplicar a todo el curso"**:
+  oculta el buscador de un solo estudiante y carga el roster completo del Grado/Modalidad/Sección
+  seleccionados (vía `/api/datos`, todos marcados por defecto, se puede destildar a alguien
+  puntual). Al registrar, un solo POST aplica el strike a todos los marcados; el toast final
+  resume cuántos quedaron registrados y si alguno llegó a Out/Reporte/falta muy grave en el
+  proceso.
+- Verificado con test client de Flask + copia de BD sintética (perfil profesor + 6 estudiantes en
+  alcance + 1 estudiante de otra mención): confirma que el estudiante fuera de alcance se omite
+  automáticamente, y que a la 3ra ronda del mismo grupo cada estudiante cae en "OUT"
+  individualmente (el conteo por estudiante sigue siendo independiente, el lote solo ahorra
+  repetir el registro).
+
+**3 — Guardado y recuperación de Planificaciones ABP MINERD (feature nueva).**
+Disparador: Erick notó que el plan ABP generado por la IA (tab "Plantilla ABP MINERD" de
+`/planificacion`) solo vivía en memoria del navegador — se perdía al recargar, y no había forma
+de recuperar una planificación generada antes. **Confirmado que nunca existió persistencia para
+esto**: la tabla `historial_planificaciones` (con su UI de "Historial") es exclusiva de la
+Planificación de Clase clásica (texto plano) — el generador ABP (`generar_planificacion_abp()` en
+`routes/planificacion.py`, 3 pasos con Claude) solo devolvía el JSON al frontend sin guardar nada,
+y `exportar_planificacion_docx()` solo streamea el `.docx` para descarga. Por eso no había ninguna
+planificación ABP vieja que "recuperar" — no es que se perdiera algo, es que nunca se guardó nada
+hasta ahora.
+- Tabla nueva `historial_planificaciones_abp` (`core/constants.py::TABLAS_NUEVAS`) — guarda el
+  JSON completo del plan (`proyecto`+`curriculo`+`fases`+`instrumentos`+`docente`) más
+  materia/grado/mención/título como columnas buscables, separada a propósito de
+  `historial_planificaciones` (estructura y propósito distintos). Índice
+  `idx_planif_abp_prof` en `core/database.py`.
+- 4 rutas nuevas bajo `/api/planificacion/abp/` (`routes/planificacion.py`): `guardar` (POST —
+  crea o actualiza si se manda `id`), `historial` (GET — lista por `profesor_id`),
+  `historial/<id>` (GET detalle completo / DELETE).
+- `templates/planificacion.html` — cada generación exitosa de ABP se autoguarda sin intervención
+  del usuario (`guardarPlanABPActual()` llamado justo después de `renderPlanABP()`, con fallo
+  silencioso si el guardado falla — nunca bloquea el flujo de generación). La columna del
+  formulario ABP muestra la lista **"Planificaciones ABP guardadas"** (título/materia/grado/
+  fecha); un clic recarga el plan completo en la vista previa sin volver a llamar a la IA
+  (ahorra cuota de Claude), y cada una se puede eliminar.
+- Verificado con test client de Flask contra una copia de la BD real: ciclo completo
+  guardar→listar→obtener→actualizar (mismo `id`)→eliminar, los 5 pasos devuelven el resultado
+  esperado. Sin filas de prueba residuales en la BD local al terminar.
+
+**LECCIÓN — un catálogo o mecanismo "por estudiante" no siempre cubre el caso real de aula:**
+la mecánica de Conducta se diseñó (sesión 23) pensando en incidentes individuales; el caso real
+de Erick ("nadie se hizo responsable") no encajaba sin una vía para aplicar el mismo evento a
+un grupo completo de una vez. Al agregar el lote, se reutilizó el mismo motor por-estudiante
+(`registrar_conducta()`) en un loop en vez de crear una mecánica de conteo paralela a nivel de
+curso — evita el mismo patrón de "dos motores que evolucionan distinto" ya detectado en sesiones
+anteriores (ver sesión 17, caché de KPIs con 5 implementaciones independientes).
+
+**Pendiente:** Erick debe probar en producción (tras el deploy de Render) los 3 cambios: (1) que
+"Tirar basura" aparece en el nivel Leve del modal Conducta, (2) el toggle "Aplicar a todo el
+curso" con un grupo real, y (3) que una planificación ABP generada aparece en "Planificaciones ABP
+guardadas" y se puede recargar sin volver a generar.
+
 ### 2026-09-04 (sesión 23 — Sistema de Conducta: Strikes/Outs, alineado a Normas MINERD de Convivencia)
 
 **Disparador:** Erick pidió un sistema de disciplina estilo beisbol para sus estudiantes — 3
